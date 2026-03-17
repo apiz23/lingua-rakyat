@@ -37,13 +37,28 @@ app = FastAPI(
 # running on localhost:3000 to make requests to this backend on localhost:8000.
 # Without this, the browser will block all requests.
 
+# Get allowed origins from environment or use defaults
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
+    "http://localhost:3000",      # Next.js dev server
+    "http://localhost:3001",      # Alternative port
+    "http://localhost:3000/",
+    "http://localhost:3001/",
+]
+
+# Add Vercel frontend URL if deployed
+vercel_url = os.getenv("VERCEL_URL")
+if vercel_url:
+    allowed_origins.append(f"https://{vercel_url}")
+    allowed_origins.append(f"http://{vercel_url}")
+
+# Add any custom frontend URLs
+custom_frontend_url = os.getenv("FRONTEND_URL")
+if custom_frontend_url:
+    allowed_origins.append(custom_frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",   # Next.js dev server
-        "http://localhost:3001",   # Alternative port
-        "https://*.vercel.app",    # Vercel deployment
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],           # Allow GET, POST, DELETE, etc.
     allow_headers=["*"],           # Allow all headers
