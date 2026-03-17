@@ -1,41 +1,43 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# requirements.txt
-# Install everything with:  pip install -r requirements.txt
+# requirements.txt - Lingua Rakyat Backend Dependencies
+# Install with: pip install -r requirements.txt
 #
-# NOTE: All LangChain packages must be from the same generation (>=0.3 / 1.x).
-# Mixing old (0.2.x) and new (0.3+/1.x) versions causes dependency conflicts.
+# NOTE: All LangChain packages must be from the same generation (>=1.0).
+# Mixing old (0.2.x) and new (1.x) versions causes dependency conflicts.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Web framework
+# Web Framework & Server
 fastapi==0.111.0
 uvicorn[standard]
+python-multipart
 
-# PDF reading
-pypdf
+# PDF Processing
+pypdf>=4.0.0
 
-# LangChain core + community tools (all pinned to compatible 1.x generation)
+# LangChain Core Stack (all 1.x generation for compatibility)
 langchain==1.2.12
 langchain-community==0.4.1
 langchain-core==1.2.19
 langchain-text-splitters==1.1.1
-langchain-groq==1.1.2            # Groq LLM integration
-langchain-pinecone==0.2.13       # Pinecone vector store integration
 
-# Vector database — Pinecone (cloud, replaces ChromaDB)
-# Pulled in automatically by langchain-pinecone — do NOT pin separately
-pinecone==7.3.0
+# LLM Integrations
+langchain-groq==1.1.2
+langchain-pinecone>=0.2.0
 
-# File storage — Supabase (replaces local ./documents/ folder)
-supabase==2.28.2
+# Vector Database
+pinecone-client>=7.0.0
 
-# Embeddings (runs locally via HuggingFace)
-sentence-transformers
+# File Storage
+supabase>=2.28.0
 
-# Language detection
+# Embeddings (runs locally)
+sentence-transformers>=2.2.0
+
+# Language Detection
 langdetect==1.0.9
 
-# File upload support
-python-multipart
+# Environment Management
+python-dotenv>=1.0.0
 
-# Environment variable management
-python-dotenv
+# Utilities
+requests>=2.31.0
