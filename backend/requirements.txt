@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# requirements.txt
+# Install everything with:  pip install -r requirements.txt
+#
+# NOTE: All LangChain packages must be from the same generation (>=0.3 / 1.x).
+# Mixing old (0.2.x) and new (0.3+/1.x) versions causes dependency conflicts.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]
+
+# PDF reading
+pypdf
+
+# LangChain core + community tools (all pinned to compatible 1.x generation)
+langchain==1.2.12
+langchain-community==0.4.1
+langchain-core==1.2.19
+langchain-text-splitters==1.1.1
+langchain-groq==1.1.2            # Groq LLM integration
+langchain-pinecone==0.2.13       # Pinecone vector store integration
+
+# Vector database — Pinecone (cloud, replaces ChromaDB)
+# Pulled in automatically by langchain-pinecone — do NOT pin separately
+pinecone==7.3.0
+
+# File storage — Supabase (replaces local ./documents/ folder)
+supabase==2.28.2
+
+# Embeddings (runs locally via HuggingFace)
+sentence-transformers
+
+# Language detection
+langdetect==1.0.9
+
+# File upload support
+python-multipart
+
+# Environment variable management
+python-dotenv

@@ -1,0 +1,10 @@
+{
+	"postman.settings.dotenv-detection-notification-visibility": false,
+	"python-envs.pythonProjects": [
+		{
+			"path": "frontend/hooks",
+			"envManager": "ms-python.python:venv",
+			"packageManager": "ms-python.python:pip"
+		}
+	]
+}
