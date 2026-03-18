@@ -16,27 +16,88 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from supabase import create_client, Client
 
 from utils.rag_pipeline import answer_question
 
 router = APIRouter()
 
-# ─── Simple File-Based Chat History Store ────────────────────────────────────
-# For a hackathon, we store chat history in a JSON file.
-# In production you would use a proper database.
+# ─── Supabase Client (singleton) ─────────────────────────────────────────────
+_supabase: Optional[Client] = None
 
-CHAT_HISTORY_FILE = "./documents/chat_history.json"
+def get_supabase() -> Client:
+    global _supabase
+    if _supabase is None:
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_KEY")
+        if not url or not key:
+            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in your .env file.")
+        _supabase = create_client(url, key)
+    return _supabase
+
+def get_bucket() -> str:
+    return os.getenv("SUPABASE_BUCKET", "documents")
+
+# ─── Supabase-Based Chat History Store ───────────────────────────────────────
+# For Vercel deployment (read-only filesystem), we store chat history in Supabase Storage
+# as a JSON file, similar to how metadata.json is stored.
+
+CHAT_HISTORY_PATH = "chat_history.json"
+LOCAL_CHAT_HISTORY_PATH = "./documents/chat_history.json"
 
 def load_chat_history() -> list[dict]:
-    if not os.path.exists(CHAT_HISTORY_FILE):
-        return []
-    with open(CHAT_HISTORY_FILE, "r") as f:
-        return json.load(f)
+    """
+    Load chat history from Supabase Storage.
+    Falls back to local file if Supabase is unavailable.
+    """
+    # Try Supabase first
+    try:
+        sb = get_supabase()
+        response = sb.storage.from_(get_bucket()).download(CHAT_HISTORY_PATH)
+        data = json.loads(response.decode("utf-8"))
+        print(f"[Chat History] Loaded {len(data)} messages from Supabase Storage")
+        return data
+    except Exception as e:
+        print(f"[Chat History] Supabase unavailable ({e}), trying local fallback")
+
+    # Local fallback
+    if os.path.exists(LOCAL_CHAT_HISTORY_PATH):
+        try:
+            with open(LOCAL_CHAT_HISTORY_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            print(f"[Chat History] Loaded {len(data)} messages from local file")
+            return data
+        except Exception as e:
+            print(f"[Chat History] Local file failed: {e}")
+
+    return []
 
 def save_chat_history(history: list[dict]) -> None:
-    os.makedirs(os.path.dirname(CHAT_HISTORY_FILE), exist_ok=True)
-    with open(CHAT_HISTORY_FILE, "w") as f:
-        json.dump(history, f, indent=2, default=str)
+    """
+    Save chat history to Supabase Storage (upsert) AND local file.
+    """
+    json_str = json.dumps(history, indent=2, default=str)
+    data_bytes = json_str.encode("utf-8")
+
+    # Always try to save locally (will fail on Vercel, which is fine)
+    try:
+        os.makedirs(os.path.dirname(LOCAL_CHAT_HISTORY_PATH), exist_ok=True)
+        with open(LOCAL_CHAT_HISTORY_PATH, "w", encoding="utf-8") as f:
+            f.write(json_str)
+    except Exception as e:
+        print(f"[Chat History] Local save warning (expected on Vercel): {e}")
+
+    # Save to Supabase with upsert
+    try:
+        sb = get_supabase()
+        sb.storage.from_(get_bucket()).upload(
+            CHAT_HISTORY_PATH,
+            data_bytes,
+            {"content-type": "application/json", "upsert": "true"},
+        )
+        print(f"[Chat History] Saved {len(history)} messages to Supabase Storage")
+    except Exception as e:
+        print(f"[Chat History] Supabase save warning: {e}")
 
 
 # ─── Request / Response Models ────────────────────────────────────────────────
