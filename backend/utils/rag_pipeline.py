@@ -65,7 +65,7 @@ def get_embeddings_cohere(texts: list[str]) -> list[list[float]]:
     
     payload = {
         "texts": texts,
-        "model": "embed-english-v3.0",
+        "model": "embed-multilingual-v3.0",
         "input_type": "search_document"
     }
     
@@ -162,10 +162,13 @@ def answer_question(question: str, document_id: str) -> dict:
     
     context = "\n".join([match["metadata"]["text"] for match in results["matches"]])
     
+    # HACKATHON CASE STUDY 4: Text Simplification
+    # Updated prompts to explicitly instruct the LLM to simplify language
+    # and target a 5th-grade reading level
     prompts = {
-        "en": "Answer based on context:\n\n{context}\n\nQuestion: {question}",
-        "ms": "Jawab berdasarkan konteks:\n\n{context}\n\nSoalan: {question}",
-        "zh-cn": "根据背景回答:\n\n{context}\n\n问题：{question}"
+        "en": "Answer based on context:\n\n{context}\n\nQuestion: {question}\n\nIMPORTANT: Please simplify your answer:\n1. Use simple, everyday words instead of complex jargon\n2. Explain technical terms in plain language\n3. Write at a 5th-grade reading level\n4. Use short sentences\n5. Avoid legal, medical, or technical terminology",
+        "ms": "Jawab berdasarkan konteks:\n\n{context}\n\nSoalan: {question}\n\nPENTING: Sila permudahkan jawapan anda:\n1. Gunakan perkataan mudah, harian bukan jargon kompleks\n2. Jelaskan istilah teknikal dalam bahasa biasa\n3. Tulis pada tahap membaca darjah 5\n4. Gunakan ayat pendek\n5. Elakkan terminologi undang-undang, perubatan atau teknikal",
+        "zh-cn": "根据背景回答:\n\n{context}\n\n问题：{question}\n\n重要：请简化您的答案：\n1. 使用简单的日常用语，而不是复杂的术语\n2. 用通俗语言解释技术术语\n3. 以五年级阅读水平写作\n4. 使用短句子\n5. 避免使用法律、医学或技术术语"
     }
     
     prompt_text = prompts.get(lang, prompts["en"]).format(context=context, question=question)
@@ -199,4 +202,3 @@ def delete_document_from_vectorstore(document_id: str) -> None:
         print(f"[RAG] Deleted document {document_id}")
     except Exception as e:
         print(f"[RAG] Error deleting: {e}")
-
