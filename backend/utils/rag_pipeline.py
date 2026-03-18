@@ -199,3 +199,4 @@ def delete_document_from_vectorstore(document_id: str) -> None:
         print(f"[RAG] Deleted document {document_id}")
     except Exception as e:
         print(f"[RAG] Error deleting: {e}")
+
