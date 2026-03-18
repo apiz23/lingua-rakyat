@@ -39,18 +39,16 @@ def get_bucket() -> str:
     return os.getenv("SUPABASE_BUCKET", "documents")
 
 # ─── Supabase-Based Chat History Store ───────────────────────────────────────
-# For Vercel deployment (read-only filesystem), we store chat history in Supabase Storage
-# as a JSON file, similar to how metadata.json is stored.
+# For Vercel deployment (read-only filesystem), we store chat history ONLY in Supabase Storage
+# as a JSON file, similar to how metadata.json is stored. No local files are created.
 
 CHAT_HISTORY_PATH = "chat_history.json"
-LOCAL_CHAT_HISTORY_PATH = "./documents/chat_history.json"
 
 def load_chat_history() -> list[dict]:
     """
     Load chat history from Supabase Storage.
-    Falls back to local file if Supabase is unavailable.
+    Returns empty list if file doesn't exist or Supabase is unavailable.
     """
-    # Try Supabase first
     try:
         sb = get_supabase()
         response = sb.storage.from_(get_bucket()).download(CHAT_HISTORY_PATH)
@@ -58,36 +56,17 @@ def load_chat_history() -> list[dict]:
         print(f"[Chat History] Loaded {len(data)} messages from Supabase Storage")
         return data
     except Exception as e:
-        print(f"[Chat History] Supabase unavailable ({e}), trying local fallback")
-
-    # Local fallback
-    if os.path.exists(LOCAL_CHAT_HISTORY_PATH):
-        try:
-            with open(LOCAL_CHAT_HISTORY_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            print(f"[Chat History] Loaded {len(data)} messages from local file")
-            return data
-        except Exception as e:
-            print(f"[Chat History] Local file failed: {e}")
-
-    return []
+        print(f"[Chat History] Could not load from Supabase (might be first run): {e}")
+        return []
 
 def save_chat_history(history: list[dict]) -> None:
     """
-    Save chat history to Supabase Storage (upsert) AND local file.
+    Save chat history ONLY to Supabase Storage (upsert).
+    No local files are created to ensure Vercel compatibility.
     """
     json_str = json.dumps(history, indent=2, default=str)
     data_bytes = json_str.encode("utf-8")
 
-    # Always try to save locally (will fail on Vercel, which is fine)
-    try:
-        os.makedirs(os.path.dirname(LOCAL_CHAT_HISTORY_PATH), exist_ok=True)
-        with open(LOCAL_CHAT_HISTORY_PATH, "w", encoding="utf-8") as f:
-            f.write(json_str)
-    except Exception as e:
-        print(f"[Chat History] Local save warning (expected on Vercel): {e}")
-
-    # Save to Supabase with upsert
     try:
         sb = get_supabase()
         sb.storage.from_(get_bucket()).upload(
@@ -97,7 +76,7 @@ def save_chat_history(history: list[dict]) -> None:
         )
         print(f"[Chat History] Saved {len(history)} messages to Supabase Storage")
     except Exception as e:
-        print(f"[Chat History] Supabase save warning: {e}")
+        print(f"[Chat History] Supabase save error: {e}")
 
 
 # ─── Request / Response Models ────────────────────────────────────────────────

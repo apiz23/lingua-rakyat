@@ -53,15 +53,13 @@ def get_bucket() -> str:
 
 # ─── Metadata helpers ─────────────────────────────────────────────────────────
 METADATA_PATH = "metadata.json"
-LOCAL_METADATA_PATH = "./documents/metadata.json"
 
 
 def load_metadata() -> list[dict]:
     """
-    Load metadata from Supabase Storage.
-    Falls back to local file if Supabase is unavailable.
+    Load metadata ONLY from Supabase Storage.
+    No local fallback to ensure Vercel compatibility.
     """
-    # Try Supabase first
     try:
         sb = get_supabase()
         response = sb.storage.from_(get_bucket()).download(METADATA_PATH)
@@ -69,37 +67,18 @@ def load_metadata() -> list[dict]:
         print(f"[Metadata] Loaded {len(data)} documents from Supabase Storage")
         return data
     except Exception as e:
-        print(f"[Metadata] Supabase unavailable ({e}), trying local fallback")
-
-    # Local fallback
-    if os.path.exists(LOCAL_METADATA_PATH):
-        try:
-            with open(LOCAL_METADATA_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            print(f"[Metadata] Loaded {len(data)} documents from local file")
-            return data
-        except Exception as e:
-            print(f"[Metadata] Local file failed: {e}")
-
-    return []
+        print(f"[Metadata] Could not load from Supabase (might be first run): {e}")
+        return []
 
 
 def save_metadata(documents: list[dict]) -> None:
     """
-    Save metadata to Supabase Storage (upsert) AND local file.
+    Save metadata ONLY to Supabase Storage (upsert).
+    No local files are created to ensure Vercel compatibility.
     """
     json_str = json.dumps(documents, indent=2, default=str)
     data_bytes = json_str.encode("utf-8")
 
-    # Always save locally
-    try:
-        os.makedirs(os.path.dirname(LOCAL_METADATA_PATH), exist_ok=True)
-        with open(LOCAL_METADATA_PATH, "w", encoding="utf-8") as f:
-            f.write(json_str)
-    except Exception as e:
-        print(f"[Metadata] Local save warning: {e}")
-
-    # Save to Supabase with upsert
     try:
         sb = get_supabase()
         sb.storage.from_(get_bucket()).upload(
@@ -109,7 +88,7 @@ def save_metadata(documents: list[dict]) -> None:
         )
         print(f"[Metadata] Saved {len(documents)} documents to Supabase Storage")
     except Exception as e:
-        print(f"[Metadata] Supabase save warning: {e}")
+        print(f"[Metadata] Supabase save error: {e}")
 
 
 def sync_metadata_with_storage(documents: list[dict]) -> list[dict]:

@@ -86,6 +86,6 @@ app.include_router(chat_router, prefix="/api/chat", tags=["Chat"])
 async def health_check():
     return {
         "status": "ok",
-        "message": "Civic Assist AI backend is running",
+        "message": "Lingua Rakyat AI backend is running",
         "docs": "Visit /docs for the interactive API documentation",
     }
