@@ -40,34 +40,57 @@ app = FastAPI(
 
 # ─── CORS Configuration ───────────────────────────────────────────────────────
 # CORS (Cross-Origin Resource Sharing) allows the Next.js frontend
-# running on localhost:3000 to make requests to this backend on localhost:8000.
-# Without this, the browser will block all requests.
+# to make requests to this backend without browser blocking.
+# This configuration supports both local development and Vercel production.
 
-# Get allowed origins from environment or use defaults
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
-    "http://localhost:3000",      # Next.js dev server
-    "http://localhost:3001",      # Alternative port
-    "http://localhost:3000/",
-    "http://localhost:3001/",
+# Start with local development URLs
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
 ]
 
-# Add Vercel frontend URL if deployed
+# Add your Vercel frontend URL (MAIN FIX)
+allowed_origins.extend([
+    "https://lingua-rakyat.vercel.app",
+    "https://www.lingua-rakyat.vercel.app",
+])
+
+# Add Vercel backend URL if deployed
 vercel_url = os.getenv("VERCEL_URL")
 if vercel_url:
-    allowed_origins.append(f"https://{vercel_url}")
-    allowed_origins.append(f"http://{vercel_url}")
+    print(f"[CORS] Adding Vercel URL: {vercel_url}", file=sys.stderr)
+    allowed_origins.extend([
+        f"https://{vercel_url}",
+        f"http://{vercel_url}",
+    ])
 
-# Add any custom frontend URLs
-custom_frontend_url = os.getenv("FRONTEND_URL")
-if custom_frontend_url:
-    allowed_origins.append(custom_frontend_url)
+# Add custom frontend URL from environment (if set)
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    print(f"[CORS] Adding custom frontend URL: {frontend_url}", file=sys.stderr)
+    allowed_origins.append(frontend_url)
 
+# Add custom backend URL from environment (if set)
+backend_url = os.getenv("BACKEND_URL")
+if backend_url:
+    print(f"[CORS] Adding custom backend URL: {backend_url}", file=sys.stderr)
+    allowed_origins.append(backend_url)
+
+# Remove duplicates and log
+allowed_origins = list(set(allowed_origins))
+print(f"[CORS] Allowed origins: {allowed_origins}", file=sys.stderr)
+
+# Apply CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],           # Allow GET, POST, DELETE, etc.
+    allow_methods=["*"],           # Allow GET, POST, DELETE, OPTIONS, etc.
     allow_headers=["*"],           # Allow all headers
+    expose_headers=["*"],          # Expose all headers to frontend
+    max_age=3600,                  # Cache preflight requests for 1 hour
 )
 
 # ─── Register Routers ─────────────────────────────────────────────────────────
@@ -89,3 +112,10 @@ async def health_check():
         "message": "Lingua Rakyat AI backend is running",
         "docs": "Visit /docs for the interactive API documentation",
     }
+
+# ─── CORS Preflight Handler ───────────────────────────────────────────────────
+# This handles OPTIONS requests that browsers send before actual requests
+@app.options("/{full_path:path}")
+async def preflight_handler(full_path: str):
+    """Handle CORS preflight requests"""
+    return {"status": "ok"}
