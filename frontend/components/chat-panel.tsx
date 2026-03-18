@@ -653,7 +653,7 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
             /* Message thread */
             <>
               {messages.map((message, index) => (
-                <div key={message.timestamp} className="space-y-4">
+                <div key={message.timestamp} className="space-y-4 mt-4">
                   <UserMessageBubble
                     message={message}
                     copiedId={copiedId}

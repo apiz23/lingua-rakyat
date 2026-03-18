@@ -21,19 +21,12 @@ import sys
 # This must be called before importing anything that reads env vars
 load_dotenv()
 
-# Preload heavy models to avoid timeout on first request
-print("[Main] Preloading models...", file=sys.stderr)
-try:
-    from sentence_transformers import SentenceTransformer
-    print("[Main] Loading BAAI/bge-m3 embedding model...", file=sys.stderr)
-    embedding_model = SentenceTransformer("BAAI/bge-m3")
-    print("[Main] ✓ Embedding model loaded", file=sys.stderr)
-except Exception as e:
-    print(f"[Main] ⚠ Warning: Could not preload embedding model: {e}", file=sys.stderr)
-
-print("[Main] Models preloaded successfully", file=sys.stderr)
+# Lightweight version: no heavy model preloading needed
+# Embeddings are handled by Groq API (no local models)
+print("[Main] Lightweight mode: Using Groq API for embeddings", file=sys.stderr)
 
 # Import our routers (defined in the routers/ folder)
+# Use lightweight RAG pipeline
 from routers.documents import router as documents_router
 from routers.chat import router as chat_router
 

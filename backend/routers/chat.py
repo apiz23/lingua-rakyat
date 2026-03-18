@@ -58,8 +58,9 @@ class AskRequest(BaseModel):
 
 
 class SourceChunk(BaseModel):
-    content: str
-    chunk_index: int
+    text: str
+    document_id: str
+    score: float
 
 
 class AskResponse(BaseModel):
@@ -132,9 +133,8 @@ async def ask_question(request: AskRequest):
     # ── Run the RAG pipeline ─────────────────────────────────────────────────
     try:
         result = answer_question(
-            document_id=request.document_id,
             question=request.question,
-            document_name=request.document_name,
+            document_id=request.document_id,
         )
     except Exception as e:
         error_msg = str(e)

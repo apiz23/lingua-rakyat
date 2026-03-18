@@ -1,43 +1,32 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# requirements.txt - Lingua Rakyat Backend Dependencies
-# Install with: pip install -r requirements.txt
-#
-# NOTE: All LangChain packages must be from the same generation (>=1.0).
-# Mixing old (0.2.x) and new (1.x) versions causes dependency conflicts.
-# ─────────────────────────────────────────────────────────────────────────────
+# Lightweight requirements for Render free tier (512MB RAM limit)
+# Removes: torch, transformers, sentence-transformers, cuda packages
 
-# Web Framework & Server
+# Core FastAPI
 fastapi==0.111.0
-uvicorn[standard]
-python-multipart
+uvicorn[standard]==0.42.0
+python-dotenv==1.2.2
+python-multipart==0.0.22
 
 # PDF Processing
-pypdf>=4.0.0
+pypdf==6.9.1
 
-# LangChain Core Stack (all 1.x generation for compatibility)
+# LLM Integration (Groq only — no local models)
 langchain==1.2.12
-langchain-community==0.4.1
 langchain-core==1.2.19
-langchain-text-splitters==1.1.1
-
-# LLM Integrations
 langchain-groq==1.1.2
-langchain-pinecone>=0.2.0
+groq==0.37.1
 
-# Vector Database
-pinecone>=6.0.0
+# Vector Database (Pinecone)
+langchain-pinecone==0.2.13
+pinecone==6.0.0
 
-# File Storage
-supabase>=2.28.0
+# File Storage (Supabase)
+supabase==2.28.2
 
-# Embeddings (runs locally)
-sentence-transformers>=2.2.0
-
-# Language Detection
+# Language Detection (lightweight)
 langdetect==1.0.9
 
-# Environment Management
-python-dotenv>=1.0.0
-
 # Utilities
-requests>=2.31.0
+requests==2.32.5
+pydantic==2.12.5
+pydantic-settings==2.13.1
