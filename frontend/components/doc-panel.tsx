@@ -15,11 +15,13 @@ import {
   AlertCircle,
   ArrowLeftFromLine,
   Plus,
+  RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useMobile } from "@/hooks/use-mobile"
 import UploadModal from "./upload-modal"
+import { Button } from "./ui/button"
 
 interface DocumentPanelProps {
   selectedDoc: Document | null
@@ -33,6 +35,7 @@ export default function DocumentPanel({
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [isReloading, setIsReloading] = useState(false)
   const isMobile = useMobile()
   const [isUploadOpen, setIsUploadOpen] = useState(false)
 
@@ -54,6 +57,23 @@ export default function DocumentPanel({
   useEffect(() => {
     fetchDocuments()
   }, [])
+
+  // Reload button handler
+  const handleReload = async () => {
+    setIsReloading(true)
+    try {
+      const docs = await listDocuments()
+      setDocuments(docs)
+      toast.success("Document list reloaded")
+    } catch (error) {
+      toast.error("Failed to reload documents", {
+        description:
+          error instanceof Error ? error.message : "Please try again",
+      })
+    } finally {
+      setIsReloading(false)
+    }
+  }
 
   const getStatusIcon = (status: Document["status"]) => {
     switch (status) {
@@ -122,13 +142,26 @@ export default function DocumentPanel({
             <h1 className="text-xl font-semibold tracking-tight">
               Lingua Rakyat
             </h1>
-            <Link
-              href="/"
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
-            >
-              <ArrowLeftFromLine className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              {/* Reload button */}
+              <Button
+                onClick={handleReload}
+                disabled={isReloading}
+                className="rounded-lg p-2 text-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                title="Reload document list"
+              >
+                <RotateCcw
+                  className={cn("h-4 w-4", isReloading && "animate-spin")}
+                />
+              </Button>
+              <Link
+                href="/"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              >
+                <ArrowLeftFromLine className="h-4 w-4" />
+                <span className="hidden sm:inline">Back</span>
+              </Link>
+            </div>
           </div>
 
           {/* Search bar */}
