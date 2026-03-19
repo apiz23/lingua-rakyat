@@ -1,28 +1,21 @@
 import type { Metadata } from "next"
-import { Inter, Source_Serif_4, JetBrains_Mono } from "next/font/google"
+import { Inter, Sora } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
-import Footer from "@/components/footer"
-import Navbar from "@/components/navbar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Fps } from "@/components/ui/fps"
 
-const fontSans = Inter({
+const sora = Sora({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-heading",
+  weight: ["500", "600", "700"],
 })
-
-const fontSerif = Source_Serif_4({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-serif",
-})
-
-const fontMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-body",
 })
 
 export const metadata: Metadata = {
@@ -64,13 +57,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn(
-        "antialiased",
-        fontSans.className,
-        fontSerif.className,
-        fontMono.className,
-        "font-sans"
-      )}
+      className={cn("antialiased", sora.className, inter.className)}
     >
       <body>
         <ThemeProvider

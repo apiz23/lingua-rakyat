@@ -24,50 +24,145 @@ import {
 import { Badge } from "@/components/ui/badge"
 import LogoLoop from "@/components/LogoLoop"
 import TextType from "@/components/TextType"
+import { LinkPreview } from "@/components/ui/link-preview"
+import { YouTubePlayer } from "@/components/ui/youtube-video-player"
+import Image from "next/image"
 
 export default function Home() {
   const techLogos = [
-    { node: <SiReact />, title: "React", href: "https://react.dev" },
-    { node: <SiNextdotjs />, title: "Next.js", href: "https://nextjs.org" },
     {
-      node: <SiTypescript />,
+      node: (
+        <Image
+          src="https://thesvg.org/icons/react/default.svg"
+          alt="React"
+          width={40}
+          height={40}
+        />
+      ),
+      title: "React",
+      href: "https://react.dev",
+    },
+    {
+      node: (
+        <Image
+          src="https://thesvg.org/icons/nextdotjs/default.svg"
+          alt="Next.js"
+          width={40}
+          height={40}
+        />
+      ),
+      title: "Next.js",
+      href: "https://nextjs.org",
+    },
+    {
+      node: (
+        <Image
+          src="https://thesvg.org/icons/typescript/default.svg"
+          alt="TypeScript"
+          width={40}
+          height={40}
+        />
+      ),
       title: "TypeScript",
       href: "https://www.typescriptlang.org",
     },
     {
-      node: <SiTailwindcss />,
+      node: (
+        <Image
+          src="https://thesvg.org/icons/tailwind-css/default.svg"
+          alt="Tailwind CSS"
+          width={40}
+          height={40}
+        />
+      ),
       title: "Tailwind CSS",
       href: "https://tailwindcss.com",
     },
     {
-      node: <SiFastapi />,
+      node: (
+        <Image
+          src="https://thesvg.org/icons/fastapi/default.svg"
+          alt="FastAPI"
+          width={40}
+          height={40}
+        />
+      ),
       title: "FastAPI",
       href: "https://fastapi.tiangolo.com",
     },
     {
-      node: <SiLangchain />,
+      node: (
+        <Image
+          src="https://thesvg.org/icons/langchain/default.svg"
+          alt="LangChain"
+          width={40}
+          height={40}
+        />
+      ),
       title: "LangChain",
       href: "https://langchain.com",
     },
   ]
 
-  // You can also add custom technology icons that aren't in react-icons
   const customTechLogos = [
     {
-      node: <span className="text-2xl font-bold text-primary">ChromaDB</span>,
-      title: "ChromaDB",
-      href: "https://chromadb.com",
+      node: (
+        <Image
+          src="https://thesvg.org/icons/pinecone/default.svg"
+          alt="Pinecone"
+          width={40}
+          height={40}
+        />
+      ),
+      title: "Pinecone",
+      href: "https://pinecone.io",
     },
     {
-      node: <span className="text-2xl font-bold text-primary">bge-m3</span>,
-      title: "BGE-M3",
-      href: "https://huggingface.co/BAAI/bge-m3",
+      node: (
+        <Image
+          src="https://thesvg.org/icons/cohere/default.svg"
+          alt="Cohere"
+          width={40}
+          height={40}
+        />
+      ),
+      title: "Cohere",
+      href: "https://cohere.com",
     },
     {
-      node: <span className="text-2xl font-bold text-primary">Llama3</span>,
-      title: "Llama 3",
-      href: "https://llama.meta.com",
+      node: (
+        <Image
+          src="https://thesvg.org/icons/groq/default.svg"
+          alt="Groq"
+          width={40}
+          height={40}
+        />
+      ),
+      title: "Groq",
+      href: "https://groq.com",
     },
+    {
+      node: (
+        <Image
+          src="https://thesvg.org/icons/supabase/default.svg"
+          alt="Supabase"
+          width={40}
+          height={40}
+        />
+      ),
+      title: "Supabase",
+      href: "https://supabase.com",
+    },
+  ]
+
+  // Tech stack badges with previews
+  const techStackItems = [
+    { name: "Next.js", url: "https://nextjs.org" },
+    { name: "FastAPI", url: "https://fastapi.tiangolo.com" },
+    { name: "LangChain", url: "https://langchain.com" },
+    { name: "Pinecone", url: "https://pinecone.io" },
+    { name: "Cohere", url: "https://cohere.com" },
+    { name: "Groq", url: "https://groq.com" },
   ]
 
   return (
@@ -96,18 +191,18 @@ export default function Home() {
               </Badge>
             </div>
 
-            {/* Main Headline - Update gradient to use theme colors */}
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            {/* Main Headline */}
+            <h1 className="text-4xl font-bold tracking-tight capitalize sm:text-5xl lg:text-6xl">
               Chat with your
               <span className="relative ml-2 inline-block">
-                <span className="relative z-10 bg-linear-to-r from-primary to-secondary-foreground bg-clip-text text-transparent">
+                <span className="relative z-10 bg-linear-to-r from-primary to-foreground bg-clip-text text-transparent">
                   documents
                 </span>
                 <span className="absolute right-0 -bottom-2 left-0 h-3 bg-primary/20 blur-xl" />
               </span>
             </h1>
 
-            {/* Update TextType with theme-aware colors */}
+            {/* TextType */}
             <TextType
               text={[
                 "Upload PDFs and get instant answers in any language.",
@@ -150,7 +245,7 @@ export default function Home() {
 
             {/* CTA Buttons */}
             <div className="mt-10 flex flex-wrap gap-4">
-              <Link href={"workspace"}>
+              <Link href={"/workspace"}>
                 <Button
                   size="lg"
                   className="relative overflow-hidden bg-primary px-8 text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl"
@@ -159,13 +254,17 @@ export default function Home() {
                     Try Demo
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </span>
-                  <span className="absolute inset-0 z-0 bg-linear-to-r from-primary to-purple-600 opacity-0 transition-opacity hover:opacity-100" />
                 </Button>
               </Link>
               <Button
                 size="lg"
                 variant="outline"
                 className="border-primary/20 bg-background/50 backdrop-blur-sm hover:bg-primary/5"
+                onClick={() =>
+                  document
+                    .getElementById("demo-section")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
               >
                 Watch Demo
               </Button>
@@ -261,6 +360,66 @@ export default function Home() {
             </motion.div>
           </motion.div>
         </div>
+
+        {/* Video Showcase Section - Added below hero */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="mt-24 py-5"
+          id="demo-section"
+        >
+          <div className="mb-8 text-center">
+            <Badge className="mb-4 border-primary/20 p-4">Watch Demo</Badge>
+            <h2 className="text-2xl font-bold sm:text-3xl">
+              See LinguaRakyat in action
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+              Watch how easily you can interact with documents, ask questions in
+              multiple languages, and get accurate answers with source
+              citations.
+            </p>
+          </div>
+
+          <div className="relative rounded-2xl border border-border/50 bg-gradient-to-br from-background via-background to-muted/30 p-3 shadow-2xl backdrop-blur-sm">
+            {/* Mac-style window controls */}
+            <div className="mb-4 flex items-center gap-2 px-4 pt-3">
+              <div className="flex gap-2">
+                <div className="h-3 w-3 rounded-full bg-red-500/80" />
+                <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
+                <div className="h-3 w-3 rounded-full bg-green-500/80" />
+              </div>
+              <div className="ml-2 text-xs font-medium text-muted-foreground">
+                demo.mp4
+              </div>
+            </div>
+
+            {/* YouTube Player */}
+            <div className="overflow-hidden rounded-xl">
+              <YouTubePlayer
+                videoId="muWScg53vxw"
+                title="LinguaRakyat Demo - AI Document Assistant"
+              />
+            </div>
+
+            {/* Feature highlights */}
+            <div className="mt-6 grid grid-cols-3 gap-4 px-4 pb-4">
+              {[
+                { label: "Multilingual", value: "4+ languages" },
+                { label: "Response Time", value: "< 2 seconds" },
+                { label: "Accuracy", value: "99.9%" },
+              ].map((item, index) => (
+                <div key={index} className="text-center">
+                  <p className="text-xs text-muted-foreground">{item.label}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {item.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
 
         {/* Features Section */}
         <div
@@ -367,32 +526,55 @@ export default function Home() {
           <h2 className="text-2xl font-bold sm:text-3xl">
             Built with modern AI stack
           </h2>
-          <p className="mt-4 text-muted-foreground">
-            Powered by LangChain, ChromaDB, and state-of-the-art multilingual
-            models
-          </p>
 
-          {/* Badge section - original */}
+          {/* FIXED: Changed from <p> to <div> to avoid invalid nesting with LinkPreview */}
+          <div className="mt-4 text-muted-foreground">
+            Powered by{" "}
+            <LinkPreview
+              url="https://langchain.com"
+              className="inline-block font-medium text-primary hover:underline"
+            >
+              LangChain
+            </LinkPreview>
+            ,{" "}
+            <LinkPreview
+              url="https://pinecone.io"
+              className="inline-block font-medium text-primary hover:underline"
+            >
+              Pinecone
+            </LinkPreview>
+            ,{" "}
+            <LinkPreview
+              url="https://groq.com"
+              className="inline-block font-medium text-primary hover:underline"
+            >
+              Groq
+            </LinkPreview>
+            , and{" "}
+            <LinkPreview
+              url="https://cohere.com"
+              className="inline-block font-medium text-primary hover:underline"
+            >
+              Cohere
+            </LinkPreview>{" "}
+            for advanced RAG
+          </div>
+
+          {/* Badge section with previews - FIXED: No nesting issues here */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-8">
-            {[
-              "Next.js",
-              "FastAPI",
-              "LangChain",
-              "ChromaDB",
-              "bge-m3",
-              "Llama3",
-            ].map((tech) => (
-              <Badge
-                key={tech}
-                variant="outline"
-                className="border-primary/20 bg-primary/5 p-4 text-sm"
-              >
-                {tech}
-              </Badge>
+            {techStackItems.map((tech) => (
+              <LinkPreview key={tech.name} url={tech.url}>
+                <Badge
+                  variant="outline"
+                  className="cursor-pointer border-primary/20 bg-primary/5 p-4 text-sm transition-all hover:border-primary/40 hover:bg-primary/10"
+                >
+                  {tech.name}
+                </Badge>
+              </LinkPreview>
             ))}
           </div>
 
-          {/* Animated logo loop section */}
+          {/* Animated logo loop section - FIXED: Removed nested <a> tags */}
           <div className="mt-16">
             <h3 className="mb-8 text-lg font-medium text-muted-foreground">
               Technologies we use

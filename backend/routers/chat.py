@@ -19,6 +19,12 @@ from pydantic import BaseModel
 from supabase import create_client, Client
 
 from utils.rag_pipeline import answer_question
+from routers.eval import _evaluator as evaluator
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from fastapi import Request
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
@@ -95,6 +101,7 @@ class AskRequest(BaseModel):
     document_id: str
     document_name: str
     question: str
+    model_override: str = ""  # optional — empty string means use server default
 
 
 class SourceChunk(BaseModel):
@@ -124,6 +131,9 @@ class AskResponse(BaseModel):
     language: str
     question: str
     timestamp: str
+    confidence: float = 0.0
+    latency_ms: int = 0
+    model_used: str = ""
 
 
 class ChatMessage(BaseModel):
@@ -139,7 +149,8 @@ class ChatMessage(BaseModel):
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/ask", response_model=AskResponse)
-async def ask_question(request: AskRequest):
+@limiter.limit("30/minute")  # 30 questions per minute per IP
+async def ask_question(request: Request, body: AskRequest):
     """
     Ask a question about an uploaded document.
     
@@ -164,6 +175,7 @@ async def ask_question(request: AskRequest):
         console.log(data.answer);  // The AI's answer
         console.log(data.sources); // The document excerpts used
     """
+    request = body  # alias for backwards compatibility
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
     
@@ -175,6 +187,7 @@ async def ask_question(request: AskRequest):
         result = answer_question(
             question=request.question,
             document_id=request.document_id,
+            model_override=request.model_override or None,
         )
     except Exception as e:
         error_msg = str(e)
@@ -201,13 +214,29 @@ async def ask_question(request: AskRequest):
     history = load_chat_history()
     history.append(history_entry)
     save_chat_history(history)
-    
+
+    # ── Auto-record into evaluation tracker ──────────────────────────────────
+    try:
+        evaluator.record(
+            question=request.question,
+            answer=result["answer"],
+            language=result["language"],
+            confidence=result.get("confidence", 0.0),
+            latency_ms=result.get("latency_ms", 0),
+            document_id=request.document_id,
+        )
+    except Exception as eval_err:
+        print(f"[Eval] Warning: failed to record interaction — {eval_err}")
+
     return AskResponse(
         answer=result["answer"],
         sources=[SourceChunk(**s) for s in result["sources"]],
         language=result["language"],
         question=request.question,
         timestamp=timestamp,
+        confidence=result.get("confidence", 0.0),
+        latency_ms=result.get("latency_ms", 0),
+        model_used=result.get("model_used", ""),
     )
 
 

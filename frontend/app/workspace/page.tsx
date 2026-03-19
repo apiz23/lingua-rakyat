@@ -80,7 +80,7 @@ export default function WorkSpacePage() {
   return (
     <div className="h-screen w-screen bg-background">
       <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
-        <ResizablePanel defaultSize={25} minSize={20}>
+        <ResizablePanel defaultSize={30} minSize={20}>
           <DocumentPanel
             selectedDoc={selectedDoc}
             onSelectDoc={setSelectedDoc}
@@ -89,7 +89,7 @@ export default function WorkSpacePage() {
 
         <ResizableHandle withHandle />
 
-        <ResizablePanel defaultSize={75}>
+        <ResizablePanel defaultSize={70}>
           <ChatPanel selectedDoc={selectedDoc} />
         </ResizablePanel>
       </ResizablePanelGroup>

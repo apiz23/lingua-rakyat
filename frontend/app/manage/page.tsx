@@ -26,12 +26,15 @@ import {
   FolderOpen,
   CheckSquare,
   Square,
-  Layers,
-  FileUp,
   Database,
   HardDrive,
   FileCheck,
+  Plus,
+  FlaskConical,
 } from "lucide-react"
+import logo from "@/public/icons/android-chrome-512x512.png"
+import Image from "next/image"
+import UploadModal from "@/components/upload-modal"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -144,130 +147,6 @@ function ConfirmDialog({
   )
 }
 
-// ─── Upload Zone ──────────────────────────────────────────────────────────────
-
-interface UploadZoneProps {
-  onUploadComplete: () => void
-}
-
-function UploadZone({ onUploadComplete }: UploadZoneProps) {
-  const [dragging, setDragging] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-
-    const pdfFiles = Array.from(files).filter((f) =>
-      f.name.toLowerCase().endsWith(".pdf")
-    )
-
-    if (pdfFiles.length === 0) {
-      toast.error("Only PDF files are supported")
-      return
-    }
-
-    setUploading(true)
-    let successCount = 0
-    const totalFiles = pdfFiles.length
-
-    for (const file of pdfFiles) {
-      setUploadProgress(`Uploading ${file.name}...`)
-      try {
-        await toast.promise(uploadDocument(file), {
-          loading: `Uploading ${file.name}...`,
-          success: `${file.name} uploaded successfully`,
-          error: (err) => `Failed to upload ${file.name}: ${err.message}`,
-        })
-        successCount++
-      } catch (err) {
-        // Error is already handled by toast.promise
-      }
-    }
-
-    setUploading(false)
-    setUploadProgress(null)
-
-    if (successCount > 0) {
-      if (successCount === totalFiles) {
-        toast.success(`All ${successCount} documents uploaded successfully`)
-      } else {
-        toast.success(`${successCount} of ${totalFiles} documents uploaded`)
-      }
-      onUploadComplete()
-    }
-  }
-
-  return (
-    <div
-      onDragOver={(e) => {
-        e.preventDefault()
-        setDragging(true)
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setDragging(false)
-        handleFiles(e.dataTransfer.files)
-      }}
-      onClick={() => !uploading && inputRef.current?.click()}
-      className={cn(
-        "relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 text-center transition-all duration-300",
-        dragging
-          ? "scale-[1.02] border-primary bg-primary/5"
-          : "border-border hover:border-primary/50 hover:bg-accent/20",
-        uploading && "pointer-events-none opacity-70"
-      )}
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".pdf"
-        multiple
-        className="hidden"
-        onChange={(e) => handleFiles(e.target.files)}
-      />
-      {uploading ? (
-        <>
-          <div className="relative">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <FileUp className="h-5 w-5 text-primary/50" />
-            </div>
-          </div>
-          <p className="mt-4 text-sm font-medium text-primary">
-            {uploadProgress}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Processing and indexing...
-          </p>
-        </>
-      ) : (
-        <>
-          <div className="rounded-full bg-primary/10 p-4">
-            <Upload className="h-8 w-8 text-primary" />
-          </div>
-          <p className="mt-4 text-base font-medium">
-            Drop PDFs here or click to upload
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Supports multiple files · PDF only
-          </p>
-          <div className="mt-4 flex gap-2">
-            <span className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
-              Max file size: 50MB
-            </span>
-            <span className="rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
-              Auto-indexed
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
 // ─── Stats Card ───────────────────────────────────────────────────────────────
 
 interface StatCardProps {
@@ -313,6 +192,7 @@ export default function ManagePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     title: string
@@ -475,9 +355,13 @@ export default function ManagePage() {
       <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
-            <div className="rounded-xl bg-primary/10 p-2">
-              <Layers className="h-6 w-6 text-primary" />
-            </div>
+            <Image
+              src={logo}
+              alt="LinguaRakyat logo"
+              width={32}
+              height={32}
+              className="rounded-md"
+            />
             <div>
               <h1 className="text-xl font-bold text-foreground">
                 Document Manager
@@ -499,6 +383,13 @@ export default function ManagePage() {
               <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
+            <Link
+              href="/eval"
+              className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+            >
+              <FlaskConical className="h-4 w-4" />
+              <span className="hidden sm:inline">Eval Dashboard</span>
+            </Link>
             <Link
               href="/"
               className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
@@ -540,21 +431,26 @@ export default function ManagePage() {
           </div>
         )}
 
-        {/* ── Upload Zone ── */}
+        {/* ── Upload Button ── */}
         <section>
-          <h2 className="mb-4 text-sm font-medium tracking-wide text-muted-foreground uppercase">
-            Upload New Documents
-          </h2>
-          <UploadZone onUploadComplete={fetchDocuments} />
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+              Document Library
+            </h2>
+            <button
+              onClick={() => setUploadModalOpen(true)}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" />
+              Upload PDF
+            </button>
+          </div>
         </section>
 
         {/* ── Document Table ── */}
         <section>
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                Document Library
-              </h2>
               {(processingCount > 0 || errorCount > 0) && (
                 <div className="flex gap-2">
                   {processingCount > 0 && (
@@ -623,8 +519,17 @@ export default function ManagePage() {
               <p className="mt-2 text-sm text-muted-foreground">
                 {searchQuery
                   ? "Try a different keyword"
-                  : "Upload a PDF above to get started"}
+                  : "Click the 'Upload PDF' button above to get started"}
               </p>
+              {!searchQuery && (
+                <button
+                  onClick={() => setUploadModalOpen(true)}
+                  className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload your first document
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -784,6 +689,16 @@ export default function ManagePage() {
           )}
         </section>
       </main>
+
+      {/* ── Upload Modal ── */}
+      <UploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onUploadComplete={() => {
+          fetchDocuments()
+          setUploadModalOpen(false)
+        }}
+      />
 
       {/* ── Confirm Dialog ── */}
       <ConfirmDialog
