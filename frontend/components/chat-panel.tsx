@@ -27,6 +27,14 @@ import type { Components } from "react-markdown"
 import { useMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import AgentAvatar from "./smoothui/agent-avatar"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Message {
   question: string
@@ -49,7 +57,8 @@ const SUGGESTIONS = [
   {
     icon: BookOpen,
     text: "Summarize this document",
-    description: "Ringkasan dalam 3-5 mata peluru / Summary in 3-5 bullet points",
+    description:
+      "Ringkasan dalam 3-5 mata peluru / Summary in 3-5 bullet points",
     color: "from-blue-500/20 to-blue-600/5",
   },
   {
@@ -245,7 +254,7 @@ function AIMessageCard({
           <div className="p-5">
             {/* Header with language and copy */}
             <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex flex-wrap items-center gap-2">
                 {isNonEnglish && (
                   <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-1">
                     <span className="text-xs">{langInfo.flag}</span>
@@ -258,35 +267,47 @@ function AIMessageCard({
                   Assistant
                 </span>
                 {message.cached && (
-                  <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                  <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
                     ⚡ cached
                   </span>
                 )}
                 {message.confidence > 0 && (
-                  <span className={[
-                    "rounded-full border px-2 py-0.5 text-[10px] font-medium",
-                    message.confidence >= 0.75 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" :
-                    message.confidence >= 0.50 ? "bg-blue-500/10 border-blue-500/20 text-blue-600" :
-                    "bg-orange-500/10 border-orange-500/20 text-orange-600"
-                  ].join(" ")}>
+                  <span
+                    className={[
+                      "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                      message.confidence >= 0.75
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+                        : message.confidence >= 0.5
+                          ? "border-blue-500/20 bg-blue-500/10 text-blue-600"
+                          : "border-orange-500/20 bg-orange-500/10 text-orange-600",
+                    ].join(" ")}
+                  >
                     {Math.round(message.confidence * 100)}% match
                   </span>
                 )}
                 {message.latency_ms > 0 && (
-                  <span className="rounded-full bg-muted/50 border border-border/50 px-2 py-0.5 text-[10px] text-muted-foreground">
-                    {message.latency_ms < 1000 ? `${message.latency_ms}ms` : `${(message.latency_ms/1000).toFixed(1)}s`}
+                  <span className="rounded-full border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+                    {message.latency_ms < 1000
+                      ? `${message.latency_ms}ms`
+                      : `${(message.latency_ms / 1000).toFixed(1)}s`}
                   </span>
                 )}
                 {message.model_used && (
-                  <span className={[
-                    "rounded-full border px-2 py-0.5 text-[10px] font-medium",
-                    message.model_used.includes("70b")
-                      ? "bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400"
-                      : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
-                  ].join(" ")}>
-                    {message.model_used.includes("70b") ? "70B" :
-                     message.model_used.includes("8b")  ? "8B" :
-                     message.model_used.includes("gemma") ? "Gemma" : message.model_used.split("-")[0]}
+                  <span
+                    className={[
+                      "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                      message.model_used.includes("70b")
+                        ? "border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                        : "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                    ].join(" ")}
+                  >
+                    {message.model_used.includes("70b")
+                      ? "70B"
+                      : message.model_used.includes("8b")
+                        ? "8B"
+                        : message.model_used.includes("gemma")
+                          ? "Gemma"
+                          : message.model_used.split("-")[0]}
                   </span>
                 )}
               </div>
@@ -345,11 +366,17 @@ function AIMessageCard({
                 </div>
                 {message.sources.map((source, idx) => {
                   const scoreColor =
-                    source.score >= 0.75 ? "bg-emerald-500" :
-                    source.score >= 0.50 ? "bg-blue-500" : "bg-orange-400"
+                    source.score >= 0.75
+                      ? "bg-emerald-500"
+                      : source.score >= 0.5
+                        ? "bg-blue-500"
+                        : "bg-orange-400"
                   const scoreLabel =
-                    source.score >= 0.75 ? "High match" :
-                    source.score >= 0.50 ? "Good match" : "Partial match"
+                    source.score >= 0.75
+                      ? "High match"
+                      : source.score >= 0.5
+                        ? "Good match"
+                        : "Partial match"
                   return (
                     <div
                       key={idx}
@@ -370,10 +397,12 @@ function AIMessageCard({
                             <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                               <div
                                 className={`h-full rounded-full transition-all ${scoreColor}`}
-                                style={{ width: `${Math.round(source.score * 100)}%` }}
+                                style={{
+                                  width: `${Math.round(source.score * 100)}%`,
+                                }}
                               />
                             </div>
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            <span className="text-[10px] whitespace-nowrap text-muted-foreground">
                               {Math.round(source.score * 100)}% — {scoreLabel}
                             </span>
                           </div>
@@ -475,7 +504,7 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
   const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [selectedModel, setSelectedModel] = useState("")  // empty = server default
+  const [selectedModel, setSelectedModel] = useState("") // empty = server default
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -632,7 +661,7 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
               <h2 className="line-clamp-1 text-base font-semibold tracking-tight">
                 {selectedDoc.name}
               </h2>
-              <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground">
                   {selectedDoc.chunk_count} chunks
                 </span>
@@ -640,7 +669,7 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
                 <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
                   Ready
                 </span>
-                <span className="rounded-full bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 text-xs text-purple-600 dark:text-purple-400">
+                <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-xs text-purple-600 dark:text-purple-400">
                   Few-shot
                 </span>
                 <span className="rounded-full bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground">
@@ -653,17 +682,26 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
           {/* Actions */}
           <div className="flex items-center gap-2">
             {/* Model selector */}
-            <select
+            <Select
               value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="hidden sm:block rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-muted-foreground focus:border-primary focus:outline-none hover:border-primary/50 transition-colors"
-              title="Select AI model"
+              onValueChange={(value) => setSelectedModel(value)}
             >
-              <option value="">Auto (server default)</option>
-              {GROQ_MODELS.map(m => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-            </select>
+              <SelectTrigger className="hidden w-50 text-xs sm:flex">
+                <SelectValue placeholder="Auto (server default)" />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="auto">Auto (server default)</SelectItem>
+
+                  {GROQ_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             {messages.length > 0 && (
               <button
                 onClick={clearChat}

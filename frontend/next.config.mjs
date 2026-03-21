@@ -4,10 +4,11 @@ import createMDX from "@next/mdx"
 const nextConfig = {
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   images: {
-    domains: [
-      "api.microlink.io",
-    ],
-     remotePatterns: [
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "api.microlink.io",
+      },
       {
         protocol: "https",
         hostname: "thesvg.org",

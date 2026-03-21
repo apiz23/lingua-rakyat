@@ -382,7 +382,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="relative rounded-2xl border border-border/50 bg-gradient-to-br from-background via-background to-muted/30 p-3 shadow-2xl backdrop-blur-sm">
+          <div className="relative rounded-2xl border border-border/50 bg-linear-to-br from-background via-background to-muted/30 p-3 shadow-2xl backdrop-blur-sm">
             {/* Mac-style window controls */}
             <div className="mb-4 flex items-center gap-2 px-4 pt-3">
               <div className="flex gap-2">

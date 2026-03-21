@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Fps } from "@/components/ui/fps"
+import { Analytics } from "@vercel/analytics/next"
 
 const sora = Sora({
   subsets: ["latin"],
@@ -71,6 +72,7 @@ export default function RootLayout({
             <Fps strategy="fixed" position="top-right" /> {children}
           </TooltipProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )
