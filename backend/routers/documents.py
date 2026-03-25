@@ -98,69 +98,120 @@ def save_metadata(documents: list[dict]) -> None:
 
 def sync_metadata_with_storage(documents: list[dict]) -> list[dict]:
     """
-    Auto-discover any PDFs in Supabase Storage that are NOT yet in metadata.json
-    and register them automatically with status 'ready'.
+    Two-way sync between metadata.json and Supabase Storage:
 
-    This fixes the issue where manually uploaded PDFs don't appear in the list.
-    Returns the updated (possibly extended) documents list.
+    1. ADD — discover PDFs in Supabase not yet in metadata and register them.
+    2. REMOVE — drop metadata entries whose file no longer exists in Supabase.
+
+    This ensures the document panel always matches reality — no ghost entries
+    from files deleted directly in Supabase or from failed/partial uploads.
     """
     try:
         sb = get_supabase()
         bucket = get_bucket()
         files = sb.storage.from_(bucket).list()
 
-        # Build set of already-registered storage paths
-        registered = {d.get("storage_path", f"{d['id']}.pdf") for d in documents}
-
-        new_entries = []
+        # Build set of all storage paths actually present in Supabase right now
+        existing_paths: set[str] = set()
         for f in files:
             fname = f.get("name", "")
-            # Only process UUID-named PDFs (skip metadata.json and other files)
-            if not fname.endswith(".pdf"):
-                continue
-            if fname in registered:
+            if fname and fname != METADATA_PATH:
+                existing_paths.add(fname)
+                # Also handle folder-style paths (uuid/filename.pdf)
+                # by listing inside folder entries (id is None for folders)
+                if f.get("id") is None:
+                    try:
+                        sub = sb.storage.from_(bucket).list(fname)
+                        for sf in sub:
+                            sname = sf.get("name", "")
+                            if sname.lower().endswith(".pdf"):
+                                existing_paths.add(f"{fname}/{sname}")
+                    except Exception:
+                        pass
+
+        # ── REMOVE: drop metadata entries with no matching file in Supabase ──
+        before = len(documents)
+        valid_documents = []
+        for doc in documents:
+            storage_path = doc.get("storage_path", f"{doc['id']}.pdf")
+            if storage_path in existing_paths:
+                valid_documents.append(doc)
+            else:
+                print(f"[Sync] Removing orphaned entry: {doc.get('name')} "
+                      f"(storage_path={storage_path} not found in Supabase)")
+        removed = before - len(valid_documents)
+        if removed:
+            print(f"[Sync] Removed {removed} orphaned metadata entries")
+
+        # ── ADD: discover PDFs in Supabase not yet in metadata ───────────────
+        registered = {d.get("storage_path", f"{d['id']}.pdf") for d in valid_documents}
+        new_entries = []
+
+        for f in files:
+            fname = f.get("name", "")
+            if not fname or fname == METADATA_PATH:
                 continue
 
-            # Extract UUID from filename (e.g. "abc-123.pdf" → "abc-123")
-            doc_id = fname.replace(".pdf", "")
+            is_folder = f.get("id") is None
 
-            # Get public URL
+            if is_folder:
+                # New format: uuid/filename.pdf
+                try:
+                    sub = sb.storage.from_(bucket).list(fname)
+                    pdf_files = [sf for sf in sub if sf.get("name", "").lower().endswith(".pdf")]
+                    if not pdf_files:
+                        continue
+                    pdf_file = pdf_files[0]
+                    real_name = pdf_file.get("name", fname + ".pdf")
+                    full_path = f"{fname}/{real_name}"
+                    doc_id = fname
+                    size_bytes = int((pdf_file.get("metadata") or {}).get("size", 0))
+                except Exception:
+                    continue
+            elif fname.lower().endswith(".pdf"):
+                # Legacy flat format: uuid.pdf
+                full_path = fname
+                doc_id = fname.replace(".pdf", "")
+                real_name = fname
+                size_bytes = int((f.get("metadata") or {}).get("size", 0))
+            else:
+                continue
+
+            if full_path in registered:
+                continue
+
             try:
-                public_url = sb.storage.from_(bucket).get_public_url(fname)
+                public_url = sb.storage.from_(bucket).get_public_url(full_path)
             except Exception:
                 public_url = None
 
-            # Get file size from metadata
-            size_bytes = 0
-            try:
-                meta = f.get("metadata") or {}
-                size_bytes = int(meta.get("size", 0))
-            except Exception:
-                pass
-
             new_doc = {
                 "id": doc_id,
-                "name": fname,           # Will show as UUID.pdf until renamed
+                "name": real_name,
                 "size_bytes": size_bytes,
                 "chunk_count": 0,
                 "status": "ready",
                 "uploaded_at": datetime.now().isoformat(),
-                "storage_path": fname,
+                "storage_path": full_path,
                 "public_url": public_url,
                 "error_message": None,
             }
             new_entries.append(new_doc)
-            print(f"[Sync] Auto-registered missing document: {fname}")
+            print(f"[Sync] Auto-registered: {full_path}")
 
         if new_entries:
-            documents = documents + new_entries
-            save_metadata(documents)
+            valid_documents = valid_documents + new_entries
             print(f"[Sync] Added {len(new_entries)} previously unregistered document(s)")
+
+        # Save if anything changed
+        if removed or new_entries:
+            save_metadata(valid_documents)
+
+        return valid_documents
 
     except Exception as e:
         print(f"[Sync] Storage sync warning: {e}")
-
-    return documents
+        return documents
 
 
 # ─── Response Models ──────────────────────────────────────────────────────────
@@ -198,6 +249,9 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
     file_size = len(file_content)
     document_id = str(uuid.uuid4())
     storage_path = f"{document_id}.pdf"
+
+    safe_filename = os.path.basename(file.filename)
+    storage_path = f"{document_id}/{safe_filename}"
 
     sb = get_supabase()
     bucket = get_bucket()
@@ -330,14 +384,20 @@ async def register_document(
 
 @router.delete("/{document_id}")
 async def delete_document(document_id: str):
-    """Delete a document from Supabase Storage, Pinecone, and metadata."""
+    """
+    Delete a document from Supabase Storage, Pinecone, and metadata.
+
+    Also handles ghost entries — documents still in metadata.json but whose
+    file was already manually deleted from Supabase. These are cleaned up
+    from metadata + Pinecone even if the Supabase file is already gone.
+    """
     documents = load_metadata()
     doc_to_delete = next((d for d in documents if d["id"] == document_id), None)
 
     if not doc_to_delete:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Delete PDF from Supabase Storage
+    # Delete PDF from Supabase Storage (best-effort — file may already be gone)
     storage_path = doc_to_delete.get("storage_path")
     if storage_path:
         try:
@@ -345,12 +405,16 @@ async def delete_document(document_id: str):
             sb.storage.from_(get_bucket()).remove([storage_path])
             print(f"[Delete] Removed from Supabase Storage: {storage_path}")
         except Exception as e:
-            print(f"[Delete] Warning: Could not remove from Supabase Storage: {e}")
+            # File may already be manually deleted — that's fine, keep going
+            print(f"[Delete] Supabase file already gone or error (continuing): {e}")
 
-    # Delete vectors from Pinecone
-    delete_document_from_vectorstore(document_id)
+    # Delete vectors from Pinecone (best-effort)
+    try:
+        delete_document_from_vectorstore(document_id)
+    except Exception as e:
+        print(f"[Delete] Pinecone cleanup warning: {e}")
 
-    # Remove from metadata
+    # Always remove from metadata regardless of Supabase/Pinecone outcome
     documents = [d for d in documents if d["id"] != document_id]
     save_metadata(documents)
 

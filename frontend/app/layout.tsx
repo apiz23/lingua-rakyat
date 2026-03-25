@@ -68,8 +68,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            <Toaster richColors expand={true} />
-            <Fps strategy="fixed" position="top-right" /> {children}
+            <Toaster richColors expand={true} position="top-center"/>
+            <Fps strategy="fixed" position="bottom-left" /> {children}
           </TooltipProvider>
         </ThemeProvider>
         <Analytics />
