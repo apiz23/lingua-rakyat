@@ -98,55 +98,58 @@ def save_metadata(documents: list[dict]) -> None:
 
 def sync_metadata_with_storage(documents: list[dict]) -> list[dict]:
     """
-    Two-way sync between metadata.json and Supabase Storage:
+    Auto-discover any PDFs in Supabase Storage that are NOT yet in metadata.json
+    and register them automatically with status 'ready'.
 
-    1. ADD — discover PDFs in Supabase not yet in metadata and register them.
-    2. REMOVE — drop metadata entries whose file no longer exists in Supabase.
-
-    This ensures the document panel always matches reality — no ghost entries
-    from files deleted directly in Supabase or from failed/partial uploads.
+    This fixes the issue where manually uploaded PDFs don't appear in the list.
+    Returns the updated (possibly extended) documents list.
     """
     try:
         sb = get_supabase()
         bucket = get_bucket()
         files = sb.storage.from_(bucket).list()
 
-        # Build set of all storage paths actually present in Supabase right now
+        # Build set of paths AND ids already registered
+        # Use BOTH to avoid re-registering a doc that changed path format
+        registered_paths = {d.get("storage_path", f"{d['id']}.pdf") for d in documents}
+        registered_ids   = {d["id"] for d in documents}
+
+        # ── REMOVE orphaned entries ──────────────────────────────────────────
+        # Build the full set of paths actually in Supabase right now
         existing_paths: set[str] = set()
         for f in files:
             fname = f.get("name", "")
-            if fname and fname != METADATA_PATH:
-                existing_paths.add(fname)
-                # Also handle folder-style paths (uuid/filename.pdf)
-                # by listing inside folder entries (id is None for folders)
-                if f.get("id") is None:
-                    try:
-                        sub = sb.storage.from_(bucket).list(fname)
-                        for sf in sub:
-                            sname = sf.get("name", "")
-                            if sname.lower().endswith(".pdf"):
-                                existing_paths.add(f"{fname}/{sname}")
-                    except Exception:
-                        pass
+            if not fname or fname == METADATA_PATH:
+                continue
+            existing_paths.add(fname)
+            # Check inside folder entries for uuid/filename.pdf format
+            if f.get("id") is None:
+                try:
+                    sub = sb.storage.from_(bucket).list(fname)
+                    for sf in sub:
+                        sname = sf.get("name", "")
+                        if sname.lower().endswith(".pdf"):
+                            existing_paths.add(f"{fname}/{sname}")
+                except Exception:
+                    pass
 
-        # ── REMOVE: drop metadata entries with no matching file in Supabase ──
         before = len(documents)
         valid_documents = []
         for doc in documents:
-            storage_path = doc.get("storage_path", f"{doc['id']}.pdf")
-            if storage_path in existing_paths:
+            sp = doc.get("storage_path", f"{doc['id']}.pdf")
+            if sp in existing_paths:
                 valid_documents.append(doc)
             else:
                 print(f"[Sync] Removing orphaned entry: {doc.get('name')} "
-                      f"(storage_path={storage_path} not found in Supabase)")
+                      f"(storage_path={sp} not in Supabase)")
         removed = before - len(valid_documents)
-        if removed:
-            print(f"[Sync] Removed {removed} orphaned metadata entries")
 
-        # ── ADD: discover PDFs in Supabase not yet in metadata ───────────────
-        registered = {d.get("storage_path", f"{d['id']}.pdf") for d in valid_documents}
+        # Rebuild registered sets from the cleaned list
+        registered_paths = {d.get("storage_path", f"{d['id']}.pdf") for d in valid_documents}
+        registered_ids   = {d["id"] for d in valid_documents}
+
+        # ── ADD new files from Supabase not yet in metadata ──────────────────
         new_entries = []
-
         for f in files:
             fname = f.get("name", "")
             if not fname or fname == METADATA_PATH:
@@ -158,26 +161,27 @@ def sync_metadata_with_storage(documents: list[dict]) -> list[dict]:
                 # New format: uuid/filename.pdf
                 try:
                     sub = sb.storage.from_(bucket).list(fname)
-                    pdf_files = [sf for sf in sub if sf.get("name", "").lower().endswith(".pdf")]
-                    if not pdf_files:
+                    pdfs = [sf for sf in sub if sf.get("name","").lower().endswith(".pdf")]
+                    if not pdfs:
                         continue
-                    pdf_file = pdf_files[0]
+                    pdf_file  = pdfs[0]
                     real_name = pdf_file.get("name", fname + ".pdf")
                     full_path = f"{fname}/{real_name}"
-                    doc_id = fname
+                    doc_id    = fname
                     size_bytes = int((pdf_file.get("metadata") or {}).get("size", 0))
                 except Exception:
                     continue
             elif fname.lower().endswith(".pdf"):
                 # Legacy flat format: uuid.pdf
-                full_path = fname
-                doc_id = fname.replace(".pdf", "")
-                real_name = fname
+                full_path  = fname
+                doc_id     = fname.replace(".pdf", "")
+                real_name  = fname
                 size_bytes = int((f.get("metadata") or {}).get("size", 0))
             else:
                 continue
 
-            if full_path in registered:
+            # Skip if already registered by path OR by document ID
+            if full_path in registered_paths or doc_id in registered_ids:
                 continue
 
             try:
@@ -186,26 +190,26 @@ def sync_metadata_with_storage(documents: list[dict]) -> list[dict]:
                 public_url = None
 
             new_doc = {
-                "id": doc_id,
-                "name": real_name,
-                "size_bytes": size_bytes,
-                "chunk_count": 0,
-                "status": "ready",
-                "uploaded_at": datetime.now().isoformat(),
+                "id":           doc_id,
+                "name":         real_name,
+                "size_bytes":   size_bytes,
+                "chunk_count":  0,
+                "status":       "ready",
+                "uploaded_at":  datetime.now().isoformat(),
                 "storage_path": full_path,
-                "public_url": public_url,
+                "public_url":   public_url,
                 "error_message": None,
             }
             new_entries.append(new_doc)
-            print(f"[Sync] Auto-registered: {full_path}")
+            print(f"[Sync] Auto-registered: {full_path} as {real_name!r}")
 
         if new_entries:
             valid_documents = valid_documents + new_entries
-            print(f"[Sync] Added {len(new_entries)} previously unregistered document(s)")
 
-        # Save if anything changed
+        # Save only if something changed
         if removed or new_entries:
             save_metadata(valid_documents)
+            print(f"[Sync] Done — removed {removed}, added {len(new_entries)}")
 
         return valid_documents
 
@@ -248,10 +252,8 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
     file_content = await file.read()
     file_size = len(file_content)
     document_id = str(uuid.uuid4())
-    storage_path = f"{document_id}.pdf"
-
-    safe_filename = os.path.basename(file.filename)
-    storage_path = f"{document_id}/{safe_filename}"
+    safe_filename = os.path.basename(file.filename)  # strip path traversal
+    storage_path = f"{document_id}/{safe_filename}"  # uuid/name.pdf keeps real name in Supabase
 
     sb = get_supabase()
     bucket = get_bucket()
@@ -274,7 +276,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
     doc_record = {
         "id": document_id,
-        "name": file.filename,
+        "name": safe_filename,
         "size_bytes": file_size,
         "chunk_count": 0,
         "status": "processing",
@@ -284,11 +286,9 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         "error_message": None,
     }
 
-    documents = load_metadata()
-    documents.append(doc_record)
-    save_metadata(documents)
-
-    # Run RAG ingestion via temp file
+    # Run RAG ingestion via temp file BEFORE saving metadata.
+    # This ensures we save the real chunk_count in one atomic write,
+    # instead of saving chunk_count=0 first and updating later.
     tmp_path = None
     try:
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
@@ -298,10 +298,11 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         chunk_count = ingest_document(
             pdf_path=tmp_path,
             document_id=document_id,
-            document_name=file.filename,
+            document_name=safe_filename,
         )
         doc_record["chunk_count"] = chunk_count
         doc_record["status"] = "ready"
+        print(f"[Upload] Ingestion complete: {chunk_count} chunks")
 
     except Exception as e:
         error_msg = str(e)
@@ -313,12 +314,11 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    # Update metadata with final status
+    # Save metadata ONCE with the final status and real chunk_count
     documents = load_metadata()
-    for i, doc in enumerate(documents):
-        if doc["id"] == document_id:
-            documents[i] = doc_record
-            break
+    # Remove any partial entry for this doc (in case of retry)
+    documents = [d for d in documents if d["id"] != document_id]
+    documents.append(doc_record)
     save_metadata(documents)
 
     return UploadResponse(
@@ -382,22 +382,74 @@ async def register_document(
     return {"success": True, "message": f"Document '{name}' registered successfully", "document": new_doc}
 
 
+@router.post("/refresh-chunks")
+async def refresh_chunk_counts():
+    """
+    Refresh chunk counts for all documents by querying Pinecone.
+    Fixes documents that show chunk_count=0 because they were auto-discovered
+    from Supabase Storage but never had their vectors counted.
+    
+    Returns: {updated: int, total: int, message: str}
+    """
+    from pinecone import Pinecone
+    
+    try:
+        # Initialize Pinecone
+        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+        index = pc.Index(os.getenv("PINECONE_INDEX", "docuquery"))
+        
+        documents = load_metadata()
+        updated = 0
+        
+        for doc in documents:
+            doc_id = doc["id"]
+            try:
+                # Query Pinecone for vector count in this document's namespace
+                # Use a dummy query to get stats about the namespace
+                results = index.query(
+                    vector=[0] * 384,  # dummy vector (Cohere embeddings are 384-dim)
+                    top_k=10000,  # get max results to count
+                    namespace=doc_id,
+                    include_metadata=False
+                )
+                
+                actual_chunk_count = len(results.get("matches", []))
+                
+                # Only update if the count changed and is non-zero
+                if actual_chunk_count > 0 and doc["chunk_count"] != actual_chunk_count:
+                    doc["chunk_count"] = actual_chunk_count
+                    updated += 1
+                    print(f"[Refresh] Updated {doc['name']}: {actual_chunk_count} chunks")
+            except Exception as e:
+                print(f"[Refresh] Warning querying {doc['id']}: {e}")
+                # Continue with next document
+        
+        # Save updated metadata
+        if updated > 0:
+            save_metadata(documents)
+            print(f"[Refresh] Saved {updated} updated documents")
+        
+        return {
+            "updated": updated,
+            "total": len(documents),
+            "message": f"Updated chunk counts for {updated}/{len(documents)} documents"
+        }
+    
+    except Exception as e:
+        print(f"[Refresh] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to refresh chunk counts: {str(e)}")
+
+
 @router.delete("/{document_id}")
 async def delete_document(document_id: str):
-    """
-    Delete a document from Supabase Storage, Pinecone, and metadata.
-
-    Also handles ghost entries — documents still in metadata.json but whose
-    file was already manually deleted from Supabase. These are cleaned up
-    from metadata + Pinecone even if the Supabase file is already gone.
-    """
+    """Delete a document from Supabase Storage, Pinecone, and metadata."""
     documents = load_metadata()
     doc_to_delete = next((d for d in documents if d["id"] == document_id), None)
 
     if not doc_to_delete:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Delete PDF from Supabase Storage (best-effort — file may already be gone)
+    # Delete PDF from Supabase Storage
     storage_path = doc_to_delete.get("storage_path")
     if storage_path:
         try:
@@ -405,16 +457,12 @@ async def delete_document(document_id: str):
             sb.storage.from_(get_bucket()).remove([storage_path])
             print(f"[Delete] Removed from Supabase Storage: {storage_path}")
         except Exception as e:
-            # File may already be manually deleted — that's fine, keep going
-            print(f"[Delete] Supabase file already gone or error (continuing): {e}")
+            print(f"[Delete] Warning: Could not remove from Supabase Storage: {e}")
 
-    # Delete vectors from Pinecone (best-effort)
-    try:
-        delete_document_from_vectorstore(document_id)
-    except Exception as e:
-        print(f"[Delete] Pinecone cleanup warning: {e}")
+    # Delete vectors from Pinecone
+    delete_document_from_vectorstore(document_id)
 
-    # Always remove from metadata regardless of Supabase/Pinecone outcome
+    # Remove from metadata
     documents = [d for d in documents if d["id"] != document_id]
     save_metadata(documents)
 

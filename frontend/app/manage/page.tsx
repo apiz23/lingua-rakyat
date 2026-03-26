@@ -1,12 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import {
-  Document,
-  listDocuments,
-  deleteDocument,
-  uploadDocument,
-} from "@/lib/api"
+import { useState, useEffect } from "react"
+import { Document, listDocuments, deleteDocument } from "@/lib/api"
 import { toast } from "sonner"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -342,7 +337,6 @@ export default function ManagePage() {
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const totalSize = documents.reduce((acc, d) => acc + d.size_bytes, 0)
-  const totalChunks = documents.reduce((acc, d) => acc + d.chunk_count, 0)
   const readyCount = documents.filter((d) => d.status === "ready").length
   const processingCount = documents.filter(
     (d) => d.status === "processing"
@@ -416,12 +410,7 @@ export default function ManagePage() {
               value={readyCount}
               color="text-primary"
             />
-            <StatCard
-              icon={Database}
-              label="Total Chunks"
-              value={totalChunks.toLocaleString()}
-              color="text-accent"
-            />
+
             <StatCard
               icon={HardDrive}
               label="Total Size"
@@ -557,9 +546,6 @@ export default function ManagePage() {
                     <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
                       Size
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Chunks
-                    </th>
                     <th className="px-4 py-3 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">
                       Status
                     </th>
@@ -631,9 +617,6 @@ export default function ManagePage() {
                         </td>
                         <td className="px-4 py-3 text-right text-sm text-muted-foreground">
                           {formatFileSize(doc.size_bytes)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-muted-foreground">
-                          {doc.chunk_count.toLocaleString()}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-1.5">

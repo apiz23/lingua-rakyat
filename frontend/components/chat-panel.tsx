@@ -663,7 +663,7 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
               </h2>
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground">
-                  {selectedDoc.chunk_count} chunks
+                  PDF
                 </span>
                 <span className="h-1 w-1 rounded-full bg-emerald-500" />
                 <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">

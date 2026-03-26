@@ -284,13 +284,9 @@ export default function DocumentPanel({
                     <p className="truncate text-sm font-medium">{doc.name}</p>
 
                     {/* Metadata row */}
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs text-muted-foreground">
-                        {formatFileSize(doc.size_bytes)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-xs text-muted-foreground">
-                        {doc.chunk_count} chunks
+                        {formatFileSize(doc.size_bytes)} • PDF
                       </span>
                       <span
                         className={cn(

@@ -18,9 +18,9 @@ export type Document = {
 }
 
 export type SourceChunk = {
-  text: string // backend returns "text" (was "content")
+  text: string
   document_id: string
-  score: number // retrieval confidence score 0–1
+  score: number
 }
 
 export type AskResponse = {
@@ -125,8 +125,7 @@ export type AugmentResult = {
   variant_count: number
 }
 
-// ── Rate-limit aware fetch helper ────────────────────────────────────────────
-// Wraps fetch and converts HTTP 429 into a user-friendly error message.
+// ── Rate-limit aware fetch ─────────────────────────────────────────────────
 async function apiFetch(
   input: RequestInfo,
   init?: RequestInit
@@ -146,17 +145,14 @@ async function apiFetch(
 export async function uploadDocument(file: File): Promise<Document> {
   const formData = new FormData()
   formData.append("file", file)
-
   const res = await apiFetch(`${API_URL}/api/documents/upload`, {
     method: "POST",
     body: formData,
   })
-
   if (!res.ok) {
     const error = await res.json()
     throw new Error(error.detail || "Upload failed")
   }
-
   const data = await res.json()
   return data.document
 }
@@ -172,6 +168,24 @@ export async function deleteDocument(documentId: string): Promise<void> {
     method: "DELETE",
   })
   if (!res.ok) throw new Error("Failed to delete document")
+}
+
+// ── FIX: Re-sync chunk counts from Pinecone ───────────────────────────────
+// Fixes existing documents that show chunk_count=0 because they were
+// uploaded before the backend fix. Queries Pinecone for real vector counts.
+export async function refreshChunkCounts(): Promise<{
+  updated: number
+  total: number
+  message: string
+}> {
+  const res = await apiFetch(`${API_URL}/api/documents/refresh-chunks`, {
+    method: "POST",
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Refresh failed" }))
+    throw new Error(err.detail || "Refresh failed")
+  }
+  return res.json()
 }
 
 // ── Chat API ───────────────────────────────────────────────────────────────
@@ -192,12 +206,10 @@ export async function askQuestion(
       model_override: modelOverride,
     }),
   })
-
   if (!res.ok) {
     const error = await res.json()
     throw new Error(error.detail || "Failed to get answer")
   }
-
   return res.json()
 }
 
@@ -255,7 +267,6 @@ export async function clearEvalRecords(): Promise<void> {
 }
 
 // ── Streaming test suite ───────────────────────────────────────────────────
-// Calls the SSE endpoint and fires callbacks as each case finishes.
 
 export type StreamProgressEvent = {
   type: "progress"
@@ -306,24 +317,19 @@ export async function runTestSuiteStream(
     }),
     signal,
   })
-
   if (!res.ok || !res.body) {
     const err = await res.json().catch(() => ({ detail: "Stream failed" }))
     throw new Error(err.detail || "Stream failed")
   }
-
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ""
-
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
-
     buffer += decoder.decode(value, { stream: true })
     const lines = buffer.split("\n")
-    buffer = lines.pop() ?? "" // keep incomplete line in buffer
-
+    buffer = lines.pop() ?? ""
     for (const line of lines) {
       if (!line.startsWith("data: ")) continue
       try {
@@ -335,6 +341,7 @@ export async function runTestSuiteStream(
 }
 
 // ── Available Groq models ──────────────────────────────────────────────────
+// rpm = requests/min, rpd = requests/day, tpm = tokens/min, tpd = tokens/day
 export const GROQ_MODELS = [
   {
     id: "groq/compound",
@@ -344,21 +351,54 @@ export const GROQ_MODELS = [
     tier: 1,
   },
   {
+    id: "groq/compound-mini",
+    label: "Groq Compound Mini",
+    tag: "⚡ Fast · 70K TPM · Unlimited",
+    rpm: 30,
+    rpd: "250",
+    tpm: "70K",
+    tpd: "No limit",
+    recommended: false,
+    tier: 2,
+  },
+  {
     id: "meta-llama/llama-4-scout-17b-16e-instruct",
     label: "Llama 4 Scout 17B",
-    tag: "⭐ Backup · 30K TPM · 1K RPM",
-    tier: 1,
+    tag: "Chat default · 30K TPM · 500K/day",
+    rpm: 30,
+    rpd: "1K",
+    tpm: "30K",
+    tpd: "500K",
+    recommended: true,
+  },
+  {
+    id: "llama-3.3-70b-versatile",
+    label: "Llama 3.3 70B",
+    tag: "Best quality · 12K TPM · 100K/day",
+    rpm: 30,
+    rpd: "1K",
+    tpm: "12K",
+    tpd: "100K",
+    recommended: false,
   },
   {
     id: "qwen/qwen3-32b",
     label: "Qwen3 32B",
-    tag: "Multilingual · 6K TPM · 500K TPD",
-    tier: 2,
+    tag: "Eval default · 6K TPM · 500K/day",
+    rpm: 60,
+    rpd: "1K",
+    tpm: "6K",
+    tpd: "500K",
+    recommended: false,
   },
   {
     id: "llama-3.1-8b-instant",
-    label: "Llama 3.1 8B",
-    tag: "Fastest · 6K TPM · 14.4K RPD",
-    tier: 2,
+    label: "Llama 3.1 8B Instant",
+    tag: "Fastest · 6K TPM · 500K/day",
+    rpm: 30,
+    rpd: "14.4K",
+    tpm: "6K",
+    tpd: "500K",
+    recommended: false,
   },
 ]
