@@ -19,7 +19,7 @@ interface UploadModalProps {
   onUploadComplete: () => void
 }
 
-const MAX_FILE_SIZE = 3 * 1024 * 1024
+const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ACCEPTED_FILE_TYPES = { "application/pdf": [".pdf"] }
 
 export default function UploadModal({
@@ -48,7 +48,7 @@ export default function UploadModal({
     // Validate file size
     if (selectedFile.size > MAX_FILE_SIZE) {
       setError(
-        `File size must be less than ${MAX_FILE_SIZE / (1024 * 1024)} MB`
+        `File size must be 5 MB or less`
       )
       return
     }

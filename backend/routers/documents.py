@@ -20,14 +20,17 @@ KEY FIX:
 import os
 import uuid
 import json
+import io
 import tempfile
 from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel
+from pypdf import PdfReader
 from supabase import create_client, Client
 
+from utils.chat_history import delete_chat_messages_for_document
 from utils.rag_pipeline import ingest_document, delete_document_from_vectorstore
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -37,6 +40,10 @@ limiter = Limiter(key_func=get_remote_address)
 
 # ─── Router ───────────────────────────────────────────────────────────────────
 router = APIRouter()
+
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+PDF_MAGIC = b"%PDF-"
+MAX_UPLOAD_PAGES = 200
 
 # ─── Supabase Client (singleton) ─────────────────────────────────────────────
 _supabase: Optional[Client] = None
@@ -54,6 +61,28 @@ def get_supabase() -> Client:
 
 def get_bucket() -> str:
     return os.getenv("SUPABASE_BUCKET", "documents")
+
+
+def validate_uploaded_pdf_bytes(file_content: bytes) -> None:
+    if not file_content.startswith(PDF_MAGIC):
+        raise HTTPException(status_code=400, detail="Invalid PDF file.")
+
+    try:
+        reader = PdfReader(io.BytesIO(file_content))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Unreadable PDF file: {exc}") from exc
+
+    if reader.is_encrypted:
+        raise HTTPException(status_code=400, detail="Encrypted PDF files are not supported.")
+
+    page_count = len(reader.pages)
+    if page_count < 1:
+        raise HTTPException(status_code=400, detail="PDF has no pages.")
+    if page_count > MAX_UPLOAD_PAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"PDF has too many pages. Maximum allowed is {MAX_UPLOAD_PAGES}.",
+        )
 
 
 # ─── Metadata helpers ─────────────────────────────────────────────────────────
@@ -184,11 +213,6 @@ def sync_metadata_with_storage(documents: list[dict]) -> list[dict]:
             if full_path in registered_paths or doc_id in registered_ids:
                 continue
 
-            try:
-                public_url = sb.storage.from_(bucket).get_public_url(full_path)
-            except Exception:
-                public_url = None
-
             new_doc = {
                 "id":           doc_id,
                 "name":         real_name,
@@ -197,7 +221,7 @@ def sync_metadata_with_storage(documents: list[dict]) -> list[dict]:
                 "status":       "ready",
                 "uploaded_at":  datetime.now().isoformat(),
                 "storage_path": full_path,
-                "public_url":   public_url,
+                "public_url":   None,
                 "error_message": None,
             }
             new_entries.append(new_doc)
@@ -248,9 +272,15 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="No file provided")
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    if file.content_type and file.content_type not in {"application/pdf", "application/x-pdf"}:
+        raise HTTPException(status_code=400, detail="Uploaded file must be a PDF.")
 
     file_content = await file.read()
     file_size = len(file_content)
+    if file_size > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large. Maximum upload size is 5 MB.")
+    validate_uploaded_pdf_bytes(file_content)
+
     document_id = str(uuid.uuid4())
     safe_filename = os.path.basename(file.filename)  # strip path traversal
     storage_path = f"{document_id}/{safe_filename}"  # uuid/name.pdf keeps real name in Supabase
@@ -269,11 +299,6 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload to Supabase: {str(e)}")
 
-    try:
-        public_url = sb.storage.from_(bucket).get_public_url(storage_path)
-    except Exception:
-        public_url = None
-
     doc_record = {
         "id": document_id,
         "name": safe_filename,
@@ -282,7 +307,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         "status": "processing",
         "uploaded_at": datetime.now().isoformat(),
         "storage_path": storage_path,
-        "public_url": public_url,
+        "public_url": None,
         "error_message": None,
     }
 
@@ -461,6 +486,7 @@ async def delete_document(document_id: str):
 
     # Delete vectors from Pinecone
     delete_document_from_vectorstore(document_id)
+    delete_chat_messages_for_document(document_id)
 
     # Remove from metadata
     documents = [d for d in documents if d["id"] != document_id]

@@ -32,6 +32,9 @@ export type AskResponse = {
   confidence: number
   latency_ms: number
   model_used?: string
+  retrieval_mode?: "single_query" | "augmented"
+  query_variants_used?: string[]
+  top_query_variant?: string
 }
 
 // ── Evaluation Types ───────────────────────────────────────────────────────
@@ -193,8 +196,10 @@ export async function refreshChunkCounts(): Promise<{
 export async function askQuestion(
   documentId: string,
   documentName: string,
+  sessionId: string,
   question: string,
-  modelOverride: string = ""
+  modelOverride: string = "",
+  enableQueryAugmentation: boolean = true
 ): Promise<AskResponse> {
   const res = await apiFetch(`${API_URL}/api/chat/ask`, {
     method: "POST",
@@ -202,8 +207,10 @@ export async function askQuestion(
     body: JSON.stringify({
       document_id: documentId,
       document_name: documentName,
+      session_id: sessionId,
       question: question,
       model_override: modelOverride,
+      enable_query_augmentation: enableQueryAugmentation,
     }),
   })
   if (!res.ok) {

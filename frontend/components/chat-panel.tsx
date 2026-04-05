@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   History,
   X,
+  Languages,
 } from "lucide-react"
 import type { Components } from "react-markdown"
 import { useMobile } from "@/hooks/use-mobile"
@@ -505,6 +506,8 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [selectedModel, setSelectedModel] = useState("") // empty = server default
+  const [sessionId, setSessionId] = useState("")
+  const [enableQueryAugmentation, setEnableQueryAugmentation] = useState(true)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -526,10 +529,35 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
     }
   }, [input])
 
+  useEffect(() => {
+    const storageKey = "lr-chat-session-id"
+    const existing =
+      typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null
+
+    if (existing) {
+      setSessionId(existing)
+      return
+    }
+
+    const nextSessionId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `lr-session-${Date.now()}`
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(storageKey, nextSessionId)
+    }
+    setSessionId(nextSessionId)
+  }, [])
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!selectedDoc) {
       toast.error("Please select a document first")
+      return
+    }
+    if (!sessionId) {
+      toast.error("Session not ready yet")
       return
     }
     if (!input.trim() || loading) return
@@ -540,12 +568,25 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
     if (inputRef.current) inputRef.current.style.height = "auto"
 
     try {
-      const response = await askQuestion(
+      const requestPromise = askQuestion(
         selectedDoc.id,
         selectedDoc.name,
+        sessionId,
         question,
-        selectedModel
+        selectedModel,
+        enableQueryAugmentation
       )
+      if (enableQueryAugmentation) {
+        toast.promise(requestPromise, {
+          loading: "Smart retrieval is working",
+          success: "Answer ready",
+          error: (message) =>
+            message instanceof Error ? message.message : "Failed to get answer",
+          description:
+            "Checking multilingual matches before generating the answer.",
+        })
+      }
+      const response = await requestPromise
       setMessages((prev) => [
         ...prev,
         {
@@ -569,7 +610,7 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
           description: `Please wait ${seconds} seconds before asking again.`,
           duration: 6000,
         })
-      } else {
+      } else if (!enableQueryAugmentation) {
         toast.error("Failed to get answer", { description: msg })
       }
     } finally {
@@ -702,6 +743,24 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
                 </SelectGroup>
               </SelectContent>
             </Select>
+            <button
+              type="button"
+              onClick={() => setEnableQueryAugmentation((prev) => !prev)}
+              className={[
+                "hidden h-9 items-center justify-between gap-1.5 rounded-md border border-input py-2 pr-2 pl-2.5 text-xs whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex",
+                enableQueryAugmentation
+                  ? "bg-transparent text-foreground"
+                  : "bg-muted/40 text-muted-foreground",
+              ].join(" ")}
+              title={
+                enableQueryAugmentation
+                  ? "Smart retrieval is enabled"
+                  : "Smart retrieval is disabled for faster replies"
+              }
+            >
+              <Languages className="h-4 w-4" />
+              {enableQueryAugmentation ? "Smart Retrieval On" : "Smart Retrieval Off"}
+            </button>
             {messages.length > 0 && (
               <button
                 onClick={clearChat}
@@ -828,7 +887,7 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
               {/* Send button */}
               <button
                 type="submit"
-                disabled={!input.trim() || loading}
+                disabled={!input.trim() || loading || !sessionId}
                 className="rounded-xl bg-primary p-2.5 text-primary-foreground transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
               >
                 {loading ? (

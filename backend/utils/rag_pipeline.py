@@ -1,71 +1,75 @@
 """
-rag_pipeline.py — Lightweight RAG Pipeline
+rag_pipeline.py - Lightweight multilingual RAG pipeline.
 """
 
-import os
-import re
-import time
 import logging
-import requests
+import os
+import time
+from collections.abc import Generator
+from typing import Any, Optional
+
 import langdetect
-from typing import Optional
+import requests
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from pypdf import PdfReader
+from groq import Groq
 from pinecone import Pinecone
+from pypdf import PdfReader
+
+from utils.data_augmentation import QueryAugmenter
 
 load_dotenv()
 
-# ─── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("rag_pipeline")
 
-# ─── Configuration ────────────────────────────────────────────────────────────
-GROQ_API_KEY    = os.getenv("GROQ_API_KEY")
-GROQ_MODEL      = os.getenv("GROQ_MODEL",      "meta-llama/llama-4-scout-17b-16e-instruct")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
 GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "qwen/qwen3-32b")
-LLM_PROVIDER    = os.getenv("LLM_PROVIDER", "groq")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX   = os.getenv("PINECONE_INDEX", "docuquery")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX", "docuquery")
 
-# ─── Thresholds ───────────────────────────────────────────────────────────────
-MIN_TEXT_LENGTH      = 50
-MIN_PAGES            = 1
-MAX_PAGES            = 500
-MIN_CHUNK_WORDS      = 20
+ENABLE_QUERY_AUGMENTATION = os.getenv("ENABLE_QUERY_AUGMENTATION", "true").lower() == "true"
+AUGMENTATION_MAX_VARIANTS = max(1, int(os.getenv("AUGMENTATION_MAX_VARIANTS", "4")))
+AUGMENTATION_INCLUDE_PARAPHRASE = (
+    os.getenv("AUGMENTATION_INCLUDE_PARAPHRASE", "true").lower() == "true"
+)
+
+MIN_TEXT_LENGTH = 50
+MIN_PAGES = 1
+MAX_PAGES = 500
+MIN_CHUNK_WORDS = 20
 CONFIDENCE_THRESHOLD = 0.50
 
-# Context budget — keeps requests under TPM limits
 CONTEXT_CHAR_LIMIT_LARGE = 4000
 CONTEXT_CHAR_LIMIT_SMALL = 1800
 TOP_K_LARGE = 5
 TOP_K_SMALL = 3
 
-# ─── Summarise intent keywords ────────────────────────────────────────────────
 SUMMARIZE_KEYWORDS: list[str] = [
-    "summarize","summarise","summary","overview","what is this document",
-    "what does this document","what is this about","explain this document",
-    "key takeaways","main points","give me an overview","what should i know",
-    "tell me about this","describe this document","ringkaskan","ringkasan",
-    "rumusan","apa isi","apakah dokumen","ceritakan","terangkan dokumen",
-    "apa yang penting","kandungan dokumen","huraikan","jelaskan dokumen",
-    "apa dokumen ini","总结","概述","摘要","这个文件","主要内容",
+    "summarize", "summarise", "summary", "overview", "what is this document",
+    "what does this document", "what is this about", "explain this document",
+    "key takeaways", "main points", "give me an overview", "what should i know",
+    "tell me about this", "describe this document", "ringkaskan", "ringkasan",
+    "rumusan", "apa isi", "apakah dokumen", "ceritakan", "terangkan dokumen",
+    "apa yang penting", "kandungan dokumen", "huraikan", "jelaskan dokumen",
+    "apa dokumen ini", "总结", "概述", "摘要", "这个文件", "主要内容",
 ]
+
 
 def is_summarize_intent(question: str) -> bool:
     q = question.lower().strip()
-    return any(kw in q for kw in SUMMARIZE_KEYWORDS)
+    return any(keyword in q for keyword in SUMMARIZE_KEYWORDS)
 
-# ─── Model helpers ────────────────────────────────────────────────────────────
+
 def _is_small_model(model_name: str) -> bool:
-    return any(p in model_name.lower() for p in ["8b","gemma","7b","9b","mixtral"])
+    return any(piece in model_name.lower() for piece in ["8b", "gemma", "7b", "9b", "mixtral"])
 
-# ─── Dialect & Language Detection ────────────────────────────────────────────
+
 DIALECT_MAP: dict[str, str] = {
     "ms": "ms", "id": "ms", "zsm": "ms",
     "zh-cn": "zh-cn", "zh-tw": "zh-cn", "zh": "zh-cn", "yue": "zh-cn",
@@ -75,94 +79,111 @@ DIALECT_MAP: dict[str, str] = {
 }
 
 DIALECT_KEYWORDS: dict[str, list[str]] = {
-    "ms": ["nak","boleh","pergi","saya","awak","kamu","dia","kami",
-           "mereka","ini","itu","dengan","untuk","tidak","ada","kalau",
-           "mohon","bantuan","kerajaan","permohonan","kelayakan"],
-    "zh-cn": ["的","是","了","在","我","你","他","她","们","申请",
-              "政府","帮助","如何","怎么"],
+    "ms": [
+        "nak", "boleh", "pergi", "saya", "awak", "kamu", "dia", "kami",
+        "mereka", "ini", "itu", "dengan", "untuk", "tidak", "ada", "kalau",
+        "mohon", "bantuan", "kerajaan", "permohonan", "kelayakan",
+    ],
+    "zh-cn": ["的", "是", "了", "在", "我", "你", "他", "她", "们", "申请", "政府", "帮助", "如何", "怎么"],
 }
+
 
 def detect_language(text: str) -> str:
     text_lower = text.lower()
     for lang, keywords in DIALECT_KEYWORDS.items():
-        if any(kw in text_lower for kw in keywords):
+        if any(keyword in text_lower for keyword in keywords):
             return lang
-    cjk_count = sum(1 for c in text if "\u4E00" <= c <= "\u9FFF" or "\u3040" <= c <= "\u309F")
-    if len(text) > 0 and cjk_count / len(text) > 0.15:
+
+    cjk_count = sum(1 for char in text if "\u4E00" <= char <= "\u9FFF" or "\u3040" <= char <= "\u309F")
+    if text and cjk_count / len(text) > 0.15:
         return "zh-cn"
+
     try:
         detected = langdetect.detect(text)
         return DIALECT_MAP.get(detected, "en")
     except Exception:
         return "en"
 
-# ─── Query Cache ──────────────────────────────────────────────────────────────
-_query_cache: dict[tuple, dict] = {}
+
+_query_cache: dict[tuple, dict[str, Any]] = {}
 CACHE_MAX_SIZE = 200
 
-def _cache_key(question: str, document_id: str) -> tuple:
+
+def _cache_key(question: str, document_id: str) -> tuple[str, str]:
     return (question.strip().lower(), document_id)
 
-def cache_get(question: str, document_id: str) -> dict | None:
-    key = _cache_key(question, document_id)
-    entry = _query_cache.get(key)
+
+def cache_get(question: str, document_id: str) -> dict[str, Any] | None:
+    entry = _query_cache.get(_cache_key(question, document_id))
     if entry:
         logger.info("[Cache] HIT for question: %s", question[:60])
     return entry
 
-def cache_set(question: str, document_id: str, result: dict) -> None:
+
+def cache_set(question: str, document_id: str, result: dict[str, Any]) -> None:
     global _query_cache
     if len(_query_cache) >= CACHE_MAX_SIZE:
-        evict_n = CACHE_MAX_SIZE // 5
-        for k in list(_query_cache.keys())[:evict_n]:
-            del _query_cache[k]
+        evict_n = max(1, CACHE_MAX_SIZE // 5)
+        for key in list(_query_cache.keys())[:evict_n]:
+            del _query_cache[key]
     _query_cache[_cache_key(question, document_id)] = result
+
 
 def cache_invalidate_document(document_id: str) -> int:
     global _query_cache
     before = len(_query_cache)
-    _query_cache = {k: v for k, v in _query_cache.items() if k[1] != document_id}
+    _query_cache = {key: value for key, value in _query_cache.items() if key[1] != document_id}
     removed = before - len(_query_cache)
     if removed:
         logger.info("[Cache] Invalidated %d entries for document_id=%s", removed, document_id)
     return removed
 
-# ─── Embeddings ───────────────────────────────────────────────────────────────
+
 def get_embeddings_cohere(texts: list[str], input_type: str = "search_document") -> list[list[float]]:
     cohere_key = os.getenv("COHERE_API_KEY")
     if not cohere_key:
         raise ValueError("COHERE_API_KEY not set.")
-    url = "https://api.cohere.ai/v1/embed"
-    headers = {"Authorization": f"Bearer {cohere_key}", "Content-Type": "application/json"}
-    payload = {"texts": texts, "model": "embed-multilingual-v3.0", "input_type": input_type}
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-        response.raise_for_status()
-        embeddings = response.json().get("embeddings", [])
-        if not embeddings:
-            logger.warning("[Embed] Empty response — returning zero vectors")
-            return [[0.0] * 1024 for _ in texts]
-        return embeddings
-    except Exception as e:
-        logger.error("[Embed] Cohere API error: %s", e)
-        # Return zero vectors — caller must handle gracefully
-        return [[0.0] * 1024 for _ in texts]
 
-def _is_zero_vector(vec: list[float]) -> bool:
-    return all(v == 0.0 for v in vec)
+    response = requests.post(
+        "https://api.cohere.ai/v1/embed",
+        json={
+            "texts": texts,
+            "model": "embed-multilingual-v3.0",
+            "input_type": input_type,
+        },
+        headers={
+            "Authorization": f"Bearer {cohere_key}",
+            "Content-Type": "application/json",
+        },
+        timeout=30,
+    )
+    response.raise_for_status()
+    embeddings = response.json().get("embeddings", [])
+    if not embeddings:
+        raise RuntimeError("Cohere returned an empty embeddings response.")
+    return embeddings
 
-# ─── PDF Processing ───────────────────────────────────────────────────────────
+
 class PDFValidationError(ValueError):
     pass
 
-def validate_pdf(pdf_path: str) -> dict:
-    metrics = {"valid": False, "page_count": 0, "char_count": 0,
-               "empty_pages": 0, "avg_chars_per_page": 0.0, "error": None}
+
+def validate_pdf(pdf_path: str) -> dict[str, Any]:
+    metrics = {
+        "valid": False,
+        "page_count": 0,
+        "char_count": 0,
+        "empty_pages": 0,
+        "avg_chars_per_page": 0.0,
+        "error": None,
+    }
+
     try:
         reader = PdfReader(pdf_path)
-    except Exception as e:
-        metrics["error"] = f"Cannot open PDF: {e}"
+    except Exception as exc:
+        metrics["error"] = f"Cannot open PDF: {exc}"
         return metrics
+
     page_count = len(reader.pages)
     metrics["page_count"] = page_count
     if page_count < MIN_PAGES:
@@ -171,6 +192,7 @@ def validate_pdf(pdf_path: str) -> dict:
     if page_count > MAX_PAGES:
         metrics["error"] = f"PDF too large ({page_count} pages; max {MAX_PAGES})."
         return metrics
+
     total_chars = 0
     empty_pages = 0
     for page in reader.pages:
@@ -181,320 +203,504 @@ def validate_pdf(pdf_path: str) -> dict:
                 empty_pages += 1
         except Exception:
             empty_pages += 1
+
     metrics["char_count"] = total_chars
     metrics["empty_pages"] = empty_pages
     metrics["avg_chars_per_page"] = round(total_chars / max(page_count, 1), 1)
+
     if total_chars < MIN_TEXT_LENGTH:
         metrics["error"] = "PDF has no extractable text (may be scanned/image-based)."
         return metrics
     if empty_pages / max(page_count, 1) > 0.8:
         metrics["error"] = f"Over 80% of pages ({empty_pages}/{page_count}) have no text."
         return metrics
+
     metrics["valid"] = True
     return metrics
 
-def extract_text_from_pdf(pdf_path: str) -> tuple[str, dict]:
+
+def extract_text_from_pdf(pdf_path: str) -> tuple[str, dict[str, Any]]:
     quality = validate_pdf(pdf_path)
     if not quality["valid"]:
         raise PDFValidationError(quality["error"])
+
     text = ""
     reader = PdfReader(pdf_path)
     for page in reader.pages:
         try:
             text += (page.extract_text() or "") + "\n"
         except Exception:
-            pass
+            continue
     return text.strip(), quality
+
 
 def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
     chunks = []
     words = text.split()
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[i:i + chunk_size])
+    for index in range(0, len(words), chunk_size - overlap):
+        chunk = " ".join(words[index:index + chunk_size])
         if len(chunk.split()) >= MIN_CHUNK_WORDS:
             chunks.append(chunk)
-    logger.info("[Chunk] %d words → %d chunks", len(words), len(chunks))
+    logger.info("[Chunk] %d words -> %d chunks", len(words), len(chunks))
     return chunks
 
-def ingest_document(pdf_path: str, document_id: str, document_name: str = None) -> int:
+
+def ingest_document(pdf_path: str, document_id: str, document_name: str | None = None) -> int:
     logger.info("[Ingest] Starting: document_id=%s name=%s", document_id, document_name or "unknown")
-    text, quality = extract_text_from_pdf(pdf_path)
+    text, _quality = extract_text_from_pdf(pdf_path)
     if not text:
         raise ValueError("No text extracted from PDF.")
+
     chunks = chunk_text(text)
     if not chunks:
         raise ValueError("No valid chunks after filtering.")
-    logger.info("[Ingest] Embedding %d chunks…", len(chunks))
+
     t0 = time.time()
     embeddings = get_embeddings_cohere(chunks)
-    logger.info("[Ingest] Embeddings in %dms", round((time.time() - t0) * 1000))
-    pc = Pinecone(api_key=PINECONE_API_KEY)
-    index = pc.Index(PINECONE_INDEX)
+    logger.info("[Ingest] Embedded %d chunks in %dms", len(chunks), round((time.time() - t0) * 1000))
+
+    index = Pinecone(api_key=PINECONE_API_KEY).Index(PINECONE_INDEX)
     vectors = [
-        (f"{document_id}_{i}", emb, {"text": chunk, "doc_id": document_id,
-                                     "chunk_index": i, "doc_name": document_name or ""})
-        for i, (chunk, emb) in enumerate(zip(chunks, embeddings))
+        (
+            f"{document_id}_{i}",
+            embedding,
+            {
+                "text": chunk,
+                "doc_id": document_id,
+                "chunk_index": i,
+                "doc_name": document_name or "",
+            },
+        )
+        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
     ]
-    t1 = time.time()
     index.upsert(vectors=vectors, namespace=document_id)
-    logger.info("[Ingest] Upserted %d vectors in %dms", len(chunks), round((time.time() - t1) * 1000))
     return len(chunks)
 
-# ─── Answer Question ──────────────────────────────────────────────────────────
-def answer_question(question: str, document_id: str, model_override: str | None = None) -> dict:
+
+def _get_index():
+    return Pinecone(api_key=PINECONE_API_KEY).Index(PINECONE_INDEX)
+
+
+def _query_variant_weight(variant_type: str) -> float:
+    if variant_type == "original":
+        return 0.03
+    if variant_type == "translation":
+        return 0.015
+    return 0.0
+
+
+def _build_query_variants(question: str, detected_lang: str, enable_query_augmentation: bool = True) -> list[dict[str, str]]:
+    variants = [{
+        "key": detected_lang,
+        "text": question,
+        "variant_type": "original",
+    }]
+
+    if not ENABLE_QUERY_AUGMENTATION or not enable_query_augmentation:
+        return variants
+
+    try:
+        augmenter = QueryAugmenter()
+        translation_slots = max(
+            0,
+            AUGMENTATION_MAX_VARIANTS - 1 - (1 if AUGMENTATION_INCLUDE_PARAPHRASE else 0),
+        )
+        target_langs = [
+            lang for lang in ["en", "ms", "zh-cn"]
+            if lang != detected_lang
+        ][:translation_slots]
+        expanded = augmenter.expand_query(
+            query=question,
+            source_lang=detected_lang,
+            target_langs=target_langs,
+            include_paraphrase=AUGMENTATION_INCLUDE_PARAPHRASE,
+        )
+
+        for key, text in expanded.items():
+            if not text or text.strip() == question.strip():
+                continue
+            variant_type = "paraphrase" if key.startswith("paraphrase_") else "translation"
+            variants.append({
+                "key": key,
+                "text": text,
+                "variant_type": variant_type,
+            })
+    except Exception as exc:
+        logger.warning("[Augment] Falling back to original query only: %s", exc)
+
+    deduped: list[dict[str, str]] = []
+    seen = set()
+    for variant in variants:
+        normalized = variant["text"].strip().lower()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(variant)
+        if len(deduped) >= AUGMENTATION_MAX_VARIANTS:
+            break
+    return deduped
+
+
+def _retrieve_matches(
+    document_id: str,
+    query_variants: list[dict[str, str]],
+    top_k: int,
+) -> list[dict[str, Any]]:
+    index = _get_index()
+    all_matches: list[dict[str, Any]] = []
+
+    for variant in query_variants:
+        embedding = get_embeddings_cohere([variant["text"]], input_type="search_query")[0]
+        results = index.query(
+            vector=embedding,
+            top_k=top_k,
+            namespace=document_id,
+            include_metadata=True,
+        )
+
+        for match in results["matches"]:
+            metadata = match.get("metadata", {})
+            reranked_score = min(1.0, match.get("score", 0.0) + _query_variant_weight(variant["variant_type"]))
+            all_matches.append({
+                "id": match.get("id"),
+                "score": match.get("score", 0.0),
+                "reranked_score": reranked_score,
+                "metadata": metadata,
+                "variant_key": variant["key"],
+                "variant_text": variant["text"],
+                "variant_type": variant["variant_type"],
+            })
+
+    deduped_by_chunk: dict[str, dict[str, Any]] = {}
+    for match in all_matches:
+        chunk_identity = match["id"] or match["metadata"].get("text", "")[:200]
+        current = deduped_by_chunk.get(chunk_identity)
+        if current is None or match["reranked_score"] > current["reranked_score"]:
+            deduped_by_chunk[chunk_identity] = match
+
+    reranked = sorted(
+        deduped_by_chunk.values(),
+        key=lambda item: (item["reranked_score"], item["score"]),
+        reverse=True,
+    )
+    return reranked
+
+
+def _filter_matches(matches: list[dict[str, Any]], is_summary: bool) -> list[dict[str, Any]]:
+    if is_summary:
+        return matches
+
+    filtered = [match for match in matches if match["reranked_score"] >= CONFIDENCE_THRESHOLD]
+    return filtered or matches[:1]
+
+
+def _build_context(matches: list[dict[str, Any]], small_model: bool) -> str:
+    char_limit = CONTEXT_CHAR_LIMIT_SMALL if small_model else CONTEXT_CHAR_LIMIT_LARGE
+    chunk_limit = max(200, char_limit // max(len(matches), 1))
+    return "\n".join(match["metadata"]["text"][:chunk_limit] for match in matches)
+
+
+def _summary_prompt(context: str, lang: str) -> str:
+    prompts = {
+        "en": (
+            "You are a helpful government services assistant.\n"
+            "Read the following excerpts from an official document and write a clear summary.\n\n"
+            "Document excerpts:\n{context}\n\n"
+            "INSTRUCTIONS:\n"
+            "1. Write 3-5 bullet points summarising what this document is about.\n"
+            "2. Each bullet must be one short simple sentence.\n"
+            "3. Mention the document purpose, who it is for, and the main points.\n"
+            "4. Do not invent facts not in the excerpts.\n"
+            "5. End with: Source: Based on official documents provided."
+        ),
+        "ms": (
+            "Anda ialah pembantu perkhidmatan kerajaan.\n"
+            "Baca petikan dokumen rasmi berikut dan tulis ringkasan yang jelas.\n\n"
+            "Petikan dokumen:\n{context}\n\n"
+            "ARAHAN:\n"
+            "1. Tulis 3-5 mata peluru tentang dokumen ini.\n"
+            "2. Setiap mata peluru mesti satu ayat pendek dan mudah.\n"
+            "3. Nyatakan tujuan dokumen, untuk siapa, dan perkara utama.\n"
+            "4. Jangan reka maklumat yang tiada dalam petikan.\n"
+            "5. Akhiri dengan: Sumber: Berdasarkan dokumen rasmi yang disediakan."
+        ),
+        "zh-cn": (
+            "你是一位政府服务助手。\n"
+            "请阅读以下官方文件摘录并写出清楚的摘要。\n\n"
+            "文件摘录:\n{context}\n\n"
+            "要求:\n"
+            "1. 用3到5个要点总结文件内容。\n"
+            "2. 每个要点都要短而易懂。\n"
+            "3. 说明文件目的、适用对象和重点。\n"
+            "4. 不要编造摘录里没有的信息。\n"
+            "5. 结尾写: 来源: Based on official documents provided."
+        ),
+    }
+    return prompts.get(lang, prompts["en"]).format(context=context)
+
+
+def _qa_prompt(context: str, question: str, lang: str) -> str:
+    prompts = {
+        "en": (
+            "You are a helpful government services assistant.\n"
+            "Answer only from the context.\n"
+            "Use simple everyday language.\n"
+            "Format the answer as 3-5 short bullet points.\n"
+            "End with: Source: Based on official documents provided.\n\n"
+            "Context:\n{context}\n\n"
+            "Question: {question}\n"
+            "Answer:"
+        ),
+        "ms": (
+            "Anda ialah pembantu perkhidmatan kerajaan.\n"
+            "Jawab hanya daripada konteks.\n"
+            "Gunakan bahasa yang mudah.\n"
+            "Format jawapan sebagai 3-5 mata peluru pendek.\n"
+            "Akhiri dengan: Sumber: Berdasarkan dokumen rasmi yang disediakan.\n\n"
+            "Konteks:\n{context}\n\n"
+            "Soalan: {question}\n"
+            "Jawapan:"
+        ),
+        "zh-cn": (
+            "你是一位政府服务助手。\n"
+            "只能根据上下文回答。\n"
+            "使用简单易懂的语言。\n"
+            "把答案写成3到5个简短要点。\n"
+            "结尾写: 来源: Based on official documents provided.\n\n"
+            "上下文:\n{context}\n\n"
+            "问题: {question}\n"
+            "答案:"
+        ),
+    }
+    return prompts.get(lang, prompts["en"]).format(context=context, question=question)
+
+
+def _prepare_pipeline(
+    question: str,
+    document_id: str,
+    model_override: str | None = None,
+    enable_query_augmentation: bool = True,
+) -> dict[str, Any]:
     t_start = time.time()
-
     lang = detect_language(question)
-    logger.info("[Chat] lang=%s question=%s", lang, question[:80])
+    model_name = model_override or GROQ_MODEL
+    small_model = _is_small_model(model_name)
+    is_summary = is_summarize_intent(question)
 
-    # Cache check
+    query_variants = _build_query_variants(question, lang, enable_query_augmentation=enable_query_augmentation)
+    retrieval_mode = "augmented" if len(query_variants) > 1 else "single_query"
+    top_k = ((TOP_K_SMALL + 2) if small_model else (TOP_K_LARGE + 3)) if is_summary else (TOP_K_SMALL if small_model else TOP_K_LARGE)
+
+    t_retrieve = time.time()
+    matches = _retrieve_matches(document_id=document_id, query_variants=query_variants, top_k=top_k)
+    retrieve_ms = round((time.time() - t_retrieve) * 1000)
+    filtered_matches = _filter_matches(matches, is_summary=is_summary)
+    if not filtered_matches:
+        raise RuntimeError(
+            "No document chunks found. The document may not be ingested yet, or the document ID is incorrect."
+        )
+
+    context = _build_context(filtered_matches, small_model)
+    prompt_text = _summary_prompt(context, lang) if is_summary else _qa_prompt(context, question, lang)
+    query_variants_used = [variant["text"] for variant in query_variants]
+    top_query_variant = filtered_matches[0]["variant_text"]
+
+    logger.info(
+        "[Chat] lang=%s retrieval=%s variants=%d matches=%d retrieve_ms=%d",
+        lang, retrieval_mode, len(query_variants), len(filtered_matches), retrieve_ms,
+    )
+
+    return {
+        "question": question,
+        "document_id": document_id,
+        "language": lang,
+        "model_name": model_name,
+        "small_model": small_model,
+        "is_summary": is_summary,
+        "prompt_text": prompt_text,
+        "filtered_matches": filtered_matches,
+        "retrieve_ms": retrieve_ms,
+        "retrieval_mode": retrieval_mode,
+        "query_variants_used": query_variants_used,
+        "top_query_variant": top_query_variant,
+        "started_at": t_start,
+    }
+
+
+def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -> dict[str, Any]:
+    total_ms = round((time.time() - prepared["started_at"]) * 1000)
+    top_score = prepared["filtered_matches"][0]["reranked_score"] if prepared["filtered_matches"] else 0.0
+    result = {
+        "answer": answer_text.strip(),
+        "language": prepared["language"],
+        "sources": [
+            {
+                "text": match["metadata"]["text"][:200],
+                "document_id": prepared["document_id"],
+                "score": round(match["reranked_score"], 4),
+            }
+            for match in prepared["filtered_matches"]
+        ],
+        "confidence": round(top_score, 4),
+        "latency_ms": total_ms,
+        "cached": False,
+        "model_used": model_used,
+        "retrieval_mode": prepared["retrieval_mode"],
+        "query_variants_used": prepared["query_variants_used"],
+        "top_query_variant": prepared["top_query_variant"],
+    }
+    return result
+
+
+def _get_client() -> Groq:
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY not set.")
+    return Groq(api_key=GROQ_API_KEY)
+
+
+def _fallback_model(current_model: str) -> str:
+    return GROQ_MODEL_FAST if current_model != GROQ_MODEL_FAST else "gemma2-9b-it"
+
+
+def _is_retryable_llm_error(exc: Exception) -> bool:
+    err = str(exc).lower()
+    return any(piece in err for piece in ["429", "rate limit", "too many", "413"])
+
+
+def _create_completion(prompt_text: str, model_name: str, stream: bool):
+    return _get_client().chat.completions.create(
+        model=model_name,
+        messages=[{"role": "user", "content": prompt_text}],
+        temperature=0.3,
+        stream=stream,
+    )
+
+
+def _generate_completion(prompt_text: str, model_name: str) -> tuple[str, str]:
+    try:
+        response = _create_completion(prompt_text, model_name, stream=False)
+        return response.choices[0].message.content or "", model_name
+    except Exception as exc:
+        if not _is_retryable_llm_error(exc):
+            raise
+
+        fallback = _fallback_model(model_name)
+        logger.warning("[Chat] Retrying buffered completion with fallback model %s", fallback)
+        response = _create_completion(prompt_text, fallback, stream=False)
+        return response.choices[0].message.content or "", fallback
+
+
+def _token_chunks(text: str, size: int = 40) -> Generator[str, None, None]:
+    words = text.split()
+    if not words:
+        return
+    for index in range(0, len(words), size):
+        yield " ".join(words[index:index + size]) + " "
+
+
+def _stream_completion(prompt_text: str, model_name: str) -> tuple[Generator[str, None, None], str]:
+    try:
+        stream = _create_completion(prompt_text, model_name, stream=True)
+        return _read_stream(stream), model_name
+    except Exception as exc:
+        if not _is_retryable_llm_error(exc):
+            logger.warning("[Chat] Streaming unavailable, falling back to buffered completion: %s", exc)
+            answer, used_model = _generate_completion(prompt_text, model_name)
+            return _token_chunks(answer), used_model
+
+        fallback = _fallback_model(model_name)
+        logger.warning("[Chat] Retrying streaming completion with fallback model %s", fallback)
+        try:
+            stream = _create_completion(prompt_text, fallback, stream=True)
+            return _read_stream(stream), fallback
+        except Exception as stream_exc:
+            logger.warning("[Chat] Streaming fallback failed, using buffered completion: %s", stream_exc)
+            answer, used_model = _generate_completion(prompt_text, fallback)
+            return _token_chunks(answer), used_model
+
+
+def _read_stream(stream) -> Generator[str, None, None]:
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content or ""
+        if delta:
+            yield delta
+
+
+def answer_question(
+    question: str,
+    document_id: str,
+    model_override: str | None = None,
+    enable_query_augmentation: bool = True,
+) -> dict[str, Any]:
     cached = cache_get(question, document_id)
     if cached:
         return {**cached, "cached": True}
 
-    # ── Determine model FIRST (needed for _is_small_model check below) ────────
-    _model = model_override or GROQ_MODEL
-    _small = _is_small_model(_model)
-    logger.info("[Chat] model=%s small=%s", _model, _small)
-
-    # ── Detect summary intent ─────────────────────────────────────────────────
-    _is_summary = is_summarize_intent(question)
-    if _is_summary:
-        logger.info("[Chat] Summary intent — broad retrieval mode")
-
-    # ── Embed query ───────────────────────────────────────────────────────────
-    t_embed = time.time()
-    embed_text = "document overview summary key points" if _is_summary else question
-    question_embedding = get_embeddings_cohere([embed_text], input_type="search_query")[0]
-    embed_ms = round((time.time() - t_embed) * 1000)
-    logger.info("[Chat] Embedded in %dms", embed_ms)
-
-    # Guard: if Cohere returned zero vector (401/error), fail cleanly
-    if _is_zero_vector(question_embedding):
-        raise RuntimeError(
-            "Embedding failed — COHERE_API_KEY may be invalid or rate-limited. "
-            "Please check your Cohere API key."
-        )
-
-    # ── Retrieve from Pinecone ────────────────────────────────────────────────
-    pc = Pinecone(api_key=PINECONE_API_KEY)
-    index = pc.Index(PINECONE_INDEX)
-
-    _top_k = ((TOP_K_SMALL + 2) if _small else (TOP_K_LARGE + 3)) if _is_summary \
-              else (TOP_K_SMALL if _small else TOP_K_LARGE)
-
-    t_retrieve = time.time()
-    results = index.query(
-        vector=question_embedding,
-        top_k=_top_k,
-        namespace=document_id,
-        include_metadata=True,
+    prepared = _prepare_pipeline(
+        question,
+        document_id,
+        model_override=model_override,
+        enable_query_augmentation=enable_query_augmentation,
     )
-    retrieve_ms = round((time.time() - t_retrieve) * 1000)
-    logger.info("[Chat] Pinecone: %d matches in %dms", len(results["matches"]), retrieve_ms)
-
-    # ── Filter matches ────────────────────────────────────────────────────────
-    if _is_summary:
-        # Use all chunks for summary — confidence filter not appropriate here
-        filtered_matches = results["matches"]
-        logger.info("[Chat] Summary mode — using all %d chunks", len(filtered_matches))
-    else:
-        filtered_matches = [m for m in results["matches"] if m.get("score", 0) >= CONFIDENCE_THRESHOLD]
-        if not filtered_matches:
-            logger.warning("[Chat] No matches above threshold — using top 1")
-            filtered_matches = results["matches"][:1]
-
-    # Guard: if no matches at all
-    if not filtered_matches:
-        raise RuntimeError(
-            "No document chunks found. The document may not be ingested yet, "
-            "or the document ID is incorrect."
-        )
-
-    # ── Build context ─────────────────────────────────────────────────────────
-    _char_limit  = CONTEXT_CHAR_LIMIT_SMALL if _small else CONTEXT_CHAR_LIMIT_LARGE
-    _chunk_limit = _char_limit // max(len(filtered_matches), 1)
-    context = "\n".join([m["metadata"]["text"][:_chunk_limit] for m in filtered_matches])
-    logger.info("[Chat] ctx=%d chars, %d chunks", len(context), len(filtered_matches))
-
-    # ── Build prompt ──────────────────────────────────────────────────────────
-    if _is_summary:
-        prompts = {
-            "en": (
-                "You are a helpful government services assistant.\n"
-                "Read the following excerpts from an official document and write a clear summary.\n\n"
-                "Document excerpts:\n{context}\n\n"
-                "INSTRUCTIONS:\n"
-                "1. Write 3-5 bullet points summarising what this document is about.\n"
-                "2. Each bullet must be one short simple sentence (5th-grade reading level).\n"
-                "3. Mention the document purpose, who it is for, and the main points.\n"
-                "4. Do NOT make up anything not in the excerpts.\n"
-                "5. End with: Source: Based on official documents provided."
-            ),
-            "ms": (
-                "Anda adalah pembantu perkhidmatan kerajaan yang membantu.\n"
-                "Baca petikan daripada dokumen rasmi dan tulis ringkasan yang jelas.\n\n"
-                "Petikan dokumen:\n{context}\n\n"
-                "ARAHAN:\n"
-                "1. Tulis 3-5 mata peluru meringkaskan apa yang dokumen ini mengenai.\n"
-                "2. Setiap mata peluru mestilah satu ayat pendek dan mudah (tahap darjah 5).\n"
-                "3. Nyatakan tujuan dokumen, untuk siapa, dan perkara utama.\n"
-                "4. JANGAN reka maklumat yang tidak ada dalam petikan.\n"
-                "5. Akhiri dengan: Sumber: Berdasarkan dokumen rasmi yang disediakan."
-            ),
-            "zh-cn": (
-                "您是一位有帮助的政府服务助理。\n"
-                "请阅读以下官方文件摘录并写一份清晰的摘要。\n\n"
-                "文件摘录：\n{context}\n\n"
-                "说明：\n"
-                "1. 用3-5个要点总结这份文件的内容。\n"
-                "2. 每个要点应为一个简短易懂的句子（五年级阅读水平）。\n"
-                "3. 说明文件的目的、适用对象和主要内容。\n"
-                "4. 不要编造摘录中没有的信息。\n"
-                "5. 以来源：基于所提供的官方文件结尾"
-            ),
-        }
-        prompt_text = prompts.get(lang, prompts["en"]).format(context=context)
-    else:
-        prompts = {
-            "en": (
-                "You are a helpful government services assistant.\n"
-                "Your job: read official documents and give simple, clear answers.\n\n"
-                "RULES:\n"
-                "1. Answer ONLY from the context — never make up information.\n"
-                "2. Use simple, everyday words (5th-grade reading level).\n"
-                "3. Replace legal/technical jargon with plain language.\n"
-                "4. Format as 3-5 short bullet points — each one is one short sentence.\n"
-                "5. End every answer with: Source: Based on official documents provided.\n\n"
-                "--- EXAMPLE 1 ---\n"
-                "Question: Who can apply for housing aid?\n"
-                "Answer:\n"
-                "• Malaysian citizens with a monthly income below RM3,000 can apply.\n"
-                "• You must be a first-time home buyer with no other property.\n"
-                "• You need to be at least 18 years old.\n"
-                "Source: Based on official documents provided.\n\n"
-                "--- EXAMPLE 2 ---\n"
-                "Question: What documents do I need?\n"
-                "Answer:\n"
-                "• Bring your identity card (MyKad).\n"
-                "• Prepare your latest payslip or income proof.\n"
-                "• You also need a utility bill to show your address.\n"
-                "Source: Based on official documents provided.\n\n"
-                "--- NOW ANSWER THIS ---\n"
-                "Context from official documents:\n{context}\n\n"
-                "Question: {question}\n"
-                "Answer:"
-            ),
-            "ms": (
-                "Anda adalah pembantu perkhidmatan kerajaan yang membantu.\n"
-                "Tugas anda: baca dokumen rasmi dan berikan jawapan yang mudah dan jelas.\n\n"
-                "PERATURAN:\n"
-                "1. Jawab HANYA dari konteks — jangan reka maklumat.\n"
-                "2. Gunakan perkataan mudah, harian (tahap pembacaan darjah 5).\n"
-                "3. Gantikan jargon undang-undang/teknikal dengan bahasa biasa.\n"
-                "4. Format sebagai 3-5 mata peluru pendek — setiap satu ialah satu ayat pendek.\n"
-                "5. Akhiri setiap jawapan dengan: Sumber: Berdasarkan dokumen rasmi yang disediakan.\n\n"
-                "--- CONTOH 1 ---\n"
-                "Soalan: Siapa yang boleh mohon bantuan perumahan?\n"
-                "Jawapan:\n"
-                "• Warganegara Malaysia dengan pendapatan bulanan di bawah RM3,000 boleh memohon.\n"
-                "• Anda mestilah pembeli rumah pertama yang tidak memiliki harta lain.\n"
-                "• Anda perlu berumur sekurang-kurangnya 18 tahun.\n"
-                "Sumber: Berdasarkan dokumen rasmi yang disediakan.\n\n"
-                "--- CONTOH 2 ---\n"
-                "Soalan: Apakah dokumen yang diperlukan?\n"
-                "Jawapan:\n"
-                "• Bawa kad pengenalan anda (MyKad).\n"
-                "• Sediakan slip gaji atau bukti pendapatan terkini.\n"
-                "• Anda juga perlukan bil utiliti untuk tunjukkan alamat anda.\n"
-                "Sumber: Berdasarkan dokumen rasmi yang disediakan.\n\n"
-                "--- JAWAB SOALAN INI ---\n"
-                "Konteks daripada dokumen rasmi:\n{context}\n\n"
-                "Soalan: {question}\n"
-                "Jawapan:"
-            ),
-            "zh-cn": (
-                "您是一位有帮助的政府服务助理。\n"
-                "您的工作：阅读官方文件，提供简单清晰的答案。\n\n"
-                "规则：\n"
-                "1. 只从背景回答——不要编造信息。\n"
-                "2. 使用简单的日常用语（五年级阅读水平）。\n"
-                "3. 用通俗语言替换法律/技术术语。\n"
-                "4. 格式为3-5个简短要点——每个要点是一个简短句子。\n"
-                "5. 每个答案以此结尾：来源：基于所提供的官方文件。\n\n"
-                "--- 示例1 ---\n"
-                "问题：谁可以申请住房援助？\n"
-                "答案：\n"
-                "• 月收入低于3000令吉的马来西亚公民可以申请。\n"
-                "• 您必须是第一次购房且没有其他房产。\n"
-                "• 您需要年满18岁。\n"
-                "来源：基于所提供的官方文件。\n\n"
-                "--- 示例2 ---\n"
-                "问题：我需要什么文件？\n"
-                "答案：\n"
-                "• 携带您的身份证（MyKad）。\n"
-                "• 准备最新的工资单或收入证明。\n"
-                "• 您还需要水电费账单来证明您的地址。\n"
-                "来源：基于所提供的官方文件。\n\n"
-                "--- 现在回答这个问题 ---\n"
-                "来自官方文件的背景：\n{context}\n\n"
-                "问题：{question}\n"
-                "答案："
-            ),
-        }
-        prompt_text = prompts.get(lang, prompts["en"]).format(context=context, question=question)
-
-    # ── Generate answer (with 429 auto-fallback) ──────────────────────────────
-    t_llm = time.time()
-
-    def _call_llm(model: str) -> object:
-        llm = ChatGroq(api_key=GROQ_API_KEY, model_name=model, temperature=0.3)
-        return llm.invoke(prompt_text)
-
-    try:
-        response = _call_llm(_model)
-    except Exception as e:
-        err_str = str(e).lower()
-        if "429" in err_str or "rate limit" in err_str or "too many" in err_str or "413" in err_str:
-            fallback = GROQ_MODEL_FAST if _model != GROQ_MODEL_FAST else "gemma2-9b-it"
-            logger.warning("[Chat] %s on %s — retrying with %s", "429/413", _model, fallback)
-            response = _call_llm(fallback)
-            _model = fallback  # update so model_used reflects actual model
-        else:
-            raise
-
-    llm_ms    = round((time.time() - t_llm) * 1000)
-    total_ms  = round((time.time() - t_start) * 1000)
-    top_score = filtered_matches[0].get("score", 0) if filtered_matches else 0
-
-    logger.info("[Chat] Done — lang=%s conf=%.3f latency=%dms (embed=%dms retrieve=%dms llm=%dms)",
-                lang, top_score, total_ms, embed_ms, retrieve_ms, llm_ms)
-
-    result = {
-        "answer":     response.content,
-        "language":   lang,
-        "sources": [
-            {"text": m["metadata"]["text"][:200], "document_id": document_id,
-             "score": round(m.get("score", 0), 4)}
-            for m in filtered_matches
-        ],
-        "confidence": round(top_score, 4),
-        "latency_ms": total_ms,
-        "cached":     False,
-        "model_used": _model,
-    }
-
+    answer_text, model_used = _generate_completion(prepared["prompt_text"], prepared["model_name"])
+    result = _build_result(prepared, answer_text, model_used)
     cache_set(question, document_id, result)
     return result
 
 
-# ─── Delete Document ──────────────────────────────────────────────────────────
+def stream_answer_question(
+    question: str,
+    document_id: str,
+    model_override: str | None = None,
+    enable_query_augmentation: bool = True,
+) -> Generator[dict[str, Any], None, None]:
+    cached = cache_get(question, document_id)
+    if cached:
+        yield {
+            "type": "retrieval",
+            "language": cached["language"],
+            "retrieval_mode": cached.get("retrieval_mode", "single_query"),
+            "query_variants_used": cached.get("query_variants_used", [question]),
+            "top_query_variant": cached.get("top_query_variant", question),
+        }
+        for text in _token_chunks(cached["answer"]):
+            yield {"type": "token", "text": text}
+        yield {"type": "sources", "sources": cached["sources"]}
+        yield {"type": "complete", **{**cached, "cached": True}}
+        return
+
+    prepared = _prepare_pipeline(
+        question,
+        document_id,
+        model_override=model_override,
+        enable_query_augmentation=enable_query_augmentation,
+    )
+    yield {
+        "type": "retrieval",
+        "language": prepared["language"],
+        "retrieval_mode": prepared["retrieval_mode"],
+        "query_variants_used": prepared["query_variants_used"],
+        "top_query_variant": prepared["top_query_variant"],
+    }
+
+    pieces: list[str] = []
+    token_stream, model_used = _stream_completion(prepared["prompt_text"], prepared["model_name"])
+    for piece in token_stream:
+        pieces.append(piece)
+        yield {"type": "token", "text": piece}
+
+    answer_text = "".join(pieces).strip()
+    result = _build_result(prepared, answer_text, model_used)
+    cache_set(question, document_id, result)
+    yield {"type": "sources", "sources": result["sources"]}
+    yield {"type": "complete", **result}
+
+
 def delete_document_from_vectorstore(document_id: str) -> None:
     try:
-        pc = Pinecone(api_key=PINECONE_API_KEY)
-        index = pc.Index(PINECONE_INDEX)
+        index = _get_index()
         index.delete(delete_all=True, namespace=document_id)
         cache_invalidate_document(document_id)
         logger.info("[RAG] Deleted document_id=%s", document_id)
-    except Exception as e:
-        logger.error("[RAG] Error deleting document_id=%s: %s", document_id, e)
+    except Exception as exc:
+        logger.error("[RAG] Error deleting document_id=%s: %s", document_id, exc)

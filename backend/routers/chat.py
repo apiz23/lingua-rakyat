@@ -1,107 +1,35 @@
 """
-routers/chat.py — Question & Answer Endpoints
-==============================================
-This file defines the API endpoints for:
-  POST /api/chat/ask       — Ask a question about a document
-  GET  /api/chat/history   — Get past Q&A pairs for a document
-
-The actual AI logic lives in utils/rag_pipeline.py.
-This file just handles the HTTP layer (receiving requests, returning responses).
+routers/chat.py - Question and answer endpoints.
 """
 
 import json
-import os
+import logging
+import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from supabase import create_client, Client
-
-from utils.rag_pipeline import answer_question
-from routers.eval import _evaluator as evaluator
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from fastapi import Request
 
+from routers.eval import _evaluator as evaluator
+from utils.chat_history import delete_chat_messages_for_document, insert_chat_message, list_chat_messages
+from utils.rag_pipeline import answer_question, stream_answer_question
+
+logger = logging.getLogger("chat_router")
 limiter = Limiter(key_func=get_remote_address)
-
 router = APIRouter()
 
-# ─── Supabase Client (singleton) ─────────────────────────────────────────────
-_supabase: Optional[Client] = None
-
-def get_supabase() -> Client:
-    global _supabase
-    if _supabase is None:
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_KEY")
-        if not url or not key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in your .env file.")
-        _supabase = create_client(url, key)
-    return _supabase
-
-def get_bucket() -> str:
-    return os.getenv("SUPABASE_BUCKET", "documents")
-
-# ─── Supabase-Based Chat History Store ───────────────────────────────────────
-# For Vercel deployment (read-only filesystem), we store chat history ONLY in Supabase Storage
-# as a JSON file, similar to how metadata.json is stored. No local files are created.
-
-CHAT_HISTORY_PATH = "chat_history.json"
-
-def load_chat_history() -> list[dict]:
-    """
-    Load chat history from Supabase Storage.
-    Returns empty list if file doesn't exist or Supabase is unavailable.
-    """
-    try:
-        sb = get_supabase()
-        response = sb.storage.from_(get_bucket()).download(CHAT_HISTORY_PATH)
-        data = json.loads(response.decode("utf-8"))
-        print(f"[Chat History] Loaded {len(data)} messages from Supabase Storage")
-        return data
-    except Exception as e:
-        print(f"[Chat History] Could not load from Supabase (might be first run): {e}")
-        return []
-
-def save_chat_history(history: list[dict]) -> None:
-    """
-    Save chat history ONLY to Supabase Storage (upsert).
-    No local files are created to ensure Vercel compatibility.
-    """
-    json_str = json.dumps(history, indent=2, default=str)
-    data_bytes = json_str.encode("utf-8")
-
-    try:
-        sb = get_supabase()
-        sb.storage.from_(get_bucket()).upload(
-            CHAT_HISTORY_PATH,
-            data_bytes,
-            {"content-type": "application/json", "upsert": "true"},
-        )
-        print(f"[Chat History] Saved {len(history)} messages to Supabase Storage")
-    except Exception as e:
-        print(f"[Chat History] Supabase save error: {e}")
-
-
-# ─── Request / Response Models ────────────────────────────────────────────────
 
 class AskRequest(BaseModel):
-    """
-    The body of a POST /api/chat/ask request.
-    
-    Example JSON body:
-        {
-            "document_id": "a1b2c3d4-...",
-            "document_name": "housing_policy.pdf",
-            "question": "What are the eligibility criteria?"
-        }
-    """
     document_id: str
     document_name: str
+    session_id: str = Field(min_length=1)
     question: str
-    model_override: str = ""  # optional — empty string means use server default
+    model_override: str = ""
+    enable_query_augmentation: bool = True
 
 
 class SourceChunk(BaseModel):
@@ -111,21 +39,6 @@ class SourceChunk(BaseModel):
 
 
 class AskResponse(BaseModel):
-    """
-    The response from POST /api/chat/ask.
-    
-    Example JSON response:
-        {
-            "answer": "The eligibility criteria include...",
-            "sources": [
-                {"content": "Eligibility criteria include...", "chunk_index": 3},
-                ...
-            ],
-            "language": "en",
-            "question": "What are the eligibility criteria?",
-            "timestamp": "2024-01-15T10:30:00"
-        }
-    """
     answer: str
     sources: list[SourceChunk]
     language: str
@@ -134,142 +47,179 @@ class AskResponse(BaseModel):
     confidence: float = 0.0
     latency_ms: int = 0
     model_used: str = ""
+    retrieval_mode: str = "single_query"
+    query_variants_used: list[str] = Field(default_factory=list)
+    top_query_variant: str = ""
 
 
 class ChatMessage(BaseModel):
     id: str
+    session_id: str
     document_id: str
     question: str
     answer: str
     language: str
     sources: list[SourceChunk]
     timestamp: str
+    confidence: float = 0.0
+    latency_ms: int = 0
+    model_used: str = ""
 
 
-# ─── Endpoints ────────────────────────────────────────────────────────────────
-
-@router.post("/ask", response_model=AskResponse)
-@limiter.limit("30/minute")  # 30 questions per minute per IP
-async def ask_question(request: Request, body: AskRequest):
-    """
-    Ask a question about an uploaded document.
-    
-    This endpoint:
-    1. Validates the request
-    2. Calls answer_question() from rag_pipeline.py
-    3. Saves the Q&A pair to chat history
-    4. Returns the answer + source excerpts
-    
-    The frontend sends a JSON body with the document_id and question.
-    Example (JavaScript fetch):
-        const response = await fetch("/api/chat/ask", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                document_id: "a1b2c3d4-...",
-                document_name: "housing_policy.pdf",
-                question: "What are the eligibility criteria?"
-            })
-        });
-        const data = await response.json();
-        console.log(data.answer);  // The AI's answer
-        console.log(data.sources); // The document excerpts used
-    """
-    request = body  # alias for backwards compatibility
-    if not request.question.strip():
+def _validate_ask_request(body: AskRequest) -> None:
+    if not body.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
-    
-    if len(request.question) > 1000:
+    if len(body.question) > 1000:
         raise HTTPException(status_code=400, detail="Question is too long (max 1000 characters)")
-    
-    # ── Run the RAG pipeline ─────────────────────────────────────────────────
-    try:
-        result = answer_question(
-            question=request.question,
-            document_id=request.document_id,
-            model_override=request.model_override or None,
-        )
-    except Exception as e:
-        error_msg = str(e)
-        print(f"[Chat] Q&A failed: {error_msg}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate answer: {error_msg}"
-        )
-    
-    timestamp = datetime.now().isoformat()
-    
-    # ── Save to chat history ─────────────────────────────────────────────────
-    import uuid
-    history_entry = {
-        "id": str(uuid.uuid4()),
-        "document_id": request.document_id,
-        "question": request.question,
-        "answer": result["answer"],
-        "language": result["language"],
-        "sources": result["sources"],
-        "timestamp": timestamp,
-    }
-    
-    history = load_chat_history()
-    history.append(history_entry)
-    save_chat_history(history)
+    if not body.session_id.strip():
+        raise HTTPException(status_code=400, detail="session_id cannot be empty")
 
-    # ── Auto-record into evaluation tracker ──────────────────────────────────
+
+def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, answer_text: str) -> dict[str, Any]:
+    return {
+        "session_id": body.session_id,
+        "document_id": body.document_id,
+        "document_name": body.document_name,
+        "question": body.question,
+        "answer": answer_text,
+        "language": result.get("language", "en"),
+        "sources": result.get("sources", []),
+        "confidence": result.get("confidence", 0.0),
+        "latency_ms": result.get("latency_ms", 0),
+        "model_used": result.get("model_used", ""),
+        "created_at": timestamp,
+    }
+
+
+def _record_eval(body: AskRequest, result: dict[str, Any], answer_text: str) -> None:
     try:
         evaluator.record(
-            question=request.question,
-            answer=result["answer"],
-            language=result["language"],
+            question=body.question,
+            answer=answer_text,
+            language=result.get("language", "en"),
             confidence=result.get("confidence", 0.0),
             latency_ms=result.get("latency_ms", 0),
-            document_id=request.document_id,
+            document_id=body.document_id,
         )
-    except Exception as eval_err:
-        print(f"[Eval] Warning: failed to record interaction — {eval_err}")
+    except Exception as exc:
+        logger.warning("[Eval] Failed to record interaction: %s", exc)
+
+
+def clear_chat_history(document_id: str) -> int:
+    return delete_chat_messages_for_document(document_id)
+
+
+@router.post("/ask", response_model=AskResponse)
+@limiter.limit("30/minute")
+async def ask_question(request: Request, body: AskRequest):
+    _ = request
+    _validate_ask_request(body)
+
+    try:
+        result = answer_question(
+            question=body.question,
+            document_id=body.document_id,
+            model_override=body.model_override or None,
+            enable_query_augmentation=body.enable_query_augmentation,
+        )
+    except Exception as exc:
+        logger.error("[Chat] Q&A failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to generate answer: {exc}") from exc
+
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    answer_text = result["answer"]
+    insert_chat_message(_history_payload(body, result, timestamp, answer_text))
+    _record_eval(body, result, answer_text)
 
     return AskResponse(
-        answer=result["answer"],
-        sources=[SourceChunk(**s) for s in result["sources"]],
+        answer=answer_text,
+        sources=[SourceChunk(**source) for source in result["sources"]],
         language=result["language"],
-        question=request.question,
+        question=body.question,
         timestamp=timestamp,
         confidence=result.get("confidence", 0.0),
         latency_ms=result.get("latency_ms", 0),
         model_used=result.get("model_used", ""),
+        retrieval_mode=result.get("retrieval_mode", "single_query"),
+        query_variants_used=result.get("query_variants_used", []),
+        top_query_variant=result.get("top_query_variant", ""),
+    )
+
+
+@router.post("/ask-stream")
+@limiter.limit("30/minute")
+async def ask_question_stream(request: Request, body: AskRequest):
+    _ = request
+    _validate_ask_request(body)
+
+    async def event_stream():
+        timestamp = datetime.utcnow().isoformat() + "Z"
+        answer_pieces: list[str] = []
+        final_result: Optional[dict[str, Any]] = None
+
+        yield f"data: {json.dumps({'type': 'start'})}\n\n"
+
+        try:
+            for event in stream_answer_question(
+                question=body.question,
+                document_id=body.document_id,
+                model_override=body.model_override or None,
+                enable_query_augmentation=body.enable_query_augmentation,
+            ):
+                if event["type"] == "token":
+                    answer_pieces.append(event["text"])
+                elif event["type"] == "complete":
+                    final_result = event
+
+                yield f"data: {json.dumps(event)}\n\n"
+
+            if final_result is None:
+                raise RuntimeError("Streaming finished without a completion event.")
+
+            answer_text = "".join(answer_pieces).strip() or final_result.get("answer", "")
+            insert_chat_message(_history_payload(body, final_result, timestamp, answer_text))
+            _record_eval(body, final_result, answer_text)
+
+        except Exception as exc:
+            logger.error("[Chat] Streaming failed: %s", exc)
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
 @router.get("/history", response_model=list[ChatMessage])
-async def get_chat_history(document_id: Optional[str] = None):
-    """
-    Get past Q&A pairs, optionally filtered by document.
-    
-    Args:
-        document_id: (Optional query param) Filter history for one document.
-                     If not provided, returns all history.
-    
-    Example URL:
-        GET /api/chat/history?document_id=a1b2c3d4-...
-    """
-    history = load_chat_history()
-    
-    if document_id:
-        history = [h for h in history if h["document_id"] == document_id]
-    
-    # Return most recent first
-    history.sort(key=lambda x: x["timestamp"], reverse=True)
-    
-    return [ChatMessage(**h) for h in history]
+async def get_chat_history(document_id: Optional[str] = None, session_id: Optional[str] = None):
+    rows = list_chat_messages(document_id=document_id, session_id=session_id)
+    messages = []
+    for row in rows:
+        messages.append(ChatMessage(
+            id=str(row.get("id", uuid.uuid4())),
+            session_id=row.get("session_id", ""),
+            document_id=row.get("document_id", ""),
+            question=row.get("question", ""),
+            answer=row.get("answer", ""),
+            language=row.get("language", "en"),
+            sources=[SourceChunk(**source) for source in row.get("sources", [])],
+            timestamp=row.get("created_at", ""),
+            confidence=float(row.get("confidence", 0.0) or 0.0),
+            latency_ms=int(row.get("latency_ms", 0) or 0),
+            model_used=row.get("model_used", ""),
+        ))
+    return messages
 
 
 @router.delete("/history/{document_id}")
-async def clear_chat_history(document_id: str):
-    """
-    Clear all chat history for a specific document.
-    Called when the user deletes a document.
-    """
-    history = load_chat_history()
-    history = [h for h in history if h["document_id"] != document_id]
-    save_chat_history(history)
-    return {"success": True, "message": "Chat history cleared"}
+async def clear_document_chat_history(document_id: str):
+    deleted = clear_chat_history(document_id)
+    return {
+        "success": True,
+        "message": "Chat history cleared",
+        "deleted_rows": deleted,
+    }
