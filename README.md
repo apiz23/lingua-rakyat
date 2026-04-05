@@ -2,7 +2,7 @@
 
 > **VHack 2026 · Case Study 4 — The Inclusive Citizen: Multilingual AI for Public Services**
 
-Lingua Rakyat is an AI-powered assistant that helps ASEAN citizens understand government services in plain language — in their own language. Upload any government PDF, ask a question in Malay, English, or Chinese, and get a simple bullet-point answer grounded in the official document. No hallucinations. Every answer is sourced directly from the uploaded document.
+Lingua Rakyat is an AI-powered assistant that helps ASEAN citizens understand government services in plain language — in their own language. Upload a government PDF, ask a question in Malay, English, or Chinese, and get a simple bullet-point answer grounded in the official document. Every answer is sourced directly from the uploaded document.
 
 ---
 
@@ -36,10 +36,11 @@ Lingua Rakyat is an AI-powered assistant that helps ASEAN citizens understand go
 
 A citizen uploads a Malaysian government PDF (e.g. FAQ SUMBANGAN ASAS RAHMAH, STR application guide, NUP housing policy). They type a question in any language. The system:
 
-1. Detects the language automatically (supports 15+ SEA languages and dialects)
+1. Detects the language automatically and routes dialectal inputs to the closest supported response language
 2. Searches the document for the most relevant passages using vector similarity
 3. Generates a simplified, 5th-grade reading level answer in the same language
 4. Shows which part of the document it used — with a confidence score
+5. Lets the user turn Smart Retrieval on or off in the chat UI
 
 **Example interaction:**
 
@@ -156,7 +157,7 @@ lingua-rakyat/
 | **Groq** | LLM inference (fast, free tier) | llama-4-scout: 30K TPM · 500K/day |
 | **Cohere** | Multilingual embeddings (1024-dim) | 1000 calls/month |
 | **Pinecone** | Vector similarity search | 2GB serverless |
-| **Supabase** | PDF file storage + metadata JSON | 500MB storage |
+| **Supabase** | PDF storage, metadata, and chat history table | 500MB storage |
 
 > **Note:** The original plan used ChromaDB + BGE embeddings + Ollama (local). These were replaced with Pinecone + Cohere + Groq for cloud deployment on Render's free tier (512MB RAM limit — local models don't fit).
 
@@ -178,25 +179,28 @@ User types question (any language)
    — SUMMARY? ("ringkaskan", "summarize", "总结", "overview")
    — QUESTION? ("how do I", "siapa yang layak", "如何申请")
         ↓
-3. Embed the query — Cohere embed-multilingual-v3.0 (1024-dim)
-   — Summary → embed "document overview summary key points"
-   — Question → embed the actual question
+3. Smart Retrieval (optional UI toggle)
+   — ON  → expand query into EN / MS / ZH-CN variants + paraphrase when available
+   — OFF → use the original query only for faster replies
         ↓
-4. Vector search in Pinecone
+4. Embed query variants — Cohere embed-multilingual-v3.0 (1024-dim)
+        ↓
+5. Vector search in Pinecone
    — Summary: top 8 chunks, skip confidence filter
-   — Question: top 5 chunks, filter by score ≥ 0.50
+   — Question: top 5 chunks, rerank and filter by score ≥ 0.50
         ↓
-5. Build prompt (EN / MS / ZH-CN)
+6. Build prompt (EN / MS / ZH-CN)
    — 2 few-shot examples per language
    — Summary intent → dedicated summary prompt
    — Q&A intent → Q&A prompt with context + question
         ↓
-6. LLM generates simplified bullet-point answer
+7. LLM generates simplified bullet-point answer
    — Primary:  meta-llama/llama-4-scout-17b-16e-instruct (chat)
    — Fallback: qwen/qwen3-32b → gemma2-9b-it (on 429/413)
         ↓
-7. Return to frontend
+8. Return to frontend
    — answer, language, sources[], confidence, latency_ms, model_used
+   — retrieval_mode, query_variants_used, top_query_variant
    — Cache result (LRU 200 entries)
 ```
 
@@ -205,7 +209,7 @@ User types question (any language)
 ```
 User uploads PDF
         ↓
-1. Validate — pages, text length, empty page ratio
+1. Validate — PDF signature, MIME type, file size, encryption, page count, text quality
         ↓
 2. Extract text — PyPDF
         ↓
@@ -218,6 +222,8 @@ User uploads PDF
 6. Store PDF in Supabase — {uuid}/{original_filename}.pdf
         ↓
 7. Save metadata — metadata.json in Supabase
+        ↓
+8. Save chat history separately in Supabase table `lr_chat_messages`
 ```
 
 ---
@@ -308,10 +314,18 @@ PINECONE_INDEX=lingua-rakyat
 
 # ── File Storage (Supabase) ───────────────────────────────────────────────────
 # Get keys at: https://app.supabase.com → Settings → API
-# Create Storage bucket named "documents" (set to Public)
+# Create Storage bucket named "documents" and keep it Private
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your_supabase_service_role_key_here
 SUPABASE_BUCKET=documents
+
+# Optional chat history table override
+CHAT_HISTORY_TABLE=lr_chat_messages
+
+# Optional retrieval controls
+ENABLE_QUERY_AUGMENTATION=true
+AUGMENTATION_MAX_VARIANTS=4
+AUGMENTATION_INCLUDE_PARAPHRASE=true
 ```
 
 ### Frontend `.env.local`
@@ -330,7 +344,8 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/api/chat/ask` | Ask a question about a document |
-| `GET` | `/api/chat/history` | Get chat history for a document |
+| `POST` | `/api/chat/ask-stream` | Stream a chat answer over SSE |
+| `GET` | `/api/chat/history` | Get chat history for a document or session |
 | `DELETE` | `/api/chat/history/{document_id}` | Clear chat history |
 
 **POST `/api/chat/ask` — request:**
@@ -338,8 +353,10 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 {
   "document_id": "abc-123-uuid",
   "document_name": "FAQ_STR_2026.pdf",
+  "session_id": "demo-session-1",
   "question": "macam mana nak mohon?",
-  "model_override": ""
+  "model_override": "",
+  "enable_query_augmentation": true
 }
 ```
 
@@ -351,6 +368,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
   "confidence": 0.847,
   "latency_ms": 2341,
   "model_used": "meta-llama/llama-4-scout-17b-16e-instruct",
+  "retrieval_mode": "augmented",
+  "query_variants_used": ["macam mana nak mohon?", "How do I apply?"],
+  "top_query_variant": "How do I apply?",
   "sources": [
     { "text": "...", "score": 0.847, "document_id": "abc-123" }
   ]
@@ -361,7 +381,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/documents/upload` | Upload a PDF (rate limited: 10/min) |
+| `POST` | `/api/documents/upload` | Upload a PDF up to 5 MB and 200 pages (rate limited: 10/min) |
 | `GET` | `/api/documents/` | List all uploaded documents |
 | `DELETE` | `/api/documents/{id}` | Delete a document |
 
@@ -512,7 +532,7 @@ Or use the **Evaluation Dashboard** in the frontend at `/eval` — includes live
 ## Key Features
 
 ### 1. Multilingual support
-Detects 15+ SEA languages. Priority: keyword matching (Malay/Chinese dialects) → CJK character ratio → langdetect. Dialect map handles Javanese → Malay, Cantonese → Chinese, Tagalog → English automatically.
+Generates answers in 3 core languages: English, Malay, and Simplified Chinese. The detector also routes several dialectal / regional inputs (for example Javanese, Cantonese, Tagalog) to the closest supported response language.
 
 ### 2. Policy simplification
 Government jargon is simplified before answers are shown. 40+ bureaucratic terms (EN + MS) are replaced with plain equivalents. Every answer targets a 5th-grade (FK grade ≤ 6) reading level.
@@ -548,10 +568,13 @@ Every answer shows the source chunks used, with a colour-coded confidence bar. G
 ### 6. Few-shot prompting
 Every prompt includes 2 worked Q&A examples in the detected language. Teaches the LLM the exact bullet-point format and prevents format drift across different document types.
 
-### 7. Live streaming test suite
+### 7. Smart Retrieval toggle
+The chat UI includes a Smart Retrieval button. When enabled, the backend expands the query into core language variants before retrieval. When disabled, it skips augmentation for faster replies.
+
+### 8. Live streaming test suite
 30-case test suite streams results one by one via SSE. Each case appears on screen as it completes — no waiting 60+ seconds for all results.
 
-### 8. Model selector
+### 9. Model selector
 Both chat and eval have a dropdown to switch between 10 Groq models. Shows TPM and daily token limits per model.
 
 ---
@@ -579,7 +602,7 @@ Both chat and eval have a dropdown to switch between 10 Groq models. Shows TPM a
 → Eval page: `frontend/app/eval/page.tsx`
 
 ### "The app is showing 429 errors"
-→ Groq model hit its daily or per-minute limit. System auto-retries with fallback. If still failing, wait until midnight UTC for daily reset, or change `GROQ_MODEL` in `.env`.
+→ Groq model hit its daily or per-minute limit. System auto-retries with a fallback model. If Smart Retrieval is on, turn it off in the UI for faster replies and fewer extra augmentation calls.
 
 ### "I uploaded a PDF but it shows 0 chunks"
 → PDF is likely scanned/image-based. Try a PDF with selectable text. Check `GET /api/eval/data-quality` for quality details.
@@ -595,12 +618,13 @@ Both chat and eval have a dropdown to switch between 10 Groq models. Shows TPM a
 |---|---|---|
 | Chat requests | 30/min per IP | Groq rate limit protection |
 | PDF uploads | 10/min per IP | Cohere embedding quota |
-| Max PDF pages | 500 | Chunking performance |
+| Max upload size | 5 MB | Upload safety and predictable processing |
+| Max PDF pages | 200 | Upload safety and chunking performance |
 | Max context per query | 4,000 chars (~1,000 tokens) | TPM budget |
 | Query cache | 200 entries LRU | In-memory, resets on restart |
 | Full prompt support | EN, MS, ZH-CN | Dedicated prompts + few-shot |
-| Language detection | 15+ SEA languages | Dialect map + langdetect |
-| PDF type | Text-based only | No OCR for scanned PDFs |
+| Language detection | Routed dialect support | Dialect map + langdetect |
+| PDF type | Text-based, non-encrypted PDFs only | No OCR for scanned PDFs |
 
 ---
 
