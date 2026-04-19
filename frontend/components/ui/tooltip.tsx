@@ -5,6 +5,11 @@ import { Tooltip as TooltipPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
+type TooltipPortalProps = React.ComponentProps<typeof TooltipPrimitive.Portal>
+type TooltipContentProps = React.ComponentProps<typeof TooltipPrimitive.Content> & {
+  container?: TooltipPortalProps["container"]
+}
+
 function TooltipProvider({
   delayDuration = 0,
   ...props
@@ -33,11 +38,12 @@ function TooltipTrigger({
 function TooltipContent({
   className,
   sideOffset = 0,
+  container,
   children,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+}: TooltipContentProps) {
   return (
-    <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Portal container={container}>
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
         sideOffset={sideOffset}
