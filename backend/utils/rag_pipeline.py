@@ -15,6 +15,21 @@ from groq import Groq
 from pinecone import Pinecone
 from pypdf import PdfReader
 
+try:
+    import fitz  # PyMuPDF
+except Exception:
+    fitz = None
+
+try:
+    from PIL import Image
+except Exception:
+    Image = None
+
+try:
+    import pytesseract
+except Exception:
+    pytesseract = None
+
 from utils.data_augmentation import QueryAugmenter
 
 load_dotenv()
@@ -44,6 +59,7 @@ MIN_PAGES = 1
 MAX_PAGES = 500
 MIN_CHUNK_WORDS = 20
 CONFIDENCE_THRESHOLD = 0.50
+OCR_MIN_CHARS = 50
 
 CONTEXT_CHAR_LIMIT_LARGE = 4000
 CONTEXT_CHAR_LIMIT_SMALL = 1800
@@ -168,6 +184,81 @@ class PDFValidationError(ValueError):
     pass
 
 
+def _ocr_is_available() -> bool:
+    return fitz is not None and pytesseract is not None and Image is not None
+
+
+def _configure_tesseract() -> None:
+    if pytesseract is None:
+        return
+    tesseract_cmd = os.getenv("TESSERACT_CMD", "").strip()
+    if tesseract_cmd:
+        pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+
+
+def _pixmap_to_image(pixmap) -> Image.Image:
+    mode = "RGBA" if pixmap.alpha else "RGB"
+    return Image.frombytes(mode, [pixmap.width, pixmap.height], pixmap.samples)
+
+
+def _ocr_pdf_pages(pdf_path: str, page_numbers: Optional[list[int]] = None) -> tuple[str, dict[str, Any]]:
+    if not _ocr_is_available():
+        return "", {"method": "none", "pages_ocrd": 0, "char_count": 0}
+
+    _configure_tesseract()
+    doc = fitz.open(pdf_path)
+    extracted_pages: list[str] = []
+
+    try:
+        indices = page_numbers if page_numbers is not None else list(range(len(doc)))
+        for page_number in indices:
+            page = doc.load_page(page_number)
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+            text = pytesseract.image_to_string(
+                _pixmap_to_image(pix),
+                lang=os.getenv("TESSERACT_LANGS", "eng+msa+chi_sim"),
+            ).strip()
+            extracted_pages.append(text)
+    finally:
+        doc.close()
+
+    text = "\n".join(page for page in extracted_pages if page).strip()
+    return text, {
+        "method": "ocr",
+        "pages_ocrd": len(extracted_pages),
+        "char_count": len(text),
+    }
+
+
+def _ocr_pdf_page_map(pdf_path: str, page_numbers: list[int]) -> tuple[dict[int, str], dict[str, Any]]:
+    if not _ocr_is_available() or not page_numbers:
+        return {}, {"method": "none", "pages_ocrd": 0, "char_count": 0}
+
+    _configure_tesseract()
+    doc = fitz.open(pdf_path)
+    page_map: dict[int, str] = {}
+
+    try:
+        for page_number in page_numbers:
+            page = doc.load_page(page_number)
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+            text = pytesseract.image_to_string(
+                _pixmap_to_image(pix),
+                lang=os.getenv("TESSERACT_LANGS", "eng+msa+chi_sim"),
+            ).strip()
+            if text:
+                page_map[page_number] = text
+    finally:
+        doc.close()
+
+    joined_text = "\n".join(page_map.values()).strip()
+    return page_map, {
+        "method": "ocr",
+        "pages_ocrd": len(page_map),
+        "char_count": len(joined_text),
+    }
+
+
 def validate_pdf(pdf_path: str) -> dict[str, Any]:
     metrics = {
         "valid": False,
@@ -209,7 +300,10 @@ def validate_pdf(pdf_path: str) -> dict[str, Any]:
     metrics["avg_chars_per_page"] = round(total_chars / max(page_count, 1), 1)
 
     if total_chars < MIN_TEXT_LENGTH:
-        metrics["error"] = "PDF has no extractable text (may be scanned/image-based)."
+        metrics["error"] = (
+            "PDF has no extractable text."
+            + (" OCR fallback will be attempted." if _ocr_is_available() else " It may be scanned/image-based.")
+        )
         return metrics
     if empty_pages / max(page_count, 1) > 0.8:
         metrics["error"] = f"Over 80% of pages ({empty_pages}/{page_count}) have no text."
@@ -221,17 +315,59 @@ def validate_pdf(pdf_path: str) -> dict[str, Any]:
 
 def extract_text_from_pdf(pdf_path: str) -> tuple[str, dict[str, Any]]:
     quality = validate_pdf(pdf_path)
+    page_texts: list[str] = []
+    pages_needing_ocr: list[int] = []
+
+    try:
+        reader = PdfReader(pdf_path)
+    except Exception as exc:
+        raise PDFValidationError(f"Cannot open PDF: {exc}") from exc
+
+    for page_index, page in enumerate(reader.pages):
+        try:
+            text = (page.extract_text() or "").strip()
+        except Exception:
+            text = ""
+
+        if len(text) >= MIN_TEXT_LENGTH:
+            page_texts.append(text)
+            continue
+
+        page_texts.append("")
+        pages_needing_ocr.append(page_index)
+
+    ocr_metrics = {"method": "none", "pages_ocrd": 0, "char_count": 0}
+    if pages_needing_ocr and _ocr_is_available():
+        ocr_page_map, ocr_metrics = _ocr_pdf_page_map(pdf_path, pages_needing_ocr)
+        for page_index, page_text in ocr_page_map.items():
+            page_texts[page_index] = page_text
+
+    text = "\n".join(page_text for page_text in page_texts if page_text).strip()
+    if text:
+        ocr_pages_used = sum(1 for page_index in pages_needing_ocr if page_texts[page_index])
+        extraction_method = "ocr" if ocr_pages_used == len(page_texts) else "hybrid" if ocr_pages_used else "text"
+        merged_quality = {
+            **quality,
+            **ocr_metrics,
+            "valid": True,
+            "char_count": len(text),
+            "empty_pages": sum(1 for page_text in page_texts if len(page_text) < MIN_TEXT_LENGTH),
+            "avg_chars_per_page": round(len(text) / max(len(page_texts), 1), 1),
+            "extraction_method": extraction_method,
+            "pages_ocrd": ocr_pages_used,
+        }
+        if ocr_pages_used:
+            logger.info(
+                "[OCR] Filled %d/%d low-text pages for PDF",
+                ocr_pages_used,
+                len(page_texts),
+            )
+        return text, merged_quality
+
     if not quality["valid"]:
         raise PDFValidationError(quality["error"])
 
-    text = ""
-    reader = PdfReader(pdf_path)
-    for page in reader.pages:
-        try:
-            text += (page.extract_text() or "") + "\n"
-        except Exception:
-            continue
-    return text.strip(), quality
+    raise PDFValidationError("No text extracted from PDF.")
 
 
 def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
@@ -245,9 +381,13 @@ def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[st
     return chunks
 
 
-def ingest_document(pdf_path: str, document_id: str, document_name: str | None = None) -> int:
+def ingest_document(
+    pdf_path: str,
+    document_id: str,
+    document_name: str | None = None,
+) -> tuple[int, dict[str, Any]]:
     logger.info("[Ingest] Starting: document_id=%s name=%s", document_id, document_name or "unknown")
-    text, _quality = extract_text_from_pdf(pdf_path)
+    text, quality = extract_text_from_pdf(pdf_path)
     if not text:
         raise ValueError("No text extracted from PDF.")
 
@@ -274,7 +414,7 @@ def ingest_document(pdf_path: str, document_id: str, document_name: str | None =
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
     ]
     index.upsert(vectors=vectors, namespace=document_id)
-    return len(chunks)
+    return len(chunks), quality
 
 
 def _get_index():
@@ -394,6 +534,14 @@ def _filter_matches(matches: list[dict[str, Any]], is_summary: bool) -> list[dic
     return filtered or matches[:1]
 
 
+def _has_sufficient_evidence(matches: list[dict[str, Any]], is_summary: bool) -> bool:
+    if is_summary:
+        return True
+    if not matches:
+        return False
+    return matches[0]["reranked_score"] >= CONFIDENCE_THRESHOLD
+
+
 def _build_context(matches: list[dict[str, Any]], small_model: bool) -> str:
     char_limit = CONTEXT_CHAR_LIMIT_SMALL if small_model else CONTEXT_CHAR_LIMIT_LARGE
     chunk_limit = max(200, char_limit // max(len(matches), 1))
@@ -475,6 +623,33 @@ def _qa_prompt(context: str, question: str, lang: str) -> str:
     return prompts.get(lang, prompts["en"]).format(context=context, question=question)
 
 
+def _insufficient_evidence_answer(lang: str) -> str:
+    answers = {
+        "en": (
+            "- I cannot answer this confidently from the uploaded document.\n"
+            "- The retrieved evidence is too weak or does not directly address your question.\n"
+            "- Try asking with more specific terms, or upload a document that contains this information.\n"
+            "- You can also open the source excerpt below to check the closest matching passage.\n\n"
+            "Source: Based on official documents provided."
+        ),
+        "ms": (
+            "- Saya tidak dapat menjawab dengan yakin berdasarkan dokumen yang dimuat naik.\n"
+            "- Bukti yang ditemui terlalu lemah atau tidak menjawab soalan anda secara langsung.\n"
+            "- Cuba tanya dengan istilah yang lebih khusus, atau muat naik dokumen yang mengandungi maklumat ini.\n"
+            "- Anda juga boleh buka petikan sumber di bawah untuk semak padanan terdekat.\n\n"
+            "Sumber: Berdasarkan dokumen rasmi yang disediakan."
+        ),
+        "zh-cn": (
+            "- 我无法仅根据已上传的文件自信地回答这个问题。\n"
+            "- 检索到的证据较弱，或没有直接回答你的问题。\n"
+            "- 请尝试使用更具体的关键词，或上传包含该信息的文件。\n"
+            "- 你也可以展开下方来源，查看最接近的原文片段。\n\n"
+            "来源: Based on official documents provided."
+        ),
+    }
+    return answers.get(lang, answers["en"])
+
+
 def _prepare_pipeline(
     question: str,
     document_id: str,
@@ -504,10 +679,11 @@ def _prepare_pipeline(
     prompt_text = _summary_prompt(context, lang) if is_summary else _qa_prompt(context, question, lang)
     query_variants_used = [variant["text"] for variant in query_variants]
     top_query_variant = filtered_matches[0]["variant_text"]
+    sufficient_evidence = _has_sufficient_evidence(filtered_matches, is_summary=is_summary)
 
     logger.info(
-        "[Chat] lang=%s retrieval=%s variants=%d matches=%d retrieve_ms=%d",
-        lang, retrieval_mode, len(query_variants), len(filtered_matches), retrieve_ms,
+        "[Chat] lang=%s retrieval=%s variants=%d matches=%d retrieve_ms=%d sufficient=%s",
+        lang, retrieval_mode, len(query_variants), len(filtered_matches), retrieve_ms, sufficient_evidence,
     )
 
     return {
@@ -523,6 +699,7 @@ def _prepare_pipeline(
         "retrieval_mode": retrieval_mode,
         "query_variants_used": query_variants_used,
         "top_query_variant": top_query_variant,
+        "sufficient_evidence": sufficient_evidence,
         "started_at": t_start,
     }
 
@@ -548,6 +725,7 @@ def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -
         "retrieval_mode": prepared["retrieval_mode"],
         "query_variants_used": prepared["query_variants_used"],
         "top_query_variant": prepared["top_query_variant"],
+        "sufficient_evidence": prepared["sufficient_evidence"],
     }
     return result
 
@@ -642,7 +820,10 @@ def answer_question(
         model_override=model_override,
         enable_query_augmentation=enable_query_augmentation,
     )
-    answer_text, model_used = _generate_completion(prepared["prompt_text"], prepared["model_name"])
+    if prepared["sufficient_evidence"]:
+        answer_text, model_used = _generate_completion(prepared["prompt_text"], prepared["model_name"])
+    else:
+        answer_text, model_used = _insufficient_evidence_answer(prepared["language"]), "evidence-guard"
     result = _build_result(prepared, answer_text, model_used)
     cache_set(question, document_id, result)
     return result
@@ -681,13 +862,20 @@ def stream_answer_question(
         "retrieval_mode": prepared["retrieval_mode"],
         "query_variants_used": prepared["query_variants_used"],
         "top_query_variant": prepared["top_query_variant"],
+        "sufficient_evidence": prepared["sufficient_evidence"],
     }
 
     pieces: list[str] = []
-    token_stream, model_used = _stream_completion(prepared["prompt_text"], prepared["model_name"])
-    for piece in token_stream:
-        pieces.append(piece)
-        yield {"type": "token", "text": piece}
+    if prepared["sufficient_evidence"]:
+        token_stream, model_used = _stream_completion(prepared["prompt_text"], prepared["model_name"])
+        for piece in token_stream:
+            pieces.append(piece)
+            yield {"type": "token", "text": piece}
+    else:
+        model_used = "evidence-guard"
+        for piece in _token_chunks(_insufficient_evidence_answer(prepared["language"])):
+            pieces.append(piece)
+            yield {"type": "token", "text": piece}
 
     answer_text = "".join(pieces).strip()
     result = _build_result(prepared, answer_text, model_used)

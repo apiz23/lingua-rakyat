@@ -26,6 +26,8 @@
     "@magicui": "https://magicui.design/r/{name}",
     "@diceui": "https://diceui.com/r/{name}.json",
     "@smoothui": "https://smoothui.dev/r/{name}.json",
-    "@aceternity": "https://ui.aceternity.com/registry/{name}.json"
+    "@aceternity": "https://ui.aceternity.com/registry/{name}.json",
+    "@joyco": "https://registry.joyco.studio/r/{name}.json",
+    "@elements": "https://www.tryelements.dev/r/{name}.json"
   }
 }

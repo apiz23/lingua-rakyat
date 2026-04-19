@@ -1,52 +1,36 @@
 """
-routers/documents.py — Document Upload & Management Endpoints
-==============================================================
-This file defines the API endpoints for:
-  POST   /api/documents/upload   — Upload a PDF and run ingestion
-  GET    /api/documents/         — List all uploaded documents (auto-syncs with Supabase)
-  DELETE /api/documents/{id}     — Delete a document
-
-Storage:
-  - PDF files  → Supabase Storage (bucket: SUPABASE_BUCKET, default: "documents")
-  - Metadata   → Supabase Storage as metadata.json
-  - Vectors    → Pinecone (handled by rag_pipeline.py)
-
-KEY FIX:
-  GET /api/documents/ now auto-discovers any PDF in Supabase Storage that is
-  not yet registered in metadata.json and adds it automatically.
-  This means manually uploaded PDFs will appear without any extra steps.
+routers/documents.py - Document upload and management endpoints.
 """
 
-import os
-import uuid
-import json
 import io
+import logging
+import os
 import tempfile
-from datetime import datetime
-from typing import Optional
+import uuid
+from datetime import datetime, timezone
+from typing import Any, Optional
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 from pypdf import PdfReader
-from supabase import create_client, Client
-
-from utils.chat_history import delete_chat_messages_for_document
-from utils.rag_pipeline import ingest_document, delete_document_from_vectorstore
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from fastapi import Request
+from supabase import Client, create_client
+from pinecone import Pinecone
+
+from utils.chat_history import delete_chat_messages_for_document
+from utils.rag_pipeline import delete_document_from_vectorstore, ingest_document
 
 limiter = Limiter(key_func=get_remote_address)
-
-# ─── Router ───────────────────────────────────────────────────────────────────
+logger = logging.getLogger("documents_router")
 router = APIRouter()
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 PDF_MAGIC = b"%PDF-"
 MAX_UPLOAD_PAGES = 200
 
-# ─── Supabase Client (singleton) ─────────────────────────────────────────────
 _supabase: Optional[Client] = None
+
 
 def get_supabase() -> Client:
     global _supabase
@@ -61,6 +45,14 @@ def get_supabase() -> Client:
 
 def get_bucket() -> str:
     return os.getenv("SUPABASE_BUCKET", "documents")
+
+
+def get_documents_table() -> str:
+    return os.getenv("DOCUMENTS_TABLE", "lr_documents")
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def validate_uploaded_pdf_bytes(file_content: bytes) -> None:
@@ -85,164 +77,179 @@ def validate_uploaded_pdf_bytes(file_content: bytes) -> None:
         )
 
 
-# ─── Metadata helpers ─────────────────────────────────────────────────────────
-METADATA_PATH = "metadata.json"
-
-
-def load_metadata() -> list[dict]:
-    """
-    Load metadata ONLY from Supabase Storage.
-    No local fallback to ensure Vercel compatibility.
-    """
+def build_public_url(storage_path: Optional[str]) -> Optional[str]:
+    if not storage_path:
+        return None
     try:
-        sb = get_supabase()
-        response = sb.storage.from_(get_bucket()).download(METADATA_PATH)
-        data = json.loads(response.decode("utf-8"))
-        print(f"[Metadata] Loaded {len(data)} documents from Supabase Storage")
-        return data
-    except Exception as e:
-        print(f"[Metadata] Could not load from Supabase (might be first run): {e}")
+        return get_supabase().storage.from_(get_bucket()).get_public_url(storage_path)
+    except Exception as exc:
+        logger.warning("[Documents] Failed to build public URL for %s: %s", storage_path, exc)
+        return None
+
+
+def normalize_document_row(row: dict[str, Any]) -> dict[str, Any]:
+    uploaded_at = row.get("uploaded_at")
+    if isinstance(uploaded_at, datetime):
+        uploaded_at = uploaded_at.isoformat()
+    elif uploaded_at is None:
+        uploaded_at = utc_now_iso()
+    else:
+        uploaded_at = str(uploaded_at)
+
+    storage_path = row.get("storage_path")
+    public_url = row.get("public_url") or build_public_url(storage_path)
+
+    return {
+        "id": str(row.get("id", "")),
+        "name": row.get("name", ""),
+        "size_bytes": int(row.get("size_bytes", 0) or 0),
+        "chunk_count": int(row.get("chunk_count", 0) or 0),
+        "status": row.get("status", "ready"),
+        "uploaded_at": uploaded_at,
+        "storage_path": storage_path,
+        "public_url": public_url,
+        "error_message": row.get("error_message"),
+    }
+
+
+def load_documents() -> list[dict[str, Any]]:
+    try:
+        response = (
+            get_supabase()
+            .table(get_documents_table())
+            .select("*")
+            .order("uploaded_at", desc=True)
+            .execute()
+        )
+        rows = response.data or []
+        logger.info("[Documents] Loaded %d rows from %s", len(rows), get_documents_table())
+        return [normalize_document_row(row) for row in rows]
+    except Exception as exc:
+        logger.warning("[Documents] Failed to load %s: %s", get_documents_table(), exc)
         return []
 
 
-def save_metadata(documents: list[dict]) -> None:
-    """
-    Save metadata ONLY to Supabase Storage (upsert).
-    No local files are created to ensure Vercel compatibility.
-    """
-    json_str = json.dumps(documents, indent=2, default=str)
-    data_bytes = json_str.encode("utf-8")
-
-    try:
-        sb = get_supabase()
-        sb.storage.from_(get_bucket()).upload(
-            METADATA_PATH,
-            data_bytes,
-            {"content-type": "application/json", "upsert": "true"},
-        )
-        print(f"[Metadata] Saved {len(documents)} documents to Supabase Storage")
-    except Exception as e:
-        print(f"[Metadata] Supabase save error: {e}")
+def upsert_documents(documents: list[dict[str, Any]]) -> None:
+    if not documents:
+        return
+    payload = [normalize_document_row(doc) for doc in documents]
+    get_supabase().table(get_documents_table()).upsert(payload).execute()
+    logger.info("[Documents] Upserted %d rows into %s", len(payload), get_documents_table())
 
 
-def sync_metadata_with_storage(documents: list[dict]) -> list[dict]:
-    """
-    Auto-discover any PDFs in Supabase Storage that are NOT yet in metadata.json
-    and register them automatically with status 'ready'.
+def delete_document_record(document_id: str) -> None:
+    get_supabase().table(get_documents_table()).delete().eq("id", document_id).execute()
 
-    This fixes the issue where manually uploaded PDFs don't appear in the list.
-    Returns the updated (possibly extended) documents list.
-    """
-    try:
-        sb = get_supabase()
-        bucket = get_bucket()
-        files = sb.storage.from_(bucket).list()
 
-        # Build set of paths AND ids already registered
-        # Use BOTH to avoid re-registering a doc that changed path format
-        registered_paths = {d.get("storage_path", f"{d['id']}.pdf") for d in documents}
-        registered_ids   = {d["id"] for d in documents}
+def list_storage_documents() -> list[dict[str, Any]]:
+    sb = get_supabase()
+    bucket = get_bucket()
+    entries = sb.storage.from_(bucket).list()
+    docs: list[dict[str, Any]] = []
 
-        # ── REMOVE orphaned entries ──────────────────────────────────────────
-        # Build the full set of paths actually in Supabase right now
-        existing_paths: set[str] = set()
-        for f in files:
-            fname = f.get("name", "")
-            if not fname or fname == METADATA_PATH:
+    for entry in entries:
+        name = entry.get("name", "")
+        if not name:
+            continue
+
+        is_folder = entry.get("id") is None
+        if is_folder:
+            try:
+                nested_entries = sb.storage.from_(bucket).list(name)
+            except Exception as exc:
+                logger.warning("[Documents] Failed to list nested path %s: %s", name, exc)
                 continue
-            existing_paths.add(fname)
-            # Check inside folder entries for uuid/filename.pdf format
-            if f.get("id") is None:
-                try:
-                    sub = sb.storage.from_(bucket).list(fname)
-                    for sf in sub:
-                        sname = sf.get("name", "")
-                        if sname.lower().endswith(".pdf"):
-                            existing_paths.add(f"{fname}/{sname}")
-                except Exception:
-                    pass
 
-        before = len(documents)
-        valid_documents = []
+            pdf_entry = next(
+                (item for item in nested_entries if item.get("name", "").lower().endswith(".pdf")),
+                None,
+            )
+            if pdf_entry is None:
+                continue
+
+            real_name = pdf_entry.get("name", f"{name}.pdf")
+            storage_path = f"{name}/{real_name}"
+            size_bytes = int((pdf_entry.get("metadata") or {}).get("size", 0) or 0)
+            document_id = name
+        elif name.lower().endswith(".pdf"):
+            real_name = name
+            storage_path = name
+            size_bytes = int((entry.get("metadata") or {}).get("size", 0) or 0)
+            document_id = name[:-4]
+        else:
+            continue
+
+        docs.append({
+            "id": document_id,
+            "name": real_name,
+            "size_bytes": size_bytes,
+            "storage_path": storage_path,
+            "public_url": build_public_url(storage_path),
+        })
+
+    return docs
+
+
+def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Reconcile the lr_documents table against the storage bucket.
+    This keeps manual bucket uploads visible in the API.
+    """
+    try:
+        storage_docs = list_storage_documents()
+        storage_by_id = {doc["id"]: doc for doc in storage_docs}
+        storage_paths = {doc["storage_path"] for doc in storage_docs}
+
+        valid_documents: list[dict[str, Any]] = []
+        removed_ids: list[str] = []
+
         for doc in documents:
-            sp = doc.get("storage_path", f"{doc['id']}.pdf")
-            if sp in existing_paths:
-                valid_documents.append(doc)
+            storage_match = storage_by_id.get(doc["id"])
+            storage_path = doc.get("storage_path")
+
+            if storage_match or storage_path in storage_paths:
+                if storage_match:
+                    doc["name"] = storage_match["name"]
+                    doc["size_bytes"] = storage_match["size_bytes"]
+                    doc["storage_path"] = storage_match["storage_path"]
+                    doc["public_url"] = storage_match["public_url"]
+                valid_documents.append(normalize_document_row(doc))
             else:
-                print(f"[Sync] Removing orphaned entry: {doc.get('name')} "
-                      f"(storage_path={sp} not in Supabase)")
-        removed = before - len(valid_documents)
+                removed_ids.append(doc["id"])
+                logger.info("[Sync] Removing orphaned row for %s", doc["id"])
 
-        # Rebuild registered sets from the cleaned list
-        registered_paths = {d.get("storage_path", f"{d['id']}.pdf") for d in valid_documents}
-        registered_ids   = {d["id"] for d in valid_documents}
+        registered_ids = {doc["id"] for doc in valid_documents}
+        new_entries: list[dict[str, Any]] = []
 
-        # ── ADD new files from Supabase not yet in metadata ──────────────────
-        new_entries = []
-        for f in files:
-            fname = f.get("name", "")
-            if not fname or fname == METADATA_PATH:
+        for storage_doc in storage_docs:
+            if storage_doc["id"] in registered_ids:
                 continue
-
-            is_folder = f.get("id") is None
-
-            if is_folder:
-                # New format: uuid/filename.pdf
-                try:
-                    sub = sb.storage.from_(bucket).list(fname)
-                    pdfs = [sf for sf in sub if sf.get("name","").lower().endswith(".pdf")]
-                    if not pdfs:
-                        continue
-                    pdf_file  = pdfs[0]
-                    real_name = pdf_file.get("name", fname + ".pdf")
-                    full_path = f"{fname}/{real_name}"
-                    doc_id    = fname
-                    size_bytes = int((pdf_file.get("metadata") or {}).get("size", 0))
-                except Exception:
-                    continue
-            elif fname.lower().endswith(".pdf"):
-                # Legacy flat format: uuid.pdf
-                full_path  = fname
-                doc_id     = fname.replace(".pdf", "")
-                real_name  = fname
-                size_bytes = int((f.get("metadata") or {}).get("size", 0))
-            else:
-                continue
-
-            # Skip if already registered by path OR by document ID
-            if full_path in registered_paths or doc_id in registered_ids:
-                continue
-
-            new_doc = {
-                "id":           doc_id,
-                "name":         real_name,
-                "size_bytes":   size_bytes,
-                "chunk_count":  0,
-                "status":       "ready",
-                "uploaded_at":  datetime.now().isoformat(),
-                "storage_path": full_path,
-                "public_url":   None,
+            new_entries.append({
+                "id": storage_doc["id"],
+                "name": storage_doc["name"],
+                "size_bytes": storage_doc["size_bytes"],
+                "chunk_count": 0,
+                "status": "ready",
+                "uploaded_at": utc_now_iso(),
+                "storage_path": storage_doc["storage_path"],
+                "public_url": storage_doc["public_url"],
                 "error_message": None,
-            }
-            new_entries.append(new_doc)
-            print(f"[Sync] Auto-registered: {full_path} as {real_name!r}")
+            })
+            logger.info("[Sync] Auto-registered %s", storage_doc["storage_path"])
 
-        if new_entries:
-            valid_documents = valid_documents + new_entries
+        if removed_ids:
+            get_supabase().table(get_documents_table()).delete().in_("id", removed_ids).execute()
 
-        # Save only if something changed
-        if removed or new_entries:
-            save_metadata(valid_documents)
-            print(f"[Sync] Done — removed {removed}, added {len(new_entries)}")
+        merged = valid_documents + new_entries
+        if new_entries or removed_ids:
+            upsert_documents(merged)
 
-        return valid_documents
-
-    except Exception as e:
-        print(f"[Sync] Storage sync warning: {e}")
+        return sorted(merged, key=lambda doc: doc["uploaded_at"], reverse=True)
+    except Exception as exc:
+        logger.warning("[Sync] Storage sync warning: %s", exc)
         return documents
 
 
-# ─── Response Models ──────────────────────────────────────────────────────────
 class DocumentResponse(BaseModel):
     id: str
     name: str
@@ -261,12 +268,10 @@ class UploadResponse(BaseModel):
     message: str
 
 
-# ─── Endpoints ────────────────────────────────────────────────────────────────
-
 @router.post("/upload", response_model=UploadResponse)
-@limiter.limit("10/minute")  # 10 uploads per minute per IP
+@limiter.limit("10/minute")
 async def upload_document(request: Request, file: UploadFile = File(...)):
-    """Upload a PDF, ingest into Pinecone, and register in metadata."""
+    _ = request
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
@@ -282,22 +287,18 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
     validate_uploaded_pdf_bytes(file_content)
 
     document_id = str(uuid.uuid4())
-    safe_filename = os.path.basename(file.filename)  # strip path traversal
-    storage_path = f"{document_id}/{safe_filename}"  # uuid/name.pdf keeps real name in Supabase
+    safe_filename = os.path.basename(file.filename)
+    storage_path = f"{document_id}/{safe_filename}"
 
-    sb = get_supabase()
-    bucket = get_bucket()
-
-    # Upload PDF to Supabase Storage
     try:
-        sb.storage.from_(bucket).upload(
+        get_supabase().storage.from_(get_bucket()).upload(
             storage_path,
             file_content,
             {"content-type": "application/pdf"},
         )
-        print(f"[Upload] PDF uploaded to Supabase Storage: {storage_path}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to upload to Supabase: {str(e)}")
+        logger.info("[Upload] Uploaded %s", storage_path)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to upload to Supabase: {exc}") from exc
 
     doc_record = {
         "id": document_id,
@@ -305,52 +306,48 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         "size_bytes": file_size,
         "chunk_count": 0,
         "status": "processing",
-        "uploaded_at": datetime.now().isoformat(),
+        "uploaded_at": utc_now_iso(),
         "storage_path": storage_path,
-        "public_url": None,
+        "public_url": build_public_url(storage_path),
         "error_message": None,
     }
 
-    # Run RAG ingestion via temp file BEFORE saving metadata.
-    # This ensures we save the real chunk_count in one atomic write,
-    # instead of saving chunk_count=0 first and updating later.
     tmp_path = None
+    extraction_method = "text"
     try:
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp.write(file_content)
             tmp_path = tmp.name
 
-        chunk_count = ingest_document(
+        chunk_count, ingest_quality = ingest_document(
             pdf_path=tmp_path,
             document_id=document_id,
             document_name=safe_filename,
         )
+        extraction_method = str(ingest_quality.get("extraction_method", "text"))
         doc_record["chunk_count"] = chunk_count
         doc_record["status"] = "ready"
-        print(f"[Upload] Ingestion complete: {chunk_count} chunks")
-
-    except Exception as e:
-        error_msg = str(e)
-        print(f"[Upload] Ingestion failed: {error_msg}")
+        logger.info(
+            "[Upload] Ingestion complete for %s: %d chunks via %s",
+            document_id,
+            chunk_count,
+            extraction_method,
+        )
+    except Exception as exc:
         doc_record["status"] = "error"
-        doc_record["error_message"] = error_msg
-
+        doc_record["error_message"] = str(exc)
+        logger.warning("[Upload] Ingestion failed for %s: %s", document_id, exc)
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    # Save metadata ONCE with the final status and real chunk_count
-    documents = load_metadata()
-    # Remove any partial entry for this doc (in case of retry)
-    documents = [d for d in documents if d["id"] != document_id]
-    documents.append(doc_record)
-    save_metadata(documents)
+    upsert_documents([doc_record])
 
     return UploadResponse(
         success=doc_record["status"] == "ready",
-        document=DocumentResponse(**doc_record),
+        document=DocumentResponse(**normalize_document_row(doc_record)),
         message=(
-            f"Document processed into {doc_record['chunk_count']} chunks"
+            f"Document processed into {doc_record['chunk_count']} chunks via {extraction_method}"
             if doc_record["status"] == "ready"
             else f"Processing failed: {doc_record['error_message']}"
         ),
@@ -359,15 +356,8 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
 @router.get("/", response_model=list[DocumentResponse])
 async def list_documents():
-    """
-    Return all uploaded documents.
-
-    KEY BEHAVIOUR: Automatically syncs with Supabase Storage to detect any
-    PDFs that were uploaded manually (not through /upload). This means
-    manually uploaded documents will appear here without any extra steps.
-    """
-    documents = load_metadata()
-    documents = sync_metadata_with_storage(documents)
+    documents = load_documents()
+    documents = sync_documents_with_storage(documents)
     return [DocumentResponse(**doc) for doc in documents]
 
 
@@ -380,13 +370,8 @@ async def register_document(
     storage_path: Optional[str] = None,
     public_url: Optional[str] = None,
 ):
-    """
-    Manually register a document that exists in Supabase/Pinecone but is
-    missing from metadata.json. Useful for documents uploaded outside the app.
-    """
-    documents = load_metadata()
-
-    if any(d["id"] == id for d in documents):
+    documents = load_documents()
+    if any(doc["id"] == id for doc in documents):
         raise HTTPException(status_code=409, detail=f"Document '{id}' is already registered.")
 
     new_doc = {
@@ -395,101 +380,76 @@ async def register_document(
         "size_bytes": size_bytes,
         "chunk_count": chunk_count,
         "status": "ready",
-        "uploaded_at": datetime.now().isoformat(),
+        "uploaded_at": utc_now_iso(),
         "storage_path": storage_path or f"{id}.pdf",
-        "public_url": public_url,
+        "public_url": public_url or build_public_url(storage_path or f"{id}.pdf"),
         "error_message": None,
     }
+    upsert_documents([new_doc])
 
-    documents.append(new_doc)
-    save_metadata(documents)
-
-    return {"success": True, "message": f"Document '{name}' registered successfully", "document": new_doc}
+    return {
+        "success": True,
+        "message": f"Document '{name}' registered successfully",
+        "document": normalize_document_row(new_doc),
+    }
 
 
 @router.post("/refresh-chunks")
 async def refresh_chunk_counts():
-    """
-    Refresh chunk counts for all documents by querying Pinecone.
-    Fixes documents that show chunk_count=0 because they were auto-discovered
-    from Supabase Storage but never had their vectors counted.
-    
-    Returns: {updated: int, total: int, message: str}
-    """
-    from pinecone import Pinecone
-    
+
     try:
-        # Initialize Pinecone
         pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
         index = pc.Index(os.getenv("PINECONE_INDEX", "docuquery"))
-        
-        documents = load_metadata()
+
+        documents = load_documents()
         updated = 0
-        
+
         for doc in documents:
-            doc_id = doc["id"]
             try:
-                # Query Pinecone for vector count in this document's namespace
-                # Use a dummy query to get stats about the namespace
                 results = index.query(
-                    vector=[0] * 384,  # dummy vector (Cohere embeddings are 384-dim)
-                    top_k=10000,  # get max results to count
-                    namespace=doc_id,
-                    include_metadata=False
+                    vector=[0] * 384,
+                    top_k=10000,
+                    namespace=doc["id"],
+                    include_metadata=False,
                 )
-                
                 actual_chunk_count = len(results.get("matches", []))
-                
-                # Only update if the count changed and is non-zero
                 if actual_chunk_count > 0 and doc["chunk_count"] != actual_chunk_count:
                     doc["chunk_count"] = actual_chunk_count
                     updated += 1
-                    print(f"[Refresh] Updated {doc['name']}: {actual_chunk_count} chunks")
-            except Exception as e:
-                print(f"[Refresh] Warning querying {doc['id']}: {e}")
-                # Continue with next document
-        
-        # Save updated metadata
+                    logger.info("[Refresh] Updated %s: %d chunks", doc["name"], actual_chunk_count)
+            except Exception as exc:
+                logger.warning("[Refresh] Warning querying %s: %s", doc["id"], exc)
+
         if updated > 0:
-            save_metadata(documents)
-            print(f"[Refresh] Saved {updated} updated documents")
-        
+            upsert_documents(documents)
+
         return {
             "updated": updated,
             "total": len(documents),
-            "message": f"Updated chunk counts for {updated}/{len(documents)} documents"
+            "message": f"Updated chunk counts for {updated}/{len(documents)} documents",
         }
-    
-    except Exception as e:
-        print(f"[Refresh] Error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to refresh chunk counts: {str(e)}")
+    except Exception as exc:
+        logger.error("[Refresh] Error: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to refresh chunk counts: {exc}") from exc
 
 
 @router.delete("/{document_id}")
 async def delete_document(document_id: str):
-    """Delete a document from Supabase Storage, Pinecone, and metadata."""
-    documents = load_metadata()
-    doc_to_delete = next((d for d in documents if d["id"] == document_id), None)
-
+    documents = load_documents()
+    doc_to_delete = next((doc for doc in documents if doc["id"] == document_id), None)
     if not doc_to_delete:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    # Delete PDF from Supabase Storage
     storage_path = doc_to_delete.get("storage_path")
     if storage_path:
         try:
-            sb = get_supabase()
-            sb.storage.from_(get_bucket()).remove([storage_path])
-            print(f"[Delete] Removed from Supabase Storage: {storage_path}")
-        except Exception as e:
-            print(f"[Delete] Warning: Could not remove from Supabase Storage: {e}")
+            get_supabase().storage.from_(get_bucket()).remove([storage_path])
+            logger.info("[Delete] Removed %s from storage", storage_path)
+        except Exception as exc:
+            logger.warning("[Delete] Could not remove %s from storage: %s", storage_path, exc)
 
-    # Delete vectors from Pinecone
     delete_document_from_vectorstore(document_id)
     delete_chat_messages_for_document(document_id)
-
-    # Remove from metadata
-    documents = [d for d in documents if d["id"] != document_id]
-    save_metadata(documents)
+    delete_document_record(document_id)
 
     return {"success": True, "message": f"Document '{doc_to_delete['name']}' deleted"}

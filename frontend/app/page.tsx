@@ -11,24 +11,67 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import Navbar from "@/components/navbar"
+import Image from "next/image"
 import Footer from "@/components/footer"
-import {
-  SiReact,
-  SiNextdotjs,
-  SiTypescript,
-  SiTailwindcss,
-  SiFastapi,
-  SiLangchain,
-} from "react-icons/si"
 import { Badge } from "@/components/ui/badge"
 import LogoLoop from "@/components/LogoLoop"
 import TextType from "@/components/TextType"
 import { LinkPreview } from "@/components/ui/link-preview"
-import { YouTubePlayer } from "@/components/ui/youtube-video-player"
-import Image from "next/image"
+import {
+  MediaPlayer,
+  MediaPlayerVideo,
+  MediaPlayerControls,
+  MediaPlayerControlsOverlay,
+  MediaPlayerPlay,
+  MediaPlayerSeekBackward,
+  MediaPlayerSeekForward,
+  MediaPlayerVolume,
+  MediaPlayerSeek,
+  MediaPlayerTime,
+  MediaPlayerPlaybackSpeed,
+  MediaPlayerFullscreen,
+  MediaPlayerPiP,
+} from "@/components/ui/media-player"
+import { useLanguage } from "@/components/language-provider"
+
+// Import logo from public/icons folder
+import logo from "@/public/icons/android-chrome-512x512.png"
 
 export default function Home() {
+  const { language } = useLanguage()
+  const copy =
+    language === "ms"
+      ? {
+          appName: "Lingua Rakyat",
+          tagline: "AI untuk dokumen awam",
+          heroBadge: "Dikuasakan AI Pelbagai Bahasa",
+          heroTitleLead: "Tanya terus pada",
+          heroTitleAccent: "dokumen anda",
+          lines: [
+            "Muat naik PDF dan dapatkan jawapan segera dalam bahasa pilihan anda.",
+            "Sesuai untuk perkhidmatan awam, penyelidikan, dan komuniti berbilang bahasa.",
+            "Tanya dalam Bahasa Melayu, English, Chinese, atau bahasa lain.",
+            "Dokumen anda terus menjadi lebih mudah dicari dan difahami.",
+          ],
+          tryDemo: "Cuba Demo",
+          watchDemo: "Tonton Demo",
+        }
+      : {
+          appName: "Lingua Rakyat",
+          tagline: "AI for public documents",
+          heroBadge: "Powered by Multilingual AI",
+          heroTitleLead: "Chat with your",
+          heroTitleAccent: "documents",
+          lines: [
+            "Upload PDFs and get instant answers in any language.",
+            "Perfect for public services, research, and multilingual communities.",
+            "Ask questions in Malay, English, Chinese, or any language.",
+            "Your documents become instantly searchable and accessible.",
+          ],
+          tryDemo: "Try Demo",
+          watchDemo: "Watch Demo",
+        }
+
   const techLogos = [
     {
       node: (
@@ -155,7 +198,6 @@ export default function Home() {
     },
   ]
 
-  // Tech stack badges with previews
   const techStackItems = [
     { name: "Next.js", url: "https://nextjs.org" },
     { name: "FastAPI", url: "https://fastapi.tiangolo.com" },
@@ -167,15 +209,41 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-linear-to-b from-background via-background to-muted/20">
-      <Navbar />
       {/* Hero Section */}
       <main className="relative z-10 mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:pt-20">
+        {/* Logo and Title Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-16 flex flex-col items-center justify-center text-center"
+        >
+          <div className="relative mb-4">
+            <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl" />
+              <Image
+                src={logo}
+                alt="Lingua Rakyat logo"
+                width={64}
+                height={64}
+                className="rounded-full"
+              />
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            <span className="bg-linear-to-r from-primary to-foreground bg-clip-text text-transparent">
+              {copy.appName}
+            </span>
+          </h1>
+          <p className="mt-2 text-sm tracking-wider text-muted-foreground uppercase">
+            {copy.tagline}
+          </p>
+        </motion.div>
+
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Left Column - Hero Content */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
             className="flex flex-col justify-center"
           >
             {/* Announcement Badge */}
@@ -185,31 +253,24 @@ export default function Home() {
                 className="border-primary/20 bg-primary/5 p-4"
               >
                 <Sparkles className="mr-2 h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-medium">
-                  Powered by Multilingual AI
-                </span>
+                <span className="text-xs font-medium">{copy.heroBadge}</span>
               </Badge>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl font-bold tracking-tight capitalize sm:text-5xl lg:text-6xl">
-              Chat with your
+            <h2 className="text-4xl font-bold tracking-tight capitalize sm:text-5xl lg:text-6xl">
+              {copy.heroTitleLead}
               <span className="relative ml-2 inline-block">
                 <span className="relative z-10 bg-linear-to-r from-primary to-foreground bg-clip-text text-transparent">
-                  documents
+                  {copy.heroTitleAccent}
                 </span>
                 <span className="absolute right-0 -bottom-2 left-0 h-3 bg-primary/20 blur-xl" />
               </span>
-            </h1>
+            </h2>
 
             {/* TextType */}
             <TextType
-              text={[
-                "Upload PDFs and get instant answers in any language.",
-                "Perfect for public services, research, and multilingual communities.",
-                "Ask questions in English, Spanish, French, or any language!",
-                "Your documents become instantly searchable and accessible.",
-              ]}
+              text={copy.lines}
               typingSpeed={40}
               deletingSpeed={20}
               pauseDuration={2500}
@@ -235,11 +296,15 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-1.5 rounded-full bg-primary/5 px-3 py-1.5 text-xs font-medium">
                 <FileText className="h-3.5 w-3.5 text-primary" />
-                <span>PDF Support</span>
+                <span>
+                  {language === "ms" ? "Sokongan PDF" : "PDF Support"}
+                </span>
               </div>
               <div className="flex items-center gap-1.5 rounded-full bg-primary/5 px-3 py-1.5 text-xs font-medium">
                 <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                <span>RAG Architecture</span>
+                <span>
+                  {language === "ms" ? "Seni Bina RAG" : "RAG Architecture"}
+                </span>
               </div>
             </div>
 
@@ -251,7 +316,7 @@ export default function Home() {
                   className="relative overflow-hidden bg-primary px-8 text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl"
                 >
                   <span className="relative z-10 flex items-center">
-                    Try Demo
+                    {copy.tryDemo}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </span>
                 </Button>
@@ -266,7 +331,7 @@ export default function Home() {
                     ?.scrollIntoView({ behavior: "smooth" })
                 }
               >
-                Watch Demo
+                {copy.watchDemo}
               </Button>
             </div>
           </motion.div>
@@ -283,7 +348,7 @@ export default function Home() {
               <div className="mb-3 flex items-center gap-2 px-3 pt-3">
                 <div className="h-3 w-3 rounded-full bg-red-500/80" />
                 <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                <div className="h-3 w-3 rounded-full bg-green-500/80" />
+                <div className="h-3 w-3 rounded-full bg-primary/80" />
                 <div className="ml-2 text-xs text-muted-foreground">
                   LinguaRakyat • Chat Interface
                 </div>
@@ -294,34 +359,52 @@ export default function Home() {
                 {/* Sample Messages */}
                 <div className="flex justify-end">
                   <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-primary p-3 text-xs text-primary-foreground">
-                    <p>What is this document about?</p>
+                    <p>
+                      {language === "ms"
+                        ? "Dokumen ini tentang apa?"
+                        : "What is this document about?"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-2xl rounded-tl-sm border border-border/40 bg-card p-3 text-xs">
                     <p className="font-medium text-foreground">
-                      This document outlines the Public Service Guidelines for
-                      2024...
+                      {language === "ms"
+                        ? "Dokumen ini menerangkan Garis Panduan Perkhidmatan Awam 2024..."
+                        : "This document explains the Public Service Guidelines 2024..."}
                     </p>
                     <div className="mt-2 flex items-center gap-2 text-[0.65rem] text-muted-foreground">
-                      <span>Source: Page 3, Paragraph 2</span>
+                      <span>
+                        {language === "ms"
+                          ? "Sumber: Halaman 3, Perenggan 2"
+                          : "Source: Page 3, Paragraph 2"}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
                   <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-primary p-3 text-xs text-primary-foreground">
-                    <p>Translate the summary to Malay</p>
+                    <p>
+                      {language === "ms"
+                        ? "Terjemahkan ringkasan ini ke Bahasa Melayu"
+                        : "Translate this summary to Malay"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-2xl rounded-tl-sm border border-border/40 bg-card p-3 text-xs">
                     <p className="font-medium text-foreground">
-                      Dokumen ini menggariskan Garis Panduan Perkhidmatan Awam
-                      2024...
+                      {language === "ms"
+                        ? "Dokumen ini menggariskan Garis Panduan Perkhidmatan Awam 2024..."
+                        : "This document outlines the Public Service Guidelines 2024..."}
                     </p>
                     <div className="mt-2 flex items-center gap-2 text-[0.65rem] text-muted-foreground">
                       <Languages className="h-3 w-3" />
-                      <span>Automatically translated from English</span>
+                      <span>
+                        {language === "ms"
+                          ? "Diterjemah secara automatik daripada English"
+                          : "Automatically translated from English"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -346,7 +429,9 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.4 }}
               className="absolute -top-4 -right-2 rounded-lg border border-border/40 bg-background/80 p-3 backdrop-blur-xl md:-top-4 md:-right-6"
             >
-              <p className="text-xs font-medium">Supported Languages</p>
+              <p className="text-xs font-medium">
+                {language === "ms" ? "Bahasa Disokong" : "Languages Supported"}
+              </p>
               <p className="text-lg font-bold">4+</p>
             </motion.div>
             <motion.div
@@ -355,13 +440,15 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.6 }}
               className="absolute -bottom-4 -left-2 rounded-lg border border-border/40 bg-background/80 p-3 backdrop-blur-xl md:-bottom-4 md:-left-4"
             >
-              <p className="text-xs font-medium">Documents Processed</p>
+              <p className="text-xs font-medium">
+                {language === "ms" ? "Dokumen Diproses" : "Documents Processed"}
+              </p>
               <p className="text-lg font-bold">10K+</p>
             </motion.div>
           </motion.div>
         </div>
 
-        {/* Video Showcase Section - Added below hero */}
+        {/* Video Showcase Section */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -371,44 +458,79 @@ export default function Home() {
           id="demo-section"
         >
           <div className="mb-8 text-center">
-            <Badge className="mb-4 border-primary/20 p-4">Watch Demo</Badge>
+            <Badge className="mb-4 border-primary/20 p-4">
+              {language === "ms" ? "Tonton Demo" : "Watch Demo"}
+            </Badge>
             <h2 className="text-2xl font-bold sm:text-3xl">
-              See LinguaRakyat in action
+              {language === "ms"
+                ? "Lihat LinguaRakyat berfungsi"
+                : "See LinguaRakyat in action"}
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              Watch how easily you can interact with documents, ask questions in
-              multiple languages, and get accurate answers with source
-              citations.
+              {language === "ms"
+                ? "Lihat bagaimana anda boleh berinteraksi dengan dokumen, bertanya dalam pelbagai bahasa, dan menerima jawapan tepat dengan petikan sumber."
+                : "See how you can interact with documents, ask questions in multiple languages, and receive accurate answers with source citations."}
             </p>
           </div>
 
           <div className="relative rounded-2xl border border-border/50 bg-linear-to-br from-background via-background to-muted/30 p-3 shadow-2xl backdrop-blur-sm">
-            {/* Mac-style window controls */}
             <div className="mb-4 flex items-center gap-2 px-4 pt-3">
               <div className="flex gap-2">
                 <div className="h-3 w-3 rounded-full bg-red-500/80" />
                 <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                <div className="h-3 w-3 rounded-full bg-green-500/80" />
+                <div className="h-3 w-3 rounded-full bg-primary/80" />
               </div>
               <div className="ml-2 text-xs font-medium text-muted-foreground">
-                demo.mp4
+                LinguaRakyat Demo
               </div>
             </div>
 
-            {/* YouTube Player */}
             <div className="overflow-hidden rounded-xl">
-              <YouTubePlayer
-                videoId="muWScg53vxw"
-                title="LinguaRakyat Demo - AI Document Assistant"
-              />
+              <MediaPlayer>
+                <MediaPlayerVideo className="aspect-video">
+                  <source
+                    src="https://stream.mux.com/VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU/medium.mp4"
+                    type="video/mp4"
+                  />
+                  {language === "ms"
+                    ? "Pelantar video tidak disokong oleh pelayar anda."
+                    : "Your browser does not support the video tag."}
+                </MediaPlayerVideo>
+                <MediaPlayerControls className="flex-col items-start gap-2.5">
+                  <MediaPlayerControlsOverlay />
+                  <MediaPlayerSeek />
+                  <div className="flex w-full items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2">
+                      <MediaPlayerPlay />
+                      <MediaPlayerSeekBackward />
+                      <MediaPlayerSeekForward />
+                      <MediaPlayerVolume expandable />
+                      <MediaPlayerTime />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MediaPlayerPlaybackSpeed />
+                      <MediaPlayerPiP />
+                      <MediaPlayerFullscreen />
+                    </div>
+                  </div>
+                </MediaPlayerControls>
+              </MediaPlayer>
             </div>
 
-            {/* Feature highlights */}
             <div className="mt-6 grid grid-cols-3 gap-4 px-4 pb-4">
               {[
-                { label: "Multilingual", value: "4+ languages" },
-                { label: "Response Time", value: "< 2 seconds" },
-                { label: "Accuracy", value: "99.9%" },
+                {
+                  label: language === "ms" ? "Pelbagai Bahasa" : "Languages",
+                  value: language === "ms" ? "4+ bahasa" : "4+ languages",
+                },
+                {
+                  label: language === "ms" ? "Masa Respons" : "Response Time",
+                  value: "< 2 saat",
+                },
+                {
+                  label: language === "ms" ? "Ketepatan" : "Accuracy",
+                  value: "99.9%",
+                },
               ].map((item, index) => (
                 <div key={index} className="text-center">
                   <p className="text-xs text-muted-foreground">{item.label}</p>
@@ -429,21 +551,33 @@ export default function Home() {
           {[
             {
               icon: Languages,
-              title: "Multilingual Support",
+              title:
+                language === "ms"
+                  ? "Sokongan Pelbagai Bahasa"
+                  : "Multilingual Support",
               description:
-                "Ask questions in Malay, English, Chinese, or Tamil - get answers in your preferred language.",
+                language === "ms"
+                  ? "Tanya dalam Bahasa Melayu, English, Chinese, atau Tamil dan terima jawapan dalam bahasa pilihan anda."
+                  : "Ask in Malay, English, Chinese, or Tamil and receive answers in your preferred language.",
             },
             {
               icon: FileText,
-              title: "Smart Document Processing",
+              title:
+                language === "ms"
+                  ? "Pemprosesan Dokumen Pintar"
+                  : "Smart Document Processing",
               description:
-                "Upload PDFs and our AI automatically indexes them for instant retrieval.",
+                language === "ms"
+                  ? "Muat naik PDF dan AI akan mengindeks kandungan secara automatik untuk carian segera."
+                  : "Upload PDFs and AI will automatically index content for instant search.",
             },
             {
               icon: Sparkles,
-              title: "RAG Architecture",
+              title: language === "ms" ? "Seni Bina RAG" : "RAG Architecture",
               description:
-                "Retrieval-Augmented Generation ensures accurate, source-cited answers every time.",
+                language === "ms"
+                  ? "Retrieval-Augmented Generation membantu menghasilkan jawapan yang lebih tepat dan bersumber."
+                  : "Retrieval-Augmented Generation helps produce more accurate, sourced answers.",
             },
           ].map((feature, index) => (
             <motion.div
@@ -467,9 +601,13 @@ export default function Home() {
         {/* How It Works Section */}
         <div className="mt-24">
           <div className="text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl">How It Works</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl">
+              {language === "ms" ? "Cara Ia Berfungsi" : "How It Works"}
+            </h2>
             <p className="mt-4 text-muted-foreground">
-              Three simple steps to unlock your document's knowledge
+              {language === "ms"
+                ? "Tiga langkah ringkas untuk membuka maklumat dalam dokumen anda"
+                : "Three simple steps to unlock information in your documents"}
             </p>
           </div>
 
@@ -477,23 +615,30 @@ export default function Home() {
             {[
               {
                 step: "01",
-                title: "Upload Document",
+                title:
+                  language === "ms" ? "Muat Naik Dokumen" : "Upload Document",
                 description:
-                  "Drag and drop your PDF. We support multiple formats.",
+                  language === "ms"
+                    ? "Seret dan lepas fail PDF anda untuk diproses."
+                    : "Drag and drop your PDF file for processing.",
                 icon: FileText,
               },
               {
                 step: "02",
-                title: "Ask Questions",
+                title: language === "ms" ? "Tanya Soalan" : "Ask Questions",
                 description:
-                  "Type your question in any language. Our AI understands context.",
+                  language === "ms"
+                    ? "Taip soalan dalam bahasa pilihan anda. AI memahami konteks dokumen."
+                    : "Type your question in your preferred language. AI understands document context.",
                 icon: MessageSquare,
               },
               {
                 step: "03",
-                title: "Get Answers",
+                title: language === "ms" ? "Dapatkan Jawapan" : "Get Answers",
                 description:
-                  "Receive accurate, source-cited answers with translations.",
+                  language === "ms"
+                    ? "Terima jawapan yang tepat, bersumber, dan boleh diterjemah."
+                    : "Receive accurate, sourced answers that can be translated.",
                 icon: Sparkles,
               },
             ].map((item, index) => (
@@ -524,12 +669,13 @@ export default function Home() {
         {/* Tech Stack Section */}
         <div className="mt-24 text-center">
           <h2 className="text-2xl font-bold sm:text-3xl">
-            Built with modern AI stack
+            {language === "ms"
+              ? "Dibina dengan timbunan AI moden"
+              : "Built with modern AI stack"}
           </h2>
 
-          {/* FIXED: Changed from <p> to <div> to avoid invalid nesting with LinkPreview */}
           <div className="mt-4 text-muted-foreground">
-            Powered by{" "}
+            {language === "ms" ? "Dikuasakan oleh" : "Powered by"}{" "}
             <LinkPreview
               url="https://langchain.com"
               className="inline-block font-medium text-primary hover:underline"
@@ -550,17 +696,16 @@ export default function Home() {
             >
               Groq
             </LinkPreview>
-            , and{" "}
+            , {language === "ms" ? "dan" : "and"}{" "}
             <LinkPreview
               url="https://cohere.com"
               className="inline-block font-medium text-primary hover:underline"
             >
               Cohere
             </LinkPreview>{" "}
-            for advanced RAG
+            {language === "ms" ? "untuk RAG lanjutan" : "for advanced RAG"}
           </div>
 
-          {/* Badge section with previews - FIXED: No nesting issues here */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-8">
             {techStackItems.map((tech) => (
               <LinkPreview key={tech.name} url={tech.url}>
@@ -574,10 +719,11 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Animated logo loop section - FIXED: Removed nested <a> tags */}
           <div className="mt-16">
             <h3 className="mb-8 text-lg font-medium text-muted-foreground">
-              Technologies we use
+              {language === "ms"
+                ? "Teknologi yang digunakan"
+                : "Technologies we use"}
             </h3>
             <div className="relative">
               <div className="mb-12">

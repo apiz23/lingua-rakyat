@@ -22,9 +22,15 @@ def get_supabase() -> Client:
     return _supabase
 
 
-def list_chat_messages(document_id: Optional[str] = None, session_id: Optional[str] = None) -> list[dict[str, Any]]:
+def list_chat_messages(
+    document_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+) -> list[dict[str, Any]]:
     try:
         query = get_supabase().table(CHAT_HISTORY_TABLE).select("*")
+        if user_id:
+            query = query.eq("user_id", user_id)
         if document_id:
             query = query.eq("document_id", document_id)
         if session_id:
@@ -33,8 +39,8 @@ def list_chat_messages(document_id: Optional[str] = None, session_id: Optional[s
         response = query.order("created_at", desc=True).execute()
         rows = response.data or []
         logger.info(
-            "[ChatHistory] Loaded %d rows for document_id=%s session_id=%s",
-            len(rows), document_id, session_id,
+            "[ChatHistory] Loaded %d rows for user_id=%s document_id=%s session_id=%s",
+            len(rows), user_id, document_id, session_id,
         )
         return rows
     except Exception as exc:
@@ -55,18 +61,41 @@ def insert_chat_message(payload: dict[str, Any]) -> bool:
         return False
 
 
-def delete_chat_messages_for_document(document_id: str) -> int:
+def delete_chat_messages(
+    *,
+    document_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+) -> int:
     try:
-        response = (
-            get_supabase()
-            .table(CHAT_HISTORY_TABLE)
-            .delete()
-            .eq("document_id", document_id)
-            .execute()
-        )
+        query = get_supabase().table(CHAT_HISTORY_TABLE).delete()
+        if user_id:
+            query = query.eq("user_id", user_id)
+        if document_id:
+            query = query.eq("document_id", document_id)
+        if session_id:
+            query = query.eq("session_id", session_id)
+
+        response = query.execute()
         deleted = len(response.data or [])
-        logger.info("[ChatHistory] Deleted %d rows for document_id=%s", deleted, document_id)
+        logger.info(
+            "[ChatHistory] Deleted %d rows for user_id=%s document_id=%s session_id=%s",
+            deleted,
+            user_id,
+            document_id,
+            session_id,
+        )
         return deleted
     except Exception as exc:
-        logger.warning("[ChatHistory] Failed to delete history for %s: %s", document_id, exc)
+        logger.warning(
+            "[ChatHistory] Failed to delete history for user_id=%s document_id=%s session_id=%s: %s",
+            user_id,
+            document_id,
+            session_id,
+            exc,
+        )
         return 0
+
+
+def delete_chat_messages_for_document(document_id: str) -> int:
+    return delete_chat_messages(document_id=document_id)

@@ -1,41 +1,62 @@
-// src/components/chat-panel.tsx
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
-import { Document, SourceChunk, askQuestion, GROQ_MODELS } from "@/lib/api"
+import {
+  ChatHistoryMessage,
+  Document,
+  SourceChunk,
+  askQuestion,
+  clearChatHistory,
+  getChatHistory,
+  GROQ_MODELS,
+} from "@/lib/api"
 import { toast } from "sonner"
 import { Markdown } from "@/components/markdown"
 import {
-  Send,
-  Loader2,
   FileText,
   Sparkles,
   ChevronDown,
   ChevronUp,
   Copy,
   Check,
-  Bot,
   User,
   BookOpen,
-  Globe,
   MessageSquare,
   ArrowLeft,
   History,
   X,
   Languages,
+  Plus,
+  Clock3,
+  Mic,
+  MicOff,
+  MoreVertical,
 } from "lucide-react"
 import type { Components } from "react-markdown"
-import { useMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "./language-provider"
 import AgentAvatar from "./smoothui/agent-avatar"
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  AiChat,
+  AiChatBody,
+  AiChatFooter,
+} from "@/components/elements/ai-elements/chat/ai-chat"
+import { ChatInput } from "@/components/elements/ai-elements/chat/chat-input"
+import { StreamingText } from "@/components/elements/ai-elements/chat/streaming-text"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface Message {
   question: string
@@ -47,12 +68,55 @@ interface Message {
   latency_ms: number
   cached: boolean
   model_used?: string
+  sufficient_evidence: boolean
 }
 
 interface ChatPanelProps {
   selectedDoc: Document | null
   onBack?: () => void
+  composerTop?: React.ReactNode
+  emptyState?: React.ReactNode
 }
+
+interface ChatThread {
+  sessionId: string
+  lastUpdated: string
+  previewQuestion: string
+  messageCount: number
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string
+}
+
+interface SpeechRecognitionResultLike {
+  isFinal: boolean
+  0: SpeechRecognitionAlternative
+  length: number
+}
+
+interface SpeechRecognitionEventLike extends Event {
+  resultIndex: number
+  results: ArrayLike<SpeechRecognitionResultLike>
+}
+
+interface SpeechRecognitionErrorEventLike extends Event {
+  error: string
+}
+
+interface SpeechRecognitionLike extends EventTarget {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onstart: ((event: Event) => void) | null
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null
+  onend: ((event: Event) => void) | null
+  start: () => void
+  stop: () => void
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike
 
 const SUGGESTIONS = [
   {
@@ -82,7 +146,6 @@ const SUGGESTIONS = [
   },
 ]
 
-// Language display names with flags
 const LANGUAGE_LABELS: Record<string, { name: string; flag: string }> = {
   ms: { name: "Bahasa Melayu", flag: "🇲🇾" },
   id: { name: "Bahasa Indonesia", flag: "🇮🇩" },
@@ -98,7 +161,6 @@ const LANGUAGE_LABELS: Record<string, { name: string; flag: string }> = {
   fil: { name: "Filipino", flag: "🇵🇭" },
 }
 
-// Custom markdown components
 const markdownComponents: Partial<Components> = {
   h1: (props) => (
     <h1 className="mb-4 flex items-center gap-2 text-xl font-bold text-foreground">
@@ -125,30 +187,12 @@ const markdownComponents: Partial<Components> = {
   ol: (props) => (
     <ol className="my-4 list-decimal space-y-2.5 pl-4">{props.children}</ol>
   ),
-  li: (props) => {
-    const childrenArray = React.Children.toArray(props.children)
-    const hasBulletPoint = childrenArray.some(
-      (child) =>
-        typeof child === "string" &&
-        (child.includes("•") || child.includes("-") || child.includes("*"))
-    )
-
-    if (hasBulletPoint) {
-      return (
-        <li className="flex items-start gap-3 text-sm">
-          <span className="mt-1 shrink-0 text-primary">•</span>
-          <span className="flex-1 text-foreground/80">{props.children}</span>
-        </li>
-      )
-    }
-
-    return (
-      <li className="flex items-start gap-3 rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
-        <span className="mt-0.5 shrink-0 text-primary">•</span>
-        <span className="text-foreground/80">{props.children}</span>
-      </li>
-    )
-  },
+  li: (props) => (
+    <li className="flex items-start gap-3 rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
+      <span className="mt-0.5 shrink-0 text-primary">•</span>
+      <span className="text-foreground/80">{props.children}</span>
+    </li>
+  ),
   blockquote: (props) => (
     <blockquote className="my-4 rounded-r-lg border-l-4 border-primary/40 bg-primary/5 py-2 pr-4 pl-4 text-sm text-foreground/70 italic">
       {props.children}
@@ -214,9 +258,56 @@ function MarkdownRenderer({ content }: { content: string }) {
   )
 }
 
+function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
+  return {
+    question: row.question,
+    answer: row.answer,
+    sources: row.sources ?? [],
+    timestamp: row.timestamp,
+    language: row.language,
+    confidence: row.confidence ?? 0,
+    latency_ms: row.latency_ms ?? 0,
+    cached: true,
+    model_used: row.model_used,
+    sufficient_evidence: row.sufficient_evidence ?? true,
+  }
+}
+
+function buildThreads(history: ChatHistoryMessage[]): ChatThread[] {
+  const bySession = new Map<string, ChatThread>()
+
+  for (const row of history) {
+    const existing = bySession.get(row.session_id)
+    if (!existing) {
+      bySession.set(row.session_id, {
+        sessionId: row.session_id,
+        lastUpdated: row.timestamp,
+        previewQuestion: row.question,
+        messageCount: 1,
+      })
+      continue
+    }
+
+    existing.messageCount += 1
+    if (
+      new Date(row.timestamp).getTime() >
+      new Date(existing.lastUpdated).getTime()
+    ) {
+      existing.lastUpdated = row.timestamp
+      existing.previewQuestion = row.question
+    }
+  }
+
+  return Array.from(bySession.values()).sort(
+    (a, b) =>
+      new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+  )
+}
+
 function AIMessageCard({
   message,
   index,
+  isLatest,
   expandedSources,
   toggleSources,
   copiedId,
@@ -224,54 +315,123 @@ function AIMessageCard({
 }: {
   message: Message
   index: number
+  isLatest: boolean
   expandedSources: Set<number>
   toggleSources: (i: number) => void
   copiedId: string | null
   copyToClipboard: (text: string, id: string) => void
 }) {
+  const { language } = useLanguage()
   const isSourcesOpen = expandedSources.has(index)
   const langInfo = LANGUAGE_LABELS[message.language] ?? {
     name: message.language,
     flag: "🌐",
   }
-  const isNonEnglish = true // always show detected language flag
+
+  const [isStreamed, setIsStreamed] = React.useState(message.cached)
+
+  React.useEffect(() => {
+    if (message.cached) {
+      setIsStreamed(true)
+      return
+    }
+    if (!isLatest) return
+    setIsStreamed(false)
+  }, [isLatest, message.cached, message.timestamp])
+
+  const evidenceState = message.sufficient_evidence
+    ? {
+        label: language === "ms" ? "Bukti kukuh" : "Strong evidence",
+        badge:
+          "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+        panel:
+          "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300",
+        description:
+          language === "ms"
+            ? "Jawapan ini disokong terus oleh kandungan dokumen yang dimuat naik."
+            : "This answer is directly supported by the uploaded document.",
+      }
+    : {
+        label:
+          language === "ms" ? "Padanan terdekat sahaja" : "Closest match only",
+        badge:
+          "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+        panel:
+          "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-300",
+        description:
+          language === "ms"
+            ? "Dokumen tidak mempunyai bukti yang cukup kuat, jadi pembantu menggunakan jawapan selamat tanpa membuat andaian."
+            : "The document did not contain strong enough evidence, so the assistant used a safe fallback instead of guessing.",
+      }
+
+  const highlightSourceText = (text: string, question: string) => {
+    const keywords = Array.from(
+      new Set(
+        question
+          .toLowerCase()
+          .split(/[^a-zA-Z0-9\u4e00-\u9fff]+/)
+          .filter((token) => token.length >= 4)
+      )
+    ).slice(0, 8)
+
+    if (keywords.length === 0) return <>{text}</>
+
+    const escaped = keywords.map((token) =>
+      token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    )
+    const regex = new RegExp(`(${escaped.join("|")})`, "gi")
+    const parts = text.split(regex)
+
+    return (
+      <>
+        {parts.map((part, partIndex) =>
+          regex.test(part) ? (
+            <mark
+              key={`${partIndex}-${part}`}
+              className="rounded bg-yellow-300/50 px-0.5 text-foreground dark:bg-yellow-500/20"
+            >
+              {part}
+            </mark>
+          ) : (
+            <React.Fragment key={`${partIndex}-${part}`}>{part}</React.Fragment>
+          )
+        )}
+      </>
+    )
+  }
 
   return (
-    <div className="group flex items-start gap-3">
-      {/* Bot avatar with glow effect */}
+    <div className="group flex items-start gap-2.5 sm:gap-3">
       <div className="relative mt-1 shrink-0">
         <div className="absolute inset-0 rounded-full bg-primary/20 opacity-0 blur-md transition-opacity group-hover:opacity-100" />
-        <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/30">
-          <AgentAvatar seed="Charlotte" size={28} />
+        <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/30 sm:h-10 sm:w-10">
+          <AgentAvatar seed="Charlotte" size={26} />
         </div>
       </div>
 
-      {/* Message content */}
-      <div className="max-w-[85%] min-w-0 flex-1">
+      <div className="max-w-[88%] min-w-0 flex-1 sm:max-w-[85%]">
         <div className="relative rounded-2xl rounded-tl-sm border border-border/50 bg-card shadow-sm transition-all hover:shadow-md">
-          {/* linear header bar */}
           <div className="h-1 w-full rounded-t-2xl bg-linear-to-r from-primary via-primary/60 to-transparent" />
+          <div className="p-3.5 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-1">
+                  <span className="text-xs">{langInfo.flag}</span>
+                  <span className="text-xs font-medium text-primary">
+                    {langInfo.name}
+                  </span>
+                </div>
 
-          <div className="p-5">
-            {/* Header with language and copy */}
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                {isNonEnglish && (
-                  <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-1">
-                    <span className="text-xs">{langInfo.flag}</span>
-                    <span className="text-xs font-medium text-primary">
-                      {langInfo.name}
-                    </span>
-                  </div>
-                )}
-                <span className="rounded-full bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
-                  Assistant
+                <span className="rounded-full bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground sm:text-xs">
+                  {language === "ms" ? "Pembantu AI" : "AI Assistant"}
                 </span>
+
                 {message.cached && (
                   <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
                     ⚡ cached
                   </span>
                 )}
+
                 {message.confidence > 0 && (
                   <span
                     className={[
@@ -283,9 +443,20 @@ function AIMessageCard({
                           : "border-orange-500/20 bg-orange-500/10 text-orange-600",
                     ].join(" ")}
                   >
-                    {Math.round(message.confidence * 100)}% match
+                    {Math.round(message.confidence * 100)}%{" "}
+                    {language === "ms" ? "padanan" : "match"}
                   </span>
                 )}
+
+                <span
+                  className={[
+                    "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                    evidenceState.badge,
+                  ].join(" ")}
+                >
+                  {evidenceState.label}
+                </span>
+
                 {message.latency_ms > 0 && (
                   <span className="rounded-full border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
                     {message.latency_ms < 1000
@@ -293,46 +464,45 @@ function AIMessageCard({
                       : `${(message.latency_ms / 1000).toFixed(1)}s`}
                   </span>
                 )}
-                {message.model_used && (
-                  <span
-                    className={[
-                      "rounded-full border px-2 py-0.5 text-[10px] font-medium",
-                      message.model_used.includes("70b")
-                        ? "border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400"
-                        : "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-                    ].join(" ")}
-                  >
-                    {message.model_used.includes("70b")
-                      ? "70B"
-                      : message.model_used.includes("8b")
-                        ? "8B"
-                        : message.model_used.includes("gemma")
-                          ? "Gemma"
-                          : message.model_used.split("-")[0]}
-                  </span>
-                )}
               </div>
 
-              {/* Copy button */}
               <button
                 onClick={() =>
                   copyToClipboard(message.answer, `a-${message.timestamp}`)
                 }
-                className="rounded-lg p-1.5 opacity-0 transition-colors group-hover:opacity-100 hover:bg-muted"
+                className="rounded-lg p-1.5 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
                 title="Copy answer"
               >
                 {copiedId === `a-${message.timestamp}` ? (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-primary" />
                 ) : (
                   <Copy className="h-4 w-4 text-muted-foreground" />
                 )}
               </button>
             </div>
 
-            {/* Answer content */}
-            <MarkdownRenderer content={message.answer} />
+            <div
+              className={[
+                "mb-4 rounded-xl border px-3 py-2 text-xs leading-relaxed",
+                evidenceState.panel,
+              ].join(" ")}
+            >
+              {evidenceState.description}
+            </div>
 
-            {/* Timestamp and sources */}
+            {isLatest && !message.cached && !isStreamed ? (
+              <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-foreground/80">
+                <StreamingText
+                  text={message.answer}
+                  speed={12}
+                  showCursor
+                  onComplete={() => setIsStreamed(true)}
+                />
+              </div>
+            ) : (
+              <MarkdownRenderer content={message.answer} />
+            )}
+
             <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
               <span className="text-xs text-muted-foreground">
                 {new Date(message.timestamp).toLocaleTimeString([], {
@@ -341,15 +511,14 @@ function AIMessageCard({
                 })}
               </span>
 
-              {/* Sources button */}
               {message.sources.length > 0 && (
                 <button
                   onClick={() => toggleSources(index)}
                   className="flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
-                  {message.sources.length} source
-                  {message.sources.length > 1 ? "s" : ""}
+                  {message.sources.length}{" "}
+                  {language === "ms" ? "sumber" : "sources"}
                   {isSourcesOpen ? (
                     <ChevronUp className="h-3.5 w-3.5" />
                   ) : (
@@ -359,12 +528,12 @@ function AIMessageCard({
               )}
             </div>
 
-            {/* Sources panel */}
             {isSourcesOpen && message.sources.length > 0 && (
               <div className="animate-in slide-in-from-top-2 mt-4 space-y-2 duration-200">
                 <div className="px-1 text-xs font-medium text-muted-foreground">
-                  Sources:
+                  {language === "ms" ? "Sumber:" : "Sources:"}
                 </div>
+
                 {message.sources.map((source, idx) => {
                   const scoreColor =
                     source.score >= 0.75
@@ -372,16 +541,24 @@ function AIMessageCard({
                       : source.score >= 0.5
                         ? "bg-blue-500"
                         : "bg-orange-400"
+
                   const scoreLabel =
                     source.score >= 0.75
-                      ? "High match"
+                      ? language === "ms"
+                        ? "Padanan tinggi"
+                        : "High match"
                       : source.score >= 0.5
-                        ? "Good match"
-                        : "Partial match"
+                        ? language === "ms"
+                          ? "Padanan baik"
+                          : "Good match"
+                        : language === "ms"
+                          ? "Padanan separa"
+                          : "Partial match"
+
                   return (
                     <div
                       key={idx}
-                      className="group/source relative rounded-xl border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40"
+                      className="relative rounded-xl border border-border/50 bg-muted/20 p-3 transition-colors hover:bg-muted/40 sm:p-4"
                     >
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
@@ -390,11 +567,15 @@ function AIMessageCard({
                           </div>
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <FileText className="h-3.5 w-3.5" />
-                            <span>Excerpt {idx + 1}</span>
+                            <span>
+                              {language === "ms" ? "Petikan" : "Excerpt"}{" "}
+                              {idx + 1}
+                            </span>
                           </div>
                         </div>
+
                         {source.score > 0 && (
-                          <div className="flex items-center gap-1.5">
+                          <div className="hidden items-center gap-1.5 sm:flex">
                             <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                               <div
                                 className={`h-full rounded-full transition-all ${scoreColor}`}
@@ -404,13 +585,14 @@ function AIMessageCard({
                               />
                             </div>
                             <span className="text-[10px] whitespace-nowrap text-muted-foreground">
-                              {Math.round(source.score * 100)}% — {scoreLabel}
+                              {Math.round(source.score * 100)}% - {scoreLabel}
                             </span>
                           </div>
                         )}
                       </div>
-                      <p className="line-clamp-3 text-xs leading-relaxed text-foreground/70">
-                        {source.text}
+
+                      <p className="text-xs leading-relaxed text-foreground/70">
+                        {highlightSourceText(source.text, message.question)}
                       </p>
                     </div>
                   )
@@ -424,7 +606,6 @@ function AIMessageCard({
   )
 }
 
-// FIXED: User message bubble with proper width - now fits content width, not full width
 function UserMessageBubble({
   message,
   copiedId,
@@ -435,16 +616,13 @@ function UserMessageBubble({
   copyToClipboard: (text: string, id: string) => void
 }) {
   return (
-    <div className="group flex items-start justify-end gap-3">
-      {/* Message container - now fits content width with max-w-[80%] */}
-      <div className="max-w-[80%] min-w-0">
+    <div className="group flex items-start justify-end gap-2.5 sm:gap-3">
+      <div className="max-w-[88%] min-w-0 sm:max-w-[80%]">
         <div className="relative">
-          {/* Message bubble - width fits content */}
-          <div className="inline-block rounded-2xl rounded-tr-sm bg-primary px-5 py-3 text-primary-foreground shadow-sm">
+          <div className="inline-block rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
             <p className="text-sm leading-relaxed">{message.question}</p>
           </div>
 
-          {/* Footer with timestamp and copy */}
           <div className="mt-1.5 flex items-center justify-end gap-2">
             <span className="text-xs text-muted-foreground">
               {new Date(message.timestamp).toLocaleTimeString([], {
@@ -453,16 +631,15 @@ function UserMessageBubble({
               })}
             </span>
 
-            {/* Copy button */}
             <button
               onClick={() =>
                 copyToClipboard(message.question, `q-${message.timestamp}`)
               }
-              className="rounded-lg p-1 opacity-0 transition-colors group-hover:opacity-100 hover:bg-muted"
+              className="rounded-lg p-1 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
               title="Copy question"
             >
               {copiedId === `q-${message.timestamp}` ? (
-                <Check className="h-3.5 w-3.5 text-green-500" />
+                <Check className="h-3.5 w-3.5 text-primary" />
               ) : (
                 <Copy className="h-3.5 w-3.5 text-muted-foreground" />
               )}
@@ -471,10 +648,9 @@ function UserMessageBubble({
         </div>
       </div>
 
-      {/* User avatar */}
       <div className="mt-1 shrink-0">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/30">
-          <User className="h-5 w-5 text-primary" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/30 sm:h-10 sm:w-10">
+          <User className="h-4.5 w-4.5 text-primary sm:h-5 sm:w-5" />
         </div>
       </div>
     </div>
@@ -483,13 +659,13 @@ function UserMessageBubble({
 
 function TypingIndicator() {
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-2.5 sm:gap-3">
       <div className="relative shrink-0">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/30">
-          <AgentAvatar seed="Charlotte" size={28} />
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/30 sm:h-10 sm:w-10">
+          <AgentAvatar seed="Charlotte" size={26} />
         </div>
       </div>
-      <div className="flex items-center gap-2 rounded-2xl rounded-tl-sm border border-border/50 bg-card px-5 py-4 shadow-sm">
+      <div className="flex items-center gap-2 rounded-2xl rounded-tl-sm border border-border/50 bg-card px-4 py-3 shadow-sm sm:px-5 sm:py-4">
         <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:0ms]" />
         <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:150ms]" />
         <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:300ms]" />
@@ -498,25 +674,190 @@ function TypingIndicator() {
   )
 }
 
-export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
+export default function ChatPanel({
+  selectedDoc,
+  onBack,
+  composerTop,
+  emptyState,
+}: ChatPanelProps) {
+  const { language, toggleLanguage } = useLanguage()
+
+  const createSessionId = (documentId: string) =>
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `lr-session-${documentId}-${Date.now()}`
+
+  const persistSessionId = (documentId: string, nextSessionId: string) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        `lr-chat-session-id:${documentId}`,
+        nextSessionId
+      )
+    }
+  }
+
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [selectedModel, setSelectedModel] = useState("") // empty = server default
+  const [selectedPopoverModel, setSelectedPopoverModel] = useState("")
+  const [userId, setUserId] = useState("")
   const [sessionId, setSessionId] = useState("")
   const [enableQueryAugmentation, setEnableQueryAugmentation] = useState(true)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [documentHistory, setDocumentHistory] = useState<ChatHistoryMessage[]>(
+    []
+  )
+  const [speechSupported, setSpeechSupported] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+
+  const copy =
+    language === "ms"
+      ? {
+          historyLoadError: "Gagal memuatkan sejarah sembang",
+          retryLater: "Sila cuba lagi sebentar nanti.",
+          noDoc: "Tiada dokumen dipilih",
+          noDocDesc:
+            "Pilih dokumen dari panel kiri untuk mula bertanya dan dapatkan jawapan berasaskan AI.",
+          ready: "Sedia",
+          autoServer: "Auto (lalai pelayan)",
+          newChat: "Sembang baharu",
+          startNewChat: "Mulakan sembang baharu",
+          smartOn: "Carian Pintar On",
+          smartOff: "Carian Pintar Off",
+          smartEnabled: "Carian pintar diaktifkan",
+          smartDisabled: "Carian pintar dimatikan untuk jawapan lebih pantas",
+          clearThread: "Padam thread semasa",
+          history: "Sejarah sembang",
+          threadList: "Thread Sembang",
+          threadDesc: "Tukar antara thread yang disimpan untuk dokumen ini.",
+          noSavedThreads: "Belum ada thread disimpan untuk dokumen ini.",
+          messages: "mesej",
+          askAbout: "Tanya apa sahaja tentang",
+          answerDesc:
+            "dan dapatkan jawapan yang ringkas, jelas, serta bersumber.",
+          suggestions: "Cuba tanya tentang:",
+          askPlaceholder: "Tanya soalan...",
+          send: "Hantar",
+          newLine: "Baris baharu",
+          voiceStart: "Mulakan input suara",
+          voiceStop: "Hentikan input suara",
+          voiceListening: "Sedang mendengar",
+          voiceUnsupported:
+            "Pelayar ini tidak menyokong input suara secara langsung.",
+          voiceBlocked:
+            "Akses mikrofon disekat. Sila benarkan mikrofon dan cuba semula.",
+          voiceUnavailable:
+            "Input suara tidak tersedia sekarang. Sila cuba lagi.",
+          thread: "Thread",
+          loading: "Carian pintar sedang dijalankan",
+          answerReady: "Jawapan sedia",
+          answerError: "Gagal mendapatkan jawapan",
+          loadingDesc:
+            "Sistem sedang menyemak padanan pelbagai bahasa sebelum menjana jawapan.",
+          tooManyQuestions: "Terlalu banyak soalan dihantar",
+          waitAgain: "Sila tunggu",
+          seconds: "saat sebelum bertanya semula.",
+          copied: "Berjaya disalin",
+          newChatStarted: "Sembang baharu dimulakan",
+          cleared: "Thread semasa dipadam",
+          nothingToClear: "Tiada apa untuk dipadam",
+          clearError: "Gagal memadam thread semasa",
+          currentThread: "Thread semasa",
+          language: "Tukar bahasa",
+          options: "Pilihan",
+          model: "Model",
+          back: "Kembali",
+        }
+      : {
+          historyLoadError: "Failed to load chat history",
+          retryLater: "Please try again later.",
+          noDoc: "No document selected",
+          noDocDesc:
+            "Select a document from the left panel to start asking questions and get AI-powered answers.",
+          ready: "Ready",
+          autoServer: "Auto (server default)",
+          newChat: "New chat",
+          startNewChat: "Start new chat",
+          smartOn: "Smart Retrieval On",
+          smartOff: "Smart Retrieval Off",
+          smartEnabled: "Smart retrieval is enabled",
+          smartDisabled: "Smart retrieval is disabled for faster replies",
+          clearThread: "Clear current thread",
+          history: "Chat history",
+          threadList: "Chat Threads",
+          threadDesc: "Switch between saved chats for this document.",
+          noSavedThreads: "No saved chats for this document yet.",
+          messages: "messages",
+          askAbout: "Ask anything about",
+          answerDesc: "and get simple, clear answers with sources.",
+          suggestions: "Try asking about:",
+          askPlaceholder: "Ask a question...",
+          send: "Send",
+          newLine: "New line",
+          voiceStart: "Start voice input",
+          voiceStop: "Stop voice input",
+          voiceListening: "Listening",
+          voiceUnsupported:
+            "This browser does not support built-in voice input.",
+          voiceBlocked:
+            "Microphone access was blocked. Please allow it and try again.",
+          voiceUnavailable:
+            "Voice input is unavailable right now. Please try again.",
+          thread: "Thread",
+          loading: "Smart retrieval is working",
+          answerReady: "Answer ready",
+          answerError: "Failed to get answer",
+          loadingDesc:
+            "Checking multilingual matches before generating the answer.",
+          tooManyQuestions: "Too many questions sent",
+          waitAgain: "Please wait",
+          seconds: "seconds before asking again.",
+          copied: "Copied to clipboard",
+          newChatStarted: "Started a new chat",
+          cleared: "Current chat cleared",
+          nothingToClear: "Nothing to clear",
+          clearError: "Failed to clear current chat",
+          currentThread: "Current chat",
+          language: "Toggle language",
+          options: "Options",
+          model: "Model",
+          back: "Back",
+        }
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const isMobile = useMobile()
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const speechCtorRef = useRef<SpeechRecognitionCtor | null>(null)
+  const dictationBaseRef = useRef("")
 
-  useEffect(() => {
-    setMessages([])
-    setExpandedSources(new Set())
-  }, [selectedDoc])
+  const getSpeechLocale = (lang: string) => {
+    switch (lang) {
+      case "ms":
+      case "id":
+        return "ms-MY"
+      case "zh":
+      case "zh-cn":
+        return "zh-CN"
+      case "zh-tw":
+        return "zh-TW"
+      default:
+        return "en-US"
+    }
+  }
+
+  const mergeVoiceTranscript = (
+    baseText: string,
+    finalTranscript: string,
+    interimTranscript: string
+  ) => {
+    const normalizedBase = baseText.trim()
+    const spokenText = `${finalTranscript} ${interimTranscript}`.trim()
+    if (!spokenText) return baseText
+    return normalizedBase ? `${normalizedBase} ${spokenText}` : spokenText
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -530,88 +871,208 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
   }, [input])
 
   useEffect(() => {
-    const storageKey = "lr-chat-session-id"
-    const existing =
-      typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null
+    if (typeof window === "undefined") return
 
-    if (existing) {
-      setSessionId(existing)
+    const speechCtor =
+      (
+        window as Window & {
+          SpeechRecognition?: SpeechRecognitionCtor
+          webkitSpeechRecognition?: SpeechRecognitionCtor
+        }
+      ).SpeechRecognition ??
+      (
+        window as Window & {
+          webkitSpeechRecognition?: SpeechRecognitionCtor
+        }
+      ).webkitSpeechRecognition ??
+      null
+
+    speechCtorRef.current = speechCtor
+    setSpeechSupported(Boolean(speechCtor))
+
+    return () => {
+      recognitionRef.current?.stop()
+      recognitionRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const userStorageKey = "lr-user-id"
+    const existingUser =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(userStorageKey)
+        : null
+
+    if (existingUser) {
+      setUserId(existingUser)
+    } else {
+      const nextUserId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `lr-user-${Date.now()}`
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(userStorageKey, nextUserId)
+      }
+
+      setUserId(nextUserId)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedDoc) {
+      setMessages([])
+      setExpandedSources(new Set())
+      setSessionId("")
+      setDocumentHistory([])
+      setShowHistory(false)
       return
     }
 
-    const nextSessionId =
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `lr-session-${Date.now()}`
+    if (typeof window === "undefined") return
 
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(storageKey, nextSessionId)
+    const storageKey = `lr-chat-session-id:${selectedDoc.id}`
+    const existingSession = window.localStorage.getItem(storageKey)
+
+    if (existingSession) {
+      setSessionId(existingSession)
+      return
     }
-    setSessionId(nextSessionId)
-  }, [])
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault()
+    const nextSessionId = createSessionId(selectedDoc.id)
+    window.localStorage.setItem(storageKey, nextSessionId)
+    setSessionId(nextSessionId)
+  }, [selectedDoc])
+
+  useEffect(() => {
+    if (!selectedDoc || !userId || !sessionId) return
+
+    let active = true
+    setHistoryLoading(true)
+
+    getChatHistory({
+      userId,
+      documentId: selectedDoc.id,
+    })
+      .then((history) => {
+        if (!active) return
+        setDocumentHistory(history)
+        const ordered = [...history]
+          .filter((row) => row.session_id === sessionId)
+          .reverse()
+          .map(mapHistoryRowToMessage)
+        setMessages(ordered)
+        setExpandedSources(new Set())
+      })
+      .catch((error) => {
+        if (!active) return
+        setMessages([])
+        toast.error(copy.historyLoadError, {
+          description: error instanceof Error ? error.message : copy.retryLater,
+        })
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [copy.historyLoadError, copy.retryLater, selectedDoc, sessionId, userId])
+
+  const submitQuestion = async (questionOverride?: string) => {
     if (!selectedDoc) {
       toast.error("Please select a document first")
       return
     }
+
+    if (!userId) {
+      toast.error("User identity not ready yet")
+      return
+    }
+
     if (!sessionId) {
       toast.error("Session not ready yet")
       return
     }
-    if (!input.trim() || loading) return
 
-    const question = input.trim()
+    const question = (questionOverride ?? input).trim()
+    if (!question || loading) return
+
+    if (isListening) stopVoiceInput()
+
     setInput("")
     setLoading(true)
+
     if (inputRef.current) inputRef.current.style.height = "auto"
 
     try {
       const requestPromise = askQuestion(
+        userId,
         selectedDoc.id,
         selectedDoc.name,
         sessionId,
         question,
-        selectedModel,
+        selectedPopoverModel,
         enableQueryAugmentation
       )
+
       if (enableQueryAugmentation) {
         toast.promise(requestPromise, {
-          loading: "Smart retrieval is working",
-          success: "Answer ready",
+          loading: copy.loading,
+          success: copy.answerReady,
           error: (message) =>
-            message instanceof Error ? message.message : "Failed to get answer",
-          description:
-            "Checking multilingual matches before generating the answer.",
+            message instanceof Error ? message.message : copy.answerError,
+          description: copy.loadingDesc,
         })
       }
+
       const response = await requestPromise
-      setMessages((prev) => [
-        ...prev,
+
+      const nextMessage = {
+        question,
+        answer: response.answer,
+        sources: response.sources,
+        timestamp: response.timestamp,
+        language: response.language,
+        confidence: response.confidence ?? 0,
+        latency_ms: response.latency_ms ?? 0,
+        cached: false,
+        model_used: response.model_used,
+        sufficient_evidence: response.sufficient_evidence ?? true,
+      }
+
+      setMessages((prev) => [...prev, nextMessage])
+
+      setDocumentHistory((prev) => [
         {
+          id: `${sessionId}-${response.timestamp}`,
+          user_id: userId,
+          session_id: sessionId,
+          document_id: selectedDoc.id,
           question,
           answer: response.answer,
+          language: response.language,
           sources: response.sources,
           timestamp: response.timestamp,
-          language: response.language,
           confidence: response.confidence ?? 0,
           latency_ms: response.latency_ms ?? 0,
-          cached: false,
           model_used: response.model_used,
+          sufficient_evidence: response.sufficient_evidence ?? true,
         },
+        ...prev,
       ])
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Please try again"
-      // Rate-limit (429) gets a special toast with the wait time extracted
+
       if (msg.toLowerCase().includes("too many requests")) {
         const seconds = msg.match(/\d+/)?.[0] ?? "60"
-        toast.error("Too many questions sent", {
-          description: `Please wait ${seconds} seconds before asking again.`,
+        toast.error(copy.tooManyQuestions, {
+          description: `${copy.waitAgain} ${seconds} ${copy.seconds}`,
           duration: 6000,
         })
       } else if (!enableQueryAugmentation) {
-        toast.error("Failed to get answer", { description: msg })
+        toast.error(copy.answerError, { description: msg })
       }
     } finally {
       setLoading(false)
@@ -626,300 +1087,532 @@ export default function ChatPanel({ selectedDoc, onBack }: ChatPanelProps) {
   const toggleSources = (messageIndex: number) => {
     setExpandedSources((prev) => {
       const next = new Set(prev)
-      next.has(messageIndex)
-        ? next.delete(messageIndex)
-        : next.add(messageIndex)
+      if (next.has(messageIndex)) {
+        next.delete(messageIndex)
+      } else {
+        next.add(messageIndex)
+      }
       return next
     })
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
+  const stopVoiceInput = () => {
+    recognitionRef.current?.stop()
+  }
+
+  const startVoiceInput = () => {
+    const SpeechRecognitionCtor = speechCtorRef.current
+
+    if (!SpeechRecognitionCtor) {
+      toast.error(copy.voiceUnsupported)
+      return
     }
+
+    try {
+      recognitionRef.current?.stop()
+
+      const recognition = new SpeechRecognitionCtor()
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.lang = getSpeechLocale(language)
+
+      dictationBaseRef.current = input.trim()
+
+      recognition.onstart = () => {
+        setIsListening(true)
+      }
+
+      recognition.onresult = (event) => {
+        let finalTranscript = ""
+        let interimTranscript = ""
+
+        for (let index = 0; index < event.results.length; index += 1) {
+          const result = event.results[index]
+          const transcript = result[0]?.transcript?.trim() ?? ""
+          if (!transcript) continue
+
+          if (result.isFinal) {
+            finalTranscript += `${transcript} `
+          } else {
+            interimTranscript += `${transcript} `
+          }
+        }
+
+        setInput(
+          mergeVoiceTranscript(
+            dictationBaseRef.current,
+            finalTranscript.trim(),
+            interimTranscript.trim()
+          )
+        )
+      }
+
+      recognition.onerror = (event) => {
+        setIsListening(false)
+
+        if (
+          event.error === "not-allowed" ||
+          event.error === "service-not-allowed"
+        ) {
+          toast.error(copy.voiceBlocked)
+          return
+        }
+
+        if (event.error === "no-speech" || event.error === "aborted") return
+        toast.error(copy.voiceUnavailable)
+      }
+
+      recognition.onend = () => {
+        setIsListening(false)
+        recognitionRef.current = null
+      }
+
+      recognitionRef.current = recognition
+      recognition.start()
+      inputRef.current?.focus()
+    } catch {
+      setIsListening(false)
+      toast.error(copy.voiceUnavailable)
+    }
+  }
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      stopVoiceInput()
+      return
+    }
+    startVoiceInput()
   }
 
   const copyToClipboard = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text)
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
-    toast.success("Copied to clipboard")
+    toast.success(copy.copied)
   }
 
-  const clearChat = () => {
+  const handleSelectThread = (nextSessionId: string) => {
+    if (!selectedDoc) return
+    persistSessionId(selectedDoc.id, nextSessionId)
+    setSessionId(nextSessionId)
+    setShowHistory(false)
+  }
+
+  const handleNewChat = () => {
+    if (!selectedDoc) return
+    const nextSessionId = createSessionId(selectedDoc.id)
+    persistSessionId(selectedDoc.id, nextSessionId)
+    setSessionId(nextSessionId)
     setMessages([])
     setExpandedSources(new Set())
-    toast.success("Chat cleared")
+    setInput("")
+    setShowHistory(false)
+    toast.success(copy.newChatStarted)
   }
 
-  // Empty state
-  if (!selectedDoc) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center bg-linear-to-b from-background to-muted/20">
-        <div className="max-w-md p-8 text-center">
-          <div className="relative mx-auto mb-6">
-            <div className="absolute inset-0 animate-pulse rounded-full bg-primary/20 blur-3xl" />
-            <div className="relative rounded-full bg-linear-to-br from-primary/20 to-primary/5 p-8 ring-1 ring-primary/30">
-              <FileText className="mx-auto h-16 w-16 text-primary/60" />
-            </div>
-          </div>
-          <h3 className="mb-3 bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-2xl font-semibold tracking-tight text-transparent">
-            No document selected
-          </h3>
-          <p className="text-muted-foreground">
-            Select a document from the sidebar to start asking questions and get
-            AI-powered insights.
-          </p>
-        </div>
-      </div>
-    )
+  const clearChat = async () => {
+    if (!selectedDoc || !userId || !sessionId) return
+
+    try {
+      const result = await clearChatHistory({
+        documentId: selectedDoc.id,
+        userId,
+        sessionId,
+      })
+
+      setDocumentHistory((prev) =>
+        prev.filter(
+          (row) =>
+            !(
+              row.document_id === selectedDoc.id && row.session_id === sessionId
+            )
+        )
+      )
+
+      setMessages([])
+      setExpandedSources(new Set())
+
+      toast.success(
+        result.deleted_rows > 0 ? copy.cleared : copy.nothingToClear
+      )
+    } catch (error) {
+      toast.error(copy.clearError, {
+        description: error instanceof Error ? error.message : copy.retryLater,
+      })
+    }
   }
+
+  const threads = buildThreads(documentHistory)
+  const activeThreadLabel =
+    threads.find((thread) => thread.sessionId === sessionId)?.previewQuestion ||
+    copy.currentThread
+
+  const chatStatus = loading ? "streaming" : "ready"
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-border/50 bg-linear-to-r from-background via-card to-background px-4 py-3 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {isMobile && onBack && (
-              <button
-                onClick={onBack}
-                className="rounded-lg p-2 transition-colors hover:bg-accent"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-            )}
-
-            <div className="relative">
-              <div className="absolute inset-0 rounded-lg bg-primary/20 blur-md" />
-              <div className="relative rounded-lg bg-linear-to-br from-primary/20 to-primary/5 p-2.5 ring-1 ring-primary/30">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-
-            <div>
-              <h2 className="line-clamp-1 text-base font-semibold tracking-tight">
-                {selectedDoc.name}
-              </h2>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground">
-                  PDF
-                </span>
-                <span className="h-1 w-1 rounded-full bg-emerald-500" />
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
-                  Ready
-                </span>
-                <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-xs text-purple-600 dark:text-purple-400">
-                  Few-shot
-                </span>
-                <span className="rounded-full bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground">
-                  30 req/min
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            {/* Model selector */}
-            <Select
-              value={selectedModel}
-              onValueChange={(value) => setSelectedModel(value)}
-            >
-              <SelectTrigger className="hidden w-50 text-xs sm:flex">
-                <SelectValue placeholder="Auto (server default)" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="auto">Auto (server default)</SelectItem>
-
-                  {GROQ_MODELS.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <button
-              type="button"
-              onClick={() => setEnableQueryAugmentation((prev) => !prev)}
-              className={[
-                "hidden h-9 items-center justify-between gap-1.5 rounded-md border border-input py-2 pr-2 pl-2.5 text-xs whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex",
-                enableQueryAugmentation
-                  ? "bg-transparent text-foreground"
-                  : "bg-muted/40 text-muted-foreground",
-              ].join(" ")}
-              title={
-                enableQueryAugmentation
-                  ? "Smart retrieval is enabled"
-                  : "Smart retrieval is disabled for faster replies"
-              }
-            >
-              <Languages className="h-4 w-4" />
-              {enableQueryAugmentation ? "Smart Retrieval On" : "Smart Retrieval Off"}
-            </button>
-            {messages.length > 0 && (
-              <button
-                onClick={clearChat}
-                className="rounded-lg p-2 transition-colors hover:bg-muted"
-                title="Clear chat"
-              >
-                <X className="h-4 w-4 text-muted-foreground" />
-              </button>
-            )}
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className="rounded-lg p-2 transition-colors hover:bg-muted"
-              title="Chat history"
-            >
-              <History className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Messages area */}
-      <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-4 py-6">
-          {messages.length === 0 ? (
-            // Welcome state with suggestions
-            <div className="flex min-h-[60vh] flex-col items-center justify-center">
-              <div className="w-full max-w-2xl space-y-8">
-                <div className="text-center">
-                  <div className="relative mx-auto mb-6 h-24 w-24">
-                    <div className="absolute inset-0 animate-pulse rounded-full bg-primary/30 blur-2xl" />
-                    <div className="relative flex h-full w-full items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-2 ring-primary/30">
-                      <AgentAvatar seed="Charlotte" size={50} />
-                    </div>
+    <AiChat
+      status={chatStatus}
+      className="h-full min-h-0 bg-background font-sans"
+    >
+      <AiChatBody className="min-h-0">
+        <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
+          <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
+            {selectedDoc && showHistory && (
+              <div className="mb-4 rounded-2xl border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">{copy.threadList}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {copy.threadDesc}
+                    </p>
                   </div>
-                  <h3 className="mb-2 bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-2xl font-semibold text-transparent">
-                    Chat with your document
-                  </h3>
-                  <p className="mx-auto max-w-md text-muted-foreground">
-                    Ask anything about{" "}
-                    <span className="font-medium text-foreground">
-                      {selectedDoc.name}
-                    </span>{" "}
-                    and get simple, clear answers with sources.
-                  </p>
+
+                  <button
+                    onClick={handleNewChat}
+                    className="inline-flex items-center gap-2 rounded-lg border border-border/50 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {copy.newChat}
+                  </button>
                 </div>
 
-                <div className="space-y-4">
-                  <p className="flex items-center justify-center gap-2 text-center text-sm font-medium text-muted-foreground">
-                    <Sparkles className="h-4 w-4" />
-                    Try asking about:
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {SUGGESTIONS.map((suggestion, index) => {
-                      const Icon = suggestion.icon
+                {threads.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+                    {copy.noSavedThreads}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {threads.map((thread) => {
+                      const isActive = thread.sessionId === sessionId
+
                       return (
                         <button
-                          key={index}
-                          onClick={() => handleSuggestionClick(suggestion.text)}
-                          className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
+                          key={thread.sessionId}
+                          onClick={() => handleSelectThread(thread.sessionId)}
+                          className={[
+                            "w-full rounded-xl border p-3 text-left transition-colors",
+                            isActive
+                              ? "border-primary/40 bg-primary/5"
+                              : "border-border/50 bg-background hover:bg-muted/40",
+                          ].join(" ")}
                         >
-                          <div
-                            className={cn(
-                              "absolute inset-0 bg-linear-to-r opacity-0 transition-opacity group-hover:opacity-100",
-                              suggestion.color
-                            )}
-                          />
-                          <Icon className="relative mb-3 h-5 w-5 text-primary" />
-                          <p className="relative mb-1 text-sm font-medium">
-                            {suggestion.text}
-                          </p>
-                          <p className="relative text-xs text-muted-foreground">
-                            {suggestion.description}
+                          <div className="mb-1 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-xs font-medium text-foreground">
+                                {new Date(thread.lastUpdated).toLocaleString(
+                                  [],
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
+                              </span>
+                            </div>
+
+                            <span className="text-[11px] text-muted-foreground">
+                              {thread.messageCount} {copy.messages}
+                            </span>
+                          </div>
+
+                          <p className="line-clamp-1 text-sm font-medium text-foreground">
+                            {thread.previewQuestion}
                           </p>
                         </button>
                       )
                     })}
                   </div>
+                )}
+              </div>
+            )}
+
+            {!selectedDoc ? (
+              (emptyState ?? (
+                <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                  <div className="max-w-md p-8 text-center">
+                    <div className="relative mx-auto mb-6">
+                      <div className="absolute inset-0 animate-pulse rounded-full bg-primary/20 blur-3xl" />
+                      <div className="relative rounded-full bg-linear-to-br from-primary/20 to-primary/5 p-8 ring-1 ring-primary/30">
+                        <FileText className="mx-auto h-16 w-16 text-primary/60" />
+                      </div>
+                    </div>
+                    <h3 className="mb-3 bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-2xl font-semibold tracking-tight text-transparent">
+                      {copy.noDoc}
+                    </h3>
+                    <p className="text-muted-foreground">{copy.noDocDesc}</p>
+                  </div>
+                </div>
+              ))
+            ) : historyLoading ? (
+              <div className="flex min-h-[40vh] items-center justify-center">
+                <TypingIndicator />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
+                  <div className="text-center">
+                    <div className="relative mx-auto mb-5 h-20 w-20 sm:mb-6 sm:h-24 sm:w-24">
+                      <div className="absolute inset-0 animate-pulse rounded-full bg-primary/30 blur-2xl" />
+                      <div className="relative flex h-full w-full items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-2 ring-primary/30">
+                        <AgentAvatar seed="Charlotte" size={44} />
+                      </div>
+                    </div>
+
+                    <h3 className="mb-2 bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-xl font-semibold text-transparent sm:text-2xl">
+                      Sembang dengan dokumen anda
+                    </h3>
+
+                    <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
+                      {copy.askAbout}{" "}
+                      <span className="font-medium text-foreground">
+                        {selectedDoc?.name ?? ""}
+                      </span>{" "}
+                      {copy.answerDesc}
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="flex items-center justify-center gap-2 text-center text-sm font-medium text-muted-foreground">
+                      <Sparkles className="h-4 w-4" />
+                      {copy.suggestions}
+                    </p>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {SUGGESTIONS.map((suggestion, index) => {
+                        const Icon = suggestion.icon
+                        return (
+                          <button
+                            key={index}
+                            onClick={() =>
+                              handleSuggestionClick(suggestion.text)
+                            }
+                            className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg sm:p-4"
+                          >
+                            <div
+                              className={cn(
+                                "absolute inset-0 bg-linear-to-r opacity-0 transition-opacity group-hover:opacity-100",
+                                suggestion.color
+                              )}
+                            />
+                            <Icon className="relative mb-3 h-5 w-5 text-primary" />
+                            <p className="relative mb-1 text-sm font-medium">
+                              {suggestion.text}
+                            </p>
+                            <p className="relative text-xs text-muted-foreground">
+                              {suggestion.description}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 sm:space-y-6">
+                {messages.map((message, index) => (
+                  <div
+                    key={message.timestamp}
+                    className="space-y-3 sm:space-y-4"
+                  >
+                    <UserMessageBubble
+                      message={message}
+                      copiedId={copiedId}
+                      copyToClipboard={copyToClipboard}
+                    />
+                    <AIMessageCard
+                      message={message}
+                      index={index}
+                      isLatest={index === messages.length - 1}
+                      expandedSources={expandedSources}
+                      toggleSources={toggleSources}
+                      copiedId={copiedId}
+                      copyToClipboard={copyToClipboard}
+                    />
+                  </div>
+                ))}
+
+                {loading && <TypingIndicator />}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+        </div>
+      </AiChatBody>
+
+      <AiChatFooter className="bg-background/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              {onBack && (
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="shrink-0 rounded-lg p-2 hover:bg-muted"
+                  title={copy.back}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+              )}
+
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium">
+                  {selectedDoc?.name ?? copy.noDoc}
+                </p>
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                  {selectedDoc ? (
+                    <>
+                      <span>PDF</span>
+                      <span className="h-1 w-1 rounded-full bg-primary" />
+                      <span>{copy.ready}</span>
+                      <span className="hidden min-w-0 items-center gap-2 sm:inline-flex">
+                        <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                        <span className="truncate">
+                          {copy.thread}: {activeThreadLabel.slice(0, 20)}
+                        </span>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="truncate">{copy.noDocDesc}</span>
+                  )}
                 </div>
               </div>
             </div>
-          ) : (
-            // Message thread
-            <div className="space-y-6">
-              {messages.map((message, index) => (
-                <div key={message.timestamp} className="space-y-4">
-                  <UserMessageBubble
-                    message={message}
-                    copiedId={copiedId}
-                    copyToClipboard={copyToClipboard}
-                  />
-                  <AIMessageCard
-                    message={message}
-                    index={index}
-                    expandedSources={expandedSources}
-                    toggleSources={toggleSources}
-                    copiedId={copiedId}
-                    copyToClipboard={copyToClipboard}
-                  />
-                </div>
-              ))}
-              {loading && <TypingIndicator />}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Input area - simplified, no voice buttons */}
-      <div className="border-t border-border/50 bg-linear-to-t from-background via-background to-transparent px-4 py-4">
-        <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
-          <div className="relative flex items-end gap-2 rounded-2xl border border-border/50 bg-card shadow-sm transition-all focus-within:border-primary/50 focus-within:shadow-md">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask a question..."
-              className="max-h-32 w-full resize-none rounded-2xl bg-transparent px-4 py-4 pr-20 text-sm focus:outline-none"
-              rows={1}
-              disabled={loading}
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg p-2 hover:bg-muted"
+                  title={copy.options}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
 
-            <div className="absolute right-3 bottom-3">
-              {/* Send button */}
-              <button
-                type="submit"
-                disabled={!input.trim() || loading || !sessionId}
-                className="rounded-xl bg-primary p-2.5 text-primary-foreground transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>{copy.options}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem onClick={toggleLanguage}>
+                  <Languages className="mr-2 h-4 w-4" />
+                  {copy.language}
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={handleNewChat}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {copy.newChat}
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() =>
+                    setEnableQueryAugmentation(!enableQueryAugmentation)
+                  }
+                >
+                  <Languages className="mr-2 h-4 w-4" />
+                  {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={() => setShowHistory(!showHistory)}>
+                  <History className="mr-2 h-4 w-4" />
+                  {copy.history}
+                </DropdownMenuItem>
+
+                {messages.length > 0 && (
+                  <DropdownMenuItem onClick={clearChat} variant="destructive">
+                    <X className="mr-2 h-4 w-4" />
+                    {copy.clearThread}
+                  </DropdownMenuItem>
                 )}
-              </button>
-            </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          {/* Input footer */}
-          <div className="mt-3 flex justify-between px-2">
+          {composerTop && <div className="mb-2">{composerTop}</div>}
+          <ChatInput
+            value={input}
+            onChange={setInput}
+            ref={inputRef}
+            onSubmit={submitQuestion}
+            loading={loading}
+            disabled={!selectedDoc || !sessionId || !userId}
+            placeholder={
+              selectedDoc ? copy.askPlaceholder : "Select a document to start…"
+            }
+            className="bg-card"
+          >
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="h-8 w-fit rounded-full border border-border/50 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  {selectedPopoverModel
+                    ? (GROQ_MODELS.find((m) => m.id === selectedPopoverModel)
+                        ?.label ?? selectedPopoverModel)
+                    : copy.autoServer}
+                </button>
+              </PopoverTrigger>
+
+              <PopoverContent align="start" className="w-56 p-1">
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPopoverModel("")}
+                    className={cn(
+                      "flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                      !selectedPopoverModel && "bg-muted"
+                    )}
+                  >
+                    {copy.autoServer}
+                  </button>
+
+                  {GROQ_MODELS.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setSelectedPopoverModel(m.id)}
+                      className={cn(
+                        "flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                        selectedPopoverModel === m.id && "bg-muted"
+                      )}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <button
+              type="button"
+              onClick={toggleVoiceInput}
+              disabled={!speechSupported || loading}
+              className={cn(
+                "rounded-xl border border-border/50 bg-background/80 p-2 text-muted-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
+                isListening &&
+                  "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/15"
+              )}
+              title={isListening ? copy.voiceStop : copy.voiceStart}
+            >
+              {isListening ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </button>
+          </ChatInput>
+
+          <div className="mt-2 hidden justify-between px-2 sm:mt-3 sm:flex">
+            <p className="text-xs text-muted-foreground">Enter {copy.send}</p>
             <p className="text-xs text-muted-foreground">
-              <kbd className="rounded border border-border/50 bg-muted px-1.5 py-0.5 text-[10px]">
-                ↵
-              </kbd>{" "}
-              Send
-            </p>
-            <p className="text-xs text-muted-foreground">
-              <kbd className="rounded border border-border/50 bg-muted px-1.5 py-0.5 text-[10px]">
-                ⇧
-              </kbd>{" "}
-              +
-              <kbd className="ml-1 rounded border border-border/50 bg-muted px-1.5 py-0.5 text-[10px]">
-                ↵
-              </kbd>{" "}
-              New line
+              Shift + Enter {copy.newLine}
             </p>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </AiChatFooter>
+    </AiChat>
   )
 }

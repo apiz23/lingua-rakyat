@@ -4,10 +4,12 @@ import { Toaster } from "@/components/ui/sonner"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { LanguageProvider } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Fps } from "@/components/ui/fps"
 import { Analytics } from "@vercel/analytics/next"
+import CommandPaletteTopRight from "@/components/navbar"
 
 const sora = Sora({
   subsets: ["latin"],
@@ -60,17 +62,19 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("antialiased", sora.className, inter.className)}
     >
-      <body>
+      <body className="min-h-screen bg-background text-foreground">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>
-            <Toaster richColors expand={true} position="top-center"/>
-            <Fps strategy="fixed" position="bottom-left" /> {children}
-          </TooltipProvider>
+          <LanguageProvider>
+            <TooltipProvider>
+              <Toaster richColors expand={true} position="top-center" />
+              {children}
+            </TooltipProvider>
+          </LanguageProvider>
         </ThemeProvider>
         <Analytics />
       </body>

@@ -29,7 +29,7 @@ export default function ResultsPage() {
     <div className="container mx-auto max-w-6xl px-4 py-10 md:px-6">
       <div className="mb-12 flex flex-col items-center text-center">
         <Badge className="mb-4 p-4" variant="secondary">
-          Varsity Hackathon 2026
+          Lingua Rakyat
         </Badge>
         <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl">
           Evaluation Results
@@ -53,7 +53,7 @@ export default function ResultsPage() {
             </div>
             <Badge
               variant="outline"
-              className="mt-2 border-green-500/20 bg-green-500/10 text-green-600"
+              className="mt-2 border-primary/20 bg-primary/10 text-primary"
             >
               <TrendingUp className="mr-1 h-3 w-3" /> +1.78 Improvement
             </Badge>
@@ -231,7 +231,7 @@ function ScoreRow({
         <span className="font-bold">{after.toFixed(1)}</span>
         <Badge
           variant="outline"
-          className="w-16 justify-center border-green-500/20 bg-green-500/10 text-green-600"
+          className="w-16 justify-center border-primary/20 bg-primary/10 text-primary"
         >
           +{improvement}
         </Badge>
@@ -287,8 +287,8 @@ function ComplianceRow({
         variant={variant === "success" ? "default" : "secondary"}
         className={
           variant === "success"
-            ? "bg-green-500 hover:bg-green-600"
-            : "bg-yellow-500/20 text-yellow-700 hover:bg-yellow-500/30"
+            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+            : "bg-accent/15 text-accent-foreground hover:bg-accent/20"
         }
       >
         {variant === "success" && <CheckCircle2 className="mr-1 h-3 w-3" />}

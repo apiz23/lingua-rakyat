@@ -1,0 +1,232 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { Document, listDocuments } from "@/lib/api"
+import ChatPanel from "@/components/chat-panel"
+import { cn } from "@/lib/utils"
+import UploadModal from "@/components/upload-modal"
+import { Button } from "@/components/ui/button"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  CheckCircle,
+  CircleAlert,
+  Clock,
+  FileText,
+  Loader2,
+  RotateCcw,
+  Upload,
+  ChevronDown,
+  Plus,
+  Database,
+} from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { motion, AnimatePresence } from "framer-motion"
+
+export default function WorkSpacePage() {
+  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const [isDocPickerOpen, setIsDocPickerOpen] = useState(false)
+
+  const loadDocuments = async () => {
+    setDocsLoading(true)
+    try {
+      const docs = await listDocuments()
+      setDocuments(docs)
+      setSelectedDoc((prev) => docs.find((d) => d.id === prev?.id) ?? null)
+      return docs
+    } finally {
+      setDocsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadDocuments()
+  }, [])
+
+  const sortedDocs = useMemo(() => {
+    return [...documents].sort((a, b) =>
+      a.uploaded_at < b.uploaded_at ? 1 : -1
+    )
+  }, [documents])
+
+  const statusConfig = (status: Document["status"]) => {
+    switch (status) {
+      case "ready":
+        return { icon: CheckCircle, color: "text-emerald-500", label: "Ready" }
+      case "processing":
+        return {
+          icon: Loader2,
+          color: "text-amber-500 animate-spin",
+          label: "Processing",
+        }
+      case "error":
+        return { icon: CircleAlert, color: "text-red-500", label: "Error" }
+      default:
+        return { icon: Clock, color: "text-muted-foreground", label: "Pending" }
+    }
+  }
+
+  return (
+    <div className="flex h-full w-full flex-col bg-linear-to-br from-background via-background to-muted/20">
+      <ChatPanel
+        selectedDoc={selectedDoc}
+        composerTop={
+          <div className="flex justify-between gap-2 px-1">
+            {/* Document Selector */}
+            <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
+              <PopoverTrigger asChild>
+                <button className="group flex w-full max-w-fit flex-1 items-center justify-between rounded-lg border border-border/50 bg-card px-3 py-2 text-sm transition-all hover:border-primary/30 hover:bg-accent/50">
+                  <div className="flex items-center gap-2 truncate">
+                    {selectedDoc ? (
+                      <>
+                        {(() => {
+                          const { icon: Icon, color } = statusConfig(
+                            selectedDoc.status
+                          )
+                          return (
+                            <Icon
+                              className={cn("h-3.5 w-3.5 shrink-0", color)}
+                            />
+                          )
+                        })()}
+                        <span className="truncate font-medium">
+                          {selectedDoc.name}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Database className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          Select document
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <ChevronDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                </button>
+              </PopoverTrigger>
+
+              <PopoverContent
+                align="start"
+                className="w-full p-0"
+                sideOffset={8}
+              >
+                <div className="flex flex-col">
+                  <ScrollArea className="max-h-80">
+                    <div className="p-1">
+                      {/* No document option */}
+                      <button
+                        onClick={() => {
+                          setSelectedDoc(null)
+                          setIsDocPickerOpen(false)
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                          !selectedDoc && "bg-primary/5 text-primary"
+                        )}
+                      >
+                        <Database className="h-4 w-4" />
+                        <span>No document</span>
+                      </button>
+
+                      {/* Document list */}
+                      {sortedDocs.length === 0 ? (
+                        <div className="py-8 text-center text-sm text-muted-foreground">
+                          No documents yet
+                        </div>
+                      ) : (
+                        sortedDocs.map((doc) => {
+                          const {
+                            icon: Icon,
+                            color,
+                            label,
+                          } = statusConfig(doc.status)
+                          return (
+                            <button
+                              key={doc.id}
+                              onClick={() => {
+                                setSelectedDoc(doc)
+                                setIsDocPickerOpen(false)
+                              }}
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                                selectedDoc?.id === doc.id && "bg-primary/5"
+                              )}
+                            >
+                              <Icon className={cn("h-4 w-4 shrink-0", color)} />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="truncate font-medium">
+                                    {doc.name}
+                                  </span>
+                                  <Badge
+                                    variant="outline"
+                                    className="h-5 px-1.5 text-[10px]"
+                                  >
+                                    {label}
+                                  </Badge>
+                                </div>
+                              </div>
+                              {selectedDoc?.id === doc.id && (
+                                <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
+                              )}
+                            </button>
+                          )
+                        })
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Refresh Button */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={loadDocuments}
+                disabled={docsLoading}
+                className="h-full w-fit shrink-0 p-3"
+              >
+                {docsLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-3.5 w-3.5" />
+                )}
+              </Button>
+
+              {/* Upload Button */}
+              <Button
+                size="icon"
+                onClick={() => setIsUploadOpen(true)}
+                className="h-full w-fit shrink-0 bg-primary p-3 shadow-sm hover:bg-primary/90"
+              >
+                <Upload className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        }
+      />
+
+      <UploadModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        onUploadComplete={async () => {
+          const docs = await loadDocuments()
+          const latest = docs?.sort((a, b) =>
+            a.uploaded_at < b.uploaded_at ? 1 : -1
+          )[0]
+          if (latest) setSelectedDoc(latest)
+        }}
+      />
+    </div>
+  )
+}

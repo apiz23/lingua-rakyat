@@ -8,7 +8,6 @@ import {
   Upload,
   File,
   AlertCircle,
-  CheckCircle,
   Loader2,
 } from "lucide-react"
 import { useDropzone } from "react-dropzone"
@@ -87,14 +86,14 @@ export default function UploadModal({
 
       toast.promise(promise, {
         loading: `Uploading ${file.name}...`,
-        success: (doc) => {
+        success: (result) => {
           clearInterval(progressInterval)
           setUploadProgress(100)
           setTimeout(() => {
             onUploadComplete()
             onClose()
           }, 500)
-          return `${file.name} uploaded successfully`
+          return result.message || `${file.name} uploaded successfully`
         },
         error: (err) => {
           clearInterval(progressInterval)
@@ -170,6 +169,9 @@ export default function UploadModal({
             </p>
             <p className="text-sm text-muted-foreground">
               PDF only (max {MAX_FILE_SIZE / (1024 * 1024)} MB)
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Text PDFs and scanned PDFs are supported with OCR fallback.
             </p>
           </div>
         )}

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { Document, listDocuments } from "@/lib/api"
 import { toast } from "sonner"
 import {
+  BarChart3,
   FileText,
   Loader2,
   CheckCircle,
@@ -20,7 +21,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { useMobile } from "@/hooks/use-mobile"
+import { useLanguage } from "./language-provider"
 import UploadModal from "./upload-modal"
 import { Button } from "./ui/button"
 
@@ -37,8 +38,60 @@ export default function DocumentPanel({
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [isReloading, setIsReloading] = useState(false)
-  const isMobile = useMobile()
   const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const { language } = useLanguage()
+  const copy =
+    language === "ms"
+      ? {
+          loadError: "Gagal memuatkan dokumen",
+          retry: "Sila cuba lagi",
+          reloadSuccess: "Senarai dokumen berjaya dimuat semula",
+          reloadError: "Gagal memuat semula dokumen",
+          ready: "sedia",
+          processing: "sedang diproses",
+          error: "ralat",
+          today: "Hari ini",
+          yesterday: "Semalam",
+          daysAgo: "hari lalu",
+          reloadTitle: "Muat semula senarai dokumen",
+          evalTitle: "Papan penilaian",
+          benchmarkTitle: "Makmal benchmark",
+          back: "Kembali",
+          search: "Cari dokumen...",
+          upload: "Muat Naik Dokumen",
+          documents: "dokumen",
+          loading: "Memuatkan dokumen...",
+          empty: "Tiada dokumen ditemui",
+          emptySearch: "Cuba kata kunci lain",
+          emptyUpload: "Muat naik PDF pertama untuk bermula",
+          firstUpload: "Muat Naik Dokumen Pertama",
+          uploadAria: "Muat naik dokumen",
+        }
+      : {
+          loadError: "Failed to load documents",
+          retry: "Please try again",
+          reloadSuccess: "Document list reloaded",
+          reloadError: "Failed to reload documents",
+          ready: "ready",
+          processing: "processing",
+          error: "error",
+          today: "Today",
+          yesterday: "Yesterday",
+          daysAgo: "days ago",
+          reloadTitle: "Reload document list",
+          evalTitle: "Evaluation dashboard",
+          benchmarkTitle: "Benchmark lab",
+          back: "Back",
+          search: "Search documents...",
+          upload: "Upload Document",
+          documents: "documents",
+          loading: "Loading documents...",
+          empty: "No documents found",
+          emptySearch: "Try a different search",
+          emptyUpload: "Upload your first PDF to get started",
+          firstUpload: "Upload Your First Document",
+          uploadAria: "Upload document",
+        }
 
   const fetchDocuments = async () => {
     try {
@@ -46,9 +99,8 @@ export default function DocumentPanel({
       const docs = await listDocuments()
       setDocuments(docs)
     } catch (error) {
-      toast.error("Failed to load documents", {
-        description:
-          error instanceof Error ? error.message : "Please try again",
+      toast.error(copy.loadError, {
+        description: error instanceof Error ? error.message : copy.retry,
       })
     } finally {
       setLoading(false)
@@ -65,11 +117,10 @@ export default function DocumentPanel({
     try {
       const docs = await listDocuments()
       setDocuments(docs)
-      toast.success("Document list reloaded")
+      toast.success(copy.reloadSuccess)
     } catch (error) {
-      toast.error("Failed to reload documents", {
-        description:
-          error instanceof Error ? error.message : "Please try again",
+      toast.error(copy.reloadError, {
+        description: error instanceof Error ? error.message : copy.retry,
       })
     } finally {
       setIsReloading(false)
@@ -102,6 +153,19 @@ export default function DocumentPanel({
     }
   }
 
+  const getStatusLabel = (status: Document["status"]) => {
+    switch (status) {
+      case "ready":
+        return copy.ready
+      case "processing":
+        return copy.processing
+      case "error":
+        return copy.error
+      default:
+        return status
+    }
+  }
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B"
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
@@ -115,11 +179,11 @@ export default function DocumentPanel({
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
     if (diffDays === 0) {
-      return `Today at ${date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`
+      return `${copy.today}, ${date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`
     } else if (diffDays === 1) {
-      return `Yesterday at ${date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`
+      return `${copy.yesterday}, ${date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`
     } else if (diffDays < 7) {
-      return `${diffDays} days ago`
+      return `${diffDays} ${copy.daysAgo}`
     } else {
       return date.toLocaleDateString(undefined, {
         month: "short",
@@ -149,7 +213,7 @@ export default function DocumentPanel({
                 onClick={handleReload}
                 disabled={isReloading}
                 className="rounded-lg p-2 text-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
-                title="Reload document list"
+                title={copy.reloadTitle}
               >
                 <RotateCcw
                   className={cn("h-4 w-4", isReloading && "animate-spin")}
@@ -158,16 +222,23 @@ export default function DocumentPanel({
               <Link
                 href="/eval"
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary transition-colors hover:bg-primary/10"
-                title="Evaluation Dashboard"
+                title={copy.evalTitle}
               >
                 <FlaskConical className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/benchmark"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary transition-colors hover:bg-primary/10"
+                title={copy.benchmarkTitle}
+              >
+                <BarChart3 className="h-4 w-4" />
               </Link>
               <Link
                 href="/"
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
               >
                 <ArrowLeftFromLine className="h-4 w-4" />
-                <span className="hidden sm:inline">Back</span>
+                <span className="hidden sm:inline">{copy.back}</span>
               </Link>
             </div>
           </div>
@@ -177,7 +248,7 @@ export default function DocumentPanel({
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search documents..."
+              placeholder={copy.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-border bg-background py-2 pr-4 pl-9 text-sm transition-colors focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
@@ -190,7 +261,7 @@ export default function DocumentPanel({
             className="mt-4 hidden w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 md:flex"
           >
             <Upload className="h-4 w-4" />
-            Upload Document
+            {copy.upload}
           </button>
         </div>
 
@@ -199,10 +270,11 @@ export default function DocumentPanel({
           <div className="border-t border-border bg-muted/30 px-4 py-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">
-                {documents.length} document{documents.length > 1 ? "s" : ""}
+                {documents.length} {copy.documents}
               </span>
               <span className="text-muted-foreground">
-                {documents.filter((d) => d.status === "ready").length} ready
+                {documents.filter((d) => d.status === "ready").length}{" "}
+                {copy.ready}
               </span>
             </div>
           </div>
@@ -215,9 +287,7 @@ export default function DocumentPanel({
           {loading ? (
             <div className="flex h-32 flex-col items-center justify-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">
-                Loading documents...
-              </p>
+              <p className="text-sm text-muted-foreground">{copy.loading}</p>
             </div>
           ) : filteredDocuments.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 text-center">
@@ -225,24 +295,22 @@ export default function DocumentPanel({
                 <FileText className="h-8 w-8 text-muted-foreground" />
               </div>
               <div className="mt-4">
-                <p className="font-medium">No documents found</p>
+                <p className="font-medium">{copy.empty}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {searchQuery
-                    ? "Try a different search"
-                    : "Upload your first PDF to get started"}
+                  {searchQuery ? copy.emptySearch : copy.emptyUpload}
                 </p>
               </div>
 
               {/* Mobile upload button in empty state */}
-              {isMobile && (
+              <div className="md:hidden">
                 <button
                   onClick={() => setIsUploadOpen(true)}
                   className="mt-6 flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg"
                 >
                   <Upload className="h-4 w-4" />
-                  Upload Your First Document
+                  {copy.firstUpload}
                 </button>
-              )}
+              </div>
             </div>
           ) : (
             filteredDocuments.map((doc) => (
@@ -294,7 +362,7 @@ export default function DocumentPanel({
                           getStatusBadge(doc.status)
                         )}
                       >
-                        {doc.status}
+                        {getStatusLabel(doc.status)}
                       </span>
                     </div>
 
@@ -321,11 +389,11 @@ export default function DocumentPanel({
       </div>
 
       {/* Mobile Floating Upload Button - Only show when there are documents */}
-      {isMobile && documents.length > 0 && (
+      {documents.length > 0 && (
         <button
           onClick={() => setIsUploadOpen(true)}
-          className="fixed right-4 bottom-20 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl active:scale-95"
-          aria-label="Upload document"
+          className="fixed right-4 bottom-20 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl active:scale-95 md:hidden"
+          aria-label={copy.uploadAria}
         >
           <Plus className="h-6 w-6" />
         </button>

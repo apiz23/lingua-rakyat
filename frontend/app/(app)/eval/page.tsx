@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   getEvalReport,
   getSimplifyDemo,
@@ -16,14 +16,13 @@ import {
   StreamEvent,
 } from "@/lib/api"
 import { toast } from "sonner"
-import Link from "next/link"
 import { cn } from "@/lib/utils"
+import PageIntro from "@/components/page-intro"
 import {
   BarChart3,
   Zap,
   BookOpen,
   Globe,
-  ArrowLeftFromLine,
   RefreshCw,
   Play,
   Trash2,
@@ -35,10 +34,7 @@ import {
   Loader2,
   Sparkles,
   FlaskConical,
-  FileText,
   Clock,
-  Filter,
-  Tag,
   ShieldAlert,
 } from "lucide-react"
 
@@ -67,7 +63,7 @@ function MetricCard({
   sub?: string
   color?: string
   bg?: string
-  icon?: React.ElementType
+  icon?: React.ComponentType<{ className?: string }>
 }) {
   return (
     <div className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-md">
@@ -212,7 +208,7 @@ export default function EvalPage() {
   const [loadingAugment, setLoadingAugment] = useState(false)
   const [expandedCases, setExpandedCases] = useState<Set<number>>(new Set())
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
-  const [evalModel, setEvalModel] = useState("")  // empty = server default (GROQ_MODEL_FAST)
+  const [evalModel, setEvalModel] = useState("") // empty = server default (GROQ_MODEL_FAST)
 
   // Streaming progress state
   const [streamProgress, setStreamProgress] = useState<{
@@ -241,7 +237,7 @@ export default function EvalPage() {
     try {
       const r = await getEvalReport()
       setReport(r)
-    } catch (e) {
+    } catch {
       // no records yet is fine — backend returns status: no_data
     } finally {
       setLoadingReport(false)
@@ -253,7 +249,7 @@ export default function EvalPage() {
     try {
       const d = await getSimplifyDemo()
       setSimplifyDemo(d)
-    } catch (e) {
+    } catch {
       toast.error("Failed to load simplify demo")
     } finally {
       setLoadingDemo(false)
@@ -360,8 +356,8 @@ export default function EvalPage() {
         },
         controller.signal
       )
-    } catch (e: any) {
-      if (e?.name === "AbortError") return
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") return
       toast.error("Test suite failed", {
         description: e instanceof Error ? e.message : "Unknown error",
       })
@@ -408,7 +404,8 @@ export default function EvalPage() {
   function toggleCase(idx: number) {
     setExpandedCases((prev) => {
       const next = new Set(prev)
-      next.has(idx) ? next.delete(idx) : next.add(idx)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
       return next
     })
   }
@@ -420,52 +417,71 @@ export default function EvalPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2">
-              <FlaskConical className="h-5 w-5 text-primary" />
+      <main className="mx-auto max-w-7xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
+        {/* Header */}
+        <PageIntro
+          eyebrow="Validation Lab"
+          title="Evaluation Dashboard"
+          description="Track retrieval quality, latency, readability, and test-suite behavior from one standardized view without a page-specific header."
+          icon={FlaskConical}
+          actions={
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+              <button
+                onClick={fetchReport}
+                disabled={loadingReport}
+                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={cn("h-4 w-4", loadingReport && "animate-spin")}
+                />
+                <span>Refresh</span>
+              </button>
+              <button
+                onClick={handleClear}
+                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Clear</span>
+              </button>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
-                Evaluation Dashboard
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Lingua Rakyat · Model Performance & Validation
-              </p>
+          }
+        >
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <FlaskConical className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">
+                  Evaluation Dashboard
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Lingua Rakyat · Model Performance & Validation
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchReport}
+                disabled={loadingReport}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={cn("h-4 w-4", loadingReport && "animate-spin")}
+                />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+              <button
+                onClick={handleClear}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Clear</span>
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchReport}
-              disabled={loadingReport}
-              className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
-            >
-              <RefreshCw
-                className={cn("h-4 w-4", loadingReport && "animate-spin")}
-              />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-            <button
-              onClick={handleClear}
-              className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Clear</span>
-            </button>
-            <Link
-              href="/manage"
-              className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary"
-            >
-              <ArrowLeftFromLine className="h-4 w-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+        </PageIntro>
 
-      <main className="mx-auto max-w-7xl space-y-10 px-6 py-8">
         {/* Rate limit info */}
         <RateLimitBanner />
 
@@ -499,7 +515,7 @@ export default function EvalPage() {
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                   <Clock className="h-4 w-4" /> Latency
                 </h3>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <MetricCard
                     label="p50 Latency"
                     value={`${report.latency.p50_ms}ms`}
@@ -534,7 +550,7 @@ export default function EvalPage() {
               </div>
 
               {/* Retrieval + Readability */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
                   label="Avg Confidence"
                   value={pct(report.retrieval.avg_confidence)}
@@ -637,7 +653,8 @@ export default function EvalPage() {
                     <Globe className="h-4 w-4" /> Per-Language Breakdown
                   </h3>
                   <div className="overflow-hidden rounded-xl border border-border bg-card">
-                    <table className="w-full text-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[720px] text-sm">
                       <thead>
                         <tr className="border-b border-border bg-muted/30">
                           <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
@@ -709,6 +726,7 @@ export default function EvalPage() {
                         )}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -822,7 +840,7 @@ export default function EvalPage() {
                 value={selectedDocId}
                 onChange={(e) => setSelectedDocId(e.target.value)}
                 disabled={loadingTest}
-                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none disabled:opacity-50"
+                className="w-full flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none disabled:opacity-50"
               >
                 {documents.length === 0 ? (
                   <option value="">No documents ready</option>
@@ -839,18 +857,20 @@ export default function EvalPage() {
                 value={evalModel}
                 onChange={(e) => setEvalModel(e.target.value)}
                 disabled={loadingTest}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground focus:border-primary focus:outline-none disabled:opacity-50"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground focus:border-primary focus:outline-none disabled:opacity-50 sm:w-72"
                 title="Model to use for test suite"
               >
                 <option value="">Auto (qwen3-32b default)</option>
-                {GROQ_MODELS.map(m => (
-                  <option key={m.id} value={m.id}>{m.label} — {m.tag}</option>
+                {GROQ_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label} — {m.tag}
+                  </option>
                 ))}
               </select>
               {loadingTest ? (
                 <button
                   onClick={handleCancelTest}
-                  className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 sm:w-auto sm:justify-start"
                 >
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Cancel
@@ -859,7 +879,7 @@ export default function EvalPage() {
                 <button
                   onClick={handleRunTestSuite}
                   disabled={!selectedDocId}
-                  className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
                 >
                   <Play className="h-4 w-4" />
                   Run Test Suite
@@ -941,7 +961,7 @@ export default function EvalPage() {
                               {LANG[r.language] ?? "🌐"}
                             </span>
                             <span className="shrink-0">
-                              {CAT[(r as any).category] ?? "📄"}
+                              {CAT[r.category ?? ""] ?? "📄"}
                             </span>
                             <span className="flex-1 truncate text-foreground/80">
                               {r.question}
@@ -1047,7 +1067,7 @@ export default function EvalPage() {
                       key === "all"
                         ? testResult.results.length
                         : testResult.results.filter(
-                            (r) => (r as any).category === key
+                            (r) => r.category === key
                           ).length
                     if (key !== "all" && count === 0) return null
                     return (
@@ -1099,7 +1119,7 @@ export default function EvalPage() {
                     .filter(
                       (r) =>
                         categoryFilter === "all" ||
-                        (r as any).category === categoryFilter
+                        r.category === categoryFilter
                     )
                     .map((r, i) => {
                       const isOpen = expandedCases.has(i)
@@ -1107,9 +1127,9 @@ export default function EvalPage() {
                         name: r.language,
                         flag: "🌐",
                       }
-                      const catInfo = CATEGORY_LABELS[(r as any).category] ?? {
+                      const catInfo = CATEGORY_LABELS[r.category ?? ""] ?? {
                         emoji: "📄",
-                        label: (r as any).category ?? "",
+                        label: r.category ?? "",
                       }
                       return (
                         <div
@@ -1291,11 +1311,11 @@ export default function EvalPage() {
               supported SEA languages. This demonstrates dialect-aware
               cross-lingual retrieval capability.
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <select
                 value={augmentLang}
                 onChange={(e) => setAugmentLang(e.target.value)}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none sm:w-56"
               >
                 <option value="en">🇬🇧 English</option>
                 <option value="ms">🇲🇾 Malay</option>
@@ -1307,12 +1327,12 @@ export default function EvalPage() {
                 onChange={(e) => setAugmentInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAugment()}
                 placeholder="How do I apply for housing aid?"
-                className="flex-1 rounded-lg border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                className="w-full flex-1 rounded-lg border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
               />
               <button
                 onClick={handleAugment}
                 disabled={loadingAugment || !augmentInput.trim()}
-                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 sm:w-auto"
               >
                 {loadingAugment ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

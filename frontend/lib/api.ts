@@ -17,6 +17,12 @@ export type Document = {
   public_url?: string
 }
 
+export type UploadDocumentResponse = {
+  success: boolean
+  document: Document
+  message: string
+}
+
 export type SourceChunk = {
   text: string
   document_id: string
@@ -35,6 +41,23 @@ export type AskResponse = {
   retrieval_mode?: "single_query" | "augmented"
   query_variants_used?: string[]
   top_query_variant?: string
+  sufficient_evidence?: boolean
+}
+
+export type ChatHistoryMessage = {
+  id: string
+  user_id?: string
+  session_id: string
+  document_id: string
+  question: string
+  answer: string
+  language: string
+  sources: SourceChunk[]
+  timestamp: string
+  confidence: number
+  latency_ms: number
+  model_used?: string
+  sufficient_evidence?: boolean
 }
 
 // ── Evaluation Types ───────────────────────────────────────────────────────
@@ -145,7 +168,7 @@ async function apiFetch(
 
 // ── Document API ───────────────────────────────────────────────────────────
 
-export async function uploadDocument(file: File): Promise<Document> {
+export async function uploadDocument(file: File): Promise<UploadDocumentResponse> {
   const formData = new FormData()
   formData.append("file", file)
   const res = await apiFetch(`${API_URL}/api/documents/upload`, {
@@ -156,8 +179,7 @@ export async function uploadDocument(file: File): Promise<Document> {
     const error = await res.json()
     throw new Error(error.detail || "Upload failed")
   }
-  const data = await res.json()
-  return data.document
+  return res.json()
 }
 
 export async function listDocuments(): Promise<Document[]> {
@@ -194,6 +216,7 @@ export async function refreshChunkCounts(): Promise<{
 // ── Chat API ───────────────────────────────────────────────────────────────
 
 export async function askQuestion(
+  userId: string,
   documentId: string,
   documentName: string,
   sessionId: string,
@@ -205,6 +228,7 @@ export async function askQuestion(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      user_id: userId,
       document_id: documentId,
       document_name: documentName,
       session_id: sessionId,
@@ -217,6 +241,39 @@ export async function askQuestion(
     const error = await res.json()
     throw new Error(error.detail || "Failed to get answer")
   }
+  return res.json()
+}
+
+export async function getChatHistory(params: {
+  userId: string
+  documentId?: string
+  sessionId?: string
+}): Promise<ChatHistoryMessage[]> {
+  const search = new URLSearchParams()
+  search.set("user_id", params.userId)
+  if (params.documentId) search.set("document_id", params.documentId)
+  if (params.sessionId) search.set("session_id", params.sessionId)
+
+  const res = await apiFetch(`${API_URL}/api/chat/history?${search.toString()}`)
+  if (!res.ok) throw new Error("Failed to fetch chat history")
+  return res.json()
+}
+
+export async function clearChatHistory(params: {
+  documentId: string
+  userId?: string
+  sessionId?: string
+}): Promise<{ success: boolean; message: string; deleted_rows: number }> {
+  const search = new URLSearchParams()
+  if (params.userId) search.set("user_id", params.userId)
+  if (params.sessionId) search.set("session_id", params.sessionId)
+
+  const suffix = search.toString() ? `?${search.toString()}` : ""
+  const res = await apiFetch(
+    `${API_URL}/api/chat/history/${params.documentId}${suffix}`,
+    { method: "DELETE" }
+  )
+  if (!res.ok) throw new Error("Failed to clear chat history")
   return res.json()
 }
 

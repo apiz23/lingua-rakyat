@@ -1,5 +1,7 @@
 import { Github, Linkedin, Twitter } from "lucide-react"
 import Link from "next/link"
+import { GithubIcon } from "./ui/github"
+import { LinkedinIcon } from "./ui/linkedin"
 
 export default function Footer() {
   return (
@@ -11,22 +13,16 @@ export default function Footer() {
           </p>
           <div className="flex items-center gap-4">
             <Link
-              href="#"
+              href="https://github.com/apiz23/lingua-rakyat"
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
-              <Github className="h-5 w-5" />
+              <GithubIcon size={20} />
             </Link>
             <Link
-              href="#"
+              href="https://www.linkedin.com/in/muh-hafizuddin/"
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
-              <Twitter className="h-5 w-5" />
-            </Link>
-            <Link
-              href="#"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Linkedin className="h-5 w-5" />
+              <LinkedinIcon size={20} />
             </Link>
           </div>
         </div>

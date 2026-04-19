@@ -94,13 +94,13 @@ export const LinkPreview = ({
           setOpen(open);
         }}
       >
-        <HoverCardPrimitive.Trigger
-          onMouseMove={handleMouseMove}
-          className={cn("text-black dark:text-white", className)}
-          href={url}
-        >
-          {children}
-        </HoverCardPrimitive.Trigger>
+          <HoverCardPrimitive.Trigger
+            onMouseMove={handleMouseMove}
+            className={cn("text-foreground", className)}
+            href={url}
+          >
+            {children}
+          </HoverCardPrimitive.Trigger>
 
         <HoverCardPrimitive.Content
           className="[transform-origin:var(--radix-hover-card-content-transform-origin)]"
@@ -130,7 +130,7 @@ export const LinkPreview = ({
               >
                 <a
                   href={url}
-                  className="block p-1 bg-white border-2 border-transparent shadow rounded-xl hover:border-neutral-200 dark:hover:border-neutral-800"
+                  className="block rounded-xl border-2 border-transparent bg-card p-1 shadow hover:border-primary/20"
                   style={{ fontSize: 0 }}
                 >
                   <img

@@ -15,7 +15,12 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from routers.eval import _evaluator as evaluator
-from utils.chat_history import delete_chat_messages_for_document, insert_chat_message, list_chat_messages
+from utils.chat_history import (
+    delete_chat_messages,
+    delete_chat_messages_for_document,
+    insert_chat_message,
+    list_chat_messages,
+)
 from utils.rag_pipeline import answer_question, stream_answer_question
 
 logger = logging.getLogger("chat_router")
@@ -24,6 +29,7 @@ router = APIRouter()
 
 
 class AskRequest(BaseModel):
+    user_id: str = Field(min_length=1)
     document_id: str
     document_name: str
     session_id: str = Field(min_length=1)
@@ -50,10 +56,12 @@ class AskResponse(BaseModel):
     retrieval_mode: str = "single_query"
     query_variants_used: list[str] = Field(default_factory=list)
     top_query_variant: str = ""
+    sufficient_evidence: bool = True
 
 
 class ChatMessage(BaseModel):
     id: str
+    user_id: str = ""
     session_id: str
     document_id: str
     question: str
@@ -64,6 +72,7 @@ class ChatMessage(BaseModel):
     confidence: float = 0.0
     latency_ms: int = 0
     model_used: str = ""
+    sufficient_evidence: bool = True
 
 
 def _validate_ask_request(body: AskRequest) -> None:
@@ -71,12 +80,15 @@ def _validate_ask_request(body: AskRequest) -> None:
         raise HTTPException(status_code=400, detail="Question cannot be empty")
     if len(body.question) > 1000:
         raise HTTPException(status_code=400, detail="Question is too long (max 1000 characters)")
+    if not body.user_id.strip():
+        raise HTTPException(status_code=400, detail="user_id cannot be empty")
     if not body.session_id.strip():
         raise HTTPException(status_code=400, detail="session_id cannot be empty")
 
 
 def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, answer_text: str) -> dict[str, Any]:
     return {
+        "user_id": body.user_id,
         "session_id": body.session_id,
         "document_id": body.document_id,
         "document_name": body.document_name,
@@ -87,6 +99,7 @@ def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, a
         "confidence": result.get("confidence", 0.0),
         "latency_ms": result.get("latency_ms", 0),
         "model_used": result.get("model_used", ""),
+        "sufficient_evidence": result.get("sufficient_evidence", True),
         "created_at": timestamp,
     }
 
@@ -105,7 +118,14 @@ def _record_eval(body: AskRequest, result: dict[str, Any], answer_text: str) -> 
         logger.warning("[Eval] Failed to record interaction: %s", exc)
 
 
-def clear_chat_history(document_id: str) -> int:
+def clear_chat_history(
+    document_id: str,
+    *,
+    user_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> int:
+    if user_id or session_id:
+        return delete_chat_messages(document_id=document_id, user_id=user_id, session_id=session_id)
     return delete_chat_messages_for_document(document_id)
 
 
@@ -143,6 +163,7 @@ async def ask_question(request: Request, body: AskRequest):
         retrieval_mode=result.get("retrieval_mode", "single_query"),
         query_variants_used=result.get("query_variants_used", []),
         top_query_variant=result.get("top_query_variant", ""),
+        sufficient_evidence=result.get("sufficient_evidence", True),
     )
 
 
@@ -195,12 +216,17 @@ async def ask_question_stream(request: Request, body: AskRequest):
 
 
 @router.get("/history", response_model=list[ChatMessage])
-async def get_chat_history(document_id: Optional[str] = None, session_id: Optional[str] = None):
-    rows = list_chat_messages(document_id=document_id, session_id=session_id)
+async def get_chat_history(
+    document_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+):
+    rows = list_chat_messages(document_id=document_id, session_id=session_id, user_id=user_id)
     messages = []
     for row in rows:
         messages.append(ChatMessage(
             id=str(row.get("id", uuid.uuid4())),
+            user_id=row.get("user_id", ""),
             session_id=row.get("session_id", ""),
             document_id=row.get("document_id", ""),
             question=row.get("question", ""),
@@ -211,13 +237,18 @@ async def get_chat_history(document_id: Optional[str] = None, session_id: Option
             confidence=float(row.get("confidence", 0.0) or 0.0),
             latency_ms=int(row.get("latency_ms", 0) or 0),
             model_used=row.get("model_used", ""),
+            sufficient_evidence=bool(row.get("sufficient_evidence", True)),
         ))
     return messages
 
 
 @router.delete("/history/{document_id}")
-async def clear_document_chat_history(document_id: str):
-    deleted = clear_chat_history(document_id)
+async def clear_document_chat_history(
+    document_id: str,
+    user_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+):
+    deleted = clear_chat_history(document_id, user_id=user_id, session_id=session_id)
     return {
         "success": True,
         "message": "Chat history cleared",

@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Document, listDocuments, deleteDocument } from "@/lib/api"
 import { toast } from "sonner"
-import Link from "next/link"
 import { cn } from "@/lib/utils"
 import {
   FileText,
@@ -15,21 +14,18 @@ import {
   Upload,
   Search,
   AlertCircle,
-  ArrowLeftFromLine,
   RefreshCw,
   ShieldAlert,
   FolderOpen,
   CheckSquare,
   Square,
-  Database,
   HardDrive,
   FileCheck,
   Plus,
-  FlaskConical,
 } from "lucide-react"
-import logo from "@/public/icons/android-chrome-512x512.png"
-import Image from "next/image"
 import UploadModal from "@/components/upload-modal"
+import { useLanguage } from "@/components/language-provider"
+import PageIntro from "@/components/page-intro"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -90,7 +86,7 @@ function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
+  confirmLabel = "Sahkan",
   onConfirm,
   onCancel,
   danger = false,
@@ -123,7 +119,7 @@ function ConfirmDialog({
             onClick={onCancel}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
           >
-            Cancel
+            Batal
           </button>
           <button
             onClick={onConfirm}
@@ -145,7 +141,7 @@ function ConfirmDialog({
 // ─── Stats Card ───────────────────────────────────────────────────────────────
 
 interface StatCardProps {
-  icon: React.ElementType
+  icon: React.ComponentType<{ className?: string }>
   label: string
   value: string | number
   color?: string
@@ -182,6 +178,7 @@ function StatCard({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ManagePage() {
+  const { language } = useLanguage()
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -195,29 +192,103 @@ export default function ManagePage() {
     onConfirm: () => void
   }>({ open: false, title: "", description: "", onConfirm: () => {} })
 
-  const fetchDocuments = async () => {
-    await toast.promise(
-      async () => {
+  // Add a ref to track if initial load has been done
+  const initialLoadDone = useRef(false)
+  // Add a ref to prevent duplicate toast calls
+  const isFetching = useRef(false)
+
+  const copy =
+    language === "ms"
+      ? {
+          loading: "Memuatkan dokumen...",
+          loaded: "Dokumen berjaya dimuatkan",
+          loadError: "Gagal memuatkan dokumen",
+          manager: "Pengurusan Dokumen",
+          adminPortal: "Portal Pentadbir",
+          refresh: "Muat Semula",
+          eval: "Papan Penilaian",
+          benchmark: "Makmal Benchmark",
+          back: "Kembali ke Aplikasi",
+          totalDocs: "Jumlah Dokumen",
+          ready: "Sedia",
+          totalSize: "Jumlah Saiz",
+          library: "Pustaka Dokumen",
+          uploadPdf: "Muat Naik PDF",
+          search: "Cari dokumen...",
+          introTag: "Portal Dokumen",
+          introBody:
+            "Urus fail yang telah dimuat naik, semak status pemprosesan, dan kekalkan perpustakaan dokumen dalam satu susun atur yang konsisten.",
+        }
+      : {
+          loading: "Loading documents...",
+          loaded: "Documents loaded successfully",
+          loadError: "Failed to load documents",
+          manager: "Document Manager",
+          adminPortal: "Admin Portal",
+          refresh: "Refresh",
+          eval: "Eval Dashboard",
+          benchmark: "Benchmark Lab",
+          back: "Back to App",
+          totalDocs: "Total Documents",
+          ready: "Ready",
+          totalSize: "Total Size",
+          library: "Document Library",
+          uploadPdf: "Upload PDF",
+          search: "Search documents...",
+          introTag: "Document Portal",
+          introBody:
+            "Manage uploaded files, review processing status, and keep the document library organized in one consistent workspace.",
+        }
+
+  const fetchDocuments = useCallback(
+    async (showToast = true) => {
+      // Prevent multiple simultaneous fetches
+      if (isFetching.current) return
+
+      isFetching.current = true
+
+      try {
         const docs = await listDocuments()
         setDocuments(docs)
         return docs
-      },
-      {
-        loading: "Loading documents...",
-        success: "Documents loaded successfully",
-        error: (err) => `Failed to load documents: ${err.message}`,
+      } catch (error) {
+        if (showToast) {
+          toast.error(
+            `${copy.loadError}: ${error instanceof Error ? error.message : "Unknown error"}`
+          )
+        }
+        throw error
+      } finally {
+        isFetching.current = false
       }
-    )
-  }
+    },
+    [copy.loadError]
+  )
 
+  // Separate function for manual refresh with toast
+  const refreshDocuments = useCallback(async () => {
+    await toast.promise(fetchDocuments(true), {
+      loading: copy.loading,
+      success: copy.loaded,
+      error: (err) => `${copy.loadError}: ${err.message}`,
+    })
+  }, [fetchDocuments, copy.loading, copy.loaded, copy.loadError])
+
+  // Initial load - only once
   useEffect(() => {
     const load = async () => {
+      if (initialLoadDone.current) return
+      initialLoadDone.current = true
+
       setLoading(true)
-      await fetchDocuments()
-      setLoading(false)
+      try {
+        await fetchDocuments(false) // No toast on initial load
+      } finally {
+        setLoading(false)
+      }
     }
     load()
-  }, [])
+  }, [fetchDocuments])
 
   // ── Selection helpers ──────────────────────────────────────────────────────
   const toggleSelect = (id: string) => {
@@ -240,8 +311,8 @@ export default function ManagePage() {
   const confirmDelete = (doc: Document) => {
     setConfirmDialog({
       open: true,
-      title: "Delete document?",
-      description: `"${doc.name}" will be permanently removed from storage and the vector database.`,
+      title: "Padam dokumen ini?",
+      description: `"${doc.name}" akan dipadam secara kekal daripada storan dan pangkalan data vektor.`,
       onConfirm: () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }))
         doDelete([doc.id])
@@ -254,8 +325,8 @@ export default function ManagePage() {
     const count = selected.size
     setConfirmDialog({
       open: true,
-      title: `Delete ${count} document${count > 1 ? "s" : ""}?`,
-      description: `This will permanently remove ${count} document${count > 1 ? "s" : ""} from storage and the vector database. This cannot be undone.`,
+      title: `Padam ${count} dokumen?`,
+      description: `Tindakan ini akan memadam ${count} dokumen secara kekal daripada storan dan pangkalan data vektor. Tindakan ini tidak boleh dibatalkan.`,
       onConfirm: () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }))
         doDelete(Array.from(selected))
@@ -284,7 +355,7 @@ export default function ManagePage() {
         }
 
         if (successCount === 0) {
-          throw new Error("No documents were deleted")
+          throw new Error("Tiada dokumen berjaya dipadam")
         }
 
         // Update the documents list
@@ -294,16 +365,16 @@ export default function ManagePage() {
         return { successCount, totalCount: ids.length, errors }
       },
       {
-        loading: `Deleting ${ids.length} document${ids.length > 1 ? "s" : ""}...`,
+        loading: `Memadam ${ids.length} dokumen...`,
         success: (data) => {
           const { successCount, totalCount, errors } = data
           if (successCount === totalCount) {
-            return `Successfully deleted ${successCount} document${successCount > 1 ? "s" : ""}`
+            return `${successCount} dokumen berjaya dipadam`
           } else {
             return (
               <div>
                 <p className="font-semibold">
-                  Deleted {successCount} of {totalCount} documents
+                  {successCount} daripada {totalCount} dokumen berjaya dipadam
                 </p>
                 {errors.length > 0 && (
                   <ul className="mt-2 list-inside list-disc text-xs">
@@ -311,7 +382,7 @@ export default function ManagePage() {
                       <li key={i}>{err}</li>
                     ))}
                     {errors.length > 2 && (
-                      <li>...and {errors.length - 2} more errors</li>
+                      <li>...dan {errors.length - 2} lagi ralat</li>
                     )}
                   </ul>
                 )}
@@ -319,7 +390,7 @@ export default function ManagePage() {
             )
           }
         },
-        error: (err) => `Failed to delete documents: ${err.message}`,
+        error: (err) => `Gagal memadam dokumen: ${err.message}`,
       }
     )
 
@@ -345,75 +416,47 @@ export default function ManagePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ── Top Nav ── */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Image
-              src={logo}
-              alt="LinguaRakyat logo"
-              width={32}
-              height={32}
-              className="rounded-md"
-            />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
-                Document Manager
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Lingua Rakyat · Admin Portal
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setLoading(true)
-                fetchDocuments().finally(() => setLoading(false))
-              }}
-              disabled={loading}
-              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
-            >
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-            <Link
-              href="/eval"
-              className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-            >
-              <FlaskConical className="h-4 w-4" />
-              <span className="hidden sm:inline">Eval Dashboard</span>
-            </Link>
-            <Link
-              href="/"
-              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
-            >
-              <ArrowLeftFromLine className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to App</span>
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <main className="mx-auto max-w-7xl space-y-8 px-6 py-8">
+        <PageIntro
+          eyebrow={copy.introTag}
+          title={copy.manager}
+          description={copy.introBody}
+          icon={FileText}
+          actions={
+            <button
+              onClick={refreshDocuments}
+              disabled={loading || isFetching.current}
+              className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
+            >
+              <RefreshCw
+                className={cn(
+                  "h-4 w-4",
+                  (loading || isFetching.current) && "animate-spin"
+                )}
+              />
+              <span>{copy.refresh}</span>
+            </button>
+          }
+        />
+
         {/* ── Stats Row ── */}
         {!loading && documents.length > 0 && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard
               icon={FileText}
-              label="Total Documents"
+              label={copy.totalDocs}
               value={documents.length}
             />
             <StatCard
               icon={FileCheck}
-              label="Ready"
+              label={copy.ready}
               value={readyCount}
               color="text-primary"
             />
 
             <StatCard
               icon={HardDrive}
-              label="Total Size"
+              label={copy.totalSize}
               value={formatFileSize(totalSize)}
               color="text-secondary"
             />
@@ -423,16 +466,25 @@ export default function ManagePage() {
         {/* ── Upload Button ── */}
         <section>
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-              Document Library
-            </h2>
-            <button
-              onClick={() => setUploadModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" />
-              Upload PDF
-            </button>
+            <div className="relative">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder={copy.search}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-64 rounded-lg border border-border bg-background py-2 pr-4 pl-9 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              />
+            </div>
+            <div className="flex justify-between gap-4">
+              <button
+                onClick={() => setUploadModalOpen(true)}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4" />
+                {copy.uploadPdf}
+              </button>
+            </div>
           </div>
         </section>
 
@@ -446,7 +498,7 @@ export default function ManagePage() {
                     <div className="flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1">
                       <Loader2 className="h-3 w-3 animate-spin text-accent" />
                       <span className="text-xs text-accent">
-                        {processingCount} processing
+                        {processingCount} sedang diproses
                       </span>
                     </div>
                   )}
@@ -454,7 +506,7 @@ export default function ManagePage() {
                     <div className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1">
                       <AlertCircle className="h-3 w-3 text-destructive" />
                       <span className="text-xs text-destructive">
-                        {errorCount} failed
+                        {errorCount} gagal
                       </span>
                     </div>
                   )}
@@ -463,18 +515,6 @@ export default function ManagePage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search documents..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 rounded-lg border border-border bg-background py-2 pr-4 pl-9 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-                />
-              </div>
-
               {/* Bulk delete */}
               {selected.size > 0 && (
                 <button
@@ -482,7 +522,7 @@ export default function ManagePage() {
                   className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Delete {selected.size}
+                  Padam {selected.size}
                 </button>
               )}
             </div>
@@ -493,7 +533,7 @@ export default function ManagePage() {
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
-                  Loading documents...
+                  Memuatkan dokumen...
                 </p>
               </div>
             </div>
@@ -502,13 +542,13 @@ export default function ManagePage() {
               <FolderOpen className="h-12 w-12 text-muted-foreground/30" />
               <p className="mt-4 text-lg font-medium text-foreground">
                 {searchQuery
-                  ? "No documents match your search"
-                  : "No documents yet"}
+                  ? "Tiada dokumen sepadan dengan carian anda"
+                  : "Belum ada dokumen"}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 {searchQuery
-                  ? "Try a different keyword"
-                  : "Click the 'Upload PDF' button above to get started"}
+                  ? "Cuba kata kunci lain"
+                  : "Klik butang 'Muat Naik PDF' di atas untuk bermula"}
               </p>
               {!searchQuery && (
                 <button
@@ -516,7 +556,7 @@ export default function ManagePage() {
                   className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   <Upload className="h-4 w-4" />
-                  Upload your first document
+                  Muat Naik Dokumen Pertama
                 </button>
               )}
             </div>
@@ -541,7 +581,7 @@ export default function ManagePage() {
                       </button>
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Document
+                      Dokumen
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
                       Size
@@ -550,7 +590,7 @@ export default function ManagePage() {
                       Status
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Uploaded
+                      Dimuat Naik
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">
                       Actions
@@ -642,7 +682,7 @@ export default function ManagePage() {
                               <button
                                 onClick={() => confirmDelete(doc)}
                                 className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                title="Delete document"
+                                title="Padam dokumen"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -659,13 +699,10 @@ export default function ManagePage() {
               <div className="border-t border-border bg-secondary/10 px-4 py-3 text-xs text-muted-foreground">
                 {selected.size > 0 ? (
                   <span className="font-medium text-foreground">
-                    {selected.size} of {filteredDocuments.length} selected
+                    {selected.size} daripada {filteredDocuments.length} dipilih
                   </span>
                 ) : (
-                  <span>
-                    Showing {filteredDocuments.length} document
-                    {filteredDocuments.length !== 1 ? "s" : ""}
-                  </span>
+                  <span>Memaparkan {filteredDocuments.length} dokumen</span>
                 )}
               </div>
             </div>
@@ -678,7 +715,7 @@ export default function ManagePage() {
         isOpen={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
         onUploadComplete={() => {
-          fetchDocuments()
+          refreshDocuments()
           setUploadModalOpen(false)
         }}
       />
@@ -688,7 +725,7 @@ export default function ManagePage() {
         open={confirmDialog.open}
         title={confirmDialog.title}
         description={confirmDialog.description}
-        confirmLabel="Delete"
+        confirmLabel="Padam"
         danger
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
