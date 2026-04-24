@@ -5,7 +5,7 @@ import {
   ChatHistoryMessage,
   Document,
   SourceChunk,
-  askQuestion,
+  askQuestionStream,
   clearChatHistory,
   getChatHistory,
   GROQ_MODELS,
@@ -69,6 +69,7 @@ interface Message {
   cached: boolean
   model_used?: string
   sufficient_evidence: boolean
+  isStreaming?: boolean
 }
 
 interface ChatPanelProps {
@@ -146,19 +147,19 @@ const SUGGESTIONS = [
   },
 ]
 
-const LANGUAGE_LABELS: Record<string, { name: string; flag: string }> = {
-  ms: { name: "Bahasa Melayu", flag: "🇲🇾" },
-  id: { name: "Bahasa Indonesia", flag: "🇮🇩" },
-  en: { name: "English", flag: "🇬🇧" },
-  "zh-cn": { name: "中文", flag: "🇨🇳" },
-  zh: { name: "中文", flag: "🇨🇳" },
-  tl: { name: "Tagalog", flag: "🇵🇭" },
-  th: { name: "ภาษาไทย", flag: "🇹🇭" },
-  vi: { name: "Tiếng Việt", flag: "🇻🇳" },
-  "zh-tw": { name: "中文 (Traditional)", flag: "🇹🇼" },
-  jv: { name: "Basa Jawa", flag: "🇮🇩" },
-  ceb: { name: "Cebuano", flag: "🇵🇭" },
-  fil: { name: "Filipino", flag: "🇵🇭" },
+const LANGUAGE_LABELS: Record<string, { name: string; code: string }> = {
+  ms: { name: "Bahasa Melayu", code: "MS" },
+  id: { name: "Bahasa Indonesia", code: "ID" },
+  en: { name: "English", code: "EN" },
+  "zh-cn": { name: "中文", code: "ZH" },
+  zh: { name: "中文", code: "ZH" },
+  tl: { name: "Tagalog", code: "TL" },
+  th: { name: "ภาษาไทย", code: "TH" },
+  vi: { name: "Tiếng Việt", code: "VI" },
+  "zh-tw": { name: "中文 (Traditional)", code: "ZH-TW" },
+  jv: { name: "Basa Jawa", code: "JV" },
+  ceb: { name: "Cebuano", code: "CEB" },
+  fil: { name: "Filipino", code: "FIL" },
 }
 
 const markdownComponents: Partial<Components> = {
@@ -188,13 +189,13 @@ const markdownComponents: Partial<Components> = {
     <ol className="my-4 list-decimal space-y-2.5 pl-4">{props.children}</ol>
   ),
   li: (props) => (
-    <li className="flex items-start gap-3 rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
+    <li className="flex items-start gap-3 border border-border/50 bg-muted/30 p-3 text-sm">
       <span className="mt-0.5 shrink-0 text-primary">•</span>
       <span className="text-foreground/80">{props.children}</span>
     </li>
   ),
   blockquote: (props) => (
-    <blockquote className="my-4 rounded-r-lg border-l-4 border-primary/40 bg-primary/5 py-2 pr-4 pl-4 text-sm text-foreground/70 italic">
+    <blockquote className="my-4 border-l-4 border-primary/40 bg-primary/5 py-2 pr-4 pl-4 text-sm text-foreground/70 italic">
       {props.children}
     </blockquote>
   ),
@@ -204,14 +205,14 @@ const markdownComponents: Partial<Components> = {
 
     if (isInline) {
       return (
-        <code className="rounded-md border border-border/50 bg-muted px-1.5 py-0.5 font-mono text-xs text-primary">
+        <code className="border border-border/50 bg-muted px-1.5 py-0.5 font-mono text-xs text-primary">
           {children}
         </code>
       )
     }
 
     return (
-      <pre className="my-4 overflow-x-auto rounded-lg border border-border/50 bg-muted p-4 font-mono text-xs text-foreground/80">
+      <pre className="my-4 overflow-x-auto border border-border/50 bg-muted p-4 font-mono text-xs text-foreground/80">
         <code className={className} {...rest}>
           {children}
         </code>
@@ -229,7 +230,7 @@ const markdownComponents: Partial<Components> = {
     </a>
   ),
   table: (props) => (
-    <div className="my-4 overflow-x-auto rounded-lg border border-border">
+    <div className="my-4 overflow-x-auto border border-border">
       <table className="w-full text-sm">{props.children}</table>
     </div>
   ),
@@ -325,7 +326,7 @@ function AIMessageCard({
   const isSourcesOpen = expandedSources.has(index)
   const langInfo = LANGUAGE_LABELS[message.language] ?? {
     name: message.language,
-    flag: "🌐",
+    code: message.language.toUpperCase(),
   }
 
   const [isStreamed, setIsStreamed] = React.useState(message.cached)
@@ -403,39 +404,38 @@ function AIMessageCard({
   return (
     <div className="group flex items-start gap-2.5 sm:gap-3">
       <div className="relative mt-1 shrink-0">
-        <div className="absolute inset-0 rounded-full bg-primary/20 opacity-0 blur-md transition-opacity group-hover:opacity-100" />
-        <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/30 sm:h-10 sm:w-10">
+        <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:h-10 sm:w-10">
           <AgentAvatar seed="Charlotte" size={26} />
         </div>
       </div>
 
       <div className="max-w-[88%] min-w-0 flex-1 sm:max-w-[85%]">
-        <div className="relative rounded-2xl rounded-tl-sm border border-border/50 bg-card shadow-sm transition-all hover:shadow-md">
-          <div className="h-1 w-full rounded-t-2xl bg-linear-to-r from-primary via-primary/60 to-transparent" />
+        <div className="relative border border-border/50 bg-card shadow-sm transition-all hover:shadow-md">
+          <div className="h-1 w-full bg-linear-to-r from-primary via-primary/60 to-transparent" />
           <div className="p-3.5 sm:p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2 py-1">
-                  <span className="text-xs">{langInfo.flag}</span>
+                <div className="flex items-center gap-1.5 border border-primary/20 bg-primary/10 px-2 py-1">
+                  <span className="bg-primary/20 px-1 font-mono text-[10px] text-primary">{langInfo.code}</span>
                   <span className="text-xs font-medium text-primary">
                     {langInfo.name}
                   </span>
                 </div>
 
-                <span className="rounded-full bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground sm:text-xs">
+                <span className="bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground sm:text-xs">
                   {language === "ms" ? "Pembantu AI" : "AI Assistant"}
                 </span>
 
                 {message.cached && (
-                  <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                    ⚡ cached
+                  <span className="border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                    cached
                   </span>
                 )}
 
                 {message.confidence > 0 && (
                   <span
                     className={[
-                      "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                      "border px-2 py-0.5 text-[10px] font-medium",
                       message.confidence >= 0.75
                         ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
                         : message.confidence >= 0.5
@@ -450,7 +450,7 @@ function AIMessageCard({
 
                 <span
                   className={[
-                    "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                    "border px-2 py-0.5 text-[10px] font-medium",
                     evidenceState.badge,
                   ].join(" ")}
                 >
@@ -458,7 +458,7 @@ function AIMessageCard({
                 </span>
 
                 {message.latency_ms > 0 && (
-                  <span className="rounded-full border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+                  <span className="border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
                     {message.latency_ms < 1000
                       ? `${message.latency_ms}ms`
                       : `${(message.latency_ms / 1000).toFixed(1)}s`}
@@ -470,7 +470,7 @@ function AIMessageCard({
                 onClick={() =>
                   copyToClipboard(message.answer, `a-${message.timestamp}`)
                 }
-                className="rounded-lg p-1.5 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
+                className="p-1.5 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
                 title="Copy answer"
               >
                 {copiedId === `a-${message.timestamp}` ? (
@@ -483,14 +483,29 @@ function AIMessageCard({
 
             <div
               className={[
-                "mb-4 rounded-xl border px-3 py-2 text-xs leading-relaxed",
+                "mb-4 border px-3 py-2 text-xs leading-relaxed",
                 evidenceState.panel,
               ].join(" ")}
             >
               {evidenceState.description}
             </div>
 
-            {isLatest && !message.cached && !isStreamed ? (
+            {message.isStreaming ? (
+              <div className="text-sm leading-relaxed text-foreground/80 whitespace-pre-wrap break-words">
+                {message.answer ? (
+                  <>
+                    {message.answer}
+                    <span className="ml-0.5 inline-block h-4 w-px animate-pulse bg-current align-middle" />
+                  </>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:0ms]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:300ms]" />
+                  </span>
+                )}
+              </div>
+            ) : isLatest && !message.cached && !isStreamed && message.isStreaming === undefined ? (
               <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-foreground/80">
                 <StreamingText
                   text={message.answer}
@@ -514,7 +529,7 @@ function AIMessageCard({
               {message.sources.length > 0 && (
                 <button
                   onClick={() => toggleSources(index)}
-                  className="flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5"
+                  className="flex items-center gap-1.5 border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
                   {message.sources.length}{" "}
@@ -558,7 +573,7 @@ function AIMessageCard({
                   return (
                     <div
                       key={idx}
-                      className="relative rounded-xl border border-border/50 bg-muted/20 p-3 transition-colors hover:bg-muted/40 sm:p-4"
+                      className="relative border border-border/50 bg-muted/20 p-3 transition-colors hover:bg-muted/40 sm:p-4"
                     >
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
@@ -619,7 +634,7 @@ function UserMessageBubble({
     <div className="group flex items-start justify-end gap-2.5 sm:gap-3">
       <div className="max-w-[88%] min-w-0 sm:max-w-[80%]">
         <div className="relative">
-          <div className="inline-block rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
+          <div className="inline-block bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
             <p className="text-sm leading-relaxed">{message.question}</p>
           </div>
 
@@ -635,7 +650,7 @@ function UserMessageBubble({
               onClick={() =>
                 copyToClipboard(message.question, `q-${message.timestamp}`)
               }
-              className="rounded-lg p-1 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
+              className="p-1 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
               title="Copy question"
             >
               {copiedId === `q-${message.timestamp}` ? (
@@ -661,11 +676,11 @@ function TypingIndicator() {
   return (
     <div className="flex items-start gap-2.5 sm:gap-3">
       <div className="relative shrink-0">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-1 ring-primary/30 sm:h-10 sm:w-10">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:h-10 sm:w-10">
           <AgentAvatar seed="Charlotte" size={26} />
         </div>
       </div>
-      <div className="flex items-center gap-2 rounded-2xl rounded-tl-sm border border-border/50 bg-card px-4 py-3 shadow-sm sm:px-5 sm:py-4">
+      <div className="flex items-center gap-2 border border-border/50 bg-card px-4 py-3 shadow-sm sm:px-5 sm:py-4">
         <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:0ms]" />
         <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:150ms]" />
         <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:300ms]" />
@@ -1006,63 +1021,160 @@ export default function ChatPanel({
 
     if (inputRef.current) inputRef.current.style.height = "auto"
 
+    const timestamp = new Date().toISOString()
+    let messageAdded = false
+
     try {
-      const requestPromise = askQuestion(
+      await askQuestionStream(
         userId,
         selectedDoc.id,
         selectedDoc.name,
         sessionId,
         question,
         selectedPopoverModel,
-        enableQueryAugmentation
+        enableQueryAugmentation,
+        (event) => {
+          if (event.type === "retrieval") {
+            if (!messageAdded) {
+              messageAdded = true
+              setMessages((prev) => [
+                ...prev,
+                {
+                  question,
+                  answer: "",
+                  sources: [],
+                  timestamp,
+                  language: event.language,
+                  confidence: 0,
+                  latency_ms: 0,
+                  cached: false,
+                  sufficient_evidence: event.sufficient_evidence ?? true,
+                  isStreaming: true,
+                },
+              ])
+            } else {
+              setMessages((prev) => {
+                const last = prev[prev.length - 1]
+                if (!last || last.timestamp !== timestamp) return prev
+                return [
+                  ...prev.slice(0, -1),
+                  {
+                    ...last,
+                    language: event.language,
+                    sufficient_evidence:
+                      event.sufficient_evidence ?? last.sufficient_evidence,
+                  },
+                ]
+              })
+            }
+          } else if (event.type === "token") {
+            if (!messageAdded) {
+              messageAdded = true
+              setMessages((prev) => [
+                ...prev,
+                {
+                  question,
+                  answer: event.text,
+                  sources: [],
+                  timestamp,
+                  language: "en",
+                  confidence: 0,
+                  latency_ms: 0,
+                  cached: false,
+                  sufficient_evidence: true,
+                  isStreaming: true,
+                },
+              ])
+            } else {
+              setMessages((prev) => {
+                const last = prev[prev.length - 1]
+                if (!last || last.timestamp !== timestamp) return prev
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, answer: last.answer + event.text },
+                ]
+              })
+            }
+          } else if (event.type === "complete") {
+            const completedMessage: Message = {
+              question,
+              answer: event.answer,
+              sources: event.sources ?? [],
+              timestamp,
+              language: event.language,
+              confidence: event.confidence ?? 0,
+              latency_ms: event.latency_ms ?? 0,
+              cached: event.cached ?? false,
+              model_used: event.model_used,
+              sufficient_evidence: event.sufficient_evidence ?? true,
+              isStreaming: false,
+            }
+            setMessages((prev) => {
+              if (!messageAdded) return [...prev, completedMessage]
+              let idx = -1
+              for (let i = prev.length - 1; i >= 0; i--) {
+                if (prev[i].timestamp === timestamp) {
+                  idx = i
+                  break
+                }
+              }
+              if (idx === -1) return [...prev, completedMessage]
+              return [
+                ...prev.slice(0, idx),
+                completedMessage,
+                ...prev.slice(idx + 1),
+              ]
+            })
+            setDocumentHistory((prev) => [
+              {
+                id: `${sessionId}-${timestamp}`,
+                user_id: userId,
+                session_id: sessionId,
+                document_id: selectedDoc.id,
+                question,
+                answer: event.answer,
+                language: event.language,
+                sources: event.sources ?? [],
+                timestamp,
+                confidence: event.confidence ?? 0,
+                latency_ms: event.latency_ms ?? 0,
+                model_used: event.model_used,
+                sufficient_evidence: event.sufficient_evidence ?? true,
+              },
+              ...prev,
+            ])
+          } else if (event.type === "error") {
+            if (messageAdded) {
+              setMessages((prev) =>
+                prev.filter((m) => m.timestamp !== timestamp)
+              )
+            }
+            const detail = event.detail ?? ""
+            const isRateLimit =
+              detail.toLowerCase().includes("rate limit") ||
+              detail.toLowerCase().includes("too many") ||
+              detail.includes("429")
+            if (isRateLimit) {
+              const match = detail.match(/(\d+(?:\.\d+)?)\s*s\b/)
+              const seconds = match
+                ? Math.ceil(parseFloat(match[1])).toString()
+                : "30"
+              toast.error(copy.tooManyQuestions, {
+                description: `${copy.waitAgain} ${seconds} ${copy.seconds}`,
+                duration: 8000,
+              })
+            } else {
+              toast.error(copy.answerError, {
+                description: detail || copy.retryLater,
+              })
+            }
+          }
+        }
       )
-
-      if (enableQueryAugmentation) {
-        toast.promise(requestPromise, {
-          loading: copy.loading,
-          success: copy.answerReady,
-          error: (message) =>
-            message instanceof Error ? message.message : copy.answerError,
-          description: copy.loadingDesc,
-        })
-      }
-
-      const response = await requestPromise
-
-      const nextMessage = {
-        question,
-        answer: response.answer,
-        sources: response.sources,
-        timestamp: response.timestamp,
-        language: response.language,
-        confidence: response.confidence ?? 0,
-        latency_ms: response.latency_ms ?? 0,
-        cached: false,
-        model_used: response.model_used,
-        sufficient_evidence: response.sufficient_evidence ?? true,
-      }
-
-      setMessages((prev) => [...prev, nextMessage])
-
-      setDocumentHistory((prev) => [
-        {
-          id: `${sessionId}-${response.timestamp}`,
-          user_id: userId,
-          session_id: sessionId,
-          document_id: selectedDoc.id,
-          question,
-          answer: response.answer,
-          language: response.language,
-          sources: response.sources,
-          timestamp: response.timestamp,
-          confidence: response.confidence ?? 0,
-          latency_ms: response.latency_ms ?? 0,
-          model_used: response.model_used,
-          sufficient_evidence: response.sufficient_evidence ?? true,
-        },
-        ...prev,
-      ])
     } catch (error) {
+      if (messageAdded) {
+        setMessages((prev) => prev.filter((m) => m.timestamp !== timestamp))
+      }
       const msg = error instanceof Error ? error.message : "Please try again"
 
       if (msg.toLowerCase().includes("too many requests")) {
@@ -1071,7 +1183,7 @@ export default function ChatPanel({
           description: `${copy.waitAgain} ${seconds} ${copy.seconds}`,
           duration: 6000,
         })
-      } else if (!enableQueryAugmentation) {
+      } else {
         toast.error(copy.answerError, { description: msg })
       }
     } finally {
@@ -1258,7 +1370,7 @@ export default function ChatPanel({
         <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
           <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
             {selectedDoc && showHistory && (
-              <div className="mb-4 rounded-2xl border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
+              <div className="mb-4 border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold">{copy.threadList}</h3>
@@ -1269,7 +1381,7 @@ export default function ChatPanel({
 
                   <button
                     onClick={handleNewChat}
-                    className="inline-flex items-center gap-2 rounded-lg border border-border/50 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
+                    className="inline-flex items-center gap-2 border border-border/50 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     {copy.newChat}
@@ -1277,7 +1389,7 @@ export default function ChatPanel({
                 </div>
 
                 {threads.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+                  <div className="border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
                     {copy.noSavedThreads}
                   </div>
                 ) : (
@@ -1290,7 +1402,7 @@ export default function ChatPanel({
                           key={thread.sessionId}
                           onClick={() => handleSelectThread(thread.sessionId)}
                           className={[
-                            "w-full rounded-xl border p-3 text-left transition-colors",
+                            "w-full border p-3 text-left transition-colors",
                             isActive
                               ? "border-primary/40 bg-primary/5"
                               : "border-border/50 bg-background hover:bg-muted/40",
@@ -1332,13 +1444,12 @@ export default function ChatPanel({
               (emptyState ?? (
                 <div className="flex min-h-[60vh] flex-col items-center justify-center">
                   <div className="max-w-md p-8 text-center">
-                    <div className="relative mx-auto mb-6">
-                      <div className="absolute inset-0 animate-pulse rounded-full bg-primary/20 blur-3xl" />
-                      <div className="relative rounded-full bg-linear-to-br from-primary/20 to-primary/5 p-8 ring-1 ring-primary/30">
+                    <div className="mx-auto mb-6 inline-flex">
+                      <div className="border border-border/50 bg-muted/20 p-8">
                         <FileText className="mx-auto h-16 w-16 text-primary/60" />
                       </div>
                     </div>
-                    <h3 className="mb-3 bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-2xl font-semibold tracking-tight text-transparent">
+                    <h3 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
                       {copy.noDoc}
                     </h3>
                     <p className="text-muted-foreground">{copy.noDocDesc}</p>
@@ -1354,14 +1465,13 @@ export default function ChatPanel({
                 <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
                   <div className="text-center">
                     <div className="relative mx-auto mb-5 h-20 w-20 sm:mb-6 sm:h-24 sm:w-24">
-                      <div className="absolute inset-0 animate-pulse rounded-full bg-primary/30 blur-2xl" />
-                      <div className="relative flex h-full w-full items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 ring-2 ring-primary/30">
+                      <div className="relative flex h-full w-full items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
                         <AgentAvatar seed="Charlotte" size={44} />
                       </div>
                     </div>
 
-                    <h3 className="mb-2 bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-xl font-semibold text-transparent sm:text-2xl">
-                      Sembang dengan dokumen anda
+                    <h3 className="mb-2 text-xl font-semibold text-foreground sm:text-2xl">
+                      {language === "ms" ? "Sembang dengan dokumen anda" : "Chat with your document"}
                     </h3>
 
                     <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
@@ -1388,19 +1498,13 @@ export default function ChatPanel({
                             onClick={() =>
                               handleSuggestionClick(suggestion.text)
                             }
-                            className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg sm:p-4"
+                            className="border border-border/50 bg-card p-3.5 text-left transition-all hover:border-primary/30 hover:bg-card/60 sm:p-4"
                           >
-                            <div
-                              className={cn(
-                                "absolute inset-0 bg-linear-to-r opacity-0 transition-opacity group-hover:opacity-100",
-                                suggestion.color
-                              )}
-                            />
-                            <Icon className="relative mb-3 h-5 w-5 text-primary" />
-                            <p className="relative mb-1 text-sm font-medium">
+                            <Icon className="mb-3 h-5 w-5 text-primary" />
+                            <p className="mb-1 text-sm font-medium">
                               {suggestion.text}
                             </p>
-                            <p className="relative text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {suggestion.description}
                             </p>
                           </button>
@@ -1434,7 +1538,9 @@ export default function ChatPanel({
                   </div>
                 ))}
 
-                {loading && <TypingIndicator />}
+                {loading && !messages.some((m) => m.isStreaming) && (
+                  <TypingIndicator />
+                )}
                 <div ref={messagesEndRef} />
               </div>
             )}
@@ -1450,7 +1556,7 @@ export default function ChatPanel({
                 <button
                   type="button"
                   onClick={onBack}
-                  className="shrink-0 rounded-lg p-2 hover:bg-muted"
+                  className="shrink-0 p-2 hover:bg-muted"
                   title={copy.back}
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -1481,53 +1587,70 @@ export default function ChatPanel({
               </div>
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="shrink-0 rounded-lg p-2 hover:bg-muted"
-                  title={copy.options}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={toggleLanguage}
+                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary"
+                title={copy.language}
+              >
+                {language === "ms" ? "EN" : "MS"}
+              </button>
 
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>{copy.options}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
+              <button
+                type="button"
+                onClick={handleNewChat}
+                className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title={copy.newChat}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
 
-                <DropdownMenuItem onClick={toggleLanguage}>
-                  <Languages className="mr-2 h-4 w-4" />
-                  {copy.language}
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onClick={handleNewChat}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {copy.newChat}
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  onClick={() =>
-                    setEnableQueryAugmentation(!enableQueryAugmentation)
-                  }
-                >
-                  <Languages className="mr-2 h-4 w-4" />
-                  {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
-                </DropdownMenuItem>
-
-                <DropdownMenuItem onClick={() => setShowHistory(!showHistory)}>
-                  <History className="mr-2 h-4 w-4" />
-                  {copy.history}
-                </DropdownMenuItem>
-
-                {messages.length > 0 && (
-                  <DropdownMenuItem onClick={clearChat} variant="destructive">
-                    <X className="mr-2 h-4 w-4" />
-                    {copy.clearThread}
-                  </DropdownMenuItem>
+              <button
+                type="button"
+                onClick={() => setShowHistory(!showHistory)}
+                className={cn(
+                  "p-2 transition-colors hover:bg-muted",
+                  showHistory ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                title={copy.history}
+              >
+                <History className="h-4 w-4" />
+              </button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    title={copy.options}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>{copy.options}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    onClick={() =>
+                      setEnableQueryAugmentation(!enableQueryAugmentation)
+                    }
+                  >
+                    <Languages className="mr-2 h-4 w-4" />
+                    {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
+                  </DropdownMenuItem>
+
+                  {messages.length > 0 && (
+                    <DropdownMenuItem onClick={clearChat} variant="destructive">
+                      <X className="mr-2 h-4 w-4" />
+                      {copy.clearThread}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {composerTop && <div className="mb-2">{composerTop}</div>}
@@ -1547,7 +1670,7 @@ export default function ChatPanel({
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="h-8 w-fit rounded-full border border-border/50 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+                  className="h-8 w-fit border border-border/50 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
                 >
                   {selectedPopoverModel
                     ? (GROQ_MODELS.find((m) => m.id === selectedPopoverModel)
@@ -1562,7 +1685,7 @@ export default function ChatPanel({
                     type="button"
                     onClick={() => setSelectedPopoverModel("")}
                     className={cn(
-                      "flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                      "flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
                       !selectedPopoverModel && "bg-muted"
                     )}
                   >
@@ -1575,7 +1698,7 @@ export default function ChatPanel({
                       type="button"
                       onClick={() => setSelectedPopoverModel(m.id)}
                       className={cn(
-                        "flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                        "flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
                         selectedPopoverModel === m.id && "bg-muted"
                       )}
                     >
@@ -1591,7 +1714,7 @@ export default function ChatPanel({
               onClick={toggleVoiceInput}
               disabled={!speechSupported || loading}
               className={cn(
-                "rounded-xl border border-border/50 bg-background/80 p-2 text-muted-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
+                "border border-border/50 bg-background/80 p-2 text-muted-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
                 isListening &&
                   "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/15"
               )}

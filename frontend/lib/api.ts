@@ -330,6 +330,90 @@ export async function clearEvalRecords(): Promise<void> {
   if (!res.ok) throw new Error("Failed to clear eval records")
 }
 
+// ── Streaming chat ─────────────────────────────────────────────────────────
+
+export type ChatStreamEvent =
+  | { type: "start" }
+  | {
+      type: "retrieval"
+      language: string
+      retrieval_mode: string
+      query_variants_used: string[]
+      top_query_variant: string
+      sufficient_evidence?: boolean
+    }
+  | { type: "token"; text: string }
+  | { type: "sources"; sources: SourceChunk[] }
+  | {
+      type: "complete"
+      answer: string
+      language: string
+      sources: SourceChunk[]
+      confidence: number
+      latency_ms: number
+      model_used: string
+      sufficient_evidence: boolean
+      cached: boolean
+      retrieval_mode?: string
+      query_variants_used?: string[]
+      top_query_variant?: string
+    }
+  | { type: "error"; detail: string }
+
+export async function askQuestionStream(
+  userId: string,
+  documentId: string,
+  documentName: string,
+  sessionId: string,
+  question: string,
+  modelOverride: string = "",
+  enableQueryAugmentation: boolean = true,
+  onEvent: (event: ChatStreamEvent) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/chat/ask-stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: userId,
+      document_id: documentId,
+      document_name: documentName,
+      session_id: sessionId,
+      question,
+      model_override: modelOverride,
+      enable_query_augmentation: enableQueryAugmentation,
+    }),
+    signal,
+  })
+  if (res.status === 429) {
+    const retryAfter = res.headers.get("Retry-After") ?? "60"
+    throw new Error(
+      `Too many requests — please wait ${retryAfter} seconds and try again.`
+    )
+  }
+  if (!res.ok || !res.body) {
+    const err = await res.json().catch(() => ({ detail: "Stream failed" }))
+    throw new Error(err.detail || "Stream failed")
+  }
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split("\n")
+    buffer = lines.pop() ?? ""
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue
+      try {
+        const event: ChatStreamEvent = JSON.parse(line.slice(6))
+        onEvent(event)
+      } catch {}
+    }
+  }
+}
+
 // ── Streaming test suite ───────────────────────────────────────────────────
 
 export type StreamProgressEvent = {
@@ -408,32 +492,30 @@ export async function runTestSuiteStream(
 // rpm = requests/min, rpd = requests/day, tpm = tokens/min, tpd = tokens/day
 export const GROQ_MODELS = [
   {
-    id: "groq/compound",
-    label: "Groq Compound",
-    tag: "⭐ Primary · 70K TPM · Unlimited",
-    recommended: true,
-    tier: 1,
-  },
-  {
-    id: "groq/compound-mini",
-    label: "Groq Compound Mini",
-    tag: "⚡ Fast · 70K TPM · Unlimited",
-    rpm: 30,
-    rpd: "250",
-    tpm: "70K",
-    tpd: "No limit",
-    recommended: false,
-    tier: 2,
-  },
-  {
     id: "meta-llama/llama-4-scout-17b-16e-instruct",
     label: "Llama 4 Scout 17B",
-    tag: "Chat default · 30K TPM · 500K/day",
+    tag: "⭐ Recommended · 30K TPM · 500K/day",
     rpm: 30,
     rpd: "1K",
     tpm: "30K",
     tpd: "500K",
     recommended: true,
+  },
+  {
+    id: "groq/compound",
+    label: "Groq Compound",
+    tag: "⚠️ Low TPM limit — may rate limit",
+    recommended: false,
+    tier: 1,
+  },
+  {
+    id: "groq/compound-mini",
+    label: "Groq Compound Mini",
+    tag: "⚠️ Low TPM limit — may rate limit",
+    rpm: 30,
+    rpd: "250",
+    recommended: false,
+    tier: 2,
   },
   {
     id: "llama-3.3-70b-versatile",

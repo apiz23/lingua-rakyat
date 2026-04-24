@@ -80,12 +80,12 @@ function MetricCard({
   icon: React.ComponentType<{ className?: string }>
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+    <div className="border border-border bg-card/40 p-5 backdrop-blur-sm">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
           {label}
         </p>
-        <div className="rounded-xl bg-primary/10 p-2">
+        <div className="bg-primary/10 p-2">
           <Icon className="h-4 w-4 text-primary" />
         </div>
       </div>
@@ -133,6 +133,42 @@ export default function BenchmarkPage() {
           run: "Jalankan benchmark",
           casesComplete: "kes selesai",
           current: "Semasa",
+          benchmarkScore: "Skor Benchmark",
+          benchmarkScoreSub:
+            "Skor berwajaran dari kualiti, keyakinan, kebolehbacaan, dan kelajuan",
+          rouge1: "ROUGE-1",
+          rouge1Sub: "Padanan jawapan dengan rujukan benchmark",
+          confidence: "Keyakinan",
+          confidenceSub: "Purata keyakinan carian",
+          readability: "Kebolehbacaan",
+          readabilitySub: "Lebih rendah lebih mudah dibaca",
+          latency: "Kelajuan",
+          latencySub: "Purata masa respons",
+          latestResults: "Keputusan Terkini",
+          latestResultsHeading: "Output benchmark per kes",
+          caseRun: "kes dijalankan",
+          noResults: "Belum ada benchmark dijalankan",
+          noResultsSub:
+            "Pilih dokumen yang sedia dan jalankan benchmark untuk mengisi halaman ini.",
+          scorecard: "Scorecard",
+          scorecardHeading: "What the benchmark means",
+          above80: "Above 80",
+          above80Sub:
+            "Strong competition-ready benchmark profile with balanced quality and usability.",
+          range6079: "60 to 79",
+          range6079Sub:
+            "Good foundation, but still room to improve answer quality or simplicity.",
+          below60: "Below 60",
+          below60Sub:
+            "Retrieval confidence, benchmark truth overlap, or prompt quality needs work.",
+          liveSnapshot: "Live Report Snapshot",
+          liveSnapshotHeading: "Stored evaluation metrics",
+          recordedQueries: "Recorded queries",
+          p95Latency: "P95 latency",
+          aboveThreshold: "Above threshold",
+          simpleLanguage: "Simple language rate",
+          noReport:
+            "No stored evaluation report yet. Run a benchmark or use the app to generate metrics.",
         }
       : {
           loadError: "Failed to load benchmark data",
@@ -153,6 +189,42 @@ export default function BenchmarkPage() {
           run: "Run benchmark",
           casesComplete: "cases complete",
           current: "Current",
+          benchmarkScore: "Benchmark Score",
+          benchmarkScoreSub:
+            "Weighted score from quality, confidence, readability, and latency",
+          rouge1: "ROUGE-1",
+          rouge1Sub: "Answer match vs benchmark reference",
+          confidence: "Confidence",
+          confidenceSub: "Average retrieval confidence",
+          readability: "Readability",
+          readabilitySub: "Lower is easier to read",
+          latency: "Latency",
+          latencySub: "Average response time",
+          latestResults: "Latest Results",
+          latestResultsHeading: "Per-case benchmark output",
+          caseRun: "cases run",
+          noResults: "No benchmark run yet",
+          noResultsSub:
+            "Select a ready document and run benchmark to populate this page.",
+          scorecard: "Scorecard",
+          scorecardHeading: "What the benchmark means",
+          above80: "Above 80",
+          above80Sub:
+            "Strong competition-ready benchmark profile with balanced quality and usability.",
+          range6079: "60 to 79",
+          range6079Sub:
+            "Good foundation, but still room to improve answer quality or simplicity.",
+          below60: "Below 60",
+          below60Sub:
+            "Retrieval confidence, benchmark truth overlap, or prompt quality needs work.",
+          liveSnapshot: "Live Report Snapshot",
+          liveSnapshotHeading: "Stored evaluation metrics",
+          recordedQueries: "Recorded queries",
+          p95Latency: "P95 latency",
+          aboveThreshold: "Above threshold",
+          simpleLanguage: "Simple language rate",
+          noReport:
+            "No stored evaluation report yet. Run a benchmark or use the app to generate metrics.",
         }
 
   const selectedDoc = useMemo(
@@ -276,48 +348,22 @@ export default function BenchmarkPage() {
             <button
               onClick={() => void loadData()}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
             >
               <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
               {copy.refresh}
             </button>
           }
-        >
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-primary/10 p-3">
-                <BarChart3 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight">
-                  {copy.title}
-                </h1>
-                <p className="text-sm text-muted-foreground">{copy.subtitle}</p>
-              </div>
-            </div>
+        />
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => void loadData()}
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
-              >
-                <RefreshCw
-                  className={cn("h-4 w-4", loading && "animate-spin")}
-                />
-                {copy.refresh}
-              </button>
-            </div>
-          </div>
-        </PageIntro>
-
-        <section className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
+        {/* Run section */}
+        <section className="border border-border bg-card/40 p-6 backdrop-blur-sm">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">
                 {copy.runTag}
               </p>
-              <h2 className="text-3xl font-bold tracking-tight">
+              <h2 className="font-heading text-3xl font-bold tracking-tight">
                 {copy.heading}
               </h2>
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
@@ -329,7 +375,7 @@ export default function BenchmarkPage() {
               <select
                 value={selectedDocId}
                 onChange={(event) => setSelectedDocId(event.target.value)}
-                className="rounded-xl border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none"
+                className="border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none"
               >
                 {documents.length === 0 ? (
                   <option value="">{copy.noReady}</option>
@@ -344,7 +390,7 @@ export default function BenchmarkPage() {
               <button
                 onClick={() => void handleRunBenchmark()}
                 disabled={!selectedDoc || running}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {running ? (
                   <>
@@ -362,7 +408,7 @@ export default function BenchmarkPage() {
           </div>
 
           {progress && (
-            <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <div className="mt-6 border border-primary/20 bg-primary/5 p-4">
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="font-medium text-foreground">
                   {progress.completed}/{progress.total} {copy.casesComplete}
@@ -391,81 +437,81 @@ export default function BenchmarkPage() {
           )}
         </section>
 
+        {/* Metric cards */}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <MetricCard
-            label="Skor Benchmark"
+            label={copy.benchmarkScore}
             value={`${overallScore}/100`}
-            sub="Skor berwajaran dari kualiti, keyakinan, kebolehbacaan, dan kelajuan"
+            sub={copy.benchmarkScoreSub}
             icon={Target}
           />
           <MetricCard
-            label="ROUGE-1"
+            label={copy.rouge1}
             value={score(
               aggregate?.avg_rouge1_f1 ??
                 report?.generation_quality?.avg_rouge1_f1 ??
                 0
             )}
-            sub="Padanan jawapan dengan rujukan benchmark"
+            sub={copy.rouge1Sub}
             icon={Sparkles}
           />
           <MetricCard
-            label="Confidence"
+            label={copy.confidence}
             value={pct(
               aggregate?.avg_confidence ??
                 report?.retrieval?.avg_confidence ??
                 0
             )}
-            sub="Purata keyakinan carian"
+            sub={copy.confidenceSub}
             icon={ShieldCheck}
           />
           <MetricCard
-            label="Readability"
+            label={copy.readability}
             value={(
               aggregate?.avg_fk_grade ??
               report?.readability?.avg_fk_grade ??
               0
             ).toFixed(1)}
-            sub="Lebih rendah lebih mudah dibaca"
+            sub={copy.readabilitySub}
             icon={CheckCircle2}
           />
           <MetricCard
-            label="Latency"
+            label={copy.latency}
             value={formatLatency(
               aggregate?.avg_latency_ms ?? report?.latency?.avg_ms ?? 0
             )}
-            sub="Purata masa respons"
+            sub={copy.latencySub}
             icon={Clock3}
           />
         </section>
 
+        {/* Results + Scorecard */}
         <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
+          {/* Per-case results */}
+          <div className="border border-border bg-card/40 p-6 backdrop-blur-sm">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">
-                  Keputusan Terkini
+                  {copy.latestResults}
                 </p>
-                <h3 className="mt-1 text-xl font-bold tracking-tight">
-                  Output benchmark per kes
+                <h3 className="mt-1 font-heading text-xl font-bold tracking-tight">
+                  {copy.latestResultsHeading}
                 </h3>
               </div>
               {aggregate && (
-                <span className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-                  {aggregate.cases_run} kes dijalankan
+                <span className="border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+                  {aggregate.cases_run} {copy.caseRun}
                 </span>
               )}
             </div>
 
             {!testResult ? (
-              <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/10 text-center">
+              <div className="flex min-h-[320px] items-center justify-center border border-dashed border-border bg-muted/10 text-center">
                 <div className="space-y-3 px-6">
                   <BarChart3 className="mx-auto h-10 w-10 text-muted-foreground/40" />
-                  <p className="font-medium text-foreground">
-                    Belum ada benchmark dijalankan
-                  </p>
+                  <p className="font-medium text-foreground">{copy.noResults}</p>
                   <p className="text-sm text-muted-foreground">
-                    Pilih dokumen yang sedia dan jalankan benchmark untuk
-                    mengisi halaman ini.
+                    {copy.noResultsSub}
                   </p>
                 </div>
               </div>
@@ -474,38 +520,36 @@ export default function BenchmarkPage() {
                 {testResult.results.map((result) => (
                   <div
                     key={`${result.case_index}-${result.question}`}
-                    className="rounded-2xl border border-border/60 bg-background p-4"
+                    className="border border-border bg-background p-4"
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <p className="line-clamp-1 text-sm font-semibold text-foreground">
                         {result.question}
                       </p>
-                      <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                      <span className="bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
                         {result.language}
                       </span>
                     </div>
                     <div className="mb-3 grid gap-2 sm:grid-cols-4">
-                      <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs">
+                      <div className="bg-muted/30 px-3 py-2 text-xs">
                         <span className="text-muted-foreground">ROUGE-1</span>
                         <p className="mt-1 font-mono text-foreground">
                           {score(result.scores.rouge1_f1)}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs">
+                      <div className="bg-muted/30 px-3 py-2 text-xs">
                         <span className="text-muted-foreground">BLEU</span>
                         <p className="mt-1 font-mono text-foreground">
                           {score(result.scores.bleu)}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs">
-                        <span className="text-muted-foreground">
-                          Confidence
-                        </span>
+                      <div className="bg-muted/30 px-3 py-2 text-xs">
+                        <span className="text-muted-foreground">Confidence</span>
                         <p className="mt-1 font-mono text-foreground">
                           {pct(result.scores.confidence)}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-muted/30 px-3 py-2 text-xs">
+                      <div className="bg-muted/30 px-3 py-2 text-xs">
                         <span className="text-muted-foreground">Latency</span>
                         <p className="mt-1 font-mono text-foreground">
                           {formatLatency(result.scores.latency_ms)}
@@ -522,73 +566,72 @@ export default function BenchmarkPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
+            {/* Scorecard */}
+            <div className="border border-border bg-card/40 p-6 backdrop-blur-sm">
               <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">
-                Scorecard
+                {copy.scorecard}
               </p>
-              <h3 className="mt-1 text-xl font-bold tracking-tight">
-                What the benchmark means
+              <h3 className="mt-1 font-heading text-xl font-bold tracking-tight">
+                {copy.scorecardHeading}
               </h3>
               <div className="mt-5 space-y-4 text-sm">
-                <div className="rounded-2xl bg-muted/20 p-4">
-                  <p className="font-semibold text-foreground">Above 80</p>
+                <div className="bg-muted/20 p-4">
+                  <p className="font-semibold text-foreground">{copy.above80}</p>
+                  <p className="mt-1 text-muted-foreground">{copy.above80Sub}</p>
+                </div>
+                <div className="bg-muted/20 p-4">
+                  <p className="font-semibold text-foreground">
+                    {copy.range6079}
+                  </p>
                   <p className="mt-1 text-muted-foreground">
-                    Strong competition-ready benchmark profile with balanced
-                    quality and usability.
+                    {copy.range6079Sub}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-muted/20 p-4">
-                  <p className="font-semibold text-foreground">60 to 79</p>
-                  <p className="mt-1 text-muted-foreground">
-                    Good foundation, but still room to improve answer quality or
-                    simplicity.
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-muted/20 p-4">
-                  <p className="font-semibold text-foreground">Below 60</p>
-                  <p className="mt-1 text-muted-foreground">
-                    Retrieval confidence, benchmark truth overlap, or prompt
-                    quality needs work.
-                  </p>
+                <div className="bg-muted/20 p-4">
+                  <p className="font-semibold text-foreground">{copy.below60}</p>
+                  <p className="mt-1 text-muted-foreground">{copy.below60Sub}</p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-sm">
+            {/* Live Report Snapshot */}
+            <div className="border border-border bg-card/40 p-6 backdrop-blur-sm">
               <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">
-                Live Report Snapshot
+                {copy.liveSnapshot}
               </p>
-              <h3 className="mt-1 text-xl font-bold tracking-tight">
-                Stored evaluation metrics
+              <h3 className="mt-1 font-heading text-xl font-bold tracking-tight">
+                {copy.liveSnapshotHeading}
               </h3>
 
               {report?.status === "ok" ? (
                 <div className="mt-5 space-y-3 text-sm">
-                  <div className="flex items-center justify-between rounded-xl bg-muted/20 px-4 py-3">
+                  <div className="flex items-center justify-between bg-muted/20 px-4 py-3">
                     <span className="text-muted-foreground">
-                      Recorded queries
+                      {copy.recordedQueries}
                     </span>
                     <span className="font-semibold text-foreground">
                       {report.total_queries}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl bg-muted/20 px-4 py-3">
-                    <span className="text-muted-foreground">P95 latency</span>
+                  <div className="flex items-center justify-between bg-muted/20 px-4 py-3">
+                    <span className="text-muted-foreground">
+                      {copy.p95Latency}
+                    </span>
                     <span className="font-semibold text-foreground">
                       {formatLatency(report.latency?.p95_ms ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl bg-muted/20 px-4 py-3">
+                  <div className="flex items-center justify-between bg-muted/20 px-4 py-3">
                     <span className="text-muted-foreground">
-                      Above threshold
+                      {copy.aboveThreshold}
                     </span>
                     <span className="font-semibold text-foreground">
                       {report.retrieval?.pct_above_threshold ?? 0}%
                     </span>
                   </div>
-                  <div className="flex items-center justify-between rounded-xl bg-muted/20 px-4 py-3">
+                  <div className="flex items-center justify-between bg-muted/20 px-4 py-3">
                     <span className="text-muted-foreground">
-                      Simple language rate
+                      {copy.simpleLanguage}
                     </span>
                     <span className="font-semibold text-foreground">
                       {report.readability?.pct_simple_language ?? 0}%
@@ -596,9 +639,8 @@ export default function BenchmarkPage() {
                   </div>
                 </div>
               ) : (
-                <div className="mt-5 rounded-2xl border border-dashed border-border/60 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
-                  No stored evaluation report yet. Run a benchmark or use the
-                  app to generate metrics.
+                <div className="mt-5 border border-dashed border-border bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+                  {copy.noReport}
                 </div>
               )}
             </div>

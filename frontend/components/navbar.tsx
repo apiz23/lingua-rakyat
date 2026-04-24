@@ -13,7 +13,6 @@ import {
   Target,
   TrendingUp,
   Sparkles,
-  Command,
   ChevronRight,
 } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -31,7 +30,6 @@ import {
   CommandShortcut,
 } from "@/components/ui/command"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
-import { cn } from "@/lib/utils"
 
 type CommandEntry = {
   id: string
@@ -42,6 +40,8 @@ type CommandEntry = {
   shortcut?: string
 }
 
+const OPEN_COMMAND_EVENT = "lingua-rakyat:open-command-palette"
+
 export default function CommandPaletteTopRight() {
   const router = useRouter()
   const { language, toggleLanguage } = useLanguage()
@@ -49,6 +49,7 @@ export default function CommandPaletteTopRight() {
   const isMobile = useMobile()
 
   const [open, setOpen] = React.useState(false)
+  const [searchValue, setSearchValue] = React.useState("")
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -61,12 +62,35 @@ export default function CommandPaletteTopRight() {
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault()
-        setOpen((prev) => !prev)
+        setOpen((prev) => {
+          const next = !prev
+          if (next) setSearchValue("")
+          return next
+        })
       }
     }
 
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
+
+  React.useEffect(() => {
+    if (!open) setSearchValue("")
+  }, [open])
+
+  React.useEffect(() => {
+    function onOpenCommand(event: Event) {
+      const detail = (event as CustomEvent<{ query?: string }>).detail
+      setSearchValue(detail?.query ?? "")
+      setOpen(true)
+    }
+
+    window.addEventListener(OPEN_COMMAND_EVENT, onOpenCommand as EventListener)
+    return () =>
+      window.removeEventListener(
+        OPEN_COMMAND_EVENT,
+        onOpenCommand as EventListener
+      )
   }, [])
 
   const copy =
@@ -83,7 +107,7 @@ export default function CommandPaletteTopRight() {
           manage: "Urus Dokumen",
           eval: "Penilaian",
           benchmark: "Penanda Aras",
-          results: "Keputusan",
+          results: "Pameran",
           toggleTheme: "Tukar tema",
           toggleLanguage: "Tukar bahasa",
           light: "Mod cerah",
@@ -101,7 +125,7 @@ export default function CommandPaletteTopRight() {
           manage: "Manage Documents",
           eval: "Evaluation",
           benchmark: "Benchmark",
-          results: "Results",
+          results: "Showcase",
           toggleTheme: "Toggle theme",
           toggleLanguage: "Toggle language",
           light: "Light mode",
@@ -202,25 +226,13 @@ export default function CommandPaletteTopRight() {
 
   return (
     <>
-      {/* Floating button - shows on both mobile and desktop */}
-      <div className="fixed right-0 bottom-0 z-50 flex w-full justify-end px-4 py-4 sm:px-6 lg:px-8">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label={copy.commandTitle}
-          className="group flex items-center gap-3 rounded-full border border-border/60 bg-background/80 px-4 py-3 shadow-sm backdrop-blur-md transition-all hover:border-primary/30 hover:bg-background hover:shadow-md"
-        >
-          <Command className="h-5 w-5 transition-transform group-hover:scale-105" />
-          <div className="hidden items-center gap-1 md:flex">
-            <Kbd>Ctrl</Kbd>
-            <Kbd>K</Kbd>
-          </div>
-        </button>
-      </div>
-
       <CommandDialog open={open} onOpenChange={setOpen}>
         <div className="border-b border-border/40 bg-linear-to-r from-primary/5 via-transparent to-primary/5">
-          <CommandInput placeholder={copy.placeholder} />
+          <CommandInput
+            placeholder={copy.placeholder}
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
         </div>
 
         <CommandList>
@@ -245,9 +257,7 @@ export default function CommandPaletteTopRight() {
                   <span className="group-data-[selected=true]:text-primary">
                     {item.label}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {item.hint}
-                  </span>
+                 
                 </div>
 
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />

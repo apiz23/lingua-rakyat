@@ -23,9 +23,7 @@ import {
   Plus,
   Database,
 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { motion, AnimatePresence } from "framer-motion"
 
 export default function WorkSpacePage() {
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
@@ -74,7 +72,7 @@ export default function WorkSpacePage() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-linear-to-br from-background via-background to-muted/20">
+    <div className="flex h-full w-full flex-col bg-background">
       <ChatPanel
         selectedDoc={selectedDoc}
         composerTop={
@@ -82,7 +80,7 @@ export default function WorkSpacePage() {
             {/* Document Selector */}
             <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
               <PopoverTrigger asChild>
-                <button className="group flex w-full max-w-fit flex-1 items-center justify-between rounded-lg border border-border/50 bg-card px-3 py-2 text-sm transition-all hover:border-primary/30 hover:bg-accent/50">
+                <button className="group flex w-full max-w-fit flex-1 items-center justify-between border border-border bg-card px-3 py-2 text-sm transition-all hover:border-primary/30 hover:bg-accent/50">
                   <div className="flex items-center gap-2 truncate">
                     {selectedDoc ? (
                       <>
@@ -128,7 +126,7 @@ export default function WorkSpacePage() {
                           setIsDocPickerOpen(false)
                         }}
                         className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
                           !selectedDoc && "bg-primary/5 text-primary"
                         )}
                       >
@@ -156,7 +154,7 @@ export default function WorkSpacePage() {
                                 setIsDocPickerOpen(false)
                               }}
                               className={cn(
-                                "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                                "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
                                 selectedDoc?.id === doc.id && "bg-primary/5"
                               )}
                             >
@@ -166,12 +164,9 @@ export default function WorkSpacePage() {
                                   <span className="truncate font-medium">
                                     {doc.name}
                                   </span>
-                                  <Badge
-                                    variant="outline"
-                                    className="h-5 px-1.5 text-[10px]"
-                                  >
+                                  <span className="border border-border/50 bg-muted/30 px-1.5 py-0.5 text-[10px] text-muted-foreground">
                                     {label}
-                                  </Badge>
+                                  </span>
                                 </div>
                               </div>
                               {selectedDoc?.id === doc.id && (

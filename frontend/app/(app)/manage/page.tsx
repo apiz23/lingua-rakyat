@@ -94,11 +94,11 @@ function ConfirmDialog({
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="animate-in fade-in zoom-in-95 w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl">
+      <div className="animate-in fade-in zoom-in-95 w-full max-w-sm border border-border bg-card p-6 shadow-2xl">
         <div className="flex items-start gap-4">
           <div
             className={cn(
-              "rounded-full p-2.5",
+              "p-2.5",
               danger ? "bg-destructive/10" : "bg-primary/10"
             )}
           >
@@ -117,14 +117,14 @@ function ConfirmDialog({
         <div className="mt-6 flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+            className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
           >
             Batal
           </button>
           <button
             onClick={onConfirm}
             className={cn(
-              "rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors",
+              "px-4 py-2 text-sm font-medium text-white transition-colors",
               danger
                 ? "bg-destructive hover:bg-destructive/90"
                 : "bg-primary hover:bg-primary/90"
@@ -154,11 +154,11 @@ function StatCard({
   color = "text-primary",
 }: StatCardProps) {
   return (
-    <div className="group rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/20 hover:shadow-lg">
+    <div className="group border border-border bg-card/40 p-5 backdrop-blur-sm transition-all duration-300 hover:border-primary/20 hover:shadow-lg">
       <div className="flex items-center gap-4">
         <div
           className={cn(
-            "rounded-lg bg-primary/5 p-2.5 transition-colors group-hover:bg-primary/10",
+            "bg-primary/5 p-2.5 transition-colors group-hover:bg-primary/10",
             color
           )}
         >
@@ -426,7 +426,7 @@ export default function ManagePage() {
             <button
               onClick={refreshDocuments}
               disabled={loading || isFetching.current}
-              className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
+              className="flex items-center justify-center gap-2 border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
             >
               <RefreshCw
                 className={cn(
@@ -473,13 +473,13 @@ export default function ManagePage() {
                 placeholder={copy.search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 rounded-lg border border-border bg-background py-2 pr-4 pl-9 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                className="w-64 border border-border bg-background py-2 pr-4 pl-9 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
               />
             </div>
             <div className="flex justify-between gap-4">
               <button
                 onClick={() => setUploadModalOpen(true)}
-                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                className="flex items-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 <Plus className="h-4 w-4" />
                 {copy.uploadPdf}
@@ -490,6 +490,9 @@ export default function ManagePage() {
 
         {/* ── Document Table ── */}
         <section>
+          <p className="mb-3 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            {copy.library}
+          </p>
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               {(processingCount > 0 || errorCount > 0) && (
@@ -519,7 +522,7 @@ export default function ManagePage() {
               {selected.size > 0 && (
                 <button
                   onClick={confirmBulkDelete}
-                  className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90"
+                  className="flex items-center gap-2 bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90"
                 >
                   <Trash2 className="h-4 w-4" />
                   Padam {selected.size}
@@ -529,7 +532,7 @@ export default function ManagePage() {
           </div>
 
           {loading ? (
-            <div className="flex h-64 items-center justify-center rounded-xl border border-border">
+            <div className="flex h-64 items-center justify-center border border-border">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
@@ -538,7 +541,7 @@ export default function ManagePage() {
               </div>
             </div>
           ) : filteredDocuments.length === 0 ? (
-            <div className="flex h-64 flex-col items-center justify-center rounded-xl border-2 border-dashed border-border text-center">
+            <div className="flex h-64 flex-col items-center justify-center border-2 border-dashed border-border text-center">
               <FolderOpen className="h-12 w-12 text-muted-foreground/30" />
               <p className="mt-4 text-lg font-medium text-foreground">
                 {searchQuery
@@ -553,7 +556,7 @@ export default function ManagePage() {
               {!searchQuery && (
                 <button
                   onClick={() => setUploadModalOpen(true)}
-                  className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  className="mt-4 flex items-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   <Upload className="h-4 w-4" />
                   Muat Naik Dokumen Pertama
@@ -561,7 +564,7 @@ export default function ManagePage() {
               )}
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-border bg-card">
+            <div className="overflow-hidden border border-border bg-card/40 backdrop-blur-sm">
               {/* Modern Table Design */}
               <table className="w-full">
                 <thead>
@@ -627,7 +630,7 @@ export default function ManagePage() {
                           <div className="flex items-center gap-3">
                             <div
                               className={cn(
-                                "shrink-0 rounded-lg p-2",
+                                "shrink-0 p-2",
                                 doc.status === "ready" && "bg-primary/10",
                                 doc.status === "processing" && "bg-accent/10",
                                 doc.status === "error" && "bg-destructive/10"

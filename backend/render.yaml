@@ -3,7 +3,7 @@ services:
     name: lingua-rakyat-backend
     runtime: python
     pythonVersion: 3.12.0
-    buildCommand: pip install -r requirements.txt
+    buildCommand: apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-msa tesseract-ocr-chi-sim libgl1 && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: free
     envVars:
@@ -25,3 +25,7 @@ services:
         value: llama-3.3-70b-versatile
       - key: LLM_PROVIDER
         value: groq
+      - key: COHERE_API_KEY
+        sync: false
+      - key: TESSERACT_LANGS
+        value: eng+msa+chi_sim

@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { Inter, Sora } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 
 import "./globals.css"
@@ -7,18 +6,23 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { LanguageProvider } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Fps } from "@/components/ui/fps"
 import { Analytics } from "@vercel/analytics/next"
 import CommandPaletteTopRight from "@/components/navbar"
 
+import { Sora, JetBrains_Mono } from "next/font/google"
+
 const sora = Sora({
   subsets: ["latin"],
-  variable: "--font-heading",
-  weight: ["500", "600", "700"],
+  variable: "--font-sans",
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 })
-const inter = Inter({
+
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-mono",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 })
 
 export const metadata: Metadata = {
@@ -60,7 +64,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", sora.className, inter.className)}
+      className={cn("antialiased", sora.variable, jetbrainsMono.variable)}
     >
       <body className="min-h-screen bg-background text-foreground">
         <ThemeProvider
@@ -73,6 +77,7 @@ export default function RootLayout({
             <TooltipProvider>
               <Toaster richColors expand={true} position="top-center" />
               {children}
+              <CommandPaletteTopRight />
             </TooltipProvider>
           </LanguageProvider>
         </ThemeProvider>

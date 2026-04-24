@@ -101,7 +101,7 @@ lingua-rakyat/
 - `/workspace`: chat experience for asking questions about a selected document
 - `/manage`: upload, list, and delete documents
 - `/eval`: evaluation dashboard and streamed test suite
-- `/results`: static competition-style showcase page
+- `/results`: static project showcase page (not user-specific results)
 
 ## Backend API Overview
 

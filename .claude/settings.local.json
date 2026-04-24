@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(json|ts|js\\)$\")",
+      "Bash(grep -E \"\\\\.\\(py|txt|yaml|json\\)$\")",
+      "Bash(pnpm run *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(pkill -f \"npm run dev\")",
+      "Read(//c/Users/SCSM11/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/**)",
+      "Bash(python scripts/search.py \"civic AI government document tool civic professional minimal\" --design-system -p \"Lingua Rakyat\" -f markdown)",
+      "PowerShell(Get-Command *)"
+    ]
+  }
+}

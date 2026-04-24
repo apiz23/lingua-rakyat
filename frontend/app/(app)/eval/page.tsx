@@ -66,7 +66,7 @@ function MetricCard({
   icon?: React.ComponentType<{ className?: string }>
 }) {
   return (
-    <div className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-md">
+    <div className="group border border-border bg-card/40 p-5 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-md">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
@@ -78,7 +78,7 @@ function MetricCard({
           {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
         </div>
         {Icon && (
-          <div className={cn("rounded-lg p-2.5", bg)}>
+          <div className={cn("p-2.5", bg)}>
             <Icon className={cn("h-5 w-5", color)} />
           </div>
         )}
@@ -149,35 +149,35 @@ function ScoreBar({
 
 // ── Language Table ─────────────────────────────────────────────────────────
 
-const LANG_LABELS: Record<string, { name: string; flag: string }> = {
-  en: { name: "English", flag: "🇬🇧" },
-  ms: { name: "Bahasa Melayu", flag: "🇲🇾" },
-  id: { name: "Indonesian", flag: "🇮🇩" },
-  "zh-cn": { name: "中文", flag: "🇨🇳" },
-  tl: { name: "Tagalog", flag: "🇵🇭" },
-  th: { name: "Thai", flag: "🇹🇭" },
-  vi: { name: "Vietnamese", flag: "🇻🇳" },
-  jv: { name: "Javanese", flag: "🇮🇩" },
-  ceb: { name: "Cebuano", flag: "🇵🇭" },
+const LANG_LABELS: Record<string, { name: string; code: string }> = {
+  en: { name: "English", code: "EN" },
+  ms: { name: "Bahasa Melayu", code: "MS" },
+  id: { name: "Indonesian", code: "ID" },
+  "zh-cn": { name: "中文", code: "ZH" },
+  tl: { name: "Tagalog", code: "TL" },
+  th: { name: "Thai", code: "TH" },
+  vi: { name: "Vietnamese", code: "VI" },
+  jv: { name: "Javanese", code: "JV" },
+  ceb: { name: "Cebuano", code: "CEB" },
 }
 
 // ── Category Labels ───────────────────────────────────────────────────────
-const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
-  all: { label: "All", emoji: "📋" },
-  housing: { label: "Housing", emoji: "🏠" },
-  healthcare: { label: "Healthcare", emoji: "🏥" },
-  student_loans: { label: "Student Loans", emoji: "🎓" },
-  social_welfare: { label: "Welfare", emoji: "🤝" },
-  immigration: { label: "Immigration", emoji: "🛂" },
+const CATEGORY_LABELS: Record<string, { label: string }> = {
+  all: { label: "All" },
+  housing: { label: "Housing" },
+  healthcare: { label: "Healthcare" },
+  student_loans: { label: "Student Loans" },
+  social_welfare: { label: "Welfare" },
+  immigration: { label: "Immigration" },
 }
 
 // ── Rate Limit Banner ──────────────────────────────────────────────────────
 function RateLimitBanner() {
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm dark:border-blue-800 dark:bg-blue-950">
-      <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-      <div className="text-blue-800 dark:text-blue-200">
-        <span className="font-medium">API Rate Limits active:</span> Chat is
+    <div className="flex items-start gap-3 border border-border bg-muted/30 px-4 py-3 text-sm">
+      <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="text-muted-foreground">
+        <span className="font-medium text-foreground">API Rate Limits active:</span> Chat is
         limited to <span className="font-mono font-medium">30 req/min</span>,
         uploads to <span className="font-mono font-medium">10 req/min</span> per
         IP. Returns HTTP 429 with{" "}
@@ -429,7 +429,7 @@ export default function EvalPage() {
               <button
                 onClick={fetchReport}
                 disabled={loadingReport}
-                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
+                className="flex items-center justify-center gap-2 border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
               >
                 <RefreshCw
                   className={cn("h-4 w-4", loadingReport && "animate-spin")}
@@ -438,49 +438,14 @@ export default function EvalPage() {
               </button>
               <button
                 onClick={handleClear}
-                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
+                className="flex items-center justify-center gap-2 border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />
                 <span>Clear</span>
               </button>
             </div>
           }
-        >
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-primary/10 p-2">
-                <FlaskConical className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">
-                  Evaluation Dashboard
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Lingua Rakyat · Model Performance & Validation
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={fetchReport}
-                disabled={loadingReport}
-                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
-              >
-                <RefreshCw
-                  className={cn("h-4 w-4", loadingReport && "animate-spin")}
-                />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
-              <button
-                onClick={handleClear}
-                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Clear</span>
-              </button>
-            </div>
-          </div>
-        </PageIntro>
+        />
 
         {/* Rate limit info */}
         <RateLimitBanner />
@@ -491,14 +456,14 @@ export default function EvalPage() {
             <BarChart3 className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Live Performance Metrics</h2>
             {hasMetrics && (
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+              <span className="bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                 {report.total_queries} queries recorded
               </span>
             )}
           </div>
 
           {!hasMetrics ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-16 text-center">
+            <div className="flex flex-col items-center justify-center border-2 border-dashed border-border py-16 text-center">
               <BarChart3 className="mx-auto mb-3 h-12 w-12 text-muted-foreground/30" />
               <p className="font-medium text-muted-foreground">
                 No metrics yet
@@ -595,10 +560,10 @@ export default function EvalPage() {
               {/* Readability note */}
               <div
                 className={cn(
-                  "flex items-center gap-2 rounded-lg border px-4 py-3 text-sm",
+                  "flex items-center gap-2 border px-4 py-3 text-sm",
                   report.readability.avg_fk_grade <= 6
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                    : "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200"
+                    ? "border-primary/20 bg-primary/5 text-primary"
+                    : "border-border bg-muted/30 text-muted-foreground"
                 )}
               >
                 {report.readability.avg_fk_grade <= 6 ? (
@@ -617,7 +582,7 @@ export default function EvalPage() {
                     {report.generation_quality!.samples_with_ground_truth}{" "}
                     graded samples)
                   </h3>
-                  <div className="space-y-4 rounded-xl border border-border bg-card p-6">
+                  <div className="space-y-4 border border-border bg-card/40 p-6 backdrop-blur-sm">
                     <ScoreBar
                       label="ROUGE-1 F1 (unigram overlap)"
                       value={report.generation_quality!.avg_rouge1_f1}
@@ -652,7 +617,7 @@ export default function EvalPage() {
                   <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                     <Globe className="h-4 w-4" /> Per-Language Breakdown
                   </h3>
-                  <div className="overflow-hidden rounded-xl border border-border bg-card">
+                  <div className="overflow-hidden border border-border bg-card/40 backdrop-blur-sm">
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[720px] text-sm">
                       <thead>
@@ -688,7 +653,6 @@ export default function EvalPage() {
                               >
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-2">
-                                    <span>{info.flag}</span>
                                     <span className="font-medium">
                                       {info.name}
                                     </span>
@@ -743,7 +707,7 @@ export default function EvalPage() {
             </h2>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-6">
+          <div className="border border-border bg-card/40 p-6 backdrop-blur-sm">
             <p className="mb-3 text-sm text-muted-foreground">
               Run the built-in{" "}
               <span className="font-medium text-foreground">
@@ -756,57 +720,35 @@ export default function EvalPage() {
             {/* Category breakdown pills */}
             <div className="mb-4 flex flex-wrap gap-2">
               {[
-                { key: "housing", emoji: "🏠", label: "Housing", count: 9 },
-                {
-                  key: "student_loans",
-                  emoji: "🎓",
-                  label: "Student Loans",
-                  count: 8,
-                },
-                {
-                  key: "healthcare",
-                  emoji: "🏥",
-                  label: "Healthcare",
-                  count: 7,
-                },
-                {
-                  key: "social_welfare",
-                  emoji: "🤝",
-                  label: "Welfare",
-                  count: 3,
-                },
-                {
-                  key: "immigration",
-                  emoji: "🛂",
-                  label: "Immigration",
-                  count: 2,
-                },
+                { key: "housing", label: "Housing", count: 9 },
+                { key: "student_loans", label: "Student Loans", count: 8 },
+                { key: "healthcare", label: "Healthcare", count: 7 },
+                { key: "social_welfare", label: "Welfare", count: 3 },
+                { key: "immigration", label: "Immigration", count: 2 },
               ].map((cat) => (
                 <span
                   key={cat.key}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/30 px-3 py-1 text-xs text-muted-foreground"
+                  className="inline-flex items-center gap-1.5 border border-border bg-muted/30 px-3 py-1 text-xs text-muted-foreground"
                 >
-                  <span>{cat.emoji}</span>
                   <span className="font-medium text-foreground">
                     {cat.label}
                   </span>
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums">
+                  <span className="bg-muted px-1.5 py-0.5 text-[10px] tabular-nums">
                     {cat.count}
                   </span>
                 </span>
               ))}
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/30 px-3 py-1 text-xs text-muted-foreground">
-                <span>🌐</span>
+              <span className="inline-flex items-center gap-1 border border-border bg-muted/30 px-3 py-1 text-xs text-muted-foreground">
                 <span>EN · MS · ZH-CN</span>
               </span>
             </div>
 
             {/* Detected category / unrelated warning */}
             {detectedCategory === "unrelated" && skippedReason && (
-              <div className="flex items-start gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 dark:border-orange-800 dark:bg-orange-950">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
-                <div className="text-sm text-orange-800 dark:text-orange-200">
-                  <p className="mb-1 font-medium">
+              <div className="flex items-start gap-3 border border-border bg-muted/30 px-4 py-3">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-1 font-medium text-foreground">
                     Document not matched to any test category
                   </p>
                   <p className="text-xs opacity-90">
@@ -819,9 +761,9 @@ export default function EvalPage() {
               </div>
             )}
             {detectedCategory && detectedCategory !== "unrelated" && (
-              <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 dark:border-emerald-800 dark:bg-emerald-950">
-                <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-sm text-emerald-800 dark:text-emerald-200">
+              <div className="flex items-center gap-2 border border-primary/20 bg-primary/5 px-4 py-2.5">
+                <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
+                <span className="text-sm text-primary">
                   Detected category:{" "}
                   <span className="font-medium capitalize">
                     {detectedCategory.replace("_", " ")}
@@ -840,7 +782,7 @@ export default function EvalPage() {
                 value={selectedDocId}
                 onChange={(e) => setSelectedDocId(e.target.value)}
                 disabled={loadingTest}
-                className="w-full flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none disabled:opacity-50"
+                className="w-full flex-1 border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none disabled:opacity-50"
               >
                 {documents.length === 0 ? (
                   <option value="">No documents ready</option>
@@ -857,7 +799,7 @@ export default function EvalPage() {
                 value={evalModel}
                 onChange={(e) => setEvalModel(e.target.value)}
                 disabled={loadingTest}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground focus:border-primary focus:outline-none disabled:opacity-50 sm:w-72"
+                className="w-full border border-border bg-background px-3 py-2 text-sm text-muted-foreground focus:border-primary focus:outline-none disabled:opacity-50 sm:w-72"
                 title="Model to use for test suite"
               >
                 <option value="">Auto (qwen3-32b default)</option>
@@ -870,7 +812,7 @@ export default function EvalPage() {
               {loadingTest ? (
                 <button
                   onClick={handleCancelTest}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 sm:w-auto sm:justify-start"
+                  className="flex w-full items-center justify-center gap-2 border border-destructive/50 bg-destructive/10 px-5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 sm:w-auto sm:justify-start"
                 >
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Cancel
@@ -879,7 +821,7 @@ export default function EvalPage() {
                 <button
                   onClick={handleRunTestSuite}
                   disabled={!selectedDocId}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
+                  className="flex w-full items-center justify-center gap-2 bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
                 >
                   <Play className="h-4 w-4" />
                   Run Test Suite
@@ -931,20 +873,6 @@ export default function EvalPage() {
                     </p>
                     <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
                       {streamProgress.liveResults.map((r, i) => {
-                        const LANG: Record<string, string> = {
-                          en: "🇬🇧",
-                          ms: "🇲🇾",
-                          "zh-cn": "🇨🇳",
-                          id: "🇮🇩",
-                          tl: "🇵🇭",
-                        }
-                        const CAT: Record<string, string> = {
-                          housing: "🏠",
-                          healthcare: "🏥",
-                          student_loans: "🎓",
-                          social_welfare: "🤝",
-                          immigration: "🛂",
-                        }
                         const r1 = r.scores.rouge1_f1
                         const barColor =
                           r1 >= 0.4
@@ -952,16 +880,18 @@ export default function EvalPage() {
                             : r1 >= 0.2
                               ? "bg-blue-500"
                               : "bg-orange-400"
+                        const langInfo = LANG_LABELS[r.language] ?? { name: r.language, code: r.language.toUpperCase() }
+                        const catInfo = CATEGORY_LABELS[r.category ?? ""] ?? { label: r.category ?? "" }
                         return (
                           <div
                             key={i}
-                            className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs"
+                            className="flex items-center gap-3 border border-border bg-muted/20 px-3 py-2 text-xs"
                           >
-                            <span className="shrink-0 text-sm">
-                              {LANG[r.language] ?? "🌐"}
+                            <span className="shrink-0 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                              {langInfo.code}
                             </span>
-                            <span className="shrink-0">
-                              {CAT[r.category ?? ""] ?? "📄"}
+                            <span className="shrink-0 text-muted-foreground">
+                              {catInfo.label}
                             </span>
                             <span className="flex-1 truncate text-foreground/80">
                               {r.question}
@@ -994,7 +924,7 @@ export default function EvalPage() {
             {testResult && (
               <div className="mt-6 space-y-5">
                 {/* Aggregate */}
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <div className="border border-primary/20 bg-primary/5 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-primary" />
                     <span className="font-semibold text-primary">
@@ -1024,7 +954,7 @@ export default function EvalPage() {
                     ].map(({ label, value }) => (
                       <div
                         key={label}
-                        className="rounded-md border border-border/50 bg-card p-3 text-center"
+                        className="border border-border/50 bg-card p-3 text-center"
                       >
                         <p className="text-xs text-muted-foreground">{label}</p>
                         <p className="mt-1 text-xl font-bold text-foreground tabular-nums">
@@ -1075,13 +1005,12 @@ export default function EvalPage() {
                         key={key}
                         onClick={() => setCategoryFilter(key)}
                         className={cn(
-                          "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                          "flex items-center gap-1.5 border px-3 py-1 text-xs font-medium transition-all",
                           categoryFilter === key
                             ? "border-primary bg-primary/10 text-primary"
                             : "border-border bg-card text-muted-foreground hover:border-primary/30"
                         )}
                       >
-                        <span>{val.emoji}</span>
                         {val.label}
                         <span className="rounded-full bg-muted px-1.5 text-[10px]">
                           {count}
@@ -1093,9 +1022,9 @@ export default function EvalPage() {
 
                 {/* Failed cases warning */}
                 {testResult.errors.length > 0 && (
-                  <div className="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 dark:border-orange-800 dark:bg-orange-950">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
-                    <div className="text-sm text-orange-800 dark:text-orange-200">
+                  <div className="flex items-start gap-2 border border-border bg-muted/30 px-4 py-3">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="text-sm text-muted-foreground">
                       <span className="font-medium">
                         {testResult.errors.length} case(s) failed:
                       </span>{" "}
@@ -1125,25 +1054,26 @@ export default function EvalPage() {
                       const isOpen = expandedCases.has(i)
                       const info = LANG_LABELS[r.language] ?? {
                         name: r.language,
-                        flag: "🌐",
+                        code: r.language.toUpperCase(),
                       }
                       const catInfo = CATEGORY_LABELS[r.category ?? ""] ?? {
-                        emoji: "📄",
                         label: r.category ?? "",
                       }
                       return (
                         <div
                           key={i}
-                          className="overflow-hidden rounded-lg border border-border"
+                          className="overflow-hidden border border-border"
                         >
                           <button
                             onClick={() => toggleCase(i)}
-                            className="flex w-full items-center justify-between bg-card px-4 py-3 text-left hover:bg-muted/30"
+                            className="flex w-full items-center justify-between bg-card/40 px-4 py-3 text-left hover:bg-muted/30"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-sm">{info.flag}</span>
-                              <span className="hidden items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground sm:inline-flex">
-                                {catInfo.emoji} {catInfo.label}
+                              <span className="bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                                {info.code}
+                              </span>
+                              <span className="hidden items-center gap-1 border border-border px-2 py-0.5 text-[10px] text-muted-foreground sm:inline-flex">
+                                {catInfo.label}
                               </span>
                               <span className="line-clamp-1 max-w-xs text-sm font-medium">
                                 {r.question}
@@ -1183,7 +1113,7 @@ export default function EvalPage() {
                                 ].map(({ label, value }) => (
                                   <div
                                     key={label}
-                                    className="rounded-md border border-border/50 bg-card p-2 text-center"
+                                    className="border border-border/50 bg-card p-2 text-center"
                                   >
                                     <p className="text-[10px] text-muted-foreground">
                                       {label}
@@ -1199,7 +1129,7 @@ export default function EvalPage() {
                                   <p className="mb-1 font-medium text-muted-foreground">
                                     Answer:
                                   </p>
-                                  <p className="rounded border border-border/50 bg-card p-2 leading-relaxed text-foreground/80">
+                                  <p className="border border-border/50 bg-card p-2 leading-relaxed text-foreground/80">
                                     {r.answer}
                                   </p>
                                 </div>
@@ -1207,7 +1137,7 @@ export default function EvalPage() {
                                   <p className="mb-1 font-medium text-muted-foreground">
                                     Ground Truth:
                                   </p>
-                                  <p className="rounded border border-emerald-200 bg-emerald-50 p-2 leading-relaxed text-foreground/80 dark:border-emerald-800 dark:bg-emerald-950">
+                                  <p className="border border-emerald-200 bg-emerald-50 p-2 leading-relaxed text-foreground/80 dark:border-emerald-800 dark:bg-emerald-950">
                                     {r.ground_truth}
                                   </p>
                                 </div>
@@ -1239,7 +1169,7 @@ export default function EvalPage() {
             <BookOpen className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Text Simplification Demo</h2>
           </div>
-          <div className="rounded-xl border border-border bg-card p-6">
+          <div className="border border-border bg-card/40 p-6 backdrop-blur-sm">
             <p className="mb-5 text-sm text-muted-foreground">
               Bureaucratic and legal language is automatically simplified into
               plain language before answers are shown to users.
@@ -1259,10 +1189,12 @@ export default function EvalPage() {
                   return (
                     <div
                       key={i}
-                      className="overflow-hidden rounded-lg border border-border"
+                      className="overflow-hidden border border-border"
                     >
                       <div className="flex items-center gap-2 bg-muted/30 px-4 py-2">
-                        <span className="text-sm">{info.flag}</span>
+                        <span className="bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                          {info.code}
+                        </span>
                         <span className="text-xs font-medium text-muted-foreground">
                           {info.name}
                         </span>
@@ -1305,7 +1237,7 @@ export default function EvalPage() {
               Cross-Lingual Query Augmentation
             </h2>
           </div>
-          <div className="space-y-4 rounded-xl border border-border bg-card p-6">
+          <div className="space-y-4 border border-border bg-card/40 p-6 backdrop-blur-sm">
             <p className="text-sm text-muted-foreground">
               Enter a question to see it automatically translated into all
               supported SEA languages. This demonstrates dialect-aware
@@ -1315,7 +1247,7 @@ export default function EvalPage() {
               <select
                 value={augmentLang}
                 onChange={(e) => setAugmentLang(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none sm:w-56"
+                className="w-full border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none sm:w-56"
               >
                 <option value="en">🇬🇧 English</option>
                 <option value="ms">🇲🇾 Malay</option>
@@ -1327,12 +1259,12 @@ export default function EvalPage() {
                 onChange={(e) => setAugmentInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAugment()}
                 placeholder="How do I apply for housing aid?"
-                className="w-full flex-1 rounded-lg border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                className="w-full flex-1 border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
               />
               <button
                 onClick={handleAugment}
                 disabled={loadingAugment || !augmentInput.trim()}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 sm:w-auto"
+                className="flex w-full items-center justify-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 sm:w-auto"
               >
                 {loadingAugment ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1355,9 +1287,9 @@ export default function EvalPage() {
                   return (
                     <div
                       key={lang}
-                      className="flex items-start gap-3 rounded-lg border border-border bg-muted/20 p-3"
+                      className="flex items-start gap-3 border border-border bg-muted/20 p-3"
                     >
-                      <span className="shrink-0 text-lg">{info.flag}</span>
+                      <span className="shrink-0 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                           {isParaphrase

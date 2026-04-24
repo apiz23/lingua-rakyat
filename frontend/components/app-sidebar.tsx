@@ -10,10 +10,6 @@ import {
   Command,
   MessageSquare,
   Languages,
-  Home,
-  Github,
-  Linkedin,
-  Twitter,
 } from "lucide-react"
 import logo from "@/public/icons/android-chrome-512x512.png"
 
@@ -66,7 +62,7 @@ const navItems: NavItem[] = [
   },
   {
     href: "/results",
-    label: "Results",
+    label: "Showcase",
     icon: Target,
   },
 ] as const
@@ -74,6 +70,9 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const pathname = usePathname()
   const { language, toggleLanguage } = useLanguage()
+
+  // Fixed repository URL - replace with your actual repo URL
+  const REPO_URL = "https://github.com/apiz23/lingua-rakyat"
 
   const copy =
     language === "ms"
@@ -86,6 +85,7 @@ export function AppSidebar() {
           language: "Tukar bahasa",
           shortcuts: "Ctrl/Cmd + B",
           followUs: "Ikuti kami",
+          repository: "Repositori",
         }
       : {
           appName: "Lingua Rakyat",
@@ -96,6 +96,7 @@ export function AppSidebar() {
           language: "Toggle language",
           shortcuts: "Ctrl/Cmd + B",
           followUs: "Follow us",
+          repository: "Repository",
         }
 
   return (
@@ -114,7 +115,7 @@ export function AppSidebar() {
               className="hover:bg-primary/5 data-[state=open]:bg-primary/5"
             >
               <Link href="/" className="group">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 p-0.5 transition-all group-hover:from-primary/30 group-hover:to-primary/20">
+                <div className="flex aspect-square size-8 items-center justify-center bg-primary/10 p-0.5 transition-colors group-hover:bg-primary/20">
                   <Image
                     src={logo}
                     alt="Lingua Rakyat logo"
@@ -163,7 +164,7 @@ export function AppSidebar() {
                   >
                     <Link
                       href={item.href}
-                      className="group flex min-h-10 items-center gap-2 rounded-md px-2 py-1"
+                      className="group flex min-h-10 items-center gap-2 px-2 py-1"
                     >
                       <Icon
                         className={cn(
@@ -188,35 +189,38 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
             {copy.actions}
           </SidebarGroupLabel>
           <SidebarMenu className="space-y-1.5">
             <SidebarMenuItem>
               <SidebarMenuButton
-                asChild
-                tooltip={copy.home}
-                className="hover:bg-primary/5 hover:text-primary"
-              >
-                <Link
-                  href="/"
-                  className="flex min-h-10 items-center gap-2 rounded-md px-2 py-1"
-                >
-                  <Home className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                  <span>{copy.home}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-
-            <SidebarMenuItem>
-              <SidebarMenuButton
                 onClick={toggleLanguage}
                 tooltip={copy.language}
-                className="flex min-h-10 items-center gap-2 rounded-md px-2 py-1 hover:bg-primary/5 hover:text-primary"
+                className="flex min-h-10 items-center gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary"
               >
                 <Languages className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                 <span>{copy.language}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            {/* Fixed Repository Link - Now properly placed inside SidebarMenu */}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip={copy.repository}
+                className="flex min-h-10 items-center gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary"
+              >
+                <Link
+                  href={REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <GithubIcon size={16} />
+                  <span>{copy.repository}</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -227,10 +231,10 @@ export function AppSidebar() {
         <div className="px-2 pb-3 group-data-[collapsible=icon]:hidden">
           <div className="flex items-center gap-2">
             <Link
-              href="https://github.com/apiz23/lingua-rakyat"
+              href={REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+              className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
             >
               <GithubIcon size={20} />
             </Link>
@@ -239,7 +243,7 @@ export function AppSidebar() {
               href="https://www.linkedin.com/in/muh-hafizuddin/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+              className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
             >
               <LinkedinIcon size={20} />
             </Link>
