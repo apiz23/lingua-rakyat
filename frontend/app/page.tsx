@@ -454,13 +454,16 @@ export default function Home() {
             </motion.div>
 
             {/* Split Layout: Visual on top for mobile, right side for desktop */}
-            <div className="grid grid-cols-1 items-center gap-8 sm:gap-12 lg:grid-cols-12 lg:gap-16">
-              {/* Visual - appears first on mobile, last on desktop */}
+            {/* Split Layout: Flex container */}
+            {/* flex-col: Visual on top | lg:flex-row-reverse: Visual on right on desktop */}
+            <div className="flex flex-col items-center gap-8 lg:flex-row-reverse lg:justify-between lg:gap-12">
+              {/* 1. Visual Block (SVG/LiquidMetal) */}
+              {/* Mobile: Top | Desktop: Right side (approx 40% width) */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.3, ease }}
-                className="relative h-[240px] w-full overflow-hidden sm:h-[280px] lg:order-last lg:h-[400px] xl:h-[500px]"
+                className="relative h-[240px] w-full overflow-hidden sm:h-[280px] lg:h-[400px] lg:w-5/12 xl:h-[500px]"
               >
                 <HeroLiquidMetalRoot
                   desktopShaderProps={{
@@ -488,7 +491,7 @@ export default function Home() {
                       />
                     </div>
 
-                    {/* Mobile visual - visible only on mobile, better positioned */}
+                    {/* Mobile visual - visible only on mobile */}
                     <div className="-mt-8 h-full w-full lg:hidden">
                       <HeroLiquidMetalMobileVisual
                         mobileShaderProps={{
@@ -505,12 +508,13 @@ export default function Home() {
                 </HeroLiquidMetalRoot>
               </motion.div>
 
-              {/* Text Content */}
+              {/* 2. Text Content Block */}
+              {/* Mobile: Bottom | Desktop: Left side (approx 55% width) */}
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="text-center sm:col-span-7 lg:text-left"
+                className="w-full text-center lg:w-7/12 lg:text-left"
               >
                 <motion.div
                   variants={itemVariants}
