@@ -8,20 +8,32 @@ import { cn } from "@/lib/utils"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Analytics } from "@vercel/analytics/next"
 import CommandPaletteTopRight from "@/components/navbar"
+import OfflineProvider from "@/components/offline-provider"
 
-import { Sora, JetBrains_Mono } from "next/font/google"
+import {
+  Atkinson_Hyperlegible,
+  Bricolage_Grotesque,
+  JetBrains_Mono,
+} from "next/font/google"
 
-const sora = Sora({
+const atkinson = Atkinson_Hyperlegible({
   subsets: ["latin"],
   variable: "--font-sans",
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "700"],
+  display: "swap",
+})
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  weight: ["500", "600", "700", "800"],
   display: "swap",
 })
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-  weight: ["400", "500", "600", "700"],
+  weight: ["500", "600", "700"],
   display: "swap",
 })
 
@@ -64,7 +76,12 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", sora.variable, jetbrainsMono.variable)}
+      className={cn(
+        "antialiased",
+        atkinson.variable,
+        bricolage.variable,
+        jetbrainsMono.variable
+      )}
     >
       <body className="min-h-screen bg-background text-foreground">
         <ThemeProvider
@@ -77,6 +94,7 @@ export default function RootLayout({
             <TooltipProvider>
               <Toaster richColors expand={true} position="top-center" />
               {children}
+              <OfflineProvider />
               <CommandPaletteTopRight />
             </TooltipProvider>
           </LanguageProvider>

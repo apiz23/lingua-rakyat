@@ -1,6 +1,15 @@
 // src/lib/api.ts
 // All API calls to the FastAPI backend go through this file
 
+import {
+  cacheAnswerSources,
+  cacheDocuments,
+  cacheHistory,
+  getCachedDocuments,
+  getCachedHistory,
+  offlineSearchAnswer,
+} from "@/lib/offline-cache"
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -27,6 +36,13 @@ export type SourceChunk = {
   text: string
   document_id: string
   score: number
+  doc_name?: string
+  page_start?: number | null
+  page_end?: number | null
+  section_title?: string
+  vector_score?: number
+  rerank_score?: number
+  confidence_label?: "high" | "medium" | "low"
 }
 
 export type AskResponse = {
@@ -36,6 +52,7 @@ export type AskResponse = {
   question: string
   timestamp: string
   confidence: number
+  confidence_label?: "high" | "medium" | "low"
   latency_ms: number
   model_used?: string
   retrieval_mode?: "single_query" | "augmented"
@@ -55,6 +72,7 @@ export type ChatHistoryMessage = {
   sources: SourceChunk[]
   timestamp: string
   confidence: number
+  confidence_label?: "high" | "medium" | "low"
   latency_ms: number
   model_used?: string
   sufficient_evidence?: boolean
@@ -168,10 +186,28 @@ async function apiFetch(
 
 // ── Document API ───────────────────────────────────────────────────────────
 
-export async function uploadDocument(file: File): Promise<UploadDocumentResponse> {
+export async function verifyUploadToken(token: string): Promise<void> {
+  const params = new URLSearchParams({ token })
+  const res = await apiFetch(
+    `${API_URL}/api/documents/verify-token?${params}`,
+    {
+      method: "POST",
+    }
+  )
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.detail || "Invalid token")
+  }
+}
+
+export async function uploadDocument(
+  file: File,
+  uploadToken: string
+): Promise<UploadDocumentResponse> {
   const formData = new FormData()
   formData.append("file", file)
-  const res = await apiFetch(`${API_URL}/api/documents/upload`, {
+  const params = new URLSearchParams({ upload_token: uploadToken })
+  const res = await apiFetch(`${API_URL}/api/documents/upload?${params}`, {
     method: "POST",
     body: formData,
   })
@@ -179,13 +215,23 @@ export async function uploadDocument(file: File): Promise<UploadDocumentResponse
     const error = await res.json()
     throw new Error(error.detail || "Upload failed")
   }
-  return res.json()
+  const result = await res.json()
+  cacheDocuments([result.document, ...getCachedDocuments()])
+  return result
 }
 
 export async function listDocuments(): Promise<Document[]> {
-  const res = await apiFetch(`${API_URL}/api/documents/`)
-  if (!res.ok) throw new Error("Failed to fetch documents")
-  return res.json()
+  try {
+    const res = await apiFetch(`${API_URL}/api/documents/`)
+    if (!res.ok) throw new Error("Failed to fetch documents")
+    const documents = await res.json()
+    cacheDocuments(documents)
+    return documents
+  } catch (error) {
+    const cached = getCachedDocuments()
+    if (cached.length) return cached
+    throw error
+  }
 }
 
 export async function deleteDocument(documentId: string): Promise<void> {
@@ -193,6 +239,27 @@ export async function deleteDocument(documentId: string): Promise<void> {
     method: "DELETE",
   })
   if (!res.ok) throw new Error("Failed to delete document")
+}
+
+export async function renameDocument(
+  documentId: string,
+  name: string,
+  uploadToken: string
+): Promise<Document> {
+  const res = await apiFetch(`${API_URL}/api/documents/${documentId}/rename`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, upload_token: uploadToken }),
+  })
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Rename failed" }))
+    throw new Error(error.detail || "Rename failed")
+  }
+  const updated = await res.json()
+  cacheDocuments(
+    getCachedDocuments().map((doc) => (doc.id === updated.id ? updated : doc))
+  )
+  return updated
 }
 
 // ── FIX: Re-sync chunk counts from Pinecone ───────────────────────────────
@@ -254,9 +321,23 @@ export async function getChatHistory(params: {
   if (params.documentId) search.set("document_id", params.documentId)
   if (params.sessionId) search.set("session_id", params.sessionId)
 
-  const res = await apiFetch(`${API_URL}/api/chat/history?${search.toString()}`)
-  if (!res.ok) throw new Error("Failed to fetch chat history")
-  return res.json()
+  try {
+    const res = await apiFetch(
+      `${API_URL}/api/chat/history?${search.toString()}`
+    )
+    if (!res.ok) throw new Error("Failed to fetch chat history")
+    const messages = await res.json()
+    cacheHistory(messages)
+    return messages
+  } catch (error) {
+    const cached = getCachedHistory({
+      userId: params.userId,
+      documentId: params.documentId,
+      sessionId: params.sessionId,
+    })
+    if (cached.length) return cached
+    throw error
+  }
 }
 
 export async function clearChatHistory(params: {
@@ -350,6 +431,7 @@ export type ChatStreamEvent =
       language: string
       sources: SourceChunk[]
       confidence: number
+      confidence_label?: "high" | "medium" | "low"
       latency_ms: number
       model_used: string
       sufficient_evidence: boolean
@@ -371,20 +453,83 @@ export async function askQuestionStream(
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/api/chat/ask-stream`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: userId,
-      document_id: documentId,
-      document_name: documentName,
-      session_id: sessionId,
+  const runOfflineFallback = () => {
+    const startedAt = Date.now()
+    const result = offlineSearchAnswer({
       question,
-      model_override: modelOverride,
-      enable_query_augmentation: enableQueryAugmentation,
-    }),
-    signal,
-  })
+      documentId,
+      documentName,
+    })
+    const complete = {
+      type: "complete" as const,
+      answer: result.answer,
+      language: "ms",
+      sources: result.sources,
+      confidence: result.confidence,
+      confidence_label: result.confidence_label,
+      latency_ms: Date.now() - startedAt,
+      model_used: "offline-cache",
+      sufficient_evidence: result.sources.length > 0,
+      cached: true,
+      retrieval_mode: "offline_cache",
+      query_variants_used: [question],
+      top_query_variant: question,
+    }
+
+    onEvent({ type: "start" })
+    onEvent({
+      type: "retrieval",
+      language: complete.language,
+      retrieval_mode: complete.retrieval_mode,
+      query_variants_used: complete.query_variants_used,
+      top_query_variant: complete.top_query_variant,
+      sufficient_evidence: complete.sufficient_evidence,
+    })
+    onEvent({ type: "token", text: complete.answer })
+    onEvent({ type: "sources", sources: complete.sources })
+    onEvent(complete)
+    cacheHistory([
+      {
+        id: `${sessionId}-${new Date().toISOString()}`,
+        user_id: userId,
+        session_id: sessionId,
+        document_id: documentId,
+        question,
+        answer: complete.answer,
+        language: complete.language,
+        sources: complete.sources,
+        timestamp: new Date().toISOString(),
+        confidence: complete.confidence,
+        confidence_label: complete.confidence_label,
+        latency_ms: complete.latency_ms,
+        model_used: complete.model_used,
+        sufficient_evidence: complete.sufficient_evidence,
+      },
+    ])
+  }
+
+  let res: Response
+  try {
+    res = await fetch(`${API_URL}/api/chat/ask-stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: userId,
+        document_id: documentId,
+        document_name: documentName,
+        session_id: sessionId,
+        question,
+        model_override: modelOverride,
+        enable_query_augmentation: enableQueryAugmentation,
+      }),
+      signal,
+    })
+  } catch (error) {
+    if (signal?.aborted) throw error
+    runOfflineFallback()
+    return
+  }
+
   if (res.status === 429) {
     const retryAfter = res.headers.get("Retry-After") ?? "60"
     throw new Error(
@@ -392,6 +537,10 @@ export async function askQuestionStream(
     )
   }
   if (!res.ok || !res.body) {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      runOfflineFallback()
+      return
+    }
     const err = await res.json().catch(() => ({ detail: "Stream failed" }))
     throw new Error(err.detail || "Stream failed")
   }
@@ -409,6 +558,33 @@ export async function askQuestionStream(
       try {
         const event: ChatStreamEvent = JSON.parse(line.slice(6))
         onEvent(event)
+        if (event.type === "complete") {
+          cacheAnswerSources({
+            documentId,
+            documentName,
+            question,
+            answer: event.answer,
+            sources: event.sources ?? [],
+          })
+          cacheHistory([
+            {
+              id: `${sessionId}-${new Date().toISOString()}`,
+              user_id: userId,
+              session_id: sessionId,
+              document_id: documentId,
+              question,
+              answer: event.answer,
+              language: event.language,
+              sources: event.sources ?? [],
+              timestamp: new Date().toISOString(),
+              confidence: event.confidence,
+              confidence_label: event.confidence_label,
+              latency_ms: event.latency_ms,
+              model_used: event.model_used,
+              sufficient_evidence: event.sufficient_evidence,
+            },
+          ])
+        }
       } catch {}
     }
   }
@@ -490,7 +666,16 @@ export async function runTestSuiteStream(
 
 // ── Available Groq models ──────────────────────────────────────────────────
 // rpm = requests/min, rpd = requests/day, tpm = tokens/min, tpd = tokens/day
+export const DEFAULT_CHAT_MODEL_ID = "groq/compound"
+
 export const GROQ_MODELS = [
+  {
+    id: "groq/compound",
+    label: "Groq Compound",
+    tag: "Recommended chat default",
+    recommended: true,
+    tier: 1,
+  },
   {
     id: "meta-llama/llama-4-scout-17b-16e-instruct",
     label: "Llama 4 Scout 17B",
@@ -499,14 +684,7 @@ export const GROQ_MODELS = [
     rpd: "1K",
     tpm: "30K",
     tpd: "500K",
-    recommended: true,
-  },
-  {
-    id: "groq/compound",
-    label: "Groq Compound",
-    tag: "⚠️ Low TPM limit — may rate limit",
     recommended: false,
-    tier: 1,
   },
   {
     id: "groq/compound-mini",

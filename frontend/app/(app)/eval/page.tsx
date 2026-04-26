@@ -94,7 +94,7 @@ function GradeBadge({ grade }: { grade: number }) {
     grade <= 5
       ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
       : grade <= 7
-        ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+        ? "bg-primary/10 text-primary border-primary/20"
         : "bg-orange-500/10 text-orange-600 border-orange-500/20"
   return (
     <span
@@ -124,7 +124,7 @@ function ScoreBar({
     pctVal >= 60
       ? "bg-emerald-500"
       : pctVal >= 35
-        ? "bg-blue-500"
+        ? "bg-primary"
         : "bg-orange-400"
   return (
     <div className="space-y-1">
@@ -177,10 +177,13 @@ function RateLimitBanner() {
     <div className="flex items-start gap-3 border border-border bg-muted/30 px-4 py-3 text-sm">
       <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       <div className="text-muted-foreground">
-        <span className="font-medium text-foreground">API Rate Limits active:</span> Chat is
-        limited to <span className="font-mono font-medium">30 req/min</span>,
-        uploads to <span className="font-mono font-medium">10 req/min</span> per
-        IP. Returns HTTP 429 with{" "}
+        <span className="font-medium text-foreground">
+          API Rate Limits active:
+        </span>{" "}
+        Chat is limited to{" "}
+        <span className="font-mono font-medium">30 req/min</span>, uploads to{" "}
+        <span className="font-mono font-medium">10 req/min</span> per IP.
+        Returns HTTP 429 with{" "}
         <span className="font-mono font-medium">Retry-After</span> header.
       </div>
     </div>
@@ -493,16 +496,16 @@ export default function EvalPage() {
                     label="p95 Latency"
                     value={`${report.latency.p95_ms}ms`}
                     sub="95th percentile"
-                    color="text-blue-600"
-                    bg="bg-blue-500/5"
+                    color="text-primary"
+                    bg="bg-primary/5"
                     icon={Zap}
                   />
                   <MetricCard
                     label="p99 Latency"
                     value={`${report.latency.p99_ms}ms`}
                     sub="99th percentile"
-                    color="text-purple-600"
-                    bg="bg-purple-500/5"
+                    color="text-secondary"
+                    bg="bg-secondary/5"
                     icon={Zap}
                   />
                   <MetricCard
@@ -551,8 +554,8 @@ export default function EvalPage() {
                   label="Simple Language"
                   value={`${report.readability.pct_simple_language}%`}
                   sub="Answers at grade ≤ 6"
-                  color="text-blue-600"
-                  bg="bg-blue-500/5"
+                  color="text-primary"
+                  bg="bg-primary/5"
                   icon={BookOpen}
                 />
               </div>
@@ -620,76 +623,76 @@ export default function EvalPage() {
                   <div className="overflow-hidden border border-border bg-card/40 backdrop-blur-sm">
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[720px] text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/30">
-                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                            Language
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                            Queries
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                            Avg Confidence
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                            Avg Latency
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                            Readability
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {Object.entries(report.per_language).map(
-                          ([lang, stats]) => {
-                            const info = LANG_LABELS[lang] ?? {
-                              name: lang,
-                              flag: "🌐",
+                        <thead>
+                          <tr className="border-b border-border bg-muted/30">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                              Language
+                            </th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                              Queries
+                            </th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                              Avg Confidence
+                            </th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                              Avg Latency
+                            </th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                              Readability
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {Object.entries(report.per_language).map(
+                            ([lang, stats]) => {
+                              const info = LANG_LABELS[lang] ?? {
+                                name: lang,
+                                flag: "🌐",
+                              }
+                              return (
+                                <tr
+                                  key={lang}
+                                  className="transition-colors hover:bg-muted/20"
+                                >
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">
+                                        {info.name}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        ({lang})
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-right text-muted-foreground">
+                                    {stats.queries}
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <span
+                                      className={cn(
+                                        "font-mono tabular-nums",
+                                        stats.avg_confidence >= 0.75
+                                          ? "text-emerald-600"
+                                          : stats.avg_confidence >= 0.5
+                                            ? "text-primary"
+                                            : "text-orange-500"
+                                      )}
+                                    >
+                                      {pct(stats.avg_confidence)}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-mono text-muted-foreground tabular-nums">
+                                    {stats.avg_latency_ms}ms
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <GradeBadge grade={stats.avg_fk_grade} />
+                                  </td>
+                                </tr>
+                              )
                             }
-                            return (
-                              <tr
-                                key={lang}
-                                className="transition-colors hover:bg-muted/20"
-                              >
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">
-                                      {info.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      ({lang})
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-right text-muted-foreground">
-                                  {stats.queries}
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <span
-                                    className={cn(
-                                      "font-mono tabular-nums",
-                                      stats.avg_confidence >= 0.75
-                                        ? "text-emerald-600"
-                                        : stats.avg_confidence >= 0.5
-                                          ? "text-blue-600"
-                                          : "text-orange-500"
-                                    )}
-                                  >
-                                    {pct(stats.avg_confidence)}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-right font-mono text-muted-foreground tabular-nums">
-                                  {stats.avg_latency_ms}ms
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                  <GradeBadge grade={stats.avg_fk_grade} />
-                                </td>
-                              </tr>
-                            )
-                          }
-                        )}
-                      </tbody>
-                    </table>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
@@ -878,10 +881,15 @@ export default function EvalPage() {
                           r1 >= 0.4
                             ? "bg-emerald-500"
                             : r1 >= 0.2
-                              ? "bg-blue-500"
+                              ? "bg-primary"
                               : "bg-orange-400"
-                        const langInfo = LANG_LABELS[r.language] ?? { name: r.language, code: r.language.toUpperCase() }
-                        const catInfo = CATEGORY_LABELS[r.category ?? ""] ?? { label: r.category ?? "" }
+                        const langInfo = LANG_LABELS[r.language] ?? {
+                          name: r.language,
+                          code: r.language.toUpperCase(),
+                        }
+                        const catInfo = CATEGORY_LABELS[r.category ?? ""] ?? {
+                          label: r.category ?? "",
+                        }
                         return (
                           <div
                             key={i}
@@ -996,9 +1004,8 @@ export default function EvalPage() {
                     const count =
                       key === "all"
                         ? testResult.results.length
-                        : testResult.results.filter(
-                            (r) => r.category === key
-                          ).length
+                        : testResult.results.filter((r) => r.category === key)
+                            .length
                     if (key !== "all" && count === 0) return null
                     return (
                       <button
@@ -1289,7 +1296,9 @@ export default function EvalPage() {
                       key={lang}
                       className="flex items-start gap-3 border border-border bg-muted/20 p-3"
                     >
-                      <span className="shrink-0 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
+                      <span className="shrink-0 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        {info.code}
+                      </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                           {isParaphrase

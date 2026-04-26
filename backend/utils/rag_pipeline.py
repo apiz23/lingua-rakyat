@@ -4,6 +4,7 @@ rag_pipeline.py - Lightweight multilingual RAG pipeline.
 
 import logging
 import os
+import re
 import time
 from collections.abc import Generator
 from typing import Any, Optional
@@ -42,8 +43,8 @@ logging.basicConfig(
 logger = logging.getLogger("rag_pipeline")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
-GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "qwen/qwen3-32b")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "groq/compound")
+GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX = os.getenv("PINECONE_INDEX", "docuquery")
@@ -58,8 +59,14 @@ MIN_TEXT_LENGTH = 50
 MIN_PAGES = 1
 MAX_PAGES = 500
 MIN_CHUNK_WORDS = 20
+CHUNK_TARGET_WORDS = 360
+CHUNK_MAX_WORDS = 520
+CHUNK_OVERLAP_WORDS = 45
 CONFIDENCE_THRESHOLD = 0.50
+MIN_USABLE_CONFIDENCE = 0.25
 OCR_MIN_CHARS = 50
+PROMPT_RETRY_CHAR_LIMITS = [2500, 1200]
+ENABLE_COHERE_RERANK = os.getenv("ENABLE_COHERE_RERANK", "true").lower() == "true"
 
 CONTEXT_CHAR_LIMIT_LARGE = 4000
 CONTEXT_CHAR_LIMIT_SMALL = 1800
@@ -184,8 +191,31 @@ class PDFValidationError(ValueError):
     pass
 
 
+OCR_UNAVAILABLE_MESSAGE = (
+    "OCR is not available because Tesseract is not installed or is not configured. "
+    "Install Tesseract OCR, or set TESSERACT_CMD in backend/.env to the full path of tesseract.exe."
+)
+_ocr_runtime_available: Optional[bool] = None
+
+
 def _ocr_is_available() -> bool:
-    return fitz is not None and pytesseract is not None and Image is not None
+    global _ocr_runtime_available
+
+    if fitz is None or pytesseract is None or Image is None:
+        return False
+
+    if _ocr_runtime_available is not None:
+        return _ocr_runtime_available
+
+    _configure_tesseract()
+    try:
+        pytesseract.get_tesseract_version()
+        _ocr_runtime_available = True
+    except Exception as exc:
+        logger.warning("[OCR] %s Details: %s", OCR_UNAVAILABLE_MESSAGE, exc)
+        _ocr_runtime_available = False
+
+    return _ocr_runtime_available
 
 
 def _configure_tesseract() -> None:
@@ -203,7 +233,12 @@ def _pixmap_to_image(pixmap) -> Image.Image:
 
 def _ocr_pdf_pages(pdf_path: str, page_numbers: Optional[list[int]] = None) -> tuple[str, dict[str, Any]]:
     if not _ocr_is_available():
-        return "", {"method": "none", "pages_ocrd": 0, "char_count": 0}
+        return "", {
+            "method": "none",
+            "pages_ocrd": 0,
+            "char_count": 0,
+            "ocr_error": OCR_UNAVAILABLE_MESSAGE,
+        }
 
     _configure_tesseract()
     doc = fitz.open(pdf_path)
@@ -214,10 +249,14 @@ def _ocr_pdf_pages(pdf_path: str, page_numbers: Optional[list[int]] = None) -> t
         for page_number in indices:
             page = doc.load_page(page_number)
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-            text = pytesseract.image_to_string(
-                _pixmap_to_image(pix),
-                lang=os.getenv("TESSERACT_LANGS", "eng+msa+chi_sim"),
-            ).strip()
+            try:
+                text = pytesseract.image_to_string(
+                    _pixmap_to_image(pix),
+                    lang=os.getenv("TESSERACT_LANGS", "eng+msa+chi_sim"),
+                ).strip()
+            except Exception as exc:
+                logger.warning("[OCR] Failed on page %d: %s", page_number + 1, exc)
+                text = ""
             extracted_pages.append(text)
     finally:
         doc.close()
@@ -232,7 +271,12 @@ def _ocr_pdf_pages(pdf_path: str, page_numbers: Optional[list[int]] = None) -> t
 
 def _ocr_pdf_page_map(pdf_path: str, page_numbers: list[int]) -> tuple[dict[int, str], dict[str, Any]]:
     if not _ocr_is_available() or not page_numbers:
-        return {}, {"method": "none", "pages_ocrd": 0, "char_count": 0}
+        return {}, {
+            "method": "none",
+            "pages_ocrd": 0,
+            "char_count": 0,
+            "ocr_error": OCR_UNAVAILABLE_MESSAGE if page_numbers else None,
+        }
 
     _configure_tesseract()
     doc = fitz.open(pdf_path)
@@ -242,10 +286,14 @@ def _ocr_pdf_page_map(pdf_path: str, page_numbers: list[int]) -> tuple[dict[int,
         for page_number in page_numbers:
             page = doc.load_page(page_number)
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-            text = pytesseract.image_to_string(
-                _pixmap_to_image(pix),
-                lang=os.getenv("TESSERACT_LANGS", "eng+msa+chi_sim"),
-            ).strip()
+            try:
+                text = pytesseract.image_to_string(
+                    _pixmap_to_image(pix),
+                    lang=os.getenv("TESSERACT_LANGS", "eng+msa+chi_sim"),
+                ).strip()
+            except Exception as exc:
+                logger.warning("[OCR] Failed on page %d: %s", page_number + 1, exc)
+                text = ""
             if text:
                 page_map[page_number] = text
     finally:
@@ -313,7 +361,7 @@ def validate_pdf(pdf_path: str) -> dict[str, Any]:
     return metrics
 
 
-def extract_text_from_pdf(pdf_path: str) -> tuple[str, dict[str, Any]]:
+def extract_pages_from_pdf(pdf_path: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     quality = validate_pdf(pdf_path)
     page_texts: list[str] = []
     pages_needing_ocr: list[int] = []
@@ -362,7 +410,12 @@ def extract_text_from_pdf(pdf_path: str) -> tuple[str, dict[str, Any]]:
                 ocr_pages_used,
                 len(page_texts),
             )
-        return text, merged_quality
+        pages = [
+            {"page_number": page_index + 1, "text": page_text.strip()}
+            for page_index, page_text in enumerate(page_texts)
+            if page_text.strip()
+        ]
+        return pages, merged_quality
 
     if not quality["valid"]:
         raise PDFValidationError(quality["error"])
@@ -370,14 +423,125 @@ def extract_text_from_pdf(pdf_path: str) -> tuple[str, dict[str, Any]]:
     raise PDFValidationError("No text extracted from PDF.")
 
 
-def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
-    chunks = []
-    words = text.split()
-    for index in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[index:index + chunk_size])
-        if len(chunk.split()) >= MIN_CHUNK_WORDS:
-            chunks.append(chunk)
-    logger.info("[Chunk] %d words -> %d chunks", len(words), len(chunks))
+def extract_text_from_pdf(pdf_path: str) -> tuple[str, dict[str, Any]]:
+    pages, quality = extract_pages_from_pdf(pdf_path)
+    return "\n".join(page["text"] for page in pages).strip(), quality
+
+
+SECTION_HEADER_RE = re.compile(
+    r"^\s*((?:bab|bahagian|seksyen|section|part|chapter|article|perkara)\s+\w+|"
+    r"\d+(?:\.\d+){0,4}\s+.{3,}|[A-Z][A-Z0-9\s,()/-]{8,})\s*$",
+    re.IGNORECASE,
+)
+
+
+def _word_count(text: str) -> int:
+    return len(text.split())
+
+
+def _is_section_header(line: str) -> bool:
+    stripped = line.strip()
+    if len(stripped) < 4 or len(stripped) > 140:
+        return False
+    if stripped.endswith(".") and not re.match(r"^\d+(?:\.\d+)*\s+", stripped):
+        return False
+    return bool(SECTION_HEADER_RE.match(stripped))
+
+
+def _split_page_sections(text: str, fallback_title: str) -> list[dict[str, str]]:
+    sections: list[dict[str, str]] = []
+    current_title = fallback_title
+    current_lines: list[str] = []
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            if current_lines:
+                current_lines.append("")
+            continue
+
+        if _is_section_header(line) and current_lines:
+            body = "\n".join(current_lines).strip()
+            if body:
+                sections.append({"title": current_title, "text": body})
+            current_title = line
+            current_lines = [line]
+            continue
+
+        if _is_section_header(line) and not current_lines:
+            current_title = line
+        current_lines.append(line)
+
+    body = "\n".join(current_lines).strip()
+    if body:
+        sections.append({"title": current_title, "text": body})
+    return sections
+
+
+def _split_long_section(text: str) -> list[str]:
+    paragraphs = [para.strip() for para in re.split(r"\n\s*\n", text) if para.strip()]
+    if len(paragraphs) <= 1:
+        words = text.split()
+        chunks: list[str] = []
+        step = max(1, CHUNK_MAX_WORDS - CHUNK_OVERLAP_WORDS)
+        for index in range(0, len(words), step):
+            chunk = " ".join(words[index:index + CHUNK_MAX_WORDS]).strip()
+            if _word_count(chunk) >= MIN_CHUNK_WORDS:
+                chunks.append(chunk)
+        return chunks
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_words = 0
+
+    for paragraph in paragraphs:
+        paragraph_words = _word_count(paragraph)
+        if current and current_words + paragraph_words > CHUNK_MAX_WORDS:
+            chunks.append("\n\n".join(current).strip())
+            overlap_words = " ".join(" ".join(current).split()[-CHUNK_OVERLAP_WORDS:])
+            current = [overlap_words, paragraph] if overlap_words else [paragraph]
+            current_words = _word_count(" ".join(current))
+        else:
+            current.append(paragraph)
+            current_words += paragraph_words
+
+    if current:
+        chunks.append("\n\n".join(current).strip())
+    return [chunk for chunk in chunks if _word_count(chunk) >= MIN_CHUNK_WORDS]
+
+
+def chunk_pages(pages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    chunks: list[dict[str, Any]] = []
+    last_section_title = "Document"
+
+    for page in pages:
+        page_number = int(page["page_number"])
+        sections = _split_page_sections(page["text"], last_section_title)
+        for section in sections:
+            section_title = section["title"] or last_section_title
+            last_section_title = section_title
+            section_text = section["text"].strip()
+            if _word_count(section_text) < MIN_CHUNK_WORDS:
+                continue
+
+            pieces = (
+                [section_text]
+                if _word_count(section_text) <= CHUNK_TARGET_WORDS
+                else _split_long_section(section_text)
+            )
+            for piece in pieces:
+                chunks.append({
+                    "text": piece,
+                    "page_start": page_number,
+                    "page_end": page_number,
+                    "section_title": section_title,
+                })
+
+    logger.info(
+        "[Chunk] %d pages -> %d section-aware chunks",
+        len(pages),
+        len(chunks),
+    )
     return chunks
 
 
@@ -387,16 +551,17 @@ def ingest_document(
     document_name: str | None = None,
 ) -> tuple[int, dict[str, Any]]:
     logger.info("[Ingest] Starting: document_id=%s name=%s", document_id, document_name or "unknown")
-    text, quality = extract_text_from_pdf(pdf_path)
-    if not text:
+    pages, quality = extract_pages_from_pdf(pdf_path)
+    if not pages:
         raise ValueError("No text extracted from PDF.")
 
-    chunks = chunk_text(text)
+    chunks = chunk_pages(pages)
     if not chunks:
         raise ValueError("No valid chunks after filtering.")
 
+    chunk_texts = [chunk["text"] for chunk in chunks]
     t0 = time.time()
-    embeddings = get_embeddings_cohere(chunks)
+    embeddings = get_embeddings_cohere(chunk_texts)
     logger.info("[Ingest] Embedded %d chunks in %dms", len(chunks), round((time.time() - t0) * 1000))
 
     index = Pinecone(api_key=PINECONE_API_KEY).Index(PINECONE_INDEX)
@@ -405,10 +570,13 @@ def ingest_document(
             f"{document_id}_{i}",
             embedding,
             {
-                "text": chunk,
+                "text": chunk["text"],
                 "doc_id": document_id,
                 "chunk_index": i,
                 "doc_name": document_name or "",
+                "page_start": chunk["page_start"],
+                "page_end": chunk["page_end"],
+                "section_title": chunk["section_title"],
             },
         )
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
@@ -481,6 +649,50 @@ def _build_query_variants(question: str, detected_lang: str, enable_query_augmen
     return deduped
 
 
+def _cohere_rerank(question: str, matches: list[dict[str, Any]], top_n: int) -> list[dict[str, Any]]:
+    cohere_key = os.getenv("COHERE_API_KEY")
+    if not ENABLE_COHERE_RERANK or not cohere_key or len(matches) <= 1:
+        return matches[:top_n]
+
+    documents = [match["metadata"].get("text", "") for match in matches]
+    try:
+        response = requests.post(
+            "https://api.cohere.ai/v1/rerank",
+            json={
+                "query": question,
+                "documents": documents,
+                "model": "rerank-multilingual-v3.0",
+                "top_n": min(top_n, len(documents)),
+            },
+            headers={
+                "Authorization": f"Bearer {cohere_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        results = response.json().get("results", [])
+    except Exception as exc:
+        logger.warning("[Rerank] Cohere rerank failed, using vector order: %s", exc)
+        return matches[:top_n]
+
+    reranked: list[dict[str, Any]] = []
+    for result in results:
+        index = result.get("index")
+        if index is None or index >= len(matches):
+            continue
+        relevance = float(result.get("relevance_score", 0.0) or 0.0)
+        match = {**matches[index]}
+        match["cohere_rerank_score"] = relevance
+        match["reranked_score"] = min(
+            1.0,
+            (match.get("reranked_score", 0.0) * 0.35) + (relevance * 0.65),
+        )
+        reranked.append(match)
+
+    return reranked or matches[:top_n]
+
+
 def _retrieve_matches(
     document_id: str,
     query_variants: list[dict[str, str]],
@@ -523,7 +735,8 @@ def _retrieve_matches(
         key=lambda item: (item["reranked_score"], item["score"]),
         reverse=True,
     )
-    return reranked
+    primary_question = query_variants[0]["text"] if query_variants else ""
+    return _cohere_rerank(primary_question, reranked, top_k)
 
 
 def _filter_matches(matches: list[dict[str, Any]], is_summary: bool) -> list[dict[str, Any]]:
@@ -545,7 +758,24 @@ def _has_sufficient_evidence(matches: list[dict[str, Any]], is_summary: bool) ->
 def _build_context(matches: list[dict[str, Any]], small_model: bool) -> str:
     char_limit = CONTEXT_CHAR_LIMIT_SMALL if small_model else CONTEXT_CHAR_LIMIT_LARGE
     chunk_limit = max(200, char_limit // max(len(matches), 1))
-    return "\n".join(match["metadata"]["text"][:chunk_limit] for match in matches)
+    context_blocks: list[str] = []
+    for index, match in enumerate(matches, start=1):
+        metadata = match["metadata"]
+        page_start = metadata.get("page_start")
+        page_end = metadata.get("page_end")
+        page_label = (
+            f"pages {page_start}-{page_end}"
+            if page_start and page_end and page_start != page_end
+            else f"page {page_start}"
+            if page_start
+            else "page unknown"
+        )
+        section = metadata.get("section_title") or "Untitled section"
+        context_blocks.append(
+            f"[Source {index}: {metadata.get('doc_name') or 'Document'}, {page_label}, section: {section}]\n"
+            f"{metadata['text'][:chunk_limit]}"
+        )
+    return "\n\n".join(context_blocks)
 
 
 def _summary_prompt(context: str, lang: str) -> str:
@@ -623,6 +853,48 @@ def _qa_prompt(context: str, question: str, lang: str) -> str:
     return prompts.get(lang, prompts["en"]).format(context=context, question=question)
 
 
+def _cautious_qa_prompt(context: str, question: str, lang: str) -> str:
+    prompts = {
+        "en": (
+            "You are a careful government services assistant.\n"
+            "The retrieved excerpts may only partially match the user's question.\n"
+            "Use only the context below. Do not use outside knowledge.\n"
+            "If the context contains useful information, answer cautiously and mention any limits.\n"
+            "If the context truly does not answer the question, say that clearly.\n"
+            "Format the answer as 3-5 short bullet points.\n"
+            "End with: Source: Based on official documents provided.\n\n"
+            "Context:\n{context}\n\n"
+            "Question: {question}\n"
+            "Answer:"
+        ),
+        "ms": (
+            "Anda ialah pembantu perkhidmatan kerajaan yang berhati-hati.\n"
+            "Petikan yang ditemui mungkin hanya sebahagiannya sepadan dengan soalan pengguna.\n"
+            "Gunakan konteks di bawah sahaja. Jangan guna pengetahuan luar.\n"
+            "Jika konteks mengandungi maklumat berguna, jawab dengan berhati-hati dan nyatakan hadnya.\n"
+            "Jika konteks memang tidak menjawab soalan, nyatakan perkara itu dengan jelas.\n"
+            "Format jawapan sebagai 3-5 mata peluru pendek.\n"
+            "Akhiri dengan: Sumber: Berdasarkan dokumen rasmi yang disediakan.\n\n"
+            "Konteks:\n{context}\n\n"
+            "Soalan: {question}\n"
+            "Jawapan:"
+        ),
+        "zh-cn": (
+            "ä½ æ˜¯ä¸€ä½è°¨æ…Žçš„æ”¿åºœæœåŠ¡åŠ©æ‰‹ã€‚\n"
+            "æ£€ç´¢åˆ°çš„æ‘˜å½•å¯èƒ½åªæ˜¯éƒ¨åˆ†åŒ¹é…ç”¨æˆ·çš„é—®é¢˜ã€‚\n"
+            "åªèƒ½ä½¿ç”¨ä¸‹æ–¹ä¸Šä¸‹æ–‡ï¼Œä¸è¦ä½¿ç”¨å¤–éƒ¨çŸ¥è¯†ã€‚\n"
+            "å¦‚æžœä¸Šä¸‹æ–‡æœ‰æœ‰ç”¨ä¿¡æ¯ï¼Œè¯·è°¨æ…Žå›žç­”å¹¶è¯´æ˜Žé™åˆ¶ã€‚\n"
+            "å¦‚æžœä¸Šä¸‹æ–‡ç¡®å®žæ— æ³•å›žç­”é—®é¢˜ï¼Œè¯·æ¸…æ¥šè¯´æ˜Žã€‚\n"
+            "æŠŠç­”æ¡ˆå†™æˆ3åˆ°5ä¸ªç®€çŸ­è¦ç‚¹ã€‚\n"
+            "ç»“å°¾å†™: æ¥æº: Based on official documents provided.\n\n"
+            "ä¸Šä¸‹æ–‡:\n{context}\n\n"
+            "é—®é¢˜: {question}\n"
+            "ç­”æ¡ˆ:"
+        ),
+    }
+    return prompts.get(lang, prompts["en"]).format(context=context, question=question)
+
+
 def _insufficient_evidence_answer(lang: str) -> str:
     answers = {
         "en": (
@@ -648,6 +920,14 @@ def _insufficient_evidence_answer(lang: str) -> str:
         ),
     }
     return answers.get(lang, answers["en"])
+
+
+def _confidence_label(score: float, sufficient_evidence: bool) -> str:
+    if not sufficient_evidence or score < 0.5:
+        return "low"
+    if score < 0.75:
+        return "medium"
+    return "high"
 
 
 def _prepare_pipeline(
@@ -676,14 +956,27 @@ def _prepare_pipeline(
         )
 
     context = _build_context(filtered_matches, small_model)
-    prompt_text = _summary_prompt(context, lang) if is_summary else _qa_prompt(context, question, lang)
     query_variants_used = [variant["text"] for variant in query_variants]
     top_query_variant = filtered_matches[0]["variant_text"]
     sufficient_evidence = _has_sufficient_evidence(filtered_matches, is_summary=is_summary)
+    top_score = filtered_matches[0]["reranked_score"] if filtered_matches else 0.0
+    usable_evidence = bool(filtered_matches) and top_score >= MIN_USABLE_CONFIDENCE
+    if is_summary:
+        evidence_mode = "summary"
+        prompt_text = _summary_prompt(context, lang)
+    elif sufficient_evidence:
+        evidence_mode = "strong"
+        prompt_text = _qa_prompt(context, question, lang)
+    elif usable_evidence:
+        evidence_mode = "cautious"
+        prompt_text = _cautious_qa_prompt(context, question, lang)
+    else:
+        evidence_mode = "insufficient"
+        prompt_text = _qa_prompt(context, question, lang)
 
     logger.info(
-        "[Chat] lang=%s retrieval=%s variants=%d matches=%d retrieve_ms=%d sufficient=%s",
-        lang, retrieval_mode, len(query_variants), len(filtered_matches), retrieve_ms, sufficient_evidence,
+        "[Chat] lang=%s retrieval=%s variants=%d matches=%d retrieve_ms=%d evidence=%s score=%.4f",
+        lang, retrieval_mode, len(query_variants), len(filtered_matches), retrieve_ms, evidence_mode, top_score,
     )
 
     return {
@@ -700,6 +993,8 @@ def _prepare_pipeline(
         "query_variants_used": query_variants_used,
         "top_query_variant": top_query_variant,
         "sufficient_evidence": sufficient_evidence,
+        "usable_evidence": usable_evidence,
+        "evidence_mode": evidence_mode,
         "started_at": t_start,
     }
 
@@ -707,18 +1002,30 @@ def _prepare_pipeline(
 def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -> dict[str, Any]:
     total_ms = round((time.time() - prepared["started_at"]) * 1000)
     top_score = prepared["filtered_matches"][0]["reranked_score"] if prepared["filtered_matches"] else 0.0
+    confidence_label = _confidence_label(top_score, prepared["sufficient_evidence"])
     result = {
         "answer": answer_text.strip(),
         "language": prepared["language"],
         "sources": [
             {
-                "text": match["metadata"]["text"][:200],
+                "text": match["metadata"]["text"][:360],
                 "document_id": prepared["document_id"],
+                "doc_name": match["metadata"].get("doc_name", ""),
+                "page_start": match["metadata"].get("page_start"),
+                "page_end": match["metadata"].get("page_end"),
+                "section_title": match["metadata"].get("section_title", ""),
                 "score": round(match["reranked_score"], 4),
+                "vector_score": round(match.get("score", 0.0), 4),
+                "rerank_score": round(match.get("cohere_rerank_score", 0.0), 4),
+                "confidence_label": _confidence_label(
+                    float(match.get("reranked_score", 0.0) or 0.0),
+                    prepared["sufficient_evidence"],
+                ),
             }
             for match in prepared["filtered_matches"]
         ],
         "confidence": round(top_score, 4),
+        "confidence_label": confidence_label,
         "latency_ms": total_ms,
         "cached": False,
         "model_used": model_used,
@@ -726,6 +1033,7 @@ def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -
         "query_variants_used": prepared["query_variants_used"],
         "top_query_variant": prepared["top_query_variant"],
         "sufficient_evidence": prepared["sufficient_evidence"],
+        "evidence_mode": prepared.get("evidence_mode", "strong"),
     }
     return result
 
@@ -745,6 +1053,53 @@ def _is_retryable_llm_error(exc: Exception) -> bool:
     return any(piece in err for piece in ["429", "rate limit", "too many", "413"])
 
 
+def _is_request_too_large_error(exc: Exception) -> bool:
+    err = str(exc).lower()
+    return any(piece in err for piece in ["413", "request entity too large", "too large"])
+
+
+def _truncate_middle(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+    if limit <= 120:
+        return text[:limit]
+
+    head_len = max(60, int(limit * 0.7))
+    tail_len = max(40, limit - head_len - 40)
+    return (
+        text[:head_len].rstrip()
+        + "\n\n[Context shortened because the model request was too large.]\n\n"
+        + text[-tail_len:].lstrip()
+    )
+
+
+def _compact_prompt(prompt_text: str, limit: int) -> str:
+    if len(prompt_text) <= limit:
+        return prompt_text
+
+    context_markers = [
+        ("Context:\n", "\n\nQuestion:"),
+        ("Konteks:\n", "\n\nSoalan:"),
+        ("Document excerpts:\n", "\n\nINSTRUCTIONS:"),
+        ("Petikan dokumen:\n", "\n\nARAHAN:"),
+    ]
+    for start_marker, end_marker in context_markers:
+        start = prompt_text.find(start_marker)
+        end = prompt_text.find(end_marker, start + len(start_marker))
+        if start == -1 or end == -1:
+            continue
+
+        prefix = prompt_text[: start + len(start_marker)]
+        context = prompt_text[start + len(start_marker):end]
+        suffix = prompt_text[end:]
+        available = limit - len(prefix) - len(suffix)
+        if available <= 200:
+            break
+        return prefix + _truncate_middle(context, available) + suffix
+
+    return _truncate_middle(prompt_text, limit)
+
+
 def _create_completion(prompt_text: str, model_name: str, stream: bool):
     return _get_client().chat.completions.create(
         model=model_name,
@@ -762,10 +1117,40 @@ def _generate_completion(prompt_text: str, model_name: str) -> tuple[str, str]:
         if not _is_retryable_llm_error(exc):
             raise
 
+        if _is_request_too_large_error(exc):
+            for limit in PROMPT_RETRY_CHAR_LIMITS:
+                compact_prompt = _compact_prompt(prompt_text, limit)
+                try:
+                    logger.warning("[Chat] Retrying buffered completion with compact prompt (%d chars)", limit)
+                    response = _create_completion(compact_prompt, model_name, stream=False)
+                    return response.choices[0].message.content or "", model_name
+                except Exception as compact_exc:
+                    if not _is_request_too_large_error(compact_exc):
+                        raise
+
         fallback = _fallback_model(model_name)
         logger.warning("[Chat] Retrying buffered completion with fallback model %s", fallback)
-        response = _create_completion(prompt_text, fallback, stream=False)
-        return response.choices[0].message.content or "", fallback
+        try:
+            response = _create_completion(prompt_text, fallback, stream=False)
+            return response.choices[0].message.content or "", fallback
+        except Exception as fallback_exc:
+            if not _is_request_too_large_error(fallback_exc):
+                raise
+
+            for limit in PROMPT_RETRY_CHAR_LIMITS:
+                compact_prompt = _compact_prompt(prompt_text, limit)
+                try:
+                    logger.warning(
+                        "[Chat] Retrying buffered fallback with compact prompt (%d chars)",
+                        limit,
+                    )
+                    response = _create_completion(compact_prompt, fallback, stream=False)
+                    return response.choices[0].message.content or "", fallback
+                except Exception as compact_fallback_exc:
+                    if not _is_request_too_large_error(compact_fallback_exc):
+                        raise
+
+            raise
 
 
 def _token_chunks(text: str, size: int = 40) -> Generator[str, None, None]:
@@ -793,7 +1178,12 @@ def _stream_completion(prompt_text: str, model_name: str) -> tuple[Generator[str
             return _read_stream(stream), fallback
         except Exception as stream_exc:
             logger.warning("[Chat] Streaming fallback failed, using buffered completion: %s", stream_exc)
-            answer, used_model = _generate_completion(prompt_text, fallback)
+            compact_prompt = (
+                _compact_prompt(prompt_text, PROMPT_RETRY_CHAR_LIMITS[0])
+                if _is_request_too_large_error(stream_exc)
+                else prompt_text
+            )
+            answer, used_model = _generate_completion(compact_prompt, fallback)
             return _token_chunks(answer), used_model
 
 
@@ -820,7 +1210,7 @@ def answer_question(
         model_override=model_override,
         enable_query_augmentation=enable_query_augmentation,
     )
-    if prepared["sufficient_evidence"]:
+    if prepared["sufficient_evidence"] or prepared.get("usable_evidence", False):
         answer_text, model_used = _generate_completion(prepared["prompt_text"], prepared["model_name"])
     else:
         answer_text, model_used = _insufficient_evidence_answer(prepared["language"]), "evidence-guard"
@@ -843,6 +1233,8 @@ def stream_answer_question(
             "retrieval_mode": cached.get("retrieval_mode", "single_query"),
             "query_variants_used": cached.get("query_variants_used", [question]),
             "top_query_variant": cached.get("top_query_variant", question),
+            "sufficient_evidence": cached.get("sufficient_evidence", True),
+            "evidence_mode": cached.get("evidence_mode", "strong"),
         }
         for text in _token_chunks(cached["answer"]):
             yield {"type": "token", "text": text}
@@ -863,10 +1255,11 @@ def stream_answer_question(
         "query_variants_used": prepared["query_variants_used"],
         "top_query_variant": prepared["top_query_variant"],
         "sufficient_evidence": prepared["sufficient_evidence"],
+        "evidence_mode": prepared["evidence_mode"],
     }
 
     pieces: list[str] = []
-    if prepared["sufficient_evidence"]:
+    if prepared["sufficient_evidence"] or prepared.get("usable_evidence", False):
         token_stream, model_used = _stream_completion(prepared["prompt_text"], prepared["model_name"])
         for piece in token_stream:
             pieces.append(piece)
@@ -892,3 +1285,24 @@ def delete_document_from_vectorstore(document_id: str) -> None:
         logger.info("[RAG] Deleted document_id=%s", document_id)
     except Exception as exc:
         logger.error("[RAG] Error deleting document_id=%s: %s", document_id, exc)
+
+
+def rename_document_in_vectorstore(document_id: str, document_name: str, chunk_count: int) -> None:
+    if chunk_count <= 0:
+        cache_invalidate_document(document_id)
+        return
+
+    try:
+        index = _get_index()
+        updated = 0
+        for chunk_index in range(chunk_count):
+            index.update(
+                id=f"{document_id}_{chunk_index}",
+                namespace=document_id,
+                set_metadata={"doc_name": document_name},
+            )
+            updated += 1
+        cache_invalidate_document(document_id)
+        logger.info("[RAG] Renamed %d vector chunks for document_id=%s", updated, document_id)
+    except Exception as exc:
+        logger.warning("[RAG] Could not update vector doc_name for %s: %s", document_id, exc)

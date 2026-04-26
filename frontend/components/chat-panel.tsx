@@ -7,6 +7,7 @@ import {
   SourceChunk,
   askQuestionStream,
   clearChatHistory,
+  DEFAULT_CHAT_MODEL_ID,
   getChatHistory,
   GROQ_MODELS,
 } from "@/lib/api"
@@ -65,6 +66,7 @@ interface Message {
   timestamp: string
   language: string
   confidence: number
+  confidence_label?: "high" | "medium" | "low"
   latency_ms: number
   cached: boolean
   model_used?: string
@@ -125,13 +127,13 @@ const SUGGESTIONS = [
     text: "Summarize this document",
     description:
       "Ringkasan dalam 3-5 mata peluru / Summary in 3-5 bullet points",
-    color: "from-blue-500/20 to-blue-600/5",
+    color: "from-primary/20 to-primary/5",
   },
   {
     icon: Sparkles,
     text: "Siapa yang layak memohon?",
     description: "Who is eligible to apply? — Malay",
-    color: "from-purple-500/20 to-purple-600/5",
+    color: "from-secondary/20 to-secondary/5",
   },
   {
     icon: FileText,
@@ -267,6 +269,7 @@ function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
     timestamp: row.timestamp,
     language: row.language,
     confidence: row.confidence ?? 0,
+    confidence_label: row.confidence_label,
     latency_ms: row.latency_ms ?? 0,
     cached: true,
     model_used: row.model_used,
@@ -416,7 +419,9 @@ function AIMessageCard({
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <div className="flex items-center gap-1.5 border border-primary/20 bg-primary/10 px-2 py-1">
-                  <span className="bg-primary/20 px-1 font-mono text-[10px] text-primary">{langInfo.code}</span>
+                  <span className="bg-primary/20 px-1 font-mono text-[10px] text-primary">
+                    {langInfo.code}
+                  </span>
                   <span className="text-xs font-medium text-primary">
                     {langInfo.name}
                   </span>
@@ -439,12 +444,14 @@ function AIMessageCard({
                       message.confidence >= 0.75
                         ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
                         : message.confidence >= 0.5
-                          ? "border-blue-500/20 bg-blue-500/10 text-blue-600"
+                          ? "border-primary/20 bg-primary/10 text-primary"
                           : "border-orange-500/20 bg-orange-500/10 text-orange-600",
                     ].join(" ")}
                   >
-                    {Math.round(message.confidence * 100)}%{" "}
-                    {language === "ms" ? "padanan" : "match"}
+                    {message.confidence_label
+                      ? message.confidence_label.toUpperCase()
+                      : `${Math.round(message.confidence * 100)}%`}{" "}
+                    {language === "ms" ? "keyakinan" : "confidence"}
                   </span>
                 )}
 
@@ -491,7 +498,7 @@ function AIMessageCard({
             </div>
 
             {message.isStreaming ? (
-              <div className="text-sm leading-relaxed text-foreground/80 whitespace-pre-wrap break-words">
+              <div className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/80">
                 {message.answer ? (
                   <>
                     {message.answer}
@@ -505,7 +512,10 @@ function AIMessageCard({
                   </span>
                 )}
               </div>
-            ) : isLatest && !message.cached && !isStreamed && message.isStreaming === undefined ? (
+            ) : isLatest &&
+              !message.cached &&
+              !isStreamed &&
+              message.isStreaming === undefined ? (
               <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-foreground/80">
                 <StreamingText
                   text={message.answer}
@@ -544,7 +554,7 @@ function AIMessageCard({
             </div>
 
             {isSourcesOpen && message.sources.length > 0 && (
-              <div className="animate-in slide-in-from-top-2 mt-4 space-y-2 duration-200">
+              <div className="mt-4 space-y-2">
                 <div className="px-1 text-xs font-medium text-muted-foreground">
                   {language === "ms" ? "Sumber:" : "Sources:"}
                 </div>
@@ -554,7 +564,7 @@ function AIMessageCard({
                     source.score >= 0.75
                       ? "bg-emerald-500"
                       : source.score >= 0.5
-                        ? "bg-blue-500"
+                        ? "bg-primary"
                         : "bg-orange-400"
 
                   const scoreLabel =
@@ -573,7 +583,8 @@ function AIMessageCard({
                   return (
                     <div
                       key={idx}
-                      className="relative border border-border/50 bg-muted/20 p-3 transition-colors hover:bg-muted/40 sm:p-4"
+                      className="animate-in fade-in slide-in-from-top-1 relative border border-border/50 bg-muted/20 p-3 transition-colors duration-200 hover:bg-muted/40 sm:p-4"
+                      style={{ animationDelay: `${idx * 50}ms` }}
                     >
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
@@ -583,8 +594,16 @@ function AIMessageCard({
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <FileText className="h-3.5 w-3.5" />
                             <span>
-                              {language === "ms" ? "Petikan" : "Excerpt"}{" "}
-                              {idx + 1}
+                              {source.doc_name ||
+                                (language === "ms" ? "Dokumen" : "Document")}
+                              {source.page_start
+                                ? `, ${language === "ms" ? "halaman" : "page"} ${
+                                    source.page_end &&
+                                    source.page_end !== source.page_start
+                                      ? `${source.page_start}-${source.page_end}`
+                                      : source.page_start
+                                  }`
+                                : ""}
                             </span>
                           </div>
                         </div>
@@ -600,11 +619,20 @@ function AIMessageCard({
                               />
                             </div>
                             <span className="text-[10px] whitespace-nowrap text-muted-foreground">
-                              {Math.round(source.score * 100)}% - {scoreLabel}
+                              {(
+                                source.confidence_label ?? scoreLabel
+                              ).toString()}{" "}
+                              - {Math.round(source.score * 100)}%
                             </span>
                           </div>
                         )}
                       </div>
+
+                      {source.section_title && (
+                        <p className="mb-2 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+                          {source.section_title}
+                        </p>
+                      )}
 
                       <p className="text-xs leading-relaxed text-foreground/70">
                         {highlightSourceText(source.text, message.question)}
@@ -674,7 +702,7 @@ function UserMessageBubble({
 
 function TypingIndicator() {
   return (
-    <div className="flex items-start gap-2.5 sm:gap-3">
+    <div className="animate-in fade-in slide-in-from-bottom-2 flex items-start gap-2.5 duration-150 sm:gap-3">
       <div className="relative shrink-0">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:h-10 sm:w-10">
           <AgentAvatar seed="Charlotte" size={26} />
@@ -717,7 +745,9 @@ export default function ChatPanel({
   const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [selectedPopoverModel, setSelectedPopoverModel] = useState("")
+  const [selectedPopoverModel, setSelectedPopoverModel] = useState(
+    DEFAULT_CHAT_MODEL_ID
+  )
   const [userId, setUserId] = useState("")
   const [sessionId, setSessionId] = useState("")
   const [enableQueryAugmentation, setEnableQueryAugmentation] = useState(true)
@@ -1103,6 +1133,7 @@ export default function ChatPanel({
               timestamp,
               language: event.language,
               confidence: event.confidence ?? 0,
+              confidence_label: event.confidence_label,
               latency_ms: event.latency_ms ?? 0,
               cached: event.cached ?? false,
               model_used: event.model_used,
@@ -1137,6 +1168,7 @@ export default function ChatPanel({
                 sources: event.sources ?? [],
                 timestamp,
                 confidence: event.confidence ?? 0,
+                confidence_label: event.confidence_label,
                 latency_ms: event.latency_ms ?? 0,
                 model_used: event.model_used,
                 sufficient_evidence: event.sufficient_evidence ?? true,
@@ -1471,7 +1503,9 @@ export default function ChatPanel({
                     </div>
 
                     <h3 className="mb-2 text-xl font-semibold text-foreground sm:text-2xl">
-                      {language === "ms" ? "Sembang dengan dokumen anda" : "Chat with your document"}
+                      {language === "ms"
+                        ? "Sembang dengan dokumen anda"
+                        : "Chat with your document"}
                     </h3>
 
                     <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
@@ -1519,7 +1553,7 @@ export default function ChatPanel({
                 {messages.map((message, index) => (
                   <div
                     key={message.timestamp}
-                    className="space-y-3 sm:space-y-4"
+                    className="animate-in fade-in slide-in-from-bottom-2 space-y-3 duration-200 sm:space-y-4"
                   >
                     <UserMessageBubble
                       message={message}
@@ -1591,7 +1625,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={toggleLanguage}
-                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary"
+                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary active:scale-[0.95]"
                 title={copy.language}
               >
                 {language === "ms" ? "EN" : "MS"}
@@ -1611,7 +1645,9 @@ export default function ChatPanel({
                 onClick={() => setShowHistory(!showHistory)}
                 className={cn(
                   "p-2 transition-colors hover:bg-muted",
-                  showHistory ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  showHistory
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
                 title={copy.history}
               >

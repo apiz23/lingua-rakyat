@@ -42,6 +42,13 @@ class SourceChunk(BaseModel):
     text: str
     document_id: str
     score: float
+    doc_name: str = ""
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+    section_title: str = ""
+    vector_score: float = 0.0
+    rerank_score: float = 0.0
+    confidence_label: str = "low"
 
 
 class AskResponse(BaseModel):
@@ -51,6 +58,7 @@ class AskResponse(BaseModel):
     question: str
     timestamp: str
     confidence: float = 0.0
+    confidence_label: str = "low"
     latency_ms: int = 0
     model_used: str = ""
     retrieval_mode: str = "single_query"
@@ -70,6 +78,7 @@ class ChatMessage(BaseModel):
     sources: list[SourceChunk]
     timestamp: str
     confidence: float = 0.0
+    confidence_label: str = "low"
     latency_ms: int = 0
     model_used: str = ""
     sufficient_evidence: bool = True
@@ -97,6 +106,7 @@ def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, a
         "language": result.get("language", "en"),
         "sources": result.get("sources", []),
         "confidence": result.get("confidence", 0.0),
+        "confidence_label": result.get("confidence_label", "low"),
         "latency_ms": result.get("latency_ms", 0),
         "model_used": result.get("model_used", ""),
         "sufficient_evidence": result.get("sufficient_evidence", True),
@@ -158,6 +168,7 @@ async def ask_question(request: Request, body: AskRequest):
         question=body.question,
         timestamp=timestamp,
         confidence=result.get("confidence", 0.0),
+        confidence_label=result.get("confidence_label", "low"),
         latency_ms=result.get("latency_ms", 0),
         model_used=result.get("model_used", ""),
         retrieval_mode=result.get("retrieval_mode", "single_query"),
@@ -235,6 +246,7 @@ async def get_chat_history(
             sources=[SourceChunk(**source) for source in row.get("sources", [])],
             timestamp=row.get("created_at", ""),
             confidence=float(row.get("confidence", 0.0) or 0.0),
+            confidence_label=row.get("confidence_label", "low"),
             latency_ms=int(row.get("latency_ms", 0) or 0),
             model_used=row.get("model_used", ""),
             sufficient_evidence=bool(row.get("sufficient_evidence", True)),

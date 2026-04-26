@@ -19,7 +19,11 @@ from supabase import Client, create_client
 from pinecone import Pinecone
 
 from utils.chat_history import delete_chat_messages_for_document
-from utils.rag_pipeline import delete_document_from_vectorstore, ingest_document
+from utils.rag_pipeline import (
+    delete_document_from_vectorstore,
+    ingest_document,
+    rename_document_in_vectorstore,
+)
 
 limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger("documents_router")
@@ -250,6 +254,23 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
         return documents
 
 
+def verify_upload_token(token: str) -> bool:
+    try:
+        result = (
+            get_supabase()
+            .table("token")
+            .select("id")
+            .eq("value", token)
+            .eq("active", True)
+            .limit(1)
+            .execute()
+        )
+        return bool(result.data)
+    except Exception as exc:
+        logger.error("[Token] Verification error: %s", exc)
+        return False
+
+
 class DocumentResponse(BaseModel):
     id: str
     name: str
@@ -268,10 +289,30 @@ class UploadResponse(BaseModel):
     message: str
 
 
+class RenameDocumentRequest(BaseModel):
+    name: str
+    upload_token: str
+
+
+@router.post("/verify-token")
+@limiter.limit("10/minute")
+async def verify_token(request: Request, token: str):
+    _ = request
+    if not token or len(token) > 256:
+        raise HTTPException(status_code=400, detail="Invalid token.")
+    valid = verify_upload_token(token)
+    if not valid:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return {"valid": True}
+
+
 @router.post("/upload", response_model=UploadResponse)
 @limiter.limit("10/minute")
-async def upload_document(request: Request, file: UploadFile = File(...)):
+async def upload_document(request: Request, file: UploadFile = File(...), upload_token: str = ""):
     _ = request
+
+    if not upload_token or not verify_upload_token(upload_token):
+        raise HTTPException(status_code=401, detail="Valid upload token required.")
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
@@ -359,6 +400,56 @@ async def list_documents():
     documents = load_documents()
     documents = sync_documents_with_storage(documents)
     return [DocumentResponse(**doc) for doc in documents]
+
+
+@router.patch("/{document_id}/rename", response_model=DocumentResponse)
+@limiter.limit("10/minute")
+async def rename_document(request: Request, document_id: str, body: RenameDocumentRequest):
+    _ = request
+
+    if not body.upload_token or not verify_upload_token(body.upload_token):
+        raise HTTPException(status_code=401, detail="Valid upload token required.")
+
+    new_name = os.path.basename(body.name.strip())
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Document name cannot be empty.")
+    if len(new_name) > 180:
+        raise HTTPException(status_code=400, detail="Document name is too long.")
+    if not new_name.lower().endswith(".pdf"):
+        new_name = f"{new_name}.pdf"
+
+    documents = load_documents()
+    doc_to_rename = next((doc for doc in documents if doc["id"] == document_id), None)
+    if not doc_to_rename:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if doc_to_rename["name"] == new_name:
+        return DocumentResponse(**normalize_document_row(doc_to_rename))
+
+    storage_path = doc_to_rename.get("storage_path")
+    if storage_path:
+        new_storage_path = f"{document_id}/{new_name}"
+        try:
+            get_supabase().storage.from_(get_bucket()).move(storage_path, new_storage_path)
+            doc_to_rename["storage_path"] = new_storage_path
+            doc_to_rename["public_url"] = build_public_url(new_storage_path)
+            logger.info("[Rename] Moved storage object %s -> %s", storage_path, new_storage_path)
+        except Exception as exc:
+            logger.warning("[Rename] Storage move failed for %s: %s", storage_path, exc)
+
+    doc_to_rename["name"] = new_name
+    get_supabase().table(get_documents_table()).update({
+        "name": new_name,
+        "storage_path": doc_to_rename.get("storage_path"),
+        "public_url": doc_to_rename.get("public_url"),
+    }).eq("id", document_id).execute()
+    rename_document_in_vectorstore(
+        document_id=document_id,
+        document_name=new_name,
+        chunk_count=int(doc_to_rename.get("chunk_count", 0) or 0),
+    )
+
+    return DocumentResponse(**normalize_document_row(doc_to_rename))
 
 
 @router.post("/register")

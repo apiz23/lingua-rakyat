@@ -16,6 +16,76 @@ interface Logo {
   img: React.ComponentType<React.SVGProps<SVGSVGElement>>
 }
 
+const createRemoteSvgIcon = (src: string, alt: string) => {
+  return function RemoteSvgIcon(props: SVGProps<SVGSVGElement>) {
+    const { className, style } = props
+    return <img src={src} alt={alt} className={className} style={style} />
+  }
+}
+
+const ALL_LOGOS: Logo[] = [
+  {
+    name: "React",
+    id: 1,
+    img: createRemoteSvgIcon("https://thesvg.org/icons/react/default.svg", "React"),
+  },
+  {
+    name: "Next.js",
+    id: 2,
+    img: createRemoteSvgIcon(
+      "https://thesvg.org/icons/nextdotjs/default.svg",
+      "Next.js"
+    ),
+  },
+  {
+    name: "TypeScript",
+    id: 3,
+    img: createRemoteSvgIcon(
+      "https://thesvg.org/icons/typescript/default.svg",
+      "TypeScript"
+    ),
+  },
+  {
+    name: "Tailwind CSS",
+    id: 4,
+    img: createRemoteSvgIcon(
+      "https://thesvg.org/icons/tailwind-css/default.svg",
+      "Tailwind CSS"
+    ),
+  },
+  {
+    name: "FastAPI",
+    id: 5,
+    img: createRemoteSvgIcon("https://thesvg.org/icons/fastapi/default.svg", "FastAPI"),
+  },
+  {
+    name: "Pinecone",
+    id: 6,
+    img: createRemoteSvgIcon(
+      "https://cdn.svglogos.dev/logos/pinecone-icon.svg",
+      "Pinecone"
+    ),
+  },
+  {
+    name: "Cohere",
+    id: 7,
+    img: createRemoteSvgIcon("https://thesvg.org/icons/cohere/default.svg", "Cohere"),
+  },
+  {
+    name: "Groq",
+    id: 8,
+    img: createRemoteSvgIcon("https://thesvg.org/icons/groq/default.svg", "Groq"),
+  },
+  {
+    name: "Supabase",
+    id: 9,
+    img: createRemoteSvgIcon(
+      "https://thesvg.org/icons/supabase/default.svg",
+      "Supabase"
+    ),
+  },
+]
+
 // Utility function to randomly shuffle an array
 // This is used to mix up the order of logos for a more dynamic display
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -47,13 +117,6 @@ const distributeLogos = (allLogos: Logo[], columnCount: number): Logo[][] => {
   })
 
   return columns
-}
-
-const createRemoteSvgIcon = (src: string, alt: string) => {
-  return function RemoteSvgIcon(props: SVGProps<SVGSVGElement>) {
-    const { className, style } = props
-    return <img src={src} alt={alt} className={className} style={style} />
-  }
 }
 
 // Props for the LogoColumn component
@@ -138,90 +201,11 @@ function LogoCarousel({ columnCount = 2 }: { columnCount?: number }) {
   const [logoSets, setLogoSets] = useState<Logo[][]>([])
   const [currentTime, setCurrentTime] = useState(0)
 
-  // Memoize the array of logos to prevent unnecessary re-renders
-  const allLogos: Logo[] = useMemo(
-    () => [
-      {
-        name: "React",
-        id: 1,
-        img: createRemoteSvgIcon(
-          "https://thesvg.org/icons/react/default.svg",
-          "React"
-        ),
-      },
-      {
-        name: "Next.js",
-        id: 2,
-        img: createRemoteSvgIcon(
-          "https://thesvg.org/icons/nextdotjs/default.svg",
-          "Next.js"
-        ),
-      },
-      {
-        name: "TypeScript",
-        id: 3,
-        img: createRemoteSvgIcon(
-          "https://thesvg.org/icons/typescript/default.svg",
-          "TypeScript"
-        ),
-      },
-      {
-        name: "Tailwind CSS",
-        id: 4,
-        img: createRemoteSvgIcon(
-          "https://thesvg.org/icons/tailwind-css/default.svg",
-          "Tailwind CSS"
-        ),
-      },
-      {
-        name: "FastAPI",
-        id: 5,
-        img: createRemoteSvgIcon(
-          "https://thesvg.org/icons/fastapi/default.svg",
-          "FastAPI"
-        ),
-      },
-      {
-        name: "Pinecone",
-        id: 6,
-        img: createRemoteSvgIcon(
-          "https://cdn.svglogos.dev/logos/pinecone-icon.svg",
-          "Pinecone"
-        ),
-      },
-      {
-        name: "Cohere",
-        id: 7,
-        img: createRemoteSvgIcon(
-          "https://thesvg.org/icons/cohere/default.svg",
-          "Cohere"
-        ),
-      },
-      {
-        name: "Groq",
-        id: 8,
-        img: createRemoteSvgIcon(
-          "https://thesvg.org/icons/groq/default.svg",
-          "Groq"
-        ),
-      },
-      {
-        name: "Supabase",
-        id: 9,
-        img: createRemoteSvgIcon(
-          "https://thesvg.org/icons/supabase/default.svg",
-          "Supabase"
-        ),
-      },
-    ],
-    []
-  )
-
   // Distribute logos across columns when the component mounts
   useEffect(() => {
-    const distributedLogos = distributeLogos(allLogos, columnCount)
+    const distributedLogos = distributeLogos(ALL_LOGOS, columnCount)
     setLogoSets(distributedLogos)
-  }, [allLogos])
+  }, [columnCount])
 
   // Function to update the current time (used for logo cycling)
   const updateTime = useCallback(() => {

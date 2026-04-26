@@ -1,7 +1,12 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Document, listDocuments, deleteDocument } from "@/lib/api"
+import {
+  Document,
+  listDocuments,
+  deleteDocument,
+  renameDocument,
+} from "@/lib/api"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import {
@@ -22,6 +27,7 @@ import {
   HardDrive,
   FileCheck,
   Plus,
+  Pencil,
 } from "lucide-react"
 import UploadModal from "@/components/upload-modal"
 import { useLanguage } from "@/components/language-provider"
@@ -93,8 +99,8 @@ function ConfirmDialog({
 }: ConfirmDialogProps) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="animate-in fade-in zoom-in-95 w-full max-w-sm border border-border bg-card p-6 shadow-2xl">
+    <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm duration-150">
+      <div className="animate-in fade-in zoom-in-95 w-full max-w-sm border border-border bg-card p-6 shadow-2xl duration-200">
         <div className="flex items-start gap-4">
           <div
             className={cn(
@@ -117,14 +123,14 @@ function ConfirmDialog({
         <div className="mt-6 flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+            className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary active:scale-[0.97]"
           >
             Batal
           </button>
           <button
             onClick={onConfirm}
             className={cn(
-              "px-4 py-2 text-sm font-medium text-white transition-colors",
+              "px-4 py-2 text-sm font-medium text-white transition-colors active:scale-[0.97]",
               danger
                 ? "bg-destructive hover:bg-destructive/90"
                 : "bg-primary hover:bg-primary/90"
@@ -184,7 +190,14 @@ export default function ManagePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
+  const [renamingId, setRenamingId] = useState<string | null>(null)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [renameDialog, setRenameDialog] = useState<{
+    open: boolean
+    document: Document | null
+    name: string
+    token: string
+  }>({ open: false, document: null, name: "", token: "" })
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     title: string
@@ -294,7 +307,11 @@ export default function ManagePage() {
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
       return next
     })
   }
@@ -398,6 +415,64 @@ export default function ManagePage() {
   }
 
   // ── Filter ─────────────────────────────────────────────────────────────────
+  const openRenameDialog = (doc: Document) => {
+    setRenameDialog({
+      open: true,
+      document: doc,
+      name: doc.name,
+      token: "",
+    })
+  }
+
+  const closeRenameDialog = () => {
+    setRenameDialog({ open: false, document: null, name: "", token: "" })
+  }
+
+  const doRename = async () => {
+    const doc = renameDialog.document
+    const name = renameDialog.name.trim()
+    const token = renameDialog.token.trim()
+
+    if (!doc) return
+    if (!name) {
+      toast.error(
+        language === "ms" ? "Nama fail diperlukan" : "File name is required"
+      )
+      return
+    }
+    if (!token) {
+      toast.error(language === "ms" ? "Token diperlukan" : "Token is required")
+      return
+    }
+
+    setRenamingId(doc.id)
+    try {
+      await toast.promise(
+        renameDocument(doc.id, name, token).then((updated) => {
+          setDocuments((prev) =>
+            prev.map((item) => (item.id === updated.id ? updated : item))
+          )
+          closeRenameDialog()
+          return updated
+        }),
+        {
+          loading:
+            language === "ms"
+              ? "Menamakan semula dokumen..."
+              : "Renaming document...",
+          success:
+            language === "ms"
+              ? "Nama dokumen dikemas kini"
+              : "Document renamed",
+          error: (err) =>
+            `${language === "ms" ? "Gagal menamakan semula" : "Rename failed"}: ${err.message}`,
+        }
+      )
+    } finally {
+      setRenamingId(null)
+    }
+  }
+
   const filteredDocuments = documents.filter((doc) =>
     doc.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -678,17 +753,30 @@ export default function ManagePage() {
                           {formatDate(doc.uploaded_at)}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex justify-center">
-                            {isDeleting ? (
+                          <div className="flex justify-center gap-1">
+                            {isDeleting || renamingId === doc.id ? (
                               <Loader2 className="h-4 w-4 animate-spin text-destructive" />
                             ) : (
-                              <button
-                                onClick={() => confirmDelete(doc)}
-                                className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                title="Padam dokumen"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => openRenameDialog(doc)}
+                                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                  title={
+                                    language === "ms"
+                                      ? "Tukar nama dokumen"
+                                      : "Rename document"
+                                  }
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => confirmDelete(doc)}
+                                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                  title="Padam dokumen"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -724,6 +812,80 @@ export default function ManagePage() {
       />
 
       {/* ── Confirm Dialog ── */}
+      {renameDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-start gap-4">
+              <div className="bg-primary/10 p-2.5">
+                <Pencil className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {language === "ms" ? "Tukar nama dokumen" : "Rename document"}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {language === "ms"
+                    ? "Masukkan nama fail baharu dan token pentadbir untuk mengesahkan perubahan."
+                    : "Enter the new file name and admin token to confirm this change."}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <label className="block">
+                <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                  {language === "ms" ? "Nama fail" : "File name"}
+                </span>
+                <input
+                  value={renameDialog.name}
+                  onChange={(event) =>
+                    setRenameDialog((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  autoFocus
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                  Token
+                </span>
+                <input
+                  value={renameDialog.token}
+                  type="password"
+                  onChange={(event) =>
+                    setRenameDialog((prev) => ({
+                      ...prev,
+                      token: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={closeRenameDialog}
+                className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+              >
+                {language === "ms" ? "Batal" : "Cancel"}
+              </button>
+              <button
+                onClick={doRename}
+                disabled={renamingId !== null}
+                className="bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              >
+                {language === "ms" ? "Simpan" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmDialog
         open={confirmDialog.open}
         title={confirmDialog.title}

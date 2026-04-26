@@ -50,7 +50,7 @@
   --sidebar-ring: oklch(0.65 0.2 150);
 
   --font-sans: var(--font-sans), system-ui, sans-serif;
-  --font-heading: var(--font-sans), system-ui, sans-serif;
+  --font-heading: var(--font-heading), var(--font-sans), system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
 
   /* REMOVED ROUNDED CORNERS - set to 0 */
@@ -77,8 +77,8 @@
     0px 4px 10px -2px hsl(0 0% 0% / 0.1), 0px 8px 10px -3px hsl(0 0% 0% / 0.1);
   --shadow-2xl: 0px 4px 10px -2px hsl(0 0% 0% / 0.25);
 
-  --tracking-normal: -0.01em;
-  --tracking-heading: -0.02em;
+  --tracking-normal: 0;
+  --tracking-heading: 0;
 }
 
 /* DARK MODE - Same fonts, different colors */
@@ -130,7 +130,7 @@
   /* FONTS - Same as light mode */
   --font-sans:
     var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, sans-serif;
+    sans-serif;
   --font-heading: var(--font-heading), var(--font-sans), system-ui, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", monospace;
 
@@ -230,6 +230,15 @@
 /* =========================
    BASE
 ========================= */
+/* =========================
+   ANIMATION TOKENS
+========================= */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -241,6 +250,20 @@
     letter-spacing: var(--tracking-normal);
     font-weight: 400;
     line-height: 1.5;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  [style*="animation-delay"] {
+    animation-fill-mode: both;
   }
 
   h1,

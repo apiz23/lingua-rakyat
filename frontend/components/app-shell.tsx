@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sidebar"
 import { GithubIcon } from "./ui/github"
 import Link from "next/link"
+import { LinkPreview } from "./ui/link-preview"
 
 const OPEN_COMMAND_EVENT = "lingua-rakyat:open-command-palette"
 
@@ -62,7 +63,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={openCommandPalette}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:hidden"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary active:scale-[0.93] sm:hidden"
               aria-label="Open command palette"
             >
               <Search className="h-4 w-4" />
@@ -72,7 +73,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={openCommandPalette}
-              className="hidden items-center rounded-lg border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:inline-flex"
+              className="hidden items-center rounded-lg border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:inline-flex"
               aria-label="Open command palette"
             >
               <span className="mr-2">Search</span>
@@ -82,22 +83,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </button>
 
             {/* GitHub Link with text */}
-            <Link
-              href="https://github.com/apiz23/lingua-rakyat"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:inline-flex"
+            <LinkPreview
+              key="github"
+              url="https://github.com/apiz23/lingua-rakyat"
             >
-              <GithubIcon size={14} />
-              <span>Repository</span>
-            </Link>
+              <Link
+                href="https://github.com/apiz23/lingua-rakyat"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:inline-flex"
+              >
+                <GithubIcon size={14} />
+                <span>Repository</span>
+              </Link>
+            </LinkPreview>
 
             {/* Mobile GitHub Icon only */}
             <Link
               href="https://github.com/apiz23/lingua-rakyat"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:hidden"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:hidden"
             >
               <GithubIcon size={16} />
               <span className="sr-only">GitHub Repository</span>

@@ -80,7 +80,7 @@ export default function WorkSpacePage() {
             {/* Document Selector */}
             <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
               <PopoverTrigger asChild>
-                <button className="group flex w-full max-w-fit flex-1 items-center justify-between border border-border bg-card px-3 py-2 text-sm transition-all hover:border-primary/30 hover:bg-accent/50">
+                <button className="group max-w-[30vw] flex w-full flex-1 items-center justify-between border border-border bg-card px-3 py-2 text-sm transition-all hover:border-primary/30 hover:bg-accent/50">
                   <div className="flex items-center gap-2 truncate">
                     {selectedDoc ? (
                       <>

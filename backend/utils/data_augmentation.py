@@ -83,7 +83,7 @@ class QueryAugmenter:
 
     def __init__(self):
         self.groq_key = os.getenv("GROQ_API_KEY")
-        self.groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        self.groq_model = os.getenv("GROQ_MODEL", "groq/compound")
         self._cache: dict[str, list[tuple[str, str]]] = {}
         self._rate_limited_until = 0.0
 

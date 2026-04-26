@@ -2,15 +2,24 @@
 
 import * as React from "react"
 import type { SVGProps } from "react"
-import { LiquidMetal } from "@paper-design/shaders-react"
+import dynamic from "next/dynamic"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-const MemoizedLiquidMetal = React.memo(LiquidMetal)
+const LiquidMetalNoSSR = dynamic(
+  async () => {
+    const mod = await import("@paper-design/shaders-react")
+    return { default: mod.LiquidMetal }
+  },
+  {
+    ssr: false,
+    loading: () => <div className="size-full bg-primary/10" aria-hidden="true" />,
+  }
+)
 
-type LiquidMetalProps = React.ComponentProps<typeof LiquidMetal>
+type LiquidMetalProps = React.ComponentProps<typeof LiquidMetalNoSSR>
 type LiquidMetalIcon = React.ComponentType<SVGProps<SVGSVGElement>>
 
 export interface HeroLiquidMetalTechItem {
@@ -623,7 +632,7 @@ export function HeroLiquidMetalVisual({
         )}
         data-slot="hero-liquid-metal-desktop"
       >
-        <MemoizedLiquidMetal
+        <LiquidMetalNoSSR
           {...resolvedDesktopShaderProps}
           image={
             resolvedDesktopShaderProps.image ??
@@ -660,7 +669,7 @@ export function HeroLiquidMetalMobileVisual({
       {...props}
     >
       <div className="absolute inset-x-0 top-0 z-10 h-56 bg-gradient-to-b from-background via-background/95 to-transparent" />
-      <MemoizedLiquidMetal
+      <LiquidMetalNoSSR
         {...resolvedMobileShaderProps}
         image={
           resolvedMobileShaderProps.image ??
