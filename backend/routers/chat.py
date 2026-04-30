@@ -36,6 +36,7 @@ class AskRequest(BaseModel):
     question: str
     model_override: str = ""
     enable_query_augmentation: bool = True
+    bypass_cache: bool = False
 
 
 class SourceChunk(BaseModel):
@@ -151,6 +152,7 @@ async def ask_question(request: Request, body: AskRequest):
             document_id=body.document_id,
             model_override=body.model_override or None,
             enable_query_augmentation=body.enable_query_augmentation,
+            bypass_cache=body.bypass_cache,
         )
     except Exception as exc:
         logger.error("[Chat] Q&A failed: %s", exc)
@@ -197,6 +199,7 @@ async def ask_question_stream(request: Request, body: AskRequest):
                 document_id=body.document_id,
                 model_override=body.model_override or None,
                 enable_query_augmentation=body.enable_query_augmentation,
+                bypass_cache=body.bypass_cache,
             ):
                 if event["type"] == "token":
                     answer_pieces.append(event["text"])

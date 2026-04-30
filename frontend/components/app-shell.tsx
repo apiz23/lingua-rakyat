@@ -1,19 +1,35 @@
 "use client"
 
 import * as React from "react"
-import { Menu, Search } from "lucide-react"
+import { Search } from "lucide-react"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { GithubIcon } from "./ui/github"
 import Link from "next/link"
 import { LinkPreview } from "./ui/link-preview"
 
 const OPEN_COMMAND_EVENT = "lingua-rakyat:open-command-palette"
+
+function SidebarKeyboardShortcut() {
+  const { toggleSidebar } = useSidebar()
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault()
+        toggleSidebar()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [toggleSidebar])
+  return null
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
@@ -37,6 +53,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     )
   }
 
+  const GITHUB_URL = "https://github.com/apiz23/lingua-rakyat"
+
   return (
     <SidebarProvider
       defaultOpen={true}
@@ -47,6 +65,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         } as React.CSSProperties
       }
     >
+      <SidebarKeyboardShortcut />
       <AppSidebar />
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-fit shrink-0 items-center gap-2 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
@@ -63,7 +82,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={openCommandPalette}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary active:scale-[0.93] sm:hidden"
+              className="inline-flex h-8 w-8 items-center justify-center border border-border/60 text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary active:scale-[0.93] sm:hidden"
               aria-label="Open command palette"
             >
               <Search className="h-4 w-4" />
@@ -73,7 +92,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={openCommandPalette}
-              className="hidden items-center rounded-lg border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:inline-flex"
+              className="hidden items-center border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:inline-flex"
               aria-label="Open command palette"
             >
               <span className="mr-2">Search</span>
@@ -82,28 +101,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </kbd>
             </button>
 
-            {/* GitHub Link with text */}
+            {/* GitHub Link with text - Use LinkPreview ALONE without nested Link */}
             <LinkPreview
-              key="github"
-              url="https://github.com/apiz23/lingua-rakyat"
+              url={GITHUB_URL}
+              className="hidden items-center gap-2 border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:inline-flex"
             >
-              <Link
-                href="https://github.com/apiz23/lingua-rakyat"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden items-center gap-2 rounded-lg border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:inline-flex"
-              >
-                <GithubIcon size={14} />
-                <span>Repository</span>
-              </Link>
+              <GithubIcon size={14} />
+              <span>Repository</span>
             </LinkPreview>
 
             {/* Mobile GitHub Icon only */}
             <Link
-              href="https://github.com/apiz23/lingua-rakyat"
+              href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:hidden"
+              className="inline-flex h-8 w-8 items-center justify-center border border-border/60 text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:hidden"
             >
               <GithubIcon size={16} />
               <span className="sr-only">GitHub Repository</span>

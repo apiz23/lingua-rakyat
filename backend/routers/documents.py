@@ -256,12 +256,14 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
 
 def verify_upload_token(token: str) -> bool:
     try:
+        now = utc_now_iso()
         result = (
             get_supabase()
             .table("token")
             .select("id")
             .eq("value", token)
             .eq("active", True)
+            .or_(f"expires_at.is.null,expires_at.gte.{now}")
             .limit(1)
             .execute()
         )

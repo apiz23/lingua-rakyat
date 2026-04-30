@@ -26,7 +26,7 @@ import json
 import logging
 from collections import defaultdict, Counter
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 logger = logging.getLogger("evaluation")
 
@@ -196,8 +196,9 @@ class Evaluator:
         report = ev.report()
     """
 
-    def __init__(self):
+    def __init__(self, persist_fn: Optional[Callable[[dict], None]] = None):
         self._records: list[dict] = []
+        self._persist_fn = persist_fn
 
     # ── Record a single Q&A interaction ──────────────────────────────────
 
@@ -258,6 +259,11 @@ class Evaluator:
             language, confidence, latency_ms, metrics["fk_grade"],
             f" rouge1={metrics['rouge1_f1']:.3f}" if ground_truth else "",
         )
+        if self._persist_fn:
+            try:
+                self._persist_fn(record)
+            except Exception as exc:
+                logger.warning("[Eval] Persistence failed: %s", exc)
         return record
 
     # ── Aggregate report ─────────────────────────────────────────────────

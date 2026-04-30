@@ -3,7 +3,7 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  const [isMobile, setIsMobile] = React.useState<boolean>(false)
 
   React.useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function")
@@ -39,7 +39,7 @@ export function useIsMobile() {
     }
   }, [])
 
-  return !!isMobile
+  return isMobile
 }
 
 // Backwards-compatible alias used throughout the codebase.

@@ -5,6 +5,7 @@ import {
   BarChart3,
   CheckCircle2,
   Clock3,
+  Info,
   Loader2,
   Play,
   RefreshCw,
@@ -26,6 +27,14 @@ import { useLanguage } from "@/components/language-provider"
 import PageIntro from "@/components/page-intro"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 function pct(value: number) {
   return `${Math.round(value * 100)}%`
@@ -54,16 +63,21 @@ function benchmarkGrade(
   const latency =
     result?.aggregate.avg_latency_ms ?? report?.latency?.avg_ms ?? 4000
 
+  // ROUGE 0.15–0.30 is the expected range for open-domain generative RAG.
+  // Scale so 0.25 = full score; don't penalise for normal RAG behaviour.
+  const rougeScore = Math.min(1, rouge / 0.25)
   const readabilityScore = Math.max(
     0,
     Math.min(1, 1 - Math.max(readability - 5, 0) / 7)
   )
   const latencyScore = Math.max(0, Math.min(1, 1 - latency / 6000))
+  // Weights: confidence (primary retrieval signal) 40%, readability 20%,
+  // latency 20%, ROUGE word-overlap 20%.
   const blended =
-    rouge * 0.4 +
-    confidence * 0.3 +
-    readabilityScore * 0.15 +
-    latencyScore * 0.15
+    rougeScore * 0.2 +
+    confidence * 0.4 +
+    readabilityScore * 0.2 +
+    latencyScore * 0.2
 
   return Math.round(blended * 100)
 }
@@ -137,7 +151,7 @@ export default function BenchmarkPage() {
           benchmarkScoreSub:
             "Skor berwajaran dari kualiti, keyakinan, kebolehbacaan, dan kelajuan",
           rouge1: "ROUGE-1",
-          rouge1Sub: "Padanan jawapan dengan rujukan benchmark",
+          rouge1Sub: "Pertindihan perkataan dengan rujukan (0.10–0.30 normal untuk RAG)",
           confidence: "Keyakinan",
           confidenceSub: "Purata keyakinan carian",
           readability: "Kebolehbacaan",
@@ -154,13 +168,17 @@ export default function BenchmarkPage() {
           scorecardHeading: "What the benchmark means",
           above80: "Above 80",
           above80Sub:
-            "Strong competition-ready benchmark profile with balanced quality and usability.",
+            "Strong competition-ready profile. High retrieval confidence, fast responses, and plain-language output.",
           range6079: "60 to 79",
           range6079Sub:
-            "Good foundation, but still room to improve answer quality or simplicity.",
+            "Good foundation. Retrieval is working — room to improve readability or latency.",
           below60: "Below 60",
           below60Sub:
-            "Retrieval confidence, benchmark truth overlap, or prompt quality needs work.",
+            "Retrieval confidence or readability needs attention. ROUGE alone does not drive this score.",
+          rougeNote: "About ROUGE & BLEU",
+          rougeNoteBody:
+            "ROUGE and BLEU measure word overlap between the generated answer and a fixed reference answer. For open-domain generative RAG, scores of 0.10–0.30 are normal and expected — the model answers from your uploaded document using its own language, not the reference template. Higher retrieval confidence and readable output are stronger signals of real-world quality.",
+          rougeTypical: "Typical generative RAG range: ROUGE-1 0.10 – 0.30",
           liveSnapshot: "Live Report Snapshot",
           liveSnapshotHeading: "Stored evaluation metrics",
           recordedQueries: "Recorded queries",
@@ -193,7 +211,7 @@ export default function BenchmarkPage() {
           benchmarkScoreSub:
             "Weighted score from quality, confidence, readability, and latency",
           rouge1: "ROUGE-1",
-          rouge1Sub: "Answer match vs benchmark reference",
+          rouge1Sub: "Word overlap vs reference (0.10–0.30 normal for RAG)",
           confidence: "Confidence",
           confidenceSub: "Average retrieval confidence",
           readability: "Readability",
@@ -210,13 +228,17 @@ export default function BenchmarkPage() {
           scorecardHeading: "What the benchmark means",
           above80: "Above 80",
           above80Sub:
-            "Strong competition-ready benchmark profile with balanced quality and usability.",
+            "Strong competition-ready profile. High retrieval confidence, fast responses, and plain-language output.",
           range6079: "60 to 79",
           range6079Sub:
-            "Good foundation, but still room to improve answer quality or simplicity.",
+            "Good foundation. Retrieval is working — room to improve readability or latency.",
           below60: "Below 60",
           below60Sub:
-            "Retrieval confidence, benchmark truth overlap, or prompt quality needs work.",
+            "Retrieval confidence or readability needs attention. ROUGE alone does not drive this score.",
+          rougeNote: "About ROUGE & BLEU",
+          rougeNoteBody:
+            "ROUGE and BLEU measure word overlap between the generated answer and a fixed reference answer. For open-domain generative RAG, scores of 0.10–0.30 are normal and expected — the model answers from your uploaded document using its own language, not the reference template. Higher retrieval confidence and readable output are stronger signals of real-world quality.",
+          rougeTypical: "Typical generative RAG range: ROUGE-1 0.10 – 0.30",
           liveSnapshot: "Live Report Snapshot",
           liveSnapshotHeading: "Stored evaluation metrics",
           recordedQueries: "Recorded queries",
@@ -372,21 +394,29 @@ export default function BenchmarkPage() {
             </div>
 
             <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[340px]">
-              <select
+              <Select
                 value={selectedDocId}
-                onChange={(event) => setSelectedDocId(event.target.value)}
-                className="border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none"
+                onValueChange={setSelectedDocId}
               >
-                {documents.length === 0 ? (
-                  <option value="">{copy.noReady}</option>
-                ) : (
-                  documents.map((doc) => (
-                    <option key={doc.id} value={doc.id}>
-                      {doc.name}
-                    </option>
-                  ))
-                )}
-              </select>
+                <SelectTrigger className="border border-border bg-background text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                  <SelectValue placeholder={copy.noReady} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {documents.length === 0 ? (
+                      <SelectItem value="__empty__" disabled>
+                        {copy.noReady}
+                      </SelectItem>
+                    ) : (
+                      documents.map((doc) => (
+                        <SelectItem key={doc.id} value={doc.id}>
+                          {doc.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               <button
                 onClick={() => void handleRunBenchmark()}
                 disabled={!selectedDoc || running}
@@ -438,13 +468,23 @@ export default function BenchmarkPage() {
         </section>
 
         {/* Metric cards */}
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <MetricCard
-            label={copy.benchmarkScore}
-            value={`${overallScore}/100`}
-            sub={copy.benchmarkScoreSub}
-            icon={Target}
-          />
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* Benchmark score — dominant card */}
+          <div className="border border-primary/20 bg-primary/[0.04] p-5 backdrop-blur-sm md:col-span-2 xl:col-span-2">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-medium tracking-[0.18em] text-primary uppercase">
+                {copy.benchmarkScore}
+              </p>
+              <div className="bg-primary/10 p-2">
+                <Target className="h-4 w-4 text-primary" />
+              </div>
+            </div>
+            <p className="text-5xl font-black tracking-tight text-foreground sm:text-6xl">
+              {overallScore}
+              <span className="ml-1.5 text-2xl font-normal text-muted-foreground/60">/100</span>
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{copy.benchmarkScoreSub}</p>
+          </div>
           <MetricCard
             label={copy.rouge1}
             value={score(
@@ -566,6 +606,22 @@ export default function BenchmarkPage() {
           </div>
 
           <div className="space-y-6">
+            {/* ROUGE context note */}
+            <div className="border border-border bg-muted/20 p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Info className="h-4 w-4 shrink-0 text-primary" />
+                <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">
+                  {copy.rougeNote}
+                </p>
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {copy.rougeNoteBody}
+              </p>
+              <p className="mt-3 inline-block border border-primary/20 bg-primary/5 px-3 py-1 font-mono text-xs text-primary">
+                {copy.rougeTypical}
+              </p>
+            </div>
+
             {/* Scorecard */}
             <div className="border border-border bg-card/40 p-6 backdrop-blur-sm">
               <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">

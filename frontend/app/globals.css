@@ -49,11 +49,15 @@
   --sidebar-border: oklch(0.95 0.01 150);
   --sidebar-ring: oklch(0.65 0.2 150);
 
+  --success: oklch(0.55 0.15 145);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.62 0.16 60);
+  --warning-foreground: oklch(0.1 0.02 60);
+
   --font-sans: var(--font-sans), system-ui, sans-serif;
   --font-heading: var(--font-heading), var(--font-sans), system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
 
-  /* REMOVED ROUNDED CORNERS - set to 0 */
   --radius: 0rem;
 
   --shadow-x: 0px;
@@ -81,60 +85,59 @@
   --tracking-heading: 0;
 }
 
-/* DARK MODE - Same fonts, different colors */
 .dark {
-  --background: oklch(0.14 0.008 150);
-  --foreground: oklch(0.97 0.004 150);
+  --background: oklch(0.2133 0.0061 337.8278);
+  --foreground: oklch(0.8109 0 0);
 
-  --card: oklch(0.18 0.01 150);
-  --card-foreground: oklch(0.97 0.004 150);
+  --card: oklch(0.1822 0 0);
+  --card-foreground: oklch(0.8109 0 0);
 
-  --popover: oklch(0.18 0.01 150);
-  --popover-foreground: oklch(0.97 0.004 150);
+  --popover: oklch(0.2133 0.0061 337.8278);
+  --popover-foreground: oklch(0.8109 0 0);
 
-  /* DEEP CIVIC GREEN DARK */
-  --primary: oklch(0.62 0.16 145);
-  --primary-foreground: oklch(1 0 0);
+  --primary: oklch(0.8617 0.1842 127.3294);
+  --primary-foreground: oklch(0.2133 0.0061 337.8278);
 
-  --secondary: oklch(0.45 0.12 150);
-  --secondary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.5019 0.0633 283.8863);
+  --secondary-foreground: oklch(0.2133 0.0061 337.8278);
 
-  --muted: oklch(0.27 0.01 150);
-  --muted-foreground: oklch(0.7 0.02 150);
+  --muted: oklch(0.2520 0 0);
+  --muted-foreground: oklch(0.6268 0 0);
 
-  --accent: oklch(0.65 0.2 150);
-  --accent-foreground: oklch(1 0 0);
+  --accent: oklch(0.3211 0 0);
+  --accent-foreground: oklch(0.8109 0 0);
 
-  --destructive: oklch(0.5 0.15 150);
-  --destructive-foreground: oklch(1 0 0);
+  --destructive: oklch(0.5019 0.0633 283.8863);
+  --destructive-foreground: oklch(0.2133 0.0061 337.8278);
 
-  --border: oklch(0.27 0.01 150);
-  --input: oklch(0.27 0.01 150);
-  --ring: oklch(0.7 0.22 150);
+  --border: oklch(0.2520 0 0);
+  --input: oklch(0.2520 0 0);
+  --ring: oklch(0.8617 0.1842 127.3294);
 
-  --chart-1: oklch(0.7 0.22 150);
-  --chart-2: oklch(0.6 0.18 150);
-  --chart-3: oklch(0.75 0.2 150);
-  --chart-4: oklch(0.8 0.15 150);
-  --chart-5: oklch(0.55 0.05 150);
+  --chart-1: oklch(0.5019 0.0633 283.8863);
+  --chart-2: oklch(0.8617 0.1842 127.3294);
+  --chart-3: oklch(0.9296 0.1387 131.0471);
+  --chart-4: oklch(0.6268 0 0);
+  --chart-5: oklch(0.6830 0 0);
 
-  --sidebar: oklch(0.16 0.01 150);
-  --sidebar-foreground: oklch(0.7 0.02 150);
-  --sidebar-primary: oklch(0.7 0.22 150);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.21 0.02 150);
-  --sidebar-accent-foreground: oklch(1 0 0);
-  --sidebar-border: oklch(0.27 0.01 150);
-  --sidebar-ring: oklch(0.7 0.22 150);
+  --sidebar: oklch(0.1822 0 0);
+  --sidebar-foreground: oklch(0.8109 0 0);
+  --sidebar-primary: oklch(0.8617 0.1842 127.3294);
+  --sidebar-primary-foreground: oklch(0.2133 0.0061 337.8278);
+  --sidebar-accent: oklch(0.3211 0 0);
+  --sidebar-accent-foreground: oklch(0.8109 0 0);
+  --sidebar-border: oklch(0.2520 0 0);
+  --sidebar-ring: oklch(0.8617 0.1842 127.3294);
 
-  /* FONTS - Same as light mode */
-  --font-sans:
-    var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  --success: oklch(0.68 0.17 145);
+  --success-foreground: oklch(0.1 0.02 145);
+  --warning: oklch(0.72 0.17 60);
+  --warning-foreground: oklch(0.1 0.02 60);
+
+  --font-sans: var(--font-sans), system-ui, sans-serif;
   --font-heading: var(--font-heading), var(--font-sans), system-ui, sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", monospace;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
 
-  /* REMOVED ROUNDED CORNERS - set to 0 */
   --radius: 0rem;
 
   --shadow-x: 0px;
@@ -191,6 +194,11 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -227,9 +235,6 @@
   --tracking-normal: var(--tracking-normal);
 }
 
-/* =========================
-   BASE
-========================= */
 /* =========================
    ANIMATION TOKENS
 ========================= */
@@ -295,4 +300,41 @@
   kbd {
     font-family: var(--font-mono);
   }
+}
+
+/* =========================
+   BACKGROUND LAYER
+========================= */
+
+/* Topo contour stroke color — adapts to theme */
+.topo-strokes {
+  stroke: var(--color-primary);
+  stroke-opacity: 0.28;
+}
+.dark .topo-strokes {
+  stroke-opacity: 0.22;
+}
+
+@keyframes topo-up {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-26px); }
+}
+
+@keyframes topo-down {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(22px); }
+}
+
+.bg-civic-glow {
+  background: radial-gradient(circle at center, oklch(0.38 0.13 145 / 0.1) 0%, transparent 70%);
+}
+
+.dark .bg-civic-glow {
+  background: radial-gradient(circle at center, oklch(0.8617 0.1842 127.3294 / 0.07) 0%, transparent 70%);
+}
+
+.bg-noise {
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='1'/></svg>");
+  background-repeat: repeat;
+  background-size: 200px 200px;
 }

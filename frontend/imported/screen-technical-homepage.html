@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&amp;family=Atkinson+Hyperlegible:wght@400;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#e7e9e4",
+                        "on-primary-container": "#88bd95",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#191c19",
+                        "on-background": "#191c19",
+                        "inverse-primary": "#9dd3aa",
+                        "error-container": "#ffdad6",
+                        "outline": "#717971",
+                        "on-surface-variant": "#414942",
+                        "primary-fixed": "#b8f0c5",
+                        "tertiary": "#243200",
+                        "secondary-fixed": "#c2f198",
+                        "on-secondary-container": "#466d24",
+                        "outline-variant": "#c1c9bf",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#f3f4ef",
+                        "primary": "#00361a",
+                        "secondary-fixed-dim": "#a6d47e",
+                        "on-primary-fixed-variant": "#1d5031",
+                        "secondary": "#426920",
+                        "on-secondary-fixed-variant": "#2b5008",
+                        "surface": "#f8faf5",
+                        "inverse-surface": "#2e312e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#00210e",
+                        "surface-bright": "#f8faf5",
+                        "primary-fixed-dim": "#9dd3aa",
+                        "background": "#f8faf5",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#a1ba64",
+                        "surface-container": "#edeee9",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#e1e3de",
+                        "on-tertiary-fixed-variant": "#394d00",
+                        "on-tertiary-fixed": "#151f00",
+                        "on-error-container": "#93000a",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#366847",
+                        "tertiary-fixed": "#d2ed91",
+                        "secondary-container": "#bfee95",
+                        "on-secondary-fixed": "#0c2000",
+                        "surface-dim": "#d9dbd6",
+                        "surface-container-highest": "#e1e3de",
+                        "inverse-on-surface": "#f0f1ec",
+                        "tertiary-fixed-dim": "#b6d178",
+                        "tertiary-container": "#374a00",
+                        "primary-container": "#1a4d2e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "unit": "4px",
+                        "lg": "24px",
+                        "container-max": "1280px",
+                        "sm": "8px",
+                        "xl": "40px",
+                        "xxl": "64px",
+                        "xs": "4px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "label-bold": ["Atkinson Hyperlegible"],
+                        "h3": ["Bricolage Grotesque"],
+                        "body-sm": ["Atkinson Hyperlegible"],
+                        "button": ["Atkinson Hyperlegible"],
+                        "body-md": ["Atkinson Hyperlegible"],
+                        "body-lg": ["Atkinson Hyperlegible"],
+                        "h2": ["Bricolage Grotesque"],
+                        "h1": ["Bricolage Grotesque"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "label-bold": ["14px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "h3": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "body-sm": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "button": ["18px", {"lineHeight": "1", "fontWeight": "700"}],
+                        "body-md": ["18px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "body-lg": ["20px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "h2": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .hero-liquid-metal {
+            background: linear-gradient(135deg, #00361a 0%, #1a4d2e 50%, #88bd95 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-liquid-metal::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
+            opacity: 0.1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md">
+<!-- TopAppBar -->
+<nav class="bg-white dark:bg-stone-950 border-b-2 border-emerald-900 dark:border-emerald-500 sticky top-0 z-50">
+<div class="flex justify-between items-center w-full px-6 md:px-10 py-6 max-w-[1440px] mx-auto">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-900 dark:text-emerald-400">terminal</span>
+<span class="text-2xl font-black text-emerald-900 dark:text-white uppercase font-['Bricolage_Grotesque']">Lingua Rakyat</span>
+</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-emerald-900 dark:text-emerald-400 border-b-4 border-emerald-900 dark:border-emerald-400 pb-1 font-label-bold text-label-bold" href="#">Documentation</a>
+<a class="text-stone-600 dark:text-stone-400 font-medium font-label-bold text-label-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors duration-150" href="#">Source Code</a>
+</div>
+<button class="bg-primary text-on-primary px-6 py-3 font-button text-button active:bg-emerald-100 transition-all">Launch Console</button>
+</div>
+</nav>
+<main>
+<!-- Hero Section -->
+<section class="relative">
+<div class="h-[300px] md:h-[400px] hero-liquid-metal w-full flex items-center justify-center">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-background/20"></div>
+<!-- This visual placeholder represents the 'HeroLiquidMetal' shader requested -->
+<div class="w-full h-full opacity-40 mix-blend-overlay">
+<img class="w-full h-full object-cover" data-alt="A macro shot of flowing green chrome liquid metal with organic swirls and high-contrast highlights. The aesthetic is futuristic and technical, featuring deep emerald greens and bright metallic silver reflections that shimmer under soft studio lighting. The texture appears viscous and high-fidelity, perfectly suited for a premium technical brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk0a2002bh3cqzUVzc5TEpKycCjjyQvSfCo1E6B9QiOhPOGqPSZ1e1U3iEyM2KX30u9OxGzFeGAUzruN3DZDSHXplD2UOvoTLJfTPUJs67nht_xkYW1BzNfTs3fbMzOAGuA0FN5dbM4Q8OKVlgcnZJ1-AddPx4suqM-ZBW82wiaoj68jrz9v-7PVHc69K9FQ1goRHqi1GzP-lJCkGgHtOjT4WWuwlZhR7-0yuxGkU3kr_OmsQ95OEYWjpogenXUW7VS9-Geh1JMIqI"/>
+</div>
+</div>
+<div class="px-6 md:px-xxl py-xl max-w-[1440px] mx-auto -mt-20 relative z-10">
+<div class="bg-surface-container-lowest border-4 border-primary p-lg md:p-xl shadow-[8px_8px_0px_0px_rgba(0,54,26,1)]">
+<h1 class="font-h1 text-h1 text-primary mb-md">Retrieval-Augmented Generation</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-lg">
+                        The definitive technical assistant for the Malaysian public sector. High-precision RAG optimized for Act of Parliament PDFs and gazette documents.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4">
+<button class="bg-primary text-on-primary px-8 py-4 font-button text-button hover:bg-primary-container transition-colors">
+                            Explore Technical Demo
+                        </button>
+<button class="border-2 border-primary text-primary px-8 py-4 font-button text-button hover:bg-surface-container transition-colors">
+                            View Metrics
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Terminal Preview -->
+<section class="px-6 md:px-xxl py-xxl bg-surface">
+<div class="max-w-[1440px] mx-auto">
+<div class="flex items-center justify-between mb-lg">
+<h2 class="font-h2 text-h2 text-primary">System Output</h2>
+<span class="font-mono text-label-bold text-on-surface-variant">Session: query_active_0x1F</span>
+</div>
+<div class="bg-stone-900 text-stone-100 font-mono p-6 md:p-10 border-2 border-stone-800 shadow-2xl">
+<div class="flex gap-2 mb-6">
+<div class="w-3 h-3 rounded-full bg-red-500"></div>
+<div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+<div class="w-3 h-3 rounded-full bg-green-500"></div>
+</div>
+<div class="space-y-4">
+<p class="text-emerald-400">user@lingua-rakyat:~$ query --file="Act_446.pdf" "What are the employer obligations for worker housing?"</p>
+<div class="pl-4 border-l-2 border-emerald-900">
+<p class="mb-4">Processing Retrieval [Vector Search: Milvus]...</p>
+<p class="text-stone-400">Found 3 relevant chunks in Act 446 (Employees' Minimum Standards of Housing, Accommodations and Amenities Act 1990).</p>
+<div class="bg-stone-800/50 p-4 border border-stone-700">
+<p class="text-white mb-2 font-bold">L-R Assistant:</p>
+<p class="mb-4 leading-relaxed">Under Section 24H of Act 446, an employer or a centralized accommodation provider must ensure that every accommodation provided for employees complies with the minimum standards. This includes providing basic amenities like water and electricity, and maintaining the safety and health of the accommodation [Ref: Act 446, Sec 24H(1)].</p>
+<p class="text-emerald-400 text-sm">Citations: [1] Sec 24H(1), [2] Sec 24J, [3] Regulation 3 (2020 Amendment)</p>
+</div>
+</div>
+<p class="text-emerald-400 animate-pulse">_</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Comparison Table -->
+<section class="px-6 md:px-xxl py-xxl bg-surface-container-low">
+<div class="max-w-[1440px] mx-auto">
+<h2 class="font-h2 text-h2 text-primary mb-xl">Institutional Benchmark</h2>
+<div class="overflow-x-auto">
+<table class="w-full border-collapse border-2 border-primary">
+<thead>
+<tr class="bg-primary text-on-primary">
+<th class="p-lg text-left font-h3 text-body-md border border-on-primary/20">Metric</th>
+<th class="p-lg text-left font-h3 text-body-md border border-on-primary/20">ChatGPT (Base)</th>
+<th class="p-lg text-left font-h3 text-body-md border border-on-primary/20 bg-primary-container">Lingua Rakyat</th>
+</tr>
+</thead>
+<tbody class="bg-white">
+<tr class="border-b border-surface-variant">
+<td class="p-lg font-label-bold text-on-surface border-x-2 border-primary">Natural Malay Support</td>
+<td class="p-lg text-on-surface-variant border-x border-surface-variant">Generic / Translated</td>
+<td class="p-lg font-bold text-primary border-x-2 border-primary bg-emerald-50">Legal-Domain Malay</td>
+</tr>
+<tr class="border-b border-surface-variant bg-surface-container-lowest">
+<td class="p-lg font-label-bold text-on-surface border-x-2 border-primary">Built-in Eval Metrics</td>
+<td class="p-lg text-on-surface-variant border-x border-surface-variant">None</td>
+<td class="p-lg font-bold text-primary border-x-2 border-primary bg-emerald-50">RAGAS / Faithfulness</td>
+</tr>
+<tr class="border-b border-surface-variant">
+<td class="p-lg font-label-bold text-on-surface border-x-2 border-primary">Document Citation</td>
+<td class="p-lg text-on-surface-variant border-x border-surface-variant">Hallucinated Links</td>
+<td class="p-lg font-bold text-primary border-x-2 border-primary bg-emerald-50">Verified PDF Pinpoint</td>
+</tr>
+<tr class="bg-surface-container-lowest">
+<td class="p-lg font-label-bold text-on-surface border-x-2 border-primary">Data Sovereignty</td>
+<td class="p-lg text-on-surface-variant border-x border-surface-variant">Cloud / Third-party</td>
+<td class="p-lg font-bold text-primary border-x-2 border-primary bg-emerald-50">On-Premise Ready</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- System Flow -->
+<section class="px-6 md:px-xxl py-xxl bg-white">
+<div class="max-w-[1440px] mx-auto">
+<h2 class="font-h2 text-h2 text-primary mb-xl">Architecture Pipeline</h2>
+<div class="grid md:grid-cols-3 gap-lg">
+<!-- Step 1 -->
+<div class="border-2 border-primary p-lg flex flex-col h-full">
+<span class="text-h1 font-h1 text-primary-container mb-md">01</span>
+<h3 class="font-h3 text-h3 text-primary mb-sm">Ingestion</h3>
+<p class="text-on-surface-variant font-body-md flex-grow">
+                            Multi-modal PDF parsing using layout-aware OCR to preserve table structures and legal hierarchies found in government gazettes.
+                        </p>
+</div>
+<!-- Step 2 -->
+<div class="border-2 border-primary p-lg flex flex-col h-full bg-primary text-on-primary">
+<span class="text-h1 font-h1 text-primary-fixed-dim mb-md">02</span>
+<h3 class="font-h3 text-h3 text-white mb-sm">Retrieval</h3>
+<p class="text-emerald-100 font-body-md flex-grow">
+                            Hybrid search combining dense vector embeddings with BM25 lexical search to handle technical terminology and specific Act numbering.
+                        </p>
+</div>
+<!-- Step 3 -->
+<div class="border-2 border-primary p-lg flex flex-col h-full">
+<span class="text-h1 font-h1 text-primary-container mb-md">03</span>
+<h3 class="font-h3 text-h3 text-primary mb-sm">Generation</h3>
+<p class="text-on-surface-variant font-body-md flex-grow">
+                            Context-injected LLM processing with strict grounding rules to ensure zero hallucination and Malaysian legal context preservation.
+                        </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Tech Stack -->
+<section class="px-6 md:px-xxl py-xxl bg-surface-container">
+<div class="max-w-[1440px] mx-auto text-center">
+<h2 class="font-h2 text-h2 text-primary mb-xl">Institutional Tech Stack</h2>
+<div class="flex flex-wrap justify-center gap-md mb-xxl">
+<div class="bg-white border-2 border-primary px-6 py-3 font-mono font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">terminal</span> Next.js
+                    </div>
+<div class="bg-white border-2 border-primary px-6 py-3 font-mono font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">api</span> FastAPI
+                    </div>
+<div class="bg-white border-2 border-primary px-6 py-3 font-mono font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">database</span> Milvus
+                    </div>
+<div class="bg-white border-2 border-primary px-6 py-3 font-mono font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">token</span> LangChain
+                    </div>
+<div class="bg-white border-2 border-primary px-6 py-3 font-mono font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">psychology</span> PyTorch
+                    </div>
+</div>
+<!-- Logo Carousel Mockup -->
+<div class="border-t-2 border-b-2 border-primary/20 py-lg overflow-hidden">
+<div class="flex gap-xxl items-center justify-center opacity-50 grayscale">
+<span class="font-h3 text-on-surface-variant tracking-tighter uppercase">Agency.X</span>
+<span class="font-h3 text-on-surface-variant tracking-tighter uppercase">Min_Law</span>
+<span class="font-h3 text-on-surface-variant tracking-tighter uppercase">GovTech.MY</span>
+<span class="font-h3 text-on-surface-variant tracking-tighter uppercase">Parlimen</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-stone-50 dark:bg-stone-900 border-t-2 border-emerald-900 dark:border-emerald-800">
+<div class="w-full px-6 md:px-10 py-16 flex flex-col md:flex-row justify-between items-center max-w-[1440px] mx-auto gap-8">
+<div class="flex flex-col gap-2">
+<span class="font-['Bricolage_Grotesque'] font-bold text-emerald-900 dark:text-white text-2xl uppercase">Lingua Rakyat</span>
+<p class="font-['Atkinson_Hyperlegible'] text-sm text-stone-500 dark:text-stone-400 max-w-sm">
+                    © 2024 Lingua Rakyat. Designed for Institutional Empathy. Built for the citizens of Malaysia.
+                </p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="text-stone-500 dark:text-stone-400 font-['Atkinson_Hyperlegible'] text-sm hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200" href="#">Documentation</a>
+<a class="text-stone-500 dark:text-stone-400 font-['Atkinson_Hyperlegible'] text-sm hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200" href="#">Source Code</a>
+<a class="text-stone-500 dark:text-stone-400 font-['Atkinson_Hyperlegible'] text-sm hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200" href="#">Civic Standards</a>
+<a class="text-stone-500 dark:text-stone-400 font-['Atkinson_Hyperlegible'] text-sm hover:text-emerald-700 dark:hover:text-emerald-300 transition-all duration-200" href="#">Governance</a>
+</div>
+</div>
+</footer>
+</body></html>

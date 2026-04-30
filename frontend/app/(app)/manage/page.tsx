@@ -83,6 +83,7 @@ interface ConfirmDialogProps {
   title: string
   description: string
   confirmLabel?: string
+  cancelLabel?: string
   onConfirm: () => void
   onCancel: () => void
   danger?: boolean
@@ -92,7 +93,8 @@ function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Sahkan",
+  confirmLabel = "OK",
+  cancelLabel = "Cancel",
   onConfirm,
   onCancel,
   danger = false,
@@ -125,7 +127,7 @@ function ConfirmDialog({
             onClick={onCancel}
             className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary active:scale-[0.97]"
           >
-            Batal
+            {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
@@ -197,7 +199,8 @@ export default function ManagePage() {
     document: Document | null
     name: string
     token: string
-  }>({ open: false, document: null, name: "", token: "" })
+    error: string
+  }>({ open: false, document: null, name: "", token: "", error: "" })
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean
     title: string
@@ -231,6 +234,26 @@ export default function ManagePage() {
           introTag: "Portal Dokumen",
           introBody:
             "Urus fail yang telah dimuat naik, semak status pemprosesan, dan kekalkan perpustakaan dokumen dalam satu susun atur yang konsisten.",
+          processing: "Sedang Diproses",
+          failed: "Gagal",
+          tableDoc: "Dokumen",
+          tableUploaded: "Dimuat Naik",
+          tableActions: "Tindakan",
+          noMatchDocs: "Tiada dokumen sepadan dengan carian anda",
+          noMatchHint: "Cuba kata kunci lain",
+          noDocs: "Belum ada dokumen",
+          noDocsHint: "Klik butang 'Muat Naik PDF' di atas untuk bermula",
+          uploadFirstBtn: "Muat Naik Dokumen Pertama",
+          cancelBtn: "Batal",
+          confirmDeleteBtn: "Padam",
+          confirmDeleteTitle: "Padam dokumen ini?",
+          deleteFailed: "Gagal memadam dokumen",
+          deleteAll: "Tiada dokumen berjaya dipadam",
+          moreErrors: "lagi ralat",
+          of: "daripada",
+          selected: "dipilih",
+          showing: "Memaparkan",
+          docs: "dokumen",
         }
       : {
           loading: "Loading documents...",
@@ -251,6 +274,26 @@ export default function ManagePage() {
           introTag: "Document Portal",
           introBody:
             "Manage uploaded files, review processing status, and keep the document library organized in one consistent workspace.",
+          processing: "Processing",
+          failed: "Failed",
+          tableDoc: "Document",
+          tableUploaded: "Uploaded",
+          tableActions: "Actions",
+          noMatchDocs: "No documents match your search",
+          noMatchHint: "Try a different keyword",
+          noDocs: "No documents yet",
+          noDocsHint: "Click 'Upload PDF' above to get started",
+          uploadFirstBtn: "Upload First Document",
+          cancelBtn: "Cancel",
+          confirmDeleteBtn: "Delete",
+          confirmDeleteTitle: "Delete this document?",
+          deleteFailed: "Failed to delete documents",
+          deleteAll: "No documents were deleted",
+          moreErrors: "more errors",
+          of: "of",
+          selected: "selected",
+          showing: "Showing",
+          docs: "documents",
         }
 
   const fetchDocuments = useCallback(
@@ -328,8 +371,11 @@ export default function ManagePage() {
   const confirmDelete = (doc: Document) => {
     setConfirmDialog({
       open: true,
-      title: "Padam dokumen ini?",
-      description: `"${doc.name}" akan dipadam secara kekal daripada storan dan pangkalan data vektor.`,
+      title: copy.confirmDeleteTitle,
+      description:
+        language === "ms"
+          ? `"${doc.name}" akan dipadam secara kekal daripada storan dan pangkalan data vektor.`
+          : `"${doc.name}" will be permanently deleted from storage and the vector database.`,
       onConfirm: () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }))
         doDelete([doc.id])
@@ -342,8 +388,14 @@ export default function ManagePage() {
     const count = selected.size
     setConfirmDialog({
       open: true,
-      title: `Padam ${count} dokumen?`,
-      description: `Tindakan ini akan memadam ${count} dokumen secara kekal daripada storan dan pangkalan data vektor. Tindakan ini tidak boleh dibatalkan.`,
+      title:
+        language === "ms"
+          ? `Padam ${count} dokumen?`
+          : `Delete ${count} documents?`,
+      description:
+        language === "ms"
+          ? `Tindakan ini akan memadam ${count} dokumen secara kekal daripada storan dan pangkalan data vektor. Tindakan ini tidak boleh dibatalkan.`
+          : `This will permanently delete ${count} documents from storage and the vector database. This action cannot be undone.`,
       onConfirm: () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }))
         doDelete(Array.from(selected))
@@ -372,26 +424,32 @@ export default function ManagePage() {
         }
 
         if (successCount === 0) {
-          throw new Error("Tiada dokumen berjaya dipadam")
+          throw new Error(copy.deleteAll)
         }
 
-        // Update the documents list
         setDocuments((prev) => prev.filter((d) => !ids.includes(d.id)))
         setSelected(new Set())
 
         return { successCount, totalCount: ids.length, errors }
       },
       {
-        loading: `Memadam ${ids.length} dokumen...`,
+        loading:
+          language === "ms"
+            ? `Memadam ${ids.length} dokumen...`
+            : `Deleting ${ids.length} documents...`,
         success: (data) => {
           const { successCount, totalCount, errors } = data
           if (successCount === totalCount) {
-            return `${successCount} dokumen berjaya dipadam`
+            return language === "ms"
+              ? `${successCount} dokumen berjaya dipadam`
+              : `${successCount} documents deleted`
           } else {
             return (
               <div>
                 <p className="font-semibold">
-                  {successCount} daripada {totalCount} dokumen berjaya dipadam
+                  {language === "ms"
+                    ? `${successCount} ${copy.of} ${totalCount} dokumen berjaya dipadam`
+                    : `${successCount} ${copy.of} ${totalCount} documents deleted`}
                 </p>
                 {errors.length > 0 && (
                   <ul className="mt-2 list-inside list-disc text-xs">
@@ -399,7 +457,9 @@ export default function ManagePage() {
                       <li key={i}>{err}</li>
                     ))}
                     {errors.length > 2 && (
-                      <li>...dan {errors.length - 2} lagi ralat</li>
+                      <li>
+                        ...{language === "ms" ? "dan" : "and"} {errors.length - 2} {copy.moreErrors}
+                      </li>
                     )}
                   </ul>
                 )}
@@ -407,7 +467,7 @@ export default function ManagePage() {
             )
           }
         },
-        error: (err) => `Gagal memadam dokumen: ${err.message}`,
+        error: (err) => `${copy.deleteFailed}: ${err.message}`,
       }
     )
 
@@ -421,11 +481,12 @@ export default function ManagePage() {
       document: doc,
       name: doc.name,
       token: "",
+      error: "",
     })
   }
 
   const closeRenameDialog = () => {
-    setRenameDialog({ open: false, document: null, name: "", token: "" })
+    setRenameDialog({ open: false, document: null, name: "", token: "", error: "" })
   }
 
   const doRename = async () => {
@@ -446,28 +507,17 @@ export default function ManagePage() {
     }
 
     setRenamingId(doc.id)
+    setRenameDialog((prev) => ({ ...prev, error: "" }))
     try {
-      await toast.promise(
-        renameDocument(doc.id, name, token).then((updated) => {
-          setDocuments((prev) =>
-            prev.map((item) => (item.id === updated.id ? updated : item))
-          )
-          closeRenameDialog()
-          return updated
-        }),
-        {
-          loading:
-            language === "ms"
-              ? "Menamakan semula dokumen..."
-              : "Renaming document...",
-          success:
-            language === "ms"
-              ? "Nama dokumen dikemas kini"
-              : "Document renamed",
-          error: (err) =>
-            `${language === "ms" ? "Gagal menamakan semula" : "Rename failed"}: ${err.message}`,
-        }
+      const updated = await renameDocument(doc.id, name, token)
+      setDocuments((prev) =>
+        prev.map((item) => (item.id === updated.id ? updated : item))
       )
+      toast.success(language === "ms" ? "Nama dokumen dikemas kini" : "Document renamed")
+      closeRenameDialog()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : language === "ms" ? "Gagal menamakan semula" : "Rename failed"
+      setRenameDialog((prev) => ({ ...prev, error: msg }))
     } finally {
       setRenamingId(null)
     }
@@ -516,7 +566,7 @@ export default function ManagePage() {
 
         {/* ── Stats Row ── */}
         {!loading && documents.length > 0 && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <StatCard
               icon={FileText}
               label={copy.totalDocs}
@@ -576,7 +626,7 @@ export default function ManagePage() {
                     <div className="flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1">
                       <Loader2 className="h-3 w-3 animate-spin text-accent" />
                       <span className="text-xs text-accent">
-                        {processingCount} sedang diproses
+                        {processingCount} {copy.processing}
                       </span>
                     </div>
                   )}
@@ -584,7 +634,7 @@ export default function ManagePage() {
                     <div className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1">
                       <AlertCircle className="h-3 w-3 text-destructive" />
                       <span className="text-xs text-destructive">
-                        {errorCount} gagal
+                        {errorCount} {copy.failed}
                       </span>
                     </div>
                   )}
@@ -600,7 +650,7 @@ export default function ManagePage() {
                   className="flex items-center gap-2 bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Padam {selected.size}
+                  {language === "ms" ? `Padam ${selected.size}` : `Delete ${selected.size}`}
                 </button>
               )}
             </div>
@@ -611,7 +661,7 @@ export default function ManagePage() {
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
-                  Memuatkan dokumen...
+                  {copy.loading}
                 </p>
               </div>
             </div>
@@ -619,14 +669,10 @@ export default function ManagePage() {
             <div className="flex h-64 flex-col items-center justify-center border-2 border-dashed border-border text-center">
               <FolderOpen className="h-12 w-12 text-muted-foreground/30" />
               <p className="mt-4 text-lg font-medium text-foreground">
-                {searchQuery
-                  ? "Tiada dokumen sepadan dengan carian anda"
-                  : "Belum ada dokumen"}
+                {searchQuery ? copy.noMatchDocs : copy.noDocs}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {searchQuery
-                  ? "Cuba kata kunci lain"
-                  : "Klik butang 'Muat Naik PDF' di atas untuk bermula"}
+                {searchQuery ? copy.noMatchHint : copy.noDocsHint}
               </p>
               {!searchQuery && (
                 <button
@@ -634,7 +680,7 @@ export default function ManagePage() {
                   className="mt-4 flex items-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   <Upload className="h-4 w-4" />
-                  Muat Naik Dokumen Pertama
+                  {copy.uploadFirstBtn}
                 </button>
               )}
             </div>
@@ -659,19 +705,19 @@ export default function ManagePage() {
                       </button>
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Dokumen
+                      {copy.tableDoc}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Size
+                      {language === "ms" ? "Saiz" : "Size"}
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">
                       Status
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Dimuat Naik
+                      {copy.tableUploaded}
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Actions
+                      {copy.tableActions}
                     </th>
                   </tr>
                 </thead>
@@ -790,10 +836,10 @@ export default function ManagePage() {
               <div className="border-t border-border bg-secondary/10 px-4 py-3 text-xs text-muted-foreground">
                 {selected.size > 0 ? (
                   <span className="font-medium text-foreground">
-                    {selected.size} daripada {filteredDocuments.length} dipilih
+                    {selected.size} {copy.of} {filteredDocuments.length} {copy.selected}
                   </span>
                 ) : (
-                  <span>Memaparkan {filteredDocuments.length} dokumen</span>
+                  <span>{copy.showing} {filteredDocuments.length} {copy.docs}</span>
                 )}
               </div>
             </div>
@@ -867,6 +913,13 @@ export default function ManagePage() {
               </label>
             </div>
 
+            {renameDialog.error && (
+              <div className="mt-4 flex items-center gap-2 border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {renameDialog.error}
+              </div>
+            )}
+
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={closeRenameDialog}
@@ -879,7 +932,9 @@ export default function ManagePage() {
                 disabled={renamingId !== null}
                 className="bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
-                {language === "ms" ? "Simpan" : "Save"}
+                {renamingId ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : language === "ms" ? "Simpan" : "Save"}
               </button>
             </div>
           </div>
@@ -890,7 +945,8 @@ export default function ManagePage() {
         open={confirmDialog.open}
         title={confirmDialog.title}
         description={confirmDialog.description}
-        confirmLabel="Padam"
+        confirmLabel={copy.confirmDeleteBtn}
+        cancelLabel={copy.cancelBtn}
         danger
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}

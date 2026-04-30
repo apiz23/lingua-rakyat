@@ -289,7 +289,8 @@ export async function askQuestion(
   sessionId: string,
   question: string,
   modelOverride: string = "",
-  enableQueryAugmentation: boolean = true
+  enableQueryAugmentation: boolean = true,
+  bypassCache: boolean = false
 ): Promise<AskResponse> {
   const res = await apiFetch(`${API_URL}/api/chat/ask`, {
     method: "POST",
@@ -302,6 +303,7 @@ export async function askQuestion(
       question: question,
       model_override: modelOverride,
       enable_query_augmentation: enableQueryAugmentation,
+      bypass_cache: bypassCache,
     }),
   })
   if (!res.ok) {
@@ -315,6 +317,7 @@ export async function getChatHistory(params: {
   userId: string
   documentId?: string
   sessionId?: string
+  signal?: AbortSignal
 }): Promise<ChatHistoryMessage[]> {
   const search = new URLSearchParams()
   search.set("user_id", params.userId)
@@ -323,7 +326,8 @@ export async function getChatHistory(params: {
 
   try {
     const res = await apiFetch(
-      `${API_URL}/api/chat/history?${search.toString()}`
+      `${API_URL}/api/chat/history?${search.toString()}`,
+      params.signal ? { signal: params.signal } : undefined
     )
     if (!res.ok) throw new Error("Failed to fetch chat history")
     const messages = await res.json()
@@ -450,6 +454,7 @@ export async function askQuestionStream(
   question: string,
   modelOverride: string = "",
   enableQueryAugmentation: boolean = true,
+  bypassCache: boolean = false,
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
@@ -521,6 +526,7 @@ export async function askQuestionStream(
         question,
         model_override: modelOverride,
         enable_query_augmentation: enableQueryAugmentation,
+        bypass_cache: bypassCache,
       }),
       signal,
     })

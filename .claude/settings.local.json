@@ -13,7 +13,20 @@
       "Bash(npx tsc *)",
       "Bash(git stash *)",
       "Bash(python -c ' *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(netstat -tuln)",
+      "Bash(python *)",
+      "Bash(claude mcp *)",
+      "mcp__stitch__list_projects",
+      "mcp__stitch__get_project",
+      "mcp__stitch__list_screens",
+      "mcp__stitch__get_screen",
+      "WebFetch(domain:contribution.usercontent.google.com)",
+      "Bash(curl -sL \"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sX2M0M2RjZmQ0MGZlZDRmOTQ4Nzk3NmExYTUyYzY5NGI5EgsSBxChxrnyng4YAZIBJAoKcHJvamVjdF9pZBIWQhQxNTQyNTIyODQ4NjcwMzc0MzYwMA&filename=&opi=89354086\" -o \"C:/Users/SCSM11/desktop/developer/lingua-rakyat/frontend/imported/screen-technical-homepage.html\")",
+      "Bash(curl -sL \"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzQ5NGVkMjUwYjQwNjQ3NTc4NGFjYjQwNzlkNzc1N2VkEgsSBxChxrnyng4YAZIBJAoKcHJvamVjdF9pZBIWQhQxNTQyNTIyODQ4NjcwMzc0MzYwMA&filename=&opi=89354086\" -o \"C:/Users/SCSM11/desktop/developer/lingua-rakyat/frontend/imported/screen-homepage.html\")",
+      "Bash(curl -sL \"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sX2E3YTEyOGI4NTM3YzRmOWJhMzA1NTQ1MjJjYzMzZGQ3EgsSBxChxrnyng4YAZIBJAoKcHJvamVjdF9pZBIWQhQxNTQyNTIyODQ4NjcwMzc0MzYwMA&filename=&opi=89354086\" -o \"C:/Users/SCSM11/desktop/developer/lingua-rakyat/frontend/imported/screen-background-component.html\")",
+      "Bash(curl *)",
+      "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"civic government AI document assistant multilingual professional\" --design-system -p \"LinguaRakyat\")"
     ]
   }
 }

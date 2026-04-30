@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&amp;family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#88bd95",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-fixed-dim": "#9dd3aa",
+                    "on-surface-variant": "#414942",
+                    "secondary": "#426920",
+                    "on-error": "#ffffff",
+                    "secondary-fixed-dim": "#a6d47e",
+                    "on-primary-fixed": "#00210e",
+                    "secondary-fixed": "#c2f198",
+                    "tertiary-fixed": "#d2ed91",
+                    "surface-bright": "#f8faf5",
+                    "outline": "#717971",
+                    "on-secondary-fixed-variant": "#2b5008",
+                    "surface-tint": "#366847",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#151f00",
+                    "tertiary": "#243200",
+                    "on-surface": "#191c19",
+                    "tertiary-fixed-dim": "#b6d178",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "inverse-primary": "#9dd3aa",
+                    "surface-variant": "#e1e3de",
+                    "surface-container-highest": "#e1e3de",
+                    "on-tertiary-container": "#a1ba64",
+                    "surface-container-high": "#e7e9e4",
+                    "inverse-surface": "#2e312e",
+                    "on-background": "#191c19",
+                    "on-primary-fixed-variant": "#1d5031",
+                    "surface-container": "#edeee9",
+                    "on-secondary": "#ffffff",
+                    "tertiary-container": "#374a00",
+                    "surface": "#f8faf5",
+                    "inverse-on-surface": "#f0f1ec",
+                    "surface-dim": "#d9dbd6",
+                    "on-secondary-container": "#466d24",
+                    "on-tertiary-fixed-variant": "#394d00",
+                    "surface-container-low": "#f3f4ef",
+                    "primary-fixed": "#b8f0c5",
+                    "background": "#f8faf5",
+                    "primary": "#00361a",
+                    "on-secondary-fixed": "#0c2000",
+                    "secondary-container": "#bfee95",
+                    "primary-container": "#1a4d2e",
+                    "outline-variant": "#c1c9bf"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0px",
+                    "lg": "0px",
+                    "xl": "0px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xxl": "64px",
+                    "gutter": "24px",
+                    "container-max": "1280px",
+                    "lg": "24px",
+                    "md": "16px",
+                    "unit": "4px",
+                    "xs": "4px",
+                    "xl": "40px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "h3": ["Bricolage Grotesque"],
+                    "h2": ["Bricolage Grotesque"],
+                    "h1": ["Bricolage Grotesque"],
+                    "body-lg": ["Atkinson Hyperlegible"],
+                    "body-sm": ["Atkinson Hyperlegible"],
+                    "body-md": ["Atkinson Hyperlegible"],
+                    "button": ["Atkinson Hyperlegible"],
+                    "label-bold": ["Atkinson Hyperlegible"]
+            },
+            "fontSize": {
+                    "h3": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "h2": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "body-lg": ["20px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "body-sm": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-md": ["18px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "button": ["18px", {"lineHeight": "1", "fontWeight": "700"}],
+                    "label-bold": ["14px", {"lineHeight": "1.2", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f8faf5;
+            color: #191c19;
+        }
+        /* Override all radii for the sharp aesthetic */
+        * { border-radius: 0 !important; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md">
+<!-- TopAppBar -->
+<nav class="fixed top-0 z-50 bg-white border-b-2 border-[#1a4d2e] flex justify-between items-center w-full px-6 h-20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#1a4d2e]" data-icon="language">language</span>
+<span class="text-2xl font-black text-[#1a4d2e] font-['Bricolage_Grotesque'] uppercase tracking-tight">Lingua Rakyat</span>
+</div>
+<button class="bg-[#1a4d2e] text-white px-4 py-2 font-button text-button hover:bg-[#00361a] transition-all active:translate-y-0.5">
+            Start Now
+        </button>
+</nav>
+<main class="pt-20">
+<!-- Hero Section -->
+<section class="px-6 py-xxl bg-white">
+<div class="max-w-container-max mx-auto">
+<h1 class="font-h1 text-h1 text-primary mb-md">
+                    Government documents, understood.
+                </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-xl max-w-2xl">
+                    Upload any official Malaysian PDF and ask questions in Malay, English, or Chinese. Plain answers, cited directly from the source.
+                </p>
+<div class="flex flex-col sm:flex-row gap-md mb-xxl">
+<button class="bg-[#1a4d2e] text-white font-button text-button h-12 px-gutter border-2 border-[#1a4d2e] hover:bg-[#00361a] transition-all">
+                        Try the Demo
+                    </button>
+<button class="bg-transparent text-[#1a4d2e] font-button text-button h-12 px-gutter border-2 border-[#1a4d2e] hover:bg-stone-100 transition-all">
+                        How it Works
+                    </button>
+</div>
+<!-- Hero Visual -->
+<div class="w-full h-64 bg-surface-container border-2 border-primary overflow-hidden relative group">
+<div class="absolute inset-0 flex items-center justify-center">
+<img class="w-full h-full object-cover grayscale brightness-75 contrast-125" data-alt="A minimalist abstract architectural detail of a government building featuring sharp, high-contrast structural lines and deep green shadows. The lighting is harsh and direct, creating a sense of official stability and institutional clarity. The overall aesthetic is professional, clean, and modern, using a palette of white and deep civic green to represent transparency through technology." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3DLtw8Lvy1V_2fVWqczKmQv5gpnhRbtUzgHryw4Ie0GBUp5_D7HNhcQd_pOSmnE14ikLV873kIguvqPzH2fjh4-Y-WUhZ4jKTOzNMTqE1y7k8Likc_E5k3lInMlxJZAmRlR9-kKCsi8JAKPoxijZyaaVO0IrPr1mKp2etcjDY7F4pQVIwmJsqgrI3RMuSUVWHzBkbMvuqQdtVcCWIQ5Hla1s9uJ0hxjBfk2vGyK4H9XK37pkxGIyEUrD3_O5I-elpeFUyjBjnWBkm"/>
+<div class="absolute inset-0 bg-primary/10 mix-blend-multiply"></div>
+<div class="absolute bottom-4 left-4 bg-white border-2 border-primary p-4 max-w-[80%]">
+<p class="font-label-bold text-label-bold text-primary uppercase tracking-widest">Bridging the Gap → Kedaulatan Bahasa</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Grid -->
+<section class="px-6 py-xxl bg-surface-container-low">
+<div class="max-w-container-max mx-auto">
+<h2 class="font-h2 text-h2 text-primary mb-xl">Institutional Clarity</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Feature Card 1 -->
+<div class="bg-white border-2 border-outline p-lg flex flex-col gap-md hover:border-primary transition-colors">
+<div class="w-12 h-12 bg-secondary-container flex items-center justify-center border-2 border-primary">
+<span class="material-symbols-outlined text-primary" data-icon="translate">translate</span>
+</div>
+<h3 class="font-h3 text-h3 text-primary">Multilingual RAG</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                            Our Retrieval-Augmented Generation summarizes complex policy into a 5th-grade level in the language of your choice.
+                        </p>
+</div>
+<!-- Feature Card 2 -->
+<div class="bg-white border-2 border-outline p-lg flex flex-col gap-md border-t-4 border-t-primary">
+<div class="w-12 h-12 bg-secondary-container flex items-center justify-center border-2 border-primary">
+<span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+</div>
+<h3 class="font-h3 text-h3 text-primary">Source-Grounded</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                            No hallucinations. Every answer includes direct citations to specific sections of the original government PDF.
+                        </p>
+</div>
+<!-- Feature Card 3 -->
+<div class="bg-white border-2 border-outline p-lg flex flex-col gap-md hover:border-primary transition-colors">
+<div class="w-12 h-12 bg-secondary-container flex items-center justify-center border-2 border-primary">
+<span class="material-symbols-outlined text-primary" data-icon="accessibility_new">accessibility_new</span>
+</div>
+<h3 class="font-h3 text-h3 text-primary">Accessibility First</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                            Optimized for low-vision users and designed to support local dialects, ensuring every citizen is heard.
+                        </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Contextual CTA -->
+<section class="px-6 py-xxl bg-primary text-white">
+<div class="max-w-container-max mx-auto flex flex-col items-center text-center">
+<span class="font-label-bold text-label-bold mb-md uppercase tracking-widest text-on-primary-container">Demokrasi Melalui Pemahaman</span>
+<h2 class="font-h2 text-h2 mb-lg">Ready to decode your first document?</h2>
+<button class="bg-white text-primary font-button text-button h-14 px-xl border-4 border-secondary-container active:translate-y-1 transition-all">
+                    Get Started Free
+                </button>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-stone-50 border-t-2 border-[#1a4d2e] flex flex-col items-center text-center w-full px-6 py-12 mb-16">
+<div class="font-['Bricolage_Grotesque'] font-bold text-[#1a4d2e] text-2xl mb-md">Lingua Rakyat</div>
+<p class="font-['Atkinson_Hyperlegible'] text-sm text-stone-600 mb-xl max-w-xs">
+            © 2024 Lingua Rakyat. Kedaulatan Bahasa melalui Teknologi MADANI.
+        </p>
+<div class="flex flex-wrap justify-center gap-gutter">
+<a class="font-['Atkinson_Hyperlegible'] text-sm text-[#1a4d2e] no-underline hover:text-black transition-colors" href="#">Privacy Policy</a>
+<a class="font-['Atkinson_Hyperlegible'] text-sm text-[#1a4d2e] no-underline hover:text-black transition-colors" href="#">Accessibility Statement</a>
+<a class="font-['Atkinson_Hyperlegible'] text-sm text-[#1a4d2e] no-underline hover:text-black transition-colors" href="#">Open Data</a>
+<a class="font-['Atkinson_Hyperlegible'] text-sm text-[#1a4d2e] no-underline hover:text-black transition-colors" href="#">Contact</a>
+</div>
+</footer>
+<!-- BottomNavBar (Mobile Shell Mandatory) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 bg-white border-t-2 border-[#1a4d2e]">
+<a class="flex flex-col items-center justify-center bg-[#1a4d2e] text-white p-2 flex-1 h-full" href="#">
+<span class="material-symbols-outlined" data-icon="translate">translate</span>
+<span class="font-['Atkinson_Hyperlegible'] text-xs font-bold">Translate</span>
+</a>
+<a class="flex flex-col items-center justify-center text-stone-600 p-2 flex-1 h-full hover:bg-stone-100 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-['Atkinson_Hyperlegible'] text-xs font-bold">Sources</span>
+</a>
+<a class="flex flex-col items-center justify-center text-stone-600 p-2 flex-1 h-full hover:bg-stone-100 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-['Atkinson_Hyperlegible'] text-xs font-bold">Mission</span>
+</a>
+<a class="flex flex-col items-center justify-center text-stone-600 p-2 flex-1 h-full hover:bg-stone-100 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Atkinson_Hyperlegible'] text-xs font-bold">Profile</span>
+</a>
+</nav>
+</body></html>

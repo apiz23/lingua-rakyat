@@ -131,25 +131,82 @@ def detect_language(text: str) -> str:
 _query_cache: dict[tuple, dict[str, Any]] = {}
 CACHE_MAX_SIZE = 200
 
-
-def _cache_key(question: str, document_id: str) -> tuple[str, str]:
-    return (question.strip().lower(), document_id)
+_augmenter: Optional[QueryAugmenter] = None
 
 
-def cache_get(question: str, document_id: str) -> dict[str, Any] | None:
-    entry = _query_cache.get(_cache_key(question, document_id))
+def _get_augmenter() -> QueryAugmenter:
+    global _augmenter
+    if _augmenter is None:
+        _augmenter = QueryAugmenter()
+    return _augmenter
+
+
+def _sanitize_question(question: str) -> str:
+    question = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", " ", question)
+    question = question.replace("{", "{{").replace("}", "}}")
+    return question[:500].strip()
+
+
+def _normalize_model_name(model_override: str | None) -> str:
+    return (model_override or GROQ_MODEL).strip().lower()
+
+
+def _cache_key(
+    question: str,
+    document_id: str,
+    *,
+    model_override: str | None = None,
+    enable_query_augmentation: bool = True,
+) -> tuple[str, str, str, bool]:
+    return (
+        question.strip().lower(),
+        document_id,
+        _normalize_model_name(model_override),
+        bool(enable_query_augmentation),
+    )
+
+
+def cache_get(
+    question: str,
+    document_id: str,
+    *,
+    model_override: str | None = None,
+    enable_query_augmentation: bool = True,
+) -> dict[str, Any] | None:
+    entry = _query_cache.get(
+        _cache_key(
+            question,
+            document_id,
+            model_override=model_override,
+            enable_query_augmentation=enable_query_augmentation,
+        )
+    )
     if entry:
         logger.info("[Cache] HIT for question: %s", question[:60])
     return entry
 
 
-def cache_set(question: str, document_id: str, result: dict[str, Any]) -> None:
+def cache_set(
+    question: str,
+    document_id: str,
+    result: dict[str, Any],
+    *,
+    model_override: str | None = None,
+    enable_query_augmentation: bool = True,
+) -> None:
     global _query_cache
     if len(_query_cache) >= CACHE_MAX_SIZE:
         evict_n = max(1, CACHE_MAX_SIZE // 5)
         for key in list(_query_cache.keys())[:evict_n]:
             del _query_cache[key]
-    _query_cache[_cache_key(question, document_id)] = result
+    _query_cache[
+        _cache_key(
+            question,
+            document_id,
+            model_override=model_override,
+            enable_query_augmentation=enable_query_augmentation,
+        )
+    ] = result
 
 
 def cache_invalidate_document(document_id: str) -> int:
@@ -597,6 +654,48 @@ def _query_variant_weight(variant_type: str) -> float:
     return 0.0
 
 
+def _clean_augmented_query_text(text: str, fallback: str) -> str:
+    cleaned = text.strip()
+    if not cleaned:
+        return ""
+
+    fenced_match = re.search(r"```(?:\w+)?\s*([\s\S]*?)```", cleaned)
+    if fenced_match:
+        cleaned = fenced_match.group(1).strip()
+
+    # Drop common label / explanation lines the model sometimes adds.
+    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+    filtered_lines: list[str] = []
+    for line in lines:
+        lowered = line.lower()
+        if lowered.startswith(("translated question:", "translation:", "reason:", "explanation:")):
+            continue
+        if lowered.startswith(("soalan diterjemah:", "soalan:", "terjemahan:", "alasan:")):
+            continue
+        if lowered.startswith(("问题翻译：", "翻译：", "原因：", "说明：")):
+            continue
+        filtered_lines.append(line)
+
+    if filtered_lines:
+        cleaned = " ".join(filtered_lines).strip()
+
+    cleaned = re.sub(r"[*_`#>\-]{1,}", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" :;-")
+
+    fallback_normalized = fallback.strip().lower()
+    cleaned_normalized = cleaned.lower()
+    if not cleaned:
+        return ""
+    if cleaned_normalized == fallback_normalized:
+        return ""
+    if len(cleaned) > 240:
+        return ""
+    if any(marker in cleaned_normalized for marker in ["because", "reason", "penjelasan", "explanation"]):
+        return ""
+
+    return cleaned
+
+
 def _build_query_variants(question: str, detected_lang: str, enable_query_augmentation: bool = True) -> list[dict[str, str]]:
     variants = [{
         "key": detected_lang,
@@ -608,7 +707,7 @@ def _build_query_variants(question: str, detected_lang: str, enable_query_augmen
         return variants
 
     try:
-        augmenter = QueryAugmenter()
+        augmenter = _get_augmenter()
         translation_slots = max(
             0,
             AUGMENTATION_MAX_VARIANTS - 1 - (1 if AUGMENTATION_INCLUDE_PARAPHRASE else 0),
@@ -625,12 +724,13 @@ def _build_query_variants(question: str, detected_lang: str, enable_query_augmen
         )
 
         for key, text in expanded.items():
-            if not text or text.strip() == question.strip():
+            cleaned_text = _clean_augmented_query_text(text, question)
+            if not cleaned_text:
                 continue
             variant_type = "paraphrase" if key.startswith("paraphrase_") else "translation"
             variants.append({
                 "key": key,
-                "text": text,
+                "text": cleaned_text,
                 "variant_type": variant_type,
             })
     except Exception as exc:
@@ -1199,8 +1299,15 @@ def answer_question(
     document_id: str,
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
+    bypass_cache: bool = False,
 ) -> dict[str, Any]:
-    cached = cache_get(question, document_id)
+    question = _sanitize_question(question)
+    cached = None if bypass_cache else cache_get(
+        question,
+        document_id,
+        model_override=model_override,
+        enable_query_augmentation=enable_query_augmentation,
+    )
     if cached:
         return {**cached, "cached": True}
 
@@ -1215,7 +1322,13 @@ def answer_question(
     else:
         answer_text, model_used = _insufficient_evidence_answer(prepared["language"]), "evidence-guard"
     result = _build_result(prepared, answer_text, model_used)
-    cache_set(question, document_id, result)
+    cache_set(
+        question,
+        document_id,
+        result,
+        model_override=model_override,
+        enable_query_augmentation=enable_query_augmentation,
+    )
     return result
 
 
@@ -1224,8 +1337,15 @@ def stream_answer_question(
     document_id: str,
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
+    bypass_cache: bool = False,
 ) -> Generator[dict[str, Any], None, None]:
-    cached = cache_get(question, document_id)
+    question = _sanitize_question(question)
+    cached = None if bypass_cache else cache_get(
+        question,
+        document_id,
+        model_override=model_override,
+        enable_query_augmentation=enable_query_augmentation,
+    )
     if cached:
         yield {
             "type": "retrieval",
@@ -1272,7 +1392,13 @@ def stream_answer_question(
 
     answer_text = "".join(pieces).strip()
     result = _build_result(prepared, answer_text, model_used)
-    cache_set(question, document_id, result)
+    cache_set(
+        question,
+        document_id,
+        result,
+        model_override=model_override,
+        enable_query_augmentation=enable_query_augmentation,
+    )
     yield {"type": "sources", "sources": result["sources"]}
     yield {"type": "complete", **result}
 

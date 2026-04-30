@@ -4,7 +4,7 @@ import createMDX from "@next/mdx"
 const nextConfig = {
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
 
-  allowedDevOrigins: ["192.168.0.108"],
+  allowedDevOrigins: ["http://192.168.0.108:3000", "http://192.168.1.14:3000"],
 
   images: {
     remotePatterns: [

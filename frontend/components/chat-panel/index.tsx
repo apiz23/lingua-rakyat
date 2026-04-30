@@ -1,78 +1,61 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import {
   ChatHistoryMessage,
+  DEFAULT_CHAT_MODEL_ID,
   Document,
-  SourceChunk,
+  GROQ_MODELS,
   askQuestionStream,
   clearChatHistory,
-  DEFAULT_CHAT_MODEL_ID,
   getChatHistory,
-  GROQ_MODELS,
 } from "@/lib/api"
 import { toast } from "sonner"
-import { Markdown } from "@/components/markdown"
-import {
-  FileText,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Check,
-  User,
-  BookOpen,
-  MessageSquare,
-  ArrowLeft,
-  History,
-  X,
-  Languages,
-  Plus,
-  Clock3,
-  Mic,
-  MicOff,
-  MoreVertical,
-} from "lucide-react"
-import type { Components } from "react-markdown"
 import { cn } from "@/lib/utils"
-import { useLanguage } from "./language-provider"
-import AgentAvatar from "./smoothui/agent-avatar"
+import { useLanguage } from "@/components/language-provider"
+import AgentAvatar from "@/components/smoothui/agent-avatar"
 import {
   AiChat,
   AiChatBody,
   AiChatFooter,
 } from "@/components/elements/ai-elements/chat/ai-chat"
 import { ChatInput } from "@/components/elements/ai-elements/chat/chat-input"
-import { StreamingText } from "@/components/elements/ai-elements/chat/streaming-text"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-interface Message {
-  question: string
-  answer: string
-  sources: SourceChunk[]
-  timestamp: string
-  language: string
-  confidence: number
-  confidence_label?: "high" | "medium" | "low"
-  latency_ms: number
-  cached: boolean
-  model_used?: string
-  sufficient_evidence: boolean
-  isStreaming?: boolean
-}
+import {
+  ArrowLeft,
+  BookOpen,
+  Clock3,
+  Download,
+  FileText,
+  History,
+  Languages,
+  MessageSquare,
+  Mic,
+  MicOff,
+  MoreVertical,
+  Plus,
+  Sparkles,
+  X,
+} from "lucide-react"
+import {
+  AIMessageCard,
+  Message,
+  TypingIndicator,
+  UserMessageBubble,
+} from "./message-cards"
 
 interface ChatPanelProps {
   selectedDoc: Document | null
@@ -127,142 +110,27 @@ const SUGGESTIONS = [
     text: "Summarize this document",
     description:
       "Ringkasan dalam 3-5 mata peluru / Summary in 3-5 bullet points",
-    color: "from-primary/20 to-primary/5",
   },
   {
     icon: Sparkles,
     text: "Siapa yang layak memohon?",
-    description: "Who is eligible to apply? — Malay",
-    color: "from-secondary/20 to-secondary/5",
+    description: "Who is eligible to apply? - Malay",
   },
   {
     icon: FileText,
     text: "What documents do I need?",
-    description: "Dokumen apa yang diperlukan? / 我需要什么文件？",
-    color: "from-emerald-500/20 to-emerald-600/5",
+    description: "Dokumen apa yang diperlukan? / What documents are needed?",
   },
   {
     icon: MessageSquare,
-    text: "如何一步一步申请？",
-    description: "How do I apply step by step? — Chinese",
-    color: "from-amber-500/20 to-amber-600/5",
+    text: "Bagaimana cara memohon langkah demi langkah?",
+    description: "How do I apply step by step?",
   },
 ]
 
-const LANGUAGE_LABELS: Record<string, { name: string; code: string }> = {
-  ms: { name: "Bahasa Melayu", code: "MS" },
-  id: { name: "Bahasa Indonesia", code: "ID" },
-  en: { name: "English", code: "EN" },
-  "zh-cn": { name: "中文", code: "ZH" },
-  zh: { name: "中文", code: "ZH" },
-  tl: { name: "Tagalog", code: "TL" },
-  th: { name: "ภาษาไทย", code: "TH" },
-  vi: { name: "Tiếng Việt", code: "VI" },
-  "zh-tw": { name: "中文 (Traditional)", code: "ZH-TW" },
-  jv: { name: "Basa Jawa", code: "JV" },
-  ceb: { name: "Cebuano", code: "CEB" },
-  fil: { name: "Filipino", code: "FIL" },
-}
-
-const markdownComponents: Partial<Components> = {
-  h1: (props) => (
-    <h1 className="mb-4 flex items-center gap-2 text-xl font-bold text-foreground">
-      <span className="h-6 w-1 rounded-full bg-primary" />
-      {props.children}
-    </h1>
-  ),
-  h2: (props) => (
-    <h2 className="mt-4 mb-3 text-lg font-semibold text-foreground/90 first:mt-0">
-      {props.children}
-    </h2>
-  ),
-  h3: (props) => (
-    <h3 className="mt-3 mb-2 text-base font-medium text-foreground/80">
-      {props.children}
-    </h3>
-  ),
-  p: (props) => (
-    <p className="mb-3 text-sm leading-relaxed text-foreground/80 last:mb-0">
-      {props.children}
-    </p>
-  ),
-  ul: (props) => <ul className="my-4 space-y-2.5">{props.children}</ul>,
-  ol: (props) => (
-    <ol className="my-4 list-decimal space-y-2.5 pl-4">{props.children}</ol>
-  ),
-  li: (props) => (
-    <li className="flex items-start gap-3 border border-border/50 bg-muted/30 p-3 text-sm">
-      <span className="mt-0.5 shrink-0 text-primary">•</span>
-      <span className="text-foreground/80">{props.children}</span>
-    </li>
-  ),
-  blockquote: (props) => (
-    <blockquote className="my-4 border-l-4 border-primary/40 bg-primary/5 py-2 pr-4 pl-4 text-sm text-foreground/70 italic">
-      {props.children}
-    </blockquote>
-  ),
-  code: (props) => {
-    const { className, children, ...rest } = props
-    const isInline = !className
-
-    if (isInline) {
-      return (
-        <code className="border border-border/50 bg-muted px-1.5 py-0.5 font-mono text-xs text-primary">
-          {children}
-        </code>
-      )
-    }
-
-    return (
-      <pre className="my-4 overflow-x-auto border border-border/50 bg-muted p-4 font-mono text-xs text-foreground/80">
-        <code className={className} {...rest}>
-          {children}
-        </code>
-      </pre>
-    )
-  },
-  a: (props) => (
-    <a
-      href={props.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary underline underline-offset-2 transition-colors hover:text-primary/80"
-    >
-      {props.children}
-    </a>
-  ),
-  table: (props) => (
-    <div className="my-4 overflow-x-auto border border-border">
-      <table className="w-full text-sm">{props.children}</table>
-    </div>
-  ),
-  th: (props) => (
-    <th className="bg-muted/50 px-4 py-2 text-left font-semibold">
-      {props.children}
-    </th>
-  ),
-  td: (props) => (
-    <td className="border-t border-border/50 px-4 py-2">{props.children}</td>
-  ),
-  hr: (props) => <hr className="my-6 border-border/30" {...props} />,
-  strong: (props) => (
-    <strong className="font-semibold text-foreground">{props.children}</strong>
-  ),
-  em: (props) => (
-    <em className="text-foreground/70 italic">{props.children}</em>
-  ),
-}
-
-function MarkdownRenderer({ content }: { content: string }) {
-  return (
-    <div className="prose prose-sm dark:prose-invert max-w-none">
-      <Markdown components={markdownComponents}>{content}</Markdown>
-    </div>
-  )
-}
-
 function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
   return {
+    id: row.id,
     question: row.question,
     answer: row.answer,
     sources: row.sources ?? [],
@@ -282,6 +150,7 @@ function buildThreads(history: ChatHistoryMessage[]): ChatThread[] {
 
   for (const row of history) {
     const existing = bySession.get(row.session_id)
+
     if (!existing) {
       bySession.set(row.session_id, {
         sessionId: row.session_id,
@@ -308,415 +177,6 @@ function buildThreads(history: ChatHistoryMessage[]): ChatThread[] {
   )
 }
 
-function AIMessageCard({
-  message,
-  index,
-  isLatest,
-  expandedSources,
-  toggleSources,
-  copiedId,
-  copyToClipboard,
-}: {
-  message: Message
-  index: number
-  isLatest: boolean
-  expandedSources: Set<number>
-  toggleSources: (i: number) => void
-  copiedId: string | null
-  copyToClipboard: (text: string, id: string) => void
-}) {
-  const { language } = useLanguage()
-  const isSourcesOpen = expandedSources.has(index)
-  const langInfo = LANGUAGE_LABELS[message.language] ?? {
-    name: message.language,
-    code: message.language.toUpperCase(),
-  }
-
-  const [isStreamed, setIsStreamed] = React.useState(message.cached)
-
-  React.useEffect(() => {
-    if (message.cached) {
-      setIsStreamed(true)
-      return
-    }
-    if (!isLatest) return
-    setIsStreamed(false)
-  }, [isLatest, message.cached, message.timestamp])
-
-  const evidenceState = message.sufficient_evidence
-    ? {
-        label: language === "ms" ? "Bukti kukuh" : "Strong evidence",
-        badge:
-          "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-        panel:
-          "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300",
-        description:
-          language === "ms"
-            ? "Jawapan ini disokong terus oleh kandungan dokumen yang dimuat naik."
-            : "This answer is directly supported by the uploaded document.",
-      }
-    : {
-        label:
-          language === "ms" ? "Padanan terdekat sahaja" : "Closest match only",
-        badge:
-          "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-        panel:
-          "border-amber-500/20 bg-amber-500/5 text-amber-700 dark:text-amber-300",
-        description:
-          language === "ms"
-            ? "Dokumen tidak mempunyai bukti yang cukup kuat, jadi pembantu menggunakan jawapan selamat tanpa membuat andaian."
-            : "The document did not contain strong enough evidence, so the assistant used a safe fallback instead of guessing.",
-      }
-
-  const highlightSourceText = (text: string, question: string) => {
-    const keywords = Array.from(
-      new Set(
-        question
-          .toLowerCase()
-          .split(/[^a-zA-Z0-9\u4e00-\u9fff]+/)
-          .filter((token) => token.length >= 4)
-      )
-    ).slice(0, 8)
-
-    if (keywords.length === 0) return <>{text}</>
-
-    const escaped = keywords.map((token) =>
-      token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    )
-    const regex = new RegExp(`(${escaped.join("|")})`, "gi")
-    const parts = text.split(regex)
-
-    return (
-      <>
-        {parts.map((part, partIndex) =>
-          regex.test(part) ? (
-            <mark
-              key={`${partIndex}-${part}`}
-              className="rounded bg-yellow-300/50 px-0.5 text-foreground dark:bg-yellow-500/20"
-            >
-              {part}
-            </mark>
-          ) : (
-            <React.Fragment key={`${partIndex}-${part}`}>{part}</React.Fragment>
-          )
-        )}
-      </>
-    )
-  }
-
-  return (
-    <div className="group flex items-start gap-2.5 sm:gap-3">
-      <div className="relative mt-1 shrink-0">
-        <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:h-10 sm:w-10">
-          <AgentAvatar seed="Charlotte" size={26} />
-        </div>
-      </div>
-
-      <div className="max-w-[88%] min-w-0 flex-1 sm:max-w-[85%]">
-        <div className="relative border border-border/50 bg-card shadow-sm transition-all hover:shadow-md">
-          <div className="h-1 w-full bg-linear-to-r from-primary via-primary/60 to-transparent" />
-          <div className="p-3.5 sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <div className="flex items-center gap-1.5 border border-primary/20 bg-primary/10 px-2 py-1">
-                  <span className="bg-primary/20 px-1 font-mono text-[10px] text-primary">
-                    {langInfo.code}
-                  </span>
-                  <span className="text-xs font-medium text-primary">
-                    {langInfo.name}
-                  </span>
-                </div>
-
-                <span className="bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground sm:text-xs">
-                  {language === "ms" ? "Pembantu AI" : "AI Assistant"}
-                </span>
-
-                {message.cached && (
-                  <span className="border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                    cached
-                  </span>
-                )}
-
-                {message.confidence > 0 && (
-                  <span
-                    className={[
-                      "border px-2 py-0.5 text-[10px] font-medium",
-                      message.confidence >= 0.75
-                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
-                        : message.confidence >= 0.5
-                          ? "border-primary/20 bg-primary/10 text-primary"
-                          : "border-orange-500/20 bg-orange-500/10 text-orange-600",
-                    ].join(" ")}
-                  >
-                    {message.confidence_label
-                      ? message.confidence_label.toUpperCase()
-                      : `${Math.round(message.confidence * 100)}%`}{" "}
-                    {language === "ms" ? "keyakinan" : "confidence"}
-                  </span>
-                )}
-
-                <span
-                  className={[
-                    "border px-2 py-0.5 text-[10px] font-medium",
-                    evidenceState.badge,
-                  ].join(" ")}
-                >
-                  {evidenceState.label}
-                </span>
-
-                {message.latency_ms > 0 && (
-                  <span className="border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
-                    {message.latency_ms < 1000
-                      ? `${message.latency_ms}ms`
-                      : `${(message.latency_ms / 1000).toFixed(1)}s`}
-                  </span>
-                )}
-              </div>
-
-              <button
-                onClick={() =>
-                  copyToClipboard(message.answer, `a-${message.timestamp}`)
-                }
-                className="p-1.5 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
-                title="Copy answer"
-              >
-                {copiedId === `a-${message.timestamp}` ? (
-                  <Check className="h-4 w-4 text-primary" />
-                ) : (
-                  <Copy className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-            </div>
-
-            <div
-              className={[
-                "mb-4 border px-3 py-2 text-xs leading-relaxed",
-                evidenceState.panel,
-              ].join(" ")}
-            >
-              {evidenceState.description}
-            </div>
-
-            {message.isStreaming ? (
-              <div className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground/80">
-                {message.answer ? (
-                  <>
-                    {message.answer}
-                    <span className="ml-0.5 inline-block h-4 w-px animate-pulse bg-current align-middle" />
-                  </>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-muted-foreground">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:0ms]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:300ms]" />
-                  </span>
-                )}
-              </div>
-            ) : isLatest &&
-              !message.cached &&
-              !isStreamed &&
-              message.isStreaming === undefined ? (
-              <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-foreground/80">
-                <StreamingText
-                  text={message.answer}
-                  speed={12}
-                  showCursor
-                  onComplete={() => setIsStreamed(true)}
-                />
-              </div>
-            ) : (
-              <MarkdownRenderer content={message.answer} />
-            )}
-
-            <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
-              <span className="text-xs text-muted-foreground">
-                {new Date(message.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-
-              {message.sources.length > 0 && (
-                <button
-                  onClick={() => toggleSources(index)}
-                  className="flex items-center gap-1.5 border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5"
-                >
-                  <BookOpen className="h-3.5 w-3.5" />
-                  {message.sources.length}{" "}
-                  {language === "ms" ? "sumber" : "sources"}
-                  {isSourcesOpen ? (
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              )}
-            </div>
-
-            {isSourcesOpen && message.sources.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <div className="px-1 text-xs font-medium text-muted-foreground">
-                  {language === "ms" ? "Sumber:" : "Sources:"}
-                </div>
-
-                {message.sources.map((source, idx) => {
-                  const scoreColor =
-                    source.score >= 0.75
-                      ? "bg-emerald-500"
-                      : source.score >= 0.5
-                        ? "bg-primary"
-                        : "bg-orange-400"
-
-                  const scoreLabel =
-                    source.score >= 0.75
-                      ? language === "ms"
-                        ? "Padanan tinggi"
-                        : "High match"
-                      : source.score >= 0.5
-                        ? language === "ms"
-                          ? "Padanan baik"
-                          : "Good match"
-                        : language === "ms"
-                          ? "Padanan separa"
-                          : "Partial match"
-
-                  return (
-                    <div
-                      key={idx}
-                      className="animate-in fade-in slide-in-from-top-1 relative border border-border/50 bg-muted/20 p-3 transition-colors duration-200 hover:bg-muted/40 sm:p-4"
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                    >
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                            {idx + 1}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <FileText className="h-3.5 w-3.5" />
-                            <span>
-                              {source.doc_name ||
-                                (language === "ms" ? "Dokumen" : "Document")}
-                              {source.page_start
-                                ? `, ${language === "ms" ? "halaman" : "page"} ${
-                                    source.page_end &&
-                                    source.page_end !== source.page_start
-                                      ? `${source.page_start}-${source.page_end}`
-                                      : source.page_start
-                                  }`
-                                : ""}
-                            </span>
-                          </div>
-                        </div>
-
-                        {source.score > 0 && (
-                          <div className="hidden items-center gap-1.5 sm:flex">
-                            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-                              <div
-                                className={`h-full rounded-full transition-all ${scoreColor}`}
-                                style={{
-                                  width: `${Math.round(source.score * 100)}%`,
-                                }}
-                              />
-                            </div>
-                            <span className="text-[10px] whitespace-nowrap text-muted-foreground">
-                              {(
-                                source.confidence_label ?? scoreLabel
-                              ).toString()}{" "}
-                              - {Math.round(source.score * 100)}%
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {source.section_title && (
-                        <p className="mb-2 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
-                          {source.section_title}
-                        </p>
-                      )}
-
-                      <p className="text-xs leading-relaxed text-foreground/70">
-                        {highlightSourceText(source.text, message.question)}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function UserMessageBubble({
-  message,
-  copiedId,
-  copyToClipboard,
-}: {
-  message: Message
-  copiedId: string | null
-  copyToClipboard: (text: string, id: string) => void
-}) {
-  return (
-    <div className="group flex items-start justify-end gap-2.5 sm:gap-3">
-      <div className="max-w-[88%] min-w-0 sm:max-w-[80%]">
-        <div className="relative">
-          <div className="inline-block bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
-            <p className="text-sm leading-relaxed">{message.question}</p>
-          </div>
-
-          <div className="mt-1.5 flex items-center justify-end gap-2">
-            <span className="text-xs text-muted-foreground">
-              {new Date(message.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-
-            <button
-              onClick={() =>
-                copyToClipboard(message.question, `q-${message.timestamp}`)
-              }
-              className="p-1 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
-              title="Copy question"
-            >
-              {copiedId === `q-${message.timestamp}` ? (
-                <Check className="h-3.5 w-3.5 text-primary" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-1 shrink-0">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/30 sm:h-10 sm:w-10">
-          <User className="h-4.5 w-4.5 text-primary sm:h-5 sm:w-5" />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function TypingIndicator() {
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 flex items-start gap-2.5 duration-150 sm:gap-3">
-      <div className="relative shrink-0">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:h-10 sm:w-10">
-          <AgentAvatar seed="Charlotte" size={26} />
-        </div>
-      </div>
-      <div className="flex items-center gap-2 border border-border/50 bg-card px-4 py-3 shadow-sm sm:px-5 sm:py-4">
-        <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:0ms]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:150ms]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:300ms]" />
-      </div>
-    </div>
-  )
-}
-
 export default function ChatPanel({
   selectedDoc,
   onBack,
@@ -724,6 +184,7 @@ export default function ChatPanel({
   emptyState,
 }: ChatPanelProps) {
   const { language, toggleLanguage } = useLanguage()
+  const shouldReduce = useReducedMotion()
 
   const createSessionId = (documentId: string) =>
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -751,6 +212,7 @@ export default function ChatPanel({
   const [userId, setUserId] = useState("")
   const [sessionId, setSessionId] = useState("")
   const [enableQueryAugmentation, setEnableQueryAugmentation] = useState(true)
+  const settingsLoadedRef = useRef(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [documentHistory, setDocumentHistory] = useState<ChatHistoryMessage[]>(
     []
@@ -769,11 +231,8 @@ export default function ChatPanel({
           ready: "Sedia",
           autoServer: "Auto (lalai pelayan)",
           newChat: "Sembang baharu",
-          startNewChat: "Mulakan sembang baharu",
           smartOn: "Carian Pintar On",
           smartOff: "Carian Pintar Off",
-          smartEnabled: "Carian pintar diaktifkan",
-          smartDisabled: "Carian pintar dimatikan untuk jawapan lebih pantas",
           clearThread: "Padam thread semasa",
           history: "Sejarah sembang",
           threadList: "Thread Sembang",
@@ -789,7 +248,6 @@ export default function ChatPanel({
           newLine: "Baris baharu",
           voiceStart: "Mulakan input suara",
           voiceStop: "Hentikan input suara",
-          voiceListening: "Sedang mendengar",
           voiceUnsupported:
             "Pelayar ini tidak menyokong input suara secara langsung.",
           voiceBlocked:
@@ -797,11 +255,6 @@ export default function ChatPanel({
           voiceUnavailable:
             "Input suara tidak tersedia sekarang. Sila cuba lagi.",
           thread: "Thread",
-          loading: "Carian pintar sedang dijalankan",
-          answerReady: "Jawapan sedia",
-          answerError: "Gagal mendapatkan jawapan",
-          loadingDesc:
-            "Sistem sedang menyemak padanan pelbagai bahasa sebelum menjana jawapan.",
           tooManyQuestions: "Terlalu banyak soalan dihantar",
           waitAgain: "Sila tunggu",
           seconds: "saat sebelum bertanya semula.",
@@ -813,8 +266,8 @@ export default function ChatPanel({
           currentThread: "Thread semasa",
           language: "Tukar bahasa",
           options: "Pilihan",
-          model: "Model",
           back: "Kembali",
+          answerError: "Gagal mendapatkan jawapan",
         }
       : {
           historyLoadError: "Failed to load chat history",
@@ -825,11 +278,8 @@ export default function ChatPanel({
           ready: "Ready",
           autoServer: "Auto (server default)",
           newChat: "New chat",
-          startNewChat: "Start new chat",
           smartOn: "Smart Retrieval On",
           smartOff: "Smart Retrieval Off",
-          smartEnabled: "Smart retrieval is enabled",
-          smartDisabled: "Smart retrieval is disabled for faster replies",
           clearThread: "Clear current thread",
           history: "Chat history",
           threadList: "Chat Threads",
@@ -844,7 +294,6 @@ export default function ChatPanel({
           newLine: "New line",
           voiceStart: "Start voice input",
           voiceStop: "Stop voice input",
-          voiceListening: "Listening",
           voiceUnsupported:
             "This browser does not support built-in voice input.",
           voiceBlocked:
@@ -852,11 +301,6 @@ export default function ChatPanel({
           voiceUnavailable:
             "Voice input is unavailable right now. Please try again.",
           thread: "Thread",
-          loading: "Smart retrieval is working",
-          answerReady: "Answer ready",
-          answerError: "Failed to get answer",
-          loadingDesc:
-            "Checking multilingual matches before generating the answer.",
           tooManyQuestions: "Too many questions sent",
           waitAgain: "Please wait",
           seconds: "seconds before asking again.",
@@ -868,15 +312,20 @@ export default function ChatPanel({
           currentThread: "Current chat",
           language: "Toggle language",
           options: "Options",
-          model: "Model",
           back: "Back",
+          answerError: "Failed to get answer",
         }
+
+  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
+  const [rateLimitSecondsLeft, setRateLimitSecondsLeft] = useState(0)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const speechCtorRef = useRef<SpeechRecognitionCtor | null>(null)
   const dictationBaseRef = useRef("")
+  const isMountedRef = useRef(true)
+  const historyAbortRef = useRef<AbortController | null>(null)
 
   const getSpeechLocale = (lang: string) => {
     switch (lang) {
@@ -903,6 +352,43 @@ export default function ChatPanel({
     if (!spokenText) return baseText
     return normalizedBase ? `${normalizedBase} ${spokenText}` : spokenText
   }
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => { isMountedRef.current = false }
+  }, [])
+
+  useEffect(() => {
+    const storedModel = window.localStorage.getItem("lr-chat-model")
+    if (storedModel !== null) setSelectedPopoverModel(storedModel)
+    const storedAug = window.localStorage.getItem("lr-augmentation")
+    if (storedAug !== null) setEnableQueryAugmentation(storedAug === "true")
+    settingsLoadedRef.current = true
+  }, [])
+
+  useEffect(() => {
+    if (!settingsLoadedRef.current) return
+    window.localStorage.setItem("lr-chat-model", selectedPopoverModel)
+  }, [selectedPopoverModel])
+
+  useEffect(() => {
+    if (!settingsLoadedRef.current) return
+    window.localStorage.setItem("lr-augmentation", String(enableQueryAugmentation))
+  }, [enableQueryAugmentation])
+
+  useEffect(() => {
+    if (!rateLimitedUntil) return
+    const interval = setInterval(() => {
+      const left = Math.ceil((rateLimitedUntil - Date.now()) / 1000)
+      if (left <= 0) {
+        setRateLimitedUntil(null)
+        setRateLimitSecondsLeft(0)
+      } else {
+        setRateLimitSecondsLeft(left)
+      }
+    }, 500)
+    return () => clearInterval(interval)
+  }, [rateLimitedUntil])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -950,18 +436,19 @@ export default function ChatPanel({
 
     if (existingUser) {
       setUserId(existingUser)
-    } else {
-      const nextUserId =
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `lr-user-${Date.now()}`
-
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(userStorageKey, nextUserId)
-      }
-
-      setUserId(nextUserId)
+      return
     }
+
+    const nextUserId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `lr-user-${Date.now()}`
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(userStorageKey, nextUserId)
+    }
+
+    setUserId(nextUserId)
   }, [])
 
   useEffect(() => {
@@ -992,12 +479,16 @@ export default function ChatPanel({
   useEffect(() => {
     if (!selectedDoc || !userId || !sessionId) return
 
+    historyAbortRef.current?.abort()
+    const controller = new AbortController()
+    historyAbortRef.current = controller
     let active = true
     setHistoryLoading(true)
 
     getChatHistory({
       userId,
       documentId: selectedDoc.id,
+      signal: controller.signal,
     })
       .then((history) => {
         if (!active) return
@@ -1011,6 +502,7 @@ export default function ChatPanel({
       })
       .catch((error) => {
         if (!active) return
+        if (error instanceof Error && error.name === "AbortError") return
         setMessages([])
         toast.error(copy.historyLoadError, {
           description: error instanceof Error ? error.message : copy.retryLater,
@@ -1022,6 +514,7 @@ export default function ChatPanel({
 
     return () => {
       active = false
+      controller.abort()
     }
   }, [copy.historyLoadError, copy.retryLater, selectedDoc, sessionId, userId])
 
@@ -1044,14 +537,27 @@ export default function ChatPanel({
     const question = (questionOverride ?? input).trim()
     if (!question || loading) return
 
+    if (rateLimitedUntil && Date.now() < rateLimitedUntil) {
+      toast.error(copy.tooManyQuestions, {
+        description: `${copy.waitAgain} ${rateLimitSecondsLeft} ${copy.seconds}`,
+      })
+      return
+    }
+
     if (isListening) stopVoiceInput()
 
     setInput("")
     setLoading(true)
 
-    if (inputRef.current) inputRef.current.style.height = "auto"
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto"
+    }
 
     const timestamp = new Date().toISOString()
+    const msgId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`
     let messageAdded = false
 
     try {
@@ -1063,6 +569,7 @@ export default function ChatPanel({
         question,
         selectedPopoverModel,
         enableQueryAugmentation,
+        false,
         (event) => {
           if (event.type === "retrieval") {
             if (!messageAdded) {
@@ -1070,6 +577,7 @@ export default function ChatPanel({
               setMessages((prev) => [
                 ...prev,
                 {
+                  id: msgId,
                   question,
                   answer: "",
                   sources: [],
@@ -1082,27 +590,33 @@ export default function ChatPanel({
                   isStreaming: true,
                 },
               ])
-            } else {
-              setMessages((prev) => {
-                const last = prev[prev.length - 1]
-                if (!last || last.timestamp !== timestamp) return prev
-                return [
-                  ...prev.slice(0, -1),
-                  {
-                    ...last,
-                    language: event.language,
-                    sufficient_evidence:
-                      event.sufficient_evidence ?? last.sufficient_evidence,
-                  },
-                ]
-              })
+              return
             }
-          } else if (event.type === "token") {
+
+            setMessages((prev) => {
+              const last = prev[prev.length - 1]
+              if (!last || last.id !== msgId) return prev
+
+              return [
+                ...prev.slice(0, -1),
+                {
+                  ...last,
+                  language: event.language,
+                  sufficient_evidence:
+                    event.sufficient_evidence ?? last.sufficient_evidence,
+                },
+              ]
+            })
+            return
+          }
+
+          if (event.type === "token") {
             if (!messageAdded) {
               messageAdded = true
               setMessages((prev) => [
                 ...prev,
                 {
+                  id: msgId,
                   question,
                   answer: event.text,
                   sources: [],
@@ -1115,18 +629,23 @@ export default function ChatPanel({
                   isStreaming: true,
                 },
               ])
-            } else {
-              setMessages((prev) => {
-                const last = prev[prev.length - 1]
-                if (!last || last.timestamp !== timestamp) return prev
-                return [
-                  ...prev.slice(0, -1),
-                  { ...last, answer: last.answer + event.text },
-                ]
-              })
+              return
             }
-          } else if (event.type === "complete") {
+
+            setMessages((prev) => {
+              const last = prev[prev.length - 1]
+              if (!last || last.id !== msgId) return prev
+              return [
+                ...prev.slice(0, -1),
+                { ...last, answer: last.answer + event.text },
+              ]
+            })
+            return
+          }
+
+          if (event.type === "complete") {
             const completedMessage: Message = {
+              id: msgId,
               question,
               answer: event.answer,
               sources: event.sources ?? [],
@@ -1140,22 +659,27 @@ export default function ChatPanel({
               sufficient_evidence: event.sufficient_evidence ?? true,
               isStreaming: false,
             }
+
             setMessages((prev) => {
               if (!messageAdded) return [...prev, completedMessage]
-              let idx = -1
-              for (let i = prev.length - 1; i >= 0; i--) {
-                if (prev[i].timestamp === timestamp) {
-                  idx = i
+
+              let index = -1
+              for (let i = prev.length - 1; i >= 0; i -= 1) {
+                if (prev[i].id === msgId) {
+                  index = i
                   break
                 }
               }
-              if (idx === -1) return [...prev, completedMessage]
+
+              if (index === -1) return [...prev, completedMessage]
+
               return [
-                ...prev.slice(0, idx),
+                ...prev.slice(0, index),
                 completedMessage,
-                ...prev.slice(idx + 1),
+                ...prev.slice(index + 1),
               ]
             })
+
             setDocumentHistory((prev) => [
               {
                 id: `${sessionId}-${timestamp}`,
@@ -1175,48 +699,60 @@ export default function ChatPanel({
               },
               ...prev,
             ])
-          } else if (event.type === "error") {
+            return
+          }
+
+          if (event.type === "error") {
             if (messageAdded) {
               setMessages((prev) =>
-                prev.filter((m) => m.timestamp !== timestamp)
+                prev.filter((message) => message.id !== msgId)
               )
             }
+
             const detail = event.detail ?? ""
             const isRateLimit =
               detail.toLowerCase().includes("rate limit") ||
               detail.toLowerCase().includes("too many") ||
               detail.includes("429")
+
             if (isRateLimit) {
               const match = detail.match(/(\d+(?:\.\d+)?)\s*s\b/)
-              const seconds = match
-                ? Math.ceil(parseFloat(match[1])).toString()
-                : "30"
+              const waitSeconds = match ? Math.ceil(parseFloat(match[1])) : 30
+              setRateLimitedUntil(Date.now() + waitSeconds * 1000)
+              setRateLimitSecondsLeft(waitSeconds)
+
               toast.error(copy.tooManyQuestions, {
-                description: `${copy.waitAgain} ${seconds} ${copy.seconds}`,
+                description: `${copy.waitAgain} ${waitSeconds} ${copy.seconds}`,
                 duration: 8000,
               })
-            } else {
-              toast.error(copy.answerError, {
-                description: detail || copy.retryLater,
-              })
+              return
             }
+
+            toast.error(copy.answerError, {
+              description: detail || copy.retryLater,
+            })
           }
         }
       )
     } catch (error) {
       if (messageAdded) {
-        setMessages((prev) => prev.filter((m) => m.timestamp !== timestamp))
+        setMessages((prev) =>
+          prev.filter((message) => message.id !== msgId)
+        )
       }
-      const msg = error instanceof Error ? error.message : "Please try again"
 
-      if (msg.toLowerCase().includes("too many requests")) {
-        const seconds = msg.match(/\d+/)?.[0] ?? "60"
+      const message = error instanceof Error ? error.message : "Please try again"
+
+      if (message.toLowerCase().includes("too many requests")) {
+        const waitSeconds = parseInt(message.match(/\d+/)?.[0] ?? "60", 10)
+        setRateLimitedUntil(Date.now() + waitSeconds * 1000)
+        setRateLimitSecondsLeft(waitSeconds)
         toast.error(copy.tooManyQuestions, {
-          description: `${copy.waitAgain} ${seconds} ${copy.seconds}`,
+          description: `${copy.waitAgain} ${waitSeconds} ${copy.seconds}`,
           duration: 6000,
         })
       } else {
-        toast.error(copy.answerError, { description: msg })
+        toast.error(copy.answerError, { description: message })
       }
     } finally {
       setLoading(false)
@@ -1231,11 +767,13 @@ export default function ChatPanel({
   const toggleSources = (messageIndex: number) => {
     setExpandedSources((prev) => {
       const next = new Set(prev)
+
       if (next.has(messageIndex)) {
         next.delete(messageIndex)
       } else {
         next.add(messageIndex)
       }
+
       return next
     })
   }
@@ -1245,9 +783,9 @@ export default function ChatPanel({
   }
 
   const startVoiceInput = () => {
-    const SpeechRecognitionCtor = speechCtorRef.current
+    const SpeechRecognitionImpl = speechCtorRef.current
 
-    if (!SpeechRecognitionCtor) {
+    if (!SpeechRecognitionImpl) {
       toast.error(copy.voiceUnsupported)
       return
     }
@@ -1255,7 +793,7 @@ export default function ChatPanel({
     try {
       recognitionRef.current?.stop()
 
-      const recognition = new SpeechRecognitionCtor()
+      const recognition = new SpeechRecognitionImpl()
       recognition.continuous = true
       recognition.interimResults = true
       recognition.lang = getSpeechLocale(language)
@@ -1273,6 +811,7 @@ export default function ChatPanel({
         for (let index = 0; index < event.results.length; index += 1) {
           const result = event.results[index]
           const transcript = result[0]?.transcript?.trim() ?? ""
+
           if (!transcript) continue
 
           if (result.isFinal) {
@@ -1292,7 +831,7 @@ export default function ChatPanel({
       }
 
       recognition.onerror = (event) => {
-        setIsListening(false)
+        if (isMountedRef.current) setIsListening(false)
 
         if (
           event.error === "not-allowed" ||
@@ -1307,7 +846,7 @@ export default function ChatPanel({
       }
 
       recognition.onend = () => {
-        setIsListening(false)
+        if (isMountedRef.current) setIsListening(false)
         recognitionRef.current = null
       }
 
@@ -1325,13 +864,49 @@ export default function ChatPanel({
       stopVoiceInput()
       return
     }
+
     startVoiceInput()
+  }
+
+  const exportChatHistory = () => {
+    if (!messages.length) return
+    const lines: string[] = [
+      `# Chat History — ${selectedDoc?.name ?? "Document"}`,
+      `# Session: ${sessionId}`,
+      `# Exported: ${new Date().toLocaleString()}`,
+      `# Messages: ${messages.length}`,
+      ``,
+    ]
+    messages.forEach((msg, i) => {
+      lines.push(`## ${i + 1}. ${msg.question}`)
+      lines.push(``)
+      lines.push(msg.answer)
+      if (msg.sources.length > 0) {
+        lines.push(``)
+        lines.push(`**Sources:**`)
+        msg.sources.forEach((src, si) => {
+          lines.push(
+            `  ${si + 1}. Page ${src.page_start ?? "?"} — ${src.section_title || "Unknown section"} (score: ${src.score.toFixed(2)})`
+          )
+        })
+      }
+      lines.push(``)
+      lines.push(`---`)
+      lines.push(``)
+    })
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `chat-${(selectedDoc?.name ?? "history").replace(/\.pdf$/i, "")}-${new Date().toISOString().split("T")[0]}.md`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const copyToClipboard = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text)
     setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
+    window.setTimeout(() => setCopiedId(null), 2000)
     toast.success(copy.copied)
   }
 
@@ -1344,6 +919,7 @@ export default function ChatPanel({
 
   const handleNewChat = () => {
     if (!selectedDoc) return
+
     const nextSessionId = createSessionId(selectedDoc.id)
     persistSessionId(selectedDoc.id, nextSessionId)
     setSessionId(nextSessionId)
@@ -1401,79 +977,106 @@ export default function ChatPanel({
       <AiChatBody className="min-h-0">
         <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
           <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
-            {selectedDoc && showHistory && (
-              <div className="mb-4 border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold">{copy.threadList}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {copy.threadDesc}
-                    </p>
+            <AnimatePresence>
+              {selectedDoc && showHistory ? (
+                <motion.div
+                  key="history-panel"
+                  initial={{
+                    opacity: 0,
+                    height: 0,
+                    filter: shouldReduce ? "blur(0px)" : "blur(8px)",
+                  }}
+                  animate={{ opacity: 1, height: "auto", filter: "blur(0px)" }}
+                  exit={{
+                    opacity: 0,
+                    height: 0,
+                    filter: shouldReduce ? "blur(0px)" : "blur(8px)",
+                  }}
+                  transition={{
+                    duration: shouldReduce ? 0.01 : 0.3,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  }}
+                  className="overflow-hidden"
+                >
+                  <div className="mb-4 border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold">
+                          {copy.threadList}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {copy.threadDesc}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleNewChat}
+                        className="inline-flex items-center gap-2 border border-border/50 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {copy.newChat}
+                      </button>
+                    </div>
+
+                    {threads.length === 0 ? (
+                      <div className="border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+                        {copy.noSavedThreads}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {threads.map((thread) => {
+                          const isActive = thread.sessionId === sessionId
+
+                          return (
+                            <button
+                              key={thread.sessionId}
+                              type="button"
+                              onClick={() =>
+                                handleSelectThread(thread.sessionId)
+                              }
+                              className={[
+                                "w-full border p-3 text-left transition-colors",
+                                isActive
+                                  ? "border-primary/40 bg-primary/5"
+                                  : "border-border/50 bg-background hover:bg-muted/40",
+                              ].join(" ")}
+                            >
+                              <div className="mb-1 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="text-xs font-medium text-foreground">
+                                    {new Date(
+                                      thread.lastUpdated
+                                    ).toLocaleString([], {
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                </div>
+
+                                <span className="text-[11px] text-muted-foreground">
+                                  {thread.messageCount} {copy.messages}
+                                </span>
+                              </div>
+
+                              <p className="line-clamp-1 text-sm font-medium text-foreground">
+                                {thread.previewQuestion}
+                              </p>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
-
-                  <button
-                    onClick={handleNewChat}
-                    className="inline-flex items-center gap-2 border border-border/50 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    {copy.newChat}
-                  </button>
-                </div>
-
-                {threads.length === 0 ? (
-                  <div className="border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-                    {copy.noSavedThreads}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {threads.map((thread) => {
-                      const isActive = thread.sessionId === sessionId
-
-                      return (
-                        <button
-                          key={thread.sessionId}
-                          onClick={() => handleSelectThread(thread.sessionId)}
-                          className={[
-                            "w-full border p-3 text-left transition-colors",
-                            isActive
-                              ? "border-primary/40 bg-primary/5"
-                              : "border-border/50 bg-background hover:bg-muted/40",
-                          ].join(" ")}
-                        >
-                          <div className="mb-1 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-xs font-medium text-foreground">
-                                {new Date(thread.lastUpdated).toLocaleString(
-                                  [],
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )}
-                              </span>
-                            </div>
-
-                            <span className="text-[11px] text-muted-foreground">
-                              {thread.messageCount} {copy.messages}
-                            </span>
-                          </div>
-
-                          <p className="line-clamp-1 text-sm font-medium text-foreground">
-                            {thread.previewQuestion}
-                          </p>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
 
             {!selectedDoc ? (
-              (emptyState ?? (
+              emptyState ?? (
                 <div className="flex min-h-[60vh] flex-col items-center justify-center">
                   <div className="max-w-md p-8 text-center">
                     <div className="mx-auto mb-6 inline-flex">
@@ -1487,7 +1090,7 @@ export default function ChatPanel({
                     <p className="text-muted-foreground">{copy.noDocDesc}</p>
                   </div>
                 </div>
-              ))
+              )
             ) : historyLoading ? (
               <div className="flex min-h-[40vh] items-center justify-center">
                 <TypingIndicator />
@@ -1497,7 +1100,7 @@ export default function ChatPanel({
                 <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
                   <div className="text-center">
                     <div className="relative mx-auto mb-5 h-20 w-20 sm:mb-6 sm:h-24 sm:w-24">
-                      <div className="relative flex h-full w-full items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+                      <div className="relative hidden h-full w-full items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:flex">
                         <AgentAvatar seed="Charlotte" size={44} />
                       </div>
                     </div>
@@ -1511,7 +1114,7 @@ export default function ChatPanel({
                     <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
                       {copy.askAbout}{" "}
                       <span className="font-medium text-foreground">
-                        {selectedDoc?.name ?? ""}
+                        {selectedDoc.name}
                       </span>{" "}
                       {copy.answerDesc}
                     </p>
@@ -1526,13 +1129,24 @@ export default function ChatPanel({
                     <div className="grid gap-3 sm:grid-cols-2">
                       {SUGGESTIONS.map((suggestion, index) => {
                         const Icon = suggestion.icon
+
                         return (
-                          <button
+                          <motion.button
                             key={index}
+                            type="button"
                             onClick={() =>
                               handleSuggestionClick(suggestion.text)
                             }
-                            className="border border-border/50 bg-card p-3.5 text-left transition-all hover:border-primary/30 hover:bg-card/60 sm:p-4"
+                            whileHover={
+                              shouldReduce ? {} : { y: -4, scale: 1.015 }
+                            }
+                            whileTap={shouldReduce ? {} : { scale: 0.97 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 300,
+                              damping: 22,
+                            }}
+                            className="border border-border/50 bg-card p-3.5 text-left hover:border-primary/30 hover:bg-card/60 sm:p-4"
                           >
                             <Icon className="mb-3 h-5 w-5 text-primary" />
                             <p className="mb-1 text-sm font-medium">
@@ -1541,7 +1155,7 @@ export default function ChatPanel({
                             <p className="text-xs text-muted-foreground">
                               {suggestion.description}
                             </p>
-                          </button>
+                          </motion.button>
                         )
                       })}
                     </div>
@@ -1552,7 +1166,7 @@ export default function ChatPanel({
               <div className="space-y-4 sm:space-y-6">
                 {messages.map((message, index) => (
                   <div
-                    key={message.timestamp}
+                    key={message.id}
                     className="animate-in fade-in slide-in-from-bottom-2 space-y-3 duration-200 sm:space-y-4"
                   >
                     <UserMessageBubble
@@ -1572,9 +1186,9 @@ export default function ChatPanel({
                   </div>
                 ))}
 
-                {loading && !messages.some((m) => m.isStreaming) && (
+                {loading && !messages.some((message) => message.isStreaming) ? (
                   <TypingIndicator />
-                )}
+                ) : null}
                 <div ref={messagesEndRef} />
               </div>
             )}
@@ -1586,7 +1200,7 @@ export default function ChatPanel({
         <div className="mx-auto max-w-5xl">
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              {onBack && (
+              {onBack ? (
                 <button
                   type="button"
                   onClick={onBack}
@@ -1595,7 +1209,7 @@ export default function ChatPanel({
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </button>
-              )}
+              ) : null}
 
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium">
@@ -1642,7 +1256,7 @@ export default function ChatPanel({
 
               <button
                 type="button"
-                onClick={() => setShowHistory(!showHistory)}
+                onClick={() => setShowHistory((prev) => !prev)}
                 className={cn(
                   "p-2 transition-colors hover:bg-muted",
                   showHistory
@@ -1671,34 +1285,49 @@ export default function ChatPanel({
 
                   <DropdownMenuItem
                     onClick={() =>
-                      setEnableQueryAugmentation(!enableQueryAugmentation)
+                      setEnableQueryAugmentation((prev) => !prev)
                     }
                   >
                     <Languages className="mr-2 h-4 w-4" />
                     {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
                   </DropdownMenuItem>
 
-                  {messages.length > 0 && (
-                    <DropdownMenuItem onClick={clearChat} variant="destructive">
+                  {messages.length > 0 ? (
+                    <DropdownMenuItem onClick={exportChatHistory}>
+                      <Download className="mr-2 h-4 w-4" />
+                      {language === "ms" ? "Eksport sejarah" : "Export history"}
+                    </DropdownMenuItem>
+                  ) : null}
+
+                  {messages.length > 0 ? (
+                    <DropdownMenuItem
+                      onClick={clearChat}
+                      variant="destructive"
+                    >
                       <X className="mr-2 h-4 w-4" />
                       {copy.clearThread}
                     </DropdownMenuItem>
-                  )}
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
 
-          {composerTop && <div className="mb-2">{composerTop}</div>}
+          {composerTop ? <div className="mb-2">{composerTop}</div> : null}
+
           <ChatInput
             value={input}
             onChange={setInput}
             ref={inputRef}
             onSubmit={submitQuestion}
             loading={loading}
-            disabled={!selectedDoc || !sessionId || !userId}
+            disabled={!selectedDoc || !sessionId || !userId || rateLimitedUntil !== null}
             placeholder={
-              selectedDoc ? copy.askPlaceholder : "Select a document to start…"
+              rateLimitedUntil !== null
+                ? `${copy.waitAgain} ${rateLimitSecondsLeft}s...`
+                : selectedDoc
+                  ? copy.askPlaceholder
+                  : "Select a document to start..."
             }
             className="bg-card"
           >
@@ -1709,7 +1338,7 @@ export default function ChatPanel({
                   className="h-8 w-fit border border-border/50 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
                 >
                   {selectedPopoverModel
-                    ? (GROQ_MODELS.find((m) => m.id === selectedPopoverModel)
+                    ? (GROQ_MODELS.find((model) => model.id === selectedPopoverModel)
                         ?.label ?? selectedPopoverModel)
                     : copy.autoServer}
                 </button>
@@ -1728,17 +1357,17 @@ export default function ChatPanel({
                     {copy.autoServer}
                   </button>
 
-                  {GROQ_MODELS.map((m) => (
+                  {GROQ_MODELS.map((model) => (
                     <button
-                      key={m.id}
+                      key={model.id}
                       type="button"
-                      onClick={() => setSelectedPopoverModel(m.id)}
+                      onClick={() => setSelectedPopoverModel(model.id)}
                       className={cn(
                         "flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
-                        selectedPopoverModel === m.id && "bg-muted"
+                        selectedPopoverModel === model.id && "bg-muted"
                       )}
                     >
-                      {m.label}
+                      {model.label}
                     </button>
                   ))}
                 </div>

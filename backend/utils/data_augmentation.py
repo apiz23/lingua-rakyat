@@ -83,9 +83,10 @@ class QueryAugmenter:
 
     def __init__(self):
         self.groq_key = os.getenv("GROQ_API_KEY")
-        self.groq_model = os.getenv("GROQ_MODEL", "groq/compound")
+        self.groq_model = os.getenv("GROQ_AUGMENT_MODEL", os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant"))
         self._cache: dict[str, list[tuple[str, str]]] = {}
         self._rate_limited_until = 0.0
+        self._last_call_failed = False
 
     def _call_groq(self, prompt: str, max_tokens: int = 300) -> Optional[str]:
         if not self.groq_key:
@@ -108,15 +109,19 @@ class QueryAugmenter:
                     "max_tokens": max_tokens,
                     "temperature": 0.3,
                 },
-                timeout=6,
+                timeout=4,
             )
             resp.raise_for_status()
+            self._last_call_failed = False
             return resp.json()["choices"][0]["message"]["content"].strip()
         except Exception as exc:
             status_code = getattr(getattr(exc, "response", None), "status_code", None)
             if status_code == 429:
                 self._rate_limited_until = time.time() + 60
                 logger.warning("[Augment] Groq rate limited - disabling augmentation for 60s")
+            else:
+                self._rate_limited_until = max(self._rate_limited_until, time.time() + 15)
+            self._last_call_failed = True
             logger.error("[Augment] Groq call failed: %s", exc)
             return None
 
@@ -159,8 +164,16 @@ class QueryAugmenter:
             if translated:
                 variants[lang] = translated
                 logger.info("[Augment] Translated to %s: %s", lang, translated[:60])
+            elif self._last_call_failed:
+                logger.warning("[Augment] Stopping further translations after failure")
+                break
 
         if include_paraphrase:
+            if self._last_call_failed:
+                self._cache[cache_key] = [
+                    (key, text) for key, text in variants.items() if key != source_lang
+                ]
+                return variants
             paraphrase = self.paraphrase_query(query, source_lang)
             if paraphrase:
                 variants[f"paraphrase_{source_lang}"] = paraphrase

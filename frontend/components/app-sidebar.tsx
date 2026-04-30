@@ -23,6 +23,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar, // Import useSidebar hook
 } from "@/components/ui/sidebar"
 import { useLanguage } from "@/components/language-provider"
 import Image from "next/image"
@@ -70,6 +71,7 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const pathname = usePathname()
   const { language, toggleLanguage } = useLanguage()
+  const { setOpenMobile } = useSidebar() // Get setOpenMobile from sidebar context
 
   // Fixed repository URL - replace with your actual repo URL
   const REPO_URL = "https://github.com/apiz23/lingua-rakyat"
@@ -99,6 +101,10 @@ export function AppSidebar() {
           repository: "Repository",
         }
 
+  const handleNavigation = () => {
+    setOpenMobile(false)
+  }
+
   return (
     <Sidebar
       collapsible="icon"
@@ -113,9 +119,10 @@ export function AppSidebar() {
               size="lg"
               tooltip={copy.appName}
               className="hover:bg-primary/5 data-[state=open]:bg-primary/5"
+              onClick={handleNavigation} // Close on mobile when clicked
             >
               <Link href="/" className="group">
-                <div className="flex aspect-square size-8 items-center justify-center bg-primary/10 p-0.5 transition-colors group-hover:bg-primary/20">
+                <div className="flex aspect-square size-8 items-center justify-center">
                   <Image
                     src={logo}
                     alt="Lingua Rakyat logo"
@@ -155,6 +162,7 @@ export function AppSidebar() {
                     asChild
                     isActive={active}
                     tooltip={item.label}
+                    onClick={handleNavigation}
                     className={cn(
                       "transition-all duration-200",
                       active
@@ -196,7 +204,10 @@ export function AppSidebar() {
           <SidebarMenu className="space-y-1.5">
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={toggleLanguage}
+                onClick={() => {
+                  toggleLanguage()
+                  handleNavigation()
+                }}
                 tooltip={copy.language}
                 className="flex min-h-10 items-center gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary"
               >
@@ -205,24 +216,6 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
 
-            {/* Fixed Repository Link - Now properly placed inside SidebarMenu */}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip={copy.repository}
-                className="flex min-h-10 items-center gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary"
-              >
-                <Link
-                  href={REPO_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  <GithubIcon size={16} />
-                  <span>{copy.repository}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
@@ -234,6 +227,8 @@ export function AppSidebar() {
               href={REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="GitHub repository"
+              onClick={handleNavigation}
               className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
             >
               <GithubIcon size={20} />
@@ -243,6 +238,8 @@ export function AppSidebar() {
               href="https://www.linkedin.com/in/muh-hafizuddin/"
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="LinkedIn profile"
+              onClick={handleNavigation}
               className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
             >
               <LinkedinIcon size={20} />

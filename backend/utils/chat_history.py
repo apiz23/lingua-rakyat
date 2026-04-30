@@ -57,6 +57,32 @@ def insert_chat_message(payload: dict[str, Any]) -> bool:
         )
         return True
     except Exception as exc:
+        error_text = str(exc)
+        if "schema cache" in error_text and "Could not find the '" in error_text:
+            optional_fields = [
+                "confidence_label",
+                "model_used",
+                "sufficient_evidence",
+                "latency_ms",
+                "document_name",
+            ]
+            retry_payload = dict(payload)
+            removed_any = False
+            for field in optional_fields:
+                if f"'{field}'" in error_text and field in retry_payload:
+                    retry_payload.pop(field, None)
+                    removed_any = True
+            if removed_any:
+                try:
+                    get_supabase().table(CHAT_HISTORY_TABLE).insert(retry_payload).execute()
+                    logger.info(
+                        "[ChatHistory] Saved message after removing unsupported columns for document_id=%s session_id=%s",
+                        retry_payload.get("document_id"),
+                        retry_payload.get("session_id"),
+                    )
+                    return True
+                except Exception as retry_exc:
+                    logger.warning("[ChatHistory] Retry save failed: %s", retry_exc)
         logger.warning("[ChatHistory] Failed to save message: %s", exc)
         return False
 

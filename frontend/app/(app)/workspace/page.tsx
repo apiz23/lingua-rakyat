@@ -76,11 +76,11 @@ export default function WorkSpacePage() {
       <ChatPanel
         selectedDoc={selectedDoc}
         composerTop={
-          <div className="flex justify-between gap-2 px-1">
+          <div className="flex min-w-0 flex-col gap-2 px-1 sm:flex-row sm:justify-between">
             {/* Document Selector */}
             <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
               <PopoverTrigger asChild>
-                <button className="group max-w-[30vw] flex w-full flex-1 items-center justify-between border border-border bg-card px-3 py-2 text-sm transition-all hover:border-primary/30 hover:bg-accent/50">
+                <button className="group min-w-0 flex w-full flex-1 items-center justify-between border border-border bg-card px-3 py-2 text-sm transition-all hover:border-primary/30 hover:bg-accent/50 sm:max-w-[30vw]">
                   <div className="flex items-center gap-2 truncate">
                     {selectedDoc ? (
                       <>
@@ -113,12 +113,12 @@ export default function WorkSpacePage() {
 
               <PopoverContent
                 align="start"
-                className="w-full p-0"
+                className="w-[calc(100vw-2rem)] p-0 sm:w-full"
                 sideOffset={8}
               >
                 <div className="flex flex-col">
-                  <ScrollArea className="max-h-80">
-                    <div className="p-1">
+                  <ScrollArea className="max-h-60 sm:max-h-80">
+                    <div className="p-2 sm:p-1">
                       {/* No document option */}
                       <button
                         onClick={() => {
@@ -126,7 +126,7 @@ export default function WorkSpacePage() {
                           setIsDocPickerOpen(false)
                         }}
                         className={cn(
-                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                          "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent sm:py-2",
                           !selectedDoc && "bg-primary/5 text-primary"
                         )}
                       >
@@ -135,7 +135,11 @@ export default function WorkSpacePage() {
                       </button>
 
                       {/* Document list */}
-                      {sortedDocs.length === 0 ? (
+                      {docsLoading ? (
+                        Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="mx-1 my-0.5 h-9 animate-pulse bg-muted/40" />
+                        ))
+                      ) : sortedDocs.length === 0 ? (
                         <div className="py-8 text-center text-sm text-muted-foreground">
                           No documents yet
                         </div>
@@ -154,7 +158,7 @@ export default function WorkSpacePage() {
                                 setIsDocPickerOpen(false)
                               }}
                               className={cn(
-                                "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                                "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent sm:py-2",
                                 selectedDoc?.id === doc.id && "bg-primary/5"
                               )}
                             >
@@ -183,28 +187,30 @@ export default function WorkSpacePage() {
             </Popover>
 
             {/* Refresh Button */}
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="Refresh documents"
                 onClick={loadDocuments}
                 disabled={docsLoading}
-                className="h-full w-fit shrink-0 p-3"
+                className="h-10 w-10 sm:h-full sm:w-fit sm:p-3"
               >
                 {docsLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin sm:h-3.5 sm:w-3.5" />
                 ) : (
-                  <RotateCcw className="h-3.5 w-3.5" />
+                  <RotateCcw className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                 )}
               </Button>
 
               {/* Upload Button */}
               <Button
                 size="icon"
+                aria-label="Upload document"
                 onClick={() => setIsUploadOpen(true)}
-                className="h-full w-fit shrink-0 bg-primary p-3 shadow-sm hover:bg-primary/90"
+                className="h-10 w-10 shrink-0 bg-primary shadow-sm hover:bg-primary/90 sm:h-full sm:w-fit sm:p-3"
               >
-                <Upload className="h-3.5 w-3.5" />
+                <Upload className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               </Button>
             </div>
           </div>

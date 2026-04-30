@@ -1,53 +1,61 @@
-# Lingua Rakyat 3-Minute Demo Script
+## Lingua Rakyat 3-Minute Demo Script (PTPTN Panduan Pengguna)
 
-## Goal
+### **Goal**
 
 Show the judge that Lingua Rakyat turns a government PDF into a multilingual, cited answer with trust signals.
 
-## Setup Before Recording
+---
+
+## **Setup Before Recording**
 
 - Open the app at `http://localhost:3000/workspace`.
-- Use a small LHDN PDF that has clear page text.
+- Use a **PTPTN “Panduan Pengguna”** PDF that has clear page text (searchable text, not scanned).
 - Make sure the backend is running and the document is not already selected.
 - Keep browser zoom at 100%.
 - Clear unrelated browser tabs.
 
-## Walkthrough Script
+---
 
-### 0:00-0:20 - Opening
+## **Walkthrough Script**
+
+### **0:00-0:20 — Opening**
 
 Say:
 
-> Lingua Rakyat helps Malaysians understand official government PDFs in plain language. I will upload an LHDN document, ask a question in Malay, then ask the same thing in English with different phrasing.
+> Lingua Rakyat helps Malaysians understand official PDFs in plain language. I’ll upload an official PTPTN Panduan Pengguna, ask a question in Malay, then ask the same thing in English with different phrasing.
 
 Action:
 
 - Open Workspace.
 - Show empty or document list state.
 
-### 0:20-0:55 - Upload LHDN PDF
+---
+
+### **0:20-0:55 — Upload PTPTN PDF**
 
 Say:
 
-> First, I upload the official PDF. The system extracts the document, chunks it by section and page, then indexes it for retrieval.
+> First, I upload the official PTPTN PDF. The system extracts the document, chunks it by section and page, then indexes it for retrieval.
 
 Action:
 
 - Click Upload Document.
 - Enter admin token.
-- Select the LHDN PDF.
+- Select the **PTPTN Panduan Pengguna** PDF.
 - Wait for the ready state.
 - Select the uploaded PDF.
 
-### 0:55-1:40 - Ask In Malay
+---
+
+### **0:55-1:40 — Ask in Malay**
 
 Say:
 
-> Now I ask in Malay, the way a citizen would naturally ask.
+> Sekarang saya tanya dalam Bahasa Melayu, macam orang awam biasa tanya.
 
-Question:
+Question (Malay):
 
-> Siapa yang layak untuk pelepasan cukai ini?
+> Bagaimana cara log masuk, dan apa langkah jika saya terlupa kata laluan?
 
 Action:
 
@@ -57,17 +65,19 @@ Action:
 
 Say:
 
-> The answer is short, in Malay, and it shows the cited document page. This matters because citizens can verify the answer against the original PDF.
+> Jawapan ini ringkas dalam Bahasa Melayu, dan ia tunjuk sumber—siap dengan muka surat dokumen. Ini penting sebab pengguna boleh semak semula terus pada PDF rasmi.
 
-### 1:40-2:25 - Switch To English
+---
+
+### **1:40-2:25 — Switch to English**
 
 Say:
 
-> Now I switch phrasing and language. I do not need to upload another file.
+> Now I switch phrasing and language. I don’t need to upload another file.
 
-Question:
+Question (English):
 
-> What are the eligibility conditions for this tax relief?
+> How do I sign in, and what should I do if I forgot my password?
 
 Action:
 
@@ -76,9 +86,11 @@ Action:
 
 Say:
 
-> The app detects the language per turn and retrieves from the same official document. The source and confidence badge stay visible so the answer is transparent.
+> The app detects language per turn and retrieves from the same official PTPTN document. The source and confidence badge stay visible so the answer is transparent.
 
-### 2:25-3:00 - Trust + Offline Close
+---
+
+### **2:25-3:00 — Trust + Offline Close**
 
 Say:
 
@@ -93,10 +105,12 @@ Closing line:
 
 > Lingua Rakyat is not just a chatbot. It is a civic document assistant: multilingual, source-backed, and built for Malaysian citizens.
 
-## Recording Checklist
+---
 
-- Target length: 2:45-3:10.
+## **Recording Checklist**
+
+- Target length: 2:45–3:10.
 - Keep cursor movement slow.
 - Pause after each answer so sources are readable.
 - Do one full practice recording before the final take.
-- Save final file as `lingua-rakyat-demo-lhdn.mp4`.
+- Save final file as `lingua-rakyat-demo-ptptn.mp4`.

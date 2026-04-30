@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { Analytics } from "@vercel/analytics/next"
 import CommandPaletteTopRight from "@/components/navbar"
 import OfflineProvider from "@/components/offline-provider"
+import { TopoPattern } from "@/components/ui/topo-pattern"
 
 import {
   Atkinson_Hyperlegible,
@@ -90,6 +91,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-70"
+          >
+            <TopoPattern />
+            <div className="bg-civic-glow absolute -top-[20%] right-[5%] h-[55%] w-[45%] blur-3xl" />
+            <div className="bg-noise absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" />
+          </div>
           <LanguageProvider>
             <TooltipProvider>
               <Toaster richColors expand={true} position="top-center" />

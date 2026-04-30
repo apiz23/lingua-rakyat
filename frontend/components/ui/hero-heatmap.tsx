@@ -631,7 +631,6 @@ export function HeroHeatmapMobileVisual({
       data-slot="hero-heatmap-mobile"
       {...props}
     >
-      <div className="absolute inset-x-0 top-0 z-10 h-56 bg-gradient-to-b from-background via-background/95 to-transparent" />
       <MemoizedHeatmap
         {...resolvedMobileShaderProps}
         image={

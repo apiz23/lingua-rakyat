@@ -15,7 +15,9 @@ const LiquidMetalNoSSR = dynamic(
   },
   {
     ssr: false,
-    loading: () => <div className="size-full bg-primary/10" aria-hidden="true" />,
+    loading: () => (
+      <div className="size-full bg-primary/10" aria-hidden="true" />
+    ),
   }
 )
 
@@ -70,7 +72,8 @@ export type HeroLiquidMetalShaderOverrides = Partial<
 >
 
 export interface HeroLiquidMetalRootProps
-  extends Omit<React.ComponentPropsWithoutRef<"section">, "title">,
+  extends
+    Omit<React.ComponentPropsWithoutRef<"section">, "title">,
     HeroLiquidMetalShaderOverrides {
   srTitle?: string
   title?: React.ReactNode
@@ -90,28 +93,27 @@ export interface HeroLiquidMetalRootProps
   mobileShaderProps?: Partial<LiquidMetalProps>
 }
 
-export interface HeroLiquidMetalHeadingProps
-  extends Omit<React.ComponentPropsWithoutRef<"div">, "title"> {
+export interface HeroLiquidMetalHeadingProps extends Omit<
+  React.ComponentPropsWithoutRef<"div">,
+  "title"
+> {
   title?: React.ReactNode
   subtitle?: React.ReactNode
   headingClassName?: string
 }
 
-export interface HeroLiquidMetalDescriptionProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroLiquidMetalDescriptionProps extends React.ComponentPropsWithoutRef<"div"> {
   description?: React.ReactNode
   descriptionClassName?: string
 }
 
-export interface HeroLiquidMetalActionsProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroLiquidMetalActionsProps extends React.ComponentPropsWithoutRef<"div"> {
   showCta?: boolean
   ctaProps?: Partial<HeroLiquidMetalCTAProps>
   renderCta?: (defaultCta: React.ReactNode) => React.ReactNode
 }
 
-export interface HeroLiquidMetalBadgesProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroLiquidMetalBadgesProps extends React.ComponentPropsWithoutRef<"div"> {
   showBadges?: boolean
   techStack?: HeroLiquidMetalTechItem[]
   renderBadge?: (
@@ -121,14 +123,12 @@ export interface HeroLiquidMetalBadgesProps
   ) => React.ReactNode
 }
 
-export interface HeroLiquidMetalVisualProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroLiquidMetalVisualProps extends React.ComponentPropsWithoutRef<"div"> {
   desktopShaderProps?: Partial<LiquidMetalProps>
   desktopClassName?: string
 }
 
-export interface HeroLiquidMetalMobileVisualProps
-  extends React.ComponentPropsWithoutRef<"div"> {
+export interface HeroLiquidMetalMobileVisualProps extends React.ComponentPropsWithoutRef<"div"> {
   mobileShaderProps?: Partial<LiquidMetalProps>
 }
 
@@ -389,7 +389,7 @@ export function HeroLiquidMetalContainer({
   return (
     <div
       className={cn(
-        "container relative z-10 grid gap-6 pb-16 sm:gap-8 sm:pb-20 lg:grid-cols-[1fr_minmax(300px,500px)] lg:items-center lg:gap-12 lg:pb-24 xl:grid-cols-[1fr_1fr]",
+        "relative z-10 container grid gap-6 pb-16 sm:gap-8 sm:pb-20 lg:grid-cols-[1fr_minmax(300px,500px)] lg:items-center lg:gap-12 lg:pb-24 xl:grid-cols-[1fr_1fr]",
         className
       )}
       data-slot="hero-liquid-metal-container"
@@ -436,7 +436,7 @@ export function HeroLiquidMetalHeading({
         <div className="relative">
           <h2
             className={cn(
-              "relative mb-0 text-balance font-medium  text-3xl tracking-[-0.04em] sm:text-4xl md:text-5xl lg:tracking-[-0.06em] xl:text-6xl 2xl:text-7xl",
+              "relative mb-0 text-3xl font-medium tracking-[-0.04em] text-balance sm:text-4xl md:text-5xl lg:tracking-[-0.06em] xl:text-6xl 2xl:text-7xl",
               headingClassName
             )}
             data-slot="hero-liquid-metal-heading"
@@ -472,7 +472,7 @@ export function HeroLiquidMetalDescription({
       {children ?? (
         <p
           className={cn(
-            "mt-0 mb-0 font-sans text-foreground/70 text-sm sm:text-base md:text-foreground/80 lg:text-lg xl:text-xl",
+            "mt-0 mb-0 font-sans text-sm text-foreground/70 sm:text-base md:text-foreground/80 lg:text-lg xl:text-xl",
             descriptionClassName
           )}
           data-slot="hero-liquid-metal-description"
@@ -580,7 +580,7 @@ export function HeroLiquidMetalBadges({
             key={tech.name}
             variant="outline"
           >
-            {Icon ? <Icon className="size-3.5 opacity-80 mr-1" /> : null}
+            {Icon ? <Icon className="mr-1 size-3.5 opacity-80" /> : null}
             <span className="font-semibold tracking-tight">{tech.name}</span>
             {tech.version ? (
               <span className="font-mono text-xs opacity-50">
@@ -668,7 +668,6 @@ export function HeroLiquidMetalMobileVisual({
       data-slot="hero-liquid-metal-mobile"
       {...props}
     >
-      <div className="absolute inset-x-0 top-0 z-10 h-56 bg-gradient-to-b from-background via-background/95 to-transparent" />
       <LiquidMetalNoSSR
         {...resolvedMobileShaderProps}
         image={
@@ -708,7 +707,7 @@ export function HeroLiquidMetal({
           <HeroLiquidMetalActions className={ctaWrapClassName} />
           <div
             className={cn(
-              "hidden lg:flex justify-center lg:justify-start",
+              "hidden justify-center lg:flex lg:justify-start",
               badgesWrapClassName
             )}
             data-slot="hero-liquid-metal-badges-wrap"

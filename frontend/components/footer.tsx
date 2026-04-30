@@ -1,15 +1,21 @@
-import { Github, Linkedin, Twitter } from "lucide-react"
+"use client"
+
 import Link from "next/link"
 import { GithubIcon } from "./ui/github"
 import { LinkedinIcon } from "./ui/linkedin"
+import { useLanguage } from "./language-provider"
 
 export default function Footer() {
+  const { language } = useLanguage()
+
   return (
-    <footer className="relative z-10 mx-auto max-w-7xl border-x border-t bg-background/50 backdrop-blur-xl">
+    <footer className="relative z-10 mx-auto max-w-7xl">
       <div className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
           <p className="text-sm text-muted-foreground">
-            © 2026 Lingua Rakyat. Multilingual AI for Public Services
+            {language === "ms"
+              ? "© 2026 Lingua Rakyat. AI Berbilang Bahasa untuk Perkhidmatan Awam"
+              : "© 2026 Lingua Rakyat. Multilingual AI for Public Services"}
           </p>
           <div className="flex items-center gap-4">
             <Link

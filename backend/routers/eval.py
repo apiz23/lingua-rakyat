@@ -20,6 +20,7 @@ in the hackathon assessment by providing:
 """
 
 import logging
+import os
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -27,14 +28,20 @@ from pydantic import BaseModel
 
 from utils.evaluation import Evaluator, BUILT_IN_TEST_CASES, rouge_n, rouge_l, bleu_score, flesch_kincaid_grade, get_test_cases_for_document, detect_document_category
 from utils.data_augmentation import QueryAugmenter, generate_data_quality_report, simplify_jargon
-from utils.rag_pipeline import answer_question, GROQ_MODEL_FAST
+from utils.rag_pipeline import answer_question, GROQ_MODEL_FAST, _get_augmenter
 
 router = APIRouter()
 logger = logging.getLogger("eval_router")
 
-# ─── Shared in-memory evaluator (persists for the server's lifetime) ─────────
-# For a production system this would be backed by a database.
-_evaluator = Evaluator()
+
+def _persist_eval_record(record: dict) -> None:
+    from routers.documents import get_supabase
+    table = os.getenv("EVAL_TABLE", "lr_eval_records")
+    get_supabase().table(table).insert(record).execute()
+
+
+# ─── Shared evaluator — writes to Supabase lr_eval_records on each record ────
+_evaluator = Evaluator(persist_fn=_persist_eval_record)
 
 
 # ─── Request / Response Models ────────────────────────────────────────────────
@@ -312,7 +319,7 @@ async def augment_query(req: AugmentRequest):
         POST /api/eval/augment-query
         { "query": "How do I apply for housing aid?", "source_lang": "en" }
     """
-    augmenter = QueryAugmenter()
+    augmenter = _get_augmenter()
     variants = augmenter.expand_query(
         query=req.query,
         source_lang=req.source_lang,
