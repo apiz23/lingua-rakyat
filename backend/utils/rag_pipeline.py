@@ -3,6 +3,7 @@ rag_pipeline.py - Lightweight multilingual RAG pipeline.
 """
 
 import logging
+import math
 import os
 import re
 import time
@@ -833,15 +834,13 @@ def _compute_semantic_similarity(text_a: str, text_b: str) -> Optional[float]:
     if not cohere_key or not text_a.strip() or not text_b.strip():
         return None
 
-    import math
-
     try:
         response = requests.post(
             "https://api.cohere.ai/v1/embed",
             json={
                 "texts": [text_a, text_b],
                 "model": "embed-multilingual-v3.0",
-                "input_type": "search_document",
+                "input_type": "clustering",
             },
             headers={
                 "Authorization": f"Bearer {cohere_key}",
