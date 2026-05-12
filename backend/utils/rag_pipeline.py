@@ -749,31 +749,42 @@ def _build_query_variants(question: str, detected_lang: str, enable_query_augmen
     return deduped
 
 
+def _call_cohere_rerank(query: str, documents: list[str], top_n: int) -> list[dict] | None:
+    """Low-level Cohere rerank call. Returns raw results list or None on failure."""
+    cohere_key = os.getenv("COHERE_API_KEY")
+    if not cohere_key:
+        return None
+    try:
+        response = requests.post(
+            "https://api.cohere.ai/v1/rerank",
+            json={
+                "query": query,
+                "documents": documents,
+                "model": "rerank-multilingual-v3.0",
+                "top_n": top_n,
+            },
+            headers={
+                "Authorization": f"Bearer {cohere_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json().get("results", [])
+    except Exception as exc:
+        logger.warning("[CohereRerank] Call failed: %s", exc)
+        return None
+
+
 def _cohere_rerank(question: str, matches: list[dict[str, Any]], top_n: int) -> list[dict[str, Any]]:
     cohere_key = os.getenv("COHERE_API_KEY")
     if not ENABLE_COHERE_RERANK or not cohere_key or len(matches) <= 1:
         return matches[:top_n]
 
     documents = [match["metadata"].get("text", "") for match in matches]
-    try:
-        response = requests.post(
-            "https://api.cohere.ai/v1/rerank",
-            json={
-                "query": question,
-                "documents": documents,
-                "model": "rerank-multilingual-v3.0",
-                "top_n": min(top_n, len(documents)),
-            },
-            headers={
-                "Authorization": f"Bearer {cohere_key}",
-                "Content-Type": "application/json",
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        results = response.json().get("results", [])
-    except Exception as exc:
-        logger.warning("[Rerank] Cohere rerank failed, using vector order: %s", exc)
+    results = _call_cohere_rerank(question, documents, top_n=min(top_n, len(documents)))
+    if results is None:
+        logger.warning("[Rerank] Cohere rerank failed, using vector order")
         return matches[:top_n]
 
     reranked: list[dict[str, Any]] = []
@@ -803,36 +814,13 @@ def _compute_faithfulness(answer: str, source_chunks: list[str]) -> Optional[flo
     cohere_key = os.getenv("COHERE_API_KEY")
     if not ENABLE_COHERE_RERANK or not cohere_key or not source_chunks or not answer.strip():
         return None
-
     documents = [chunk for chunk in source_chunks if chunk.strip()]
     if not documents:
         return None
-
-    try:
-        response = requests.post(
-            "https://api.cohere.ai/v1/rerank",
-            json={
-                "query": answer,
-                "documents": documents,
-                "model": "rerank-multilingual-v3.0",
-                "top_n": len(documents),
-            },
-            headers={
-                "Authorization": f"Bearer {cohere_key}",
-                "Content-Type": "application/json",
-            },
-            timeout=10,
-        )
-        if response.status_code != 200:
-            logger.warning("[Faithfulness] Rerank returned %d", response.status_code)
-            return None
-        results = response.json().get("results", [])
-        if not results:
-            return None
-        return round(max(r.get("relevance_score", 0.0) for r in results), 4)
-    except Exception as exc:
-        logger.warning("[Faithfulness] Cohere rerank failed: %s", exc)
+    results = _call_cohere_rerank(answer, documents, top_n=len(documents))
+    if not results:
         return None
+    return round(max(r.get("relevance_score", 0.0) for r in results), 4)
 
 
 def _retrieve_matches(

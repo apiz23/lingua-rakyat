@@ -380,8 +380,10 @@ class Evaluator:
             },
 
             "per_language": per_language,
-            "faithfulness": faithfulness_stats,
         }
+
+        if faithfulness_stats:
+            report_data["faithfulness"] = faithfulness_stats
 
         if rouge_bleu:
             report_data["generation_quality"] = rouge_bleu
