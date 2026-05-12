@@ -28,7 +28,7 @@ from pydantic import BaseModel
 
 from utils.evaluation import Evaluator, BUILT_IN_TEST_CASES, rouge_n, rouge_l, bleu_score, flesch_kincaid_grade, get_test_cases_for_document, detect_document_category
 from utils.data_augmentation import QueryAugmenter, generate_data_quality_report, simplify_jargon
-from utils.rag_pipeline import answer_question, GROQ_MODEL_FAST, _get_augmenter
+from utils.rag_pipeline import answer_question, GROQ_MODEL_FAST, _get_augmenter, _compute_semantic_similarity
 
 router = APIRouter()
 logger = logging.getLogger("eval_router")
@@ -181,6 +181,7 @@ async def run_test_suite(req: TestSuiteRequest):
             rl = rouge_l(answer, gt)
             bl = bleu_score(answer, gt)
             fk = flesch_kincaid_grade(answer)
+            sem_sim = _compute_semantic_similarity(answer, gt)
 
             record = _evaluator.record(
                 question=case["question"],
@@ -206,6 +207,7 @@ async def run_test_suite(req: TestSuiteRequest):
                     "fk_grade":  fk,
                     "confidence": rag_result.get("confidence", 0.0),
                     "latency_ms": rag_result.get("latency_ms", 0),
+                    "semantic_similarity": sem_sim,
                 },
             })
             logger.info(
@@ -225,6 +227,12 @@ async def run_test_suite(req: TestSuiteRequest):
 
     # ── Aggregate ─────────────────────────────────────────────────────────
     n = len(results)
+    scored_sim = [r for r in results if r["scores"].get("semantic_similarity") is not None]
+    if scored_sim:
+        avg_sem_sim = round(sum(r["scores"]["semantic_similarity"] for r in scored_sim) / len(scored_sim), 4)
+    else:
+        avg_sem_sim = None
+
     aggregate = {
         "cases_run":       n,
         "cases_failed":    len(errors),
@@ -235,6 +243,7 @@ async def run_test_suite(req: TestSuiteRequest):
         "avg_fk_grade":    round(sum(r["scores"]["fk_grade"]   for r in results) / n, 2),
         "avg_confidence":  round(sum(r["scores"]["confidence"] for r in results) / n, 4),
         "avg_latency_ms":  round(sum(r["scores"]["latency_ms"] for r in results) / n),
+        "avg_semantic_similarity": avg_sem_sim,
         "readability_note": (
             "✅ Meeting 5th-grade simplification target"
             if sum(r["scores"]["fk_grade"] for r in results) / n <= 6
@@ -441,6 +450,7 @@ async def run_test_suite_stream(req: TestSuiteRequest):
                 rl = rouge_l(answer, gt)
                 bl = bleu_score(answer, gt)
                 fk = flesch_kincaid_grade(answer)
+                sem_sim = _compute_semantic_similarity(answer, gt)
 
                 _evaluator.record(
                     question=case["question"],
@@ -467,6 +477,7 @@ async def run_test_suite_stream(req: TestSuiteRequest):
                         "fk_grade":   fk,
                         "confidence": rag_result.get("confidence", 0.0),
                         "latency_ms": rag_result.get("latency_ms", 0),
+                        "semantic_similarity": sem_sim,
                     },
                 }
                 results.append(result_obj)
@@ -492,6 +503,11 @@ async def run_test_suite_stream(req: TestSuiteRequest):
         # Send aggregate after all cases
         if results:
             n = len(results)
+            scored_sim = [r for r in results if r["scores"].get("semantic_similarity") is not None]
+            if scored_sim:
+                avg_sem_sim = round(sum(r["scores"]["semantic_similarity"] for r in scored_sim) / len(scored_sim), 4)
+            else:
+                avg_sem_sim = None
             aggregate = {
                 "cases_run":      n,
                 "cases_failed":   len(errors),
@@ -502,6 +518,7 @@ async def run_test_suite_stream(req: TestSuiteRequest):
                 "avg_fk_grade":   round(sum(r["scores"]["fk_grade"]   for r in results) / n, 2),
                 "avg_confidence": round(sum(r["scores"]["confidence"] for r in results) / n, 4),
                 "avg_latency_ms": round(sum(r["scores"]["latency_ms"] for r in results) / n),
+                "avg_semantic_similarity": avg_sem_sim,
                 "readability_note": (
                     "Meeting 5th-grade simplification target"
                     if sum(r["scores"]["fk_grade"] for r in results) / n <= 6

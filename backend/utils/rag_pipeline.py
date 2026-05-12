@@ -823,6 +823,50 @@ def _compute_faithfulness(answer: str, source_chunks: list[str]) -> Optional[flo
     return round(max(r.get("relevance_score", 0.0) for r in results), 4)
 
 
+def _compute_semantic_similarity(text_a: str, text_b: str) -> Optional[float]:
+    """
+    Cosine similarity between two texts using Cohere multilingual embeddings.
+    Used in test suite runs to score generated answer vs ground truth.
+    Returns None on API failure or missing key.
+    """
+    cohere_key = os.getenv("COHERE_API_KEY")
+    if not cohere_key or not text_a.strip() or not text_b.strip():
+        return None
+
+    import math
+
+    try:
+        response = requests.post(
+            "https://api.cohere.ai/v1/embed",
+            json={
+                "texts": [text_a, text_b],
+                "model": "embed-multilingual-v3.0",
+                "input_type": "search_document",
+            },
+            headers={
+                "Authorization": f"Bearer {cohere_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=15,
+        )
+        if response.status_code != 200:
+            logger.warning("[SemanticSim] Embed returned %d", response.status_code)
+            return None
+        embeddings = response.json().get("embeddings", [])
+        if len(embeddings) < 2:
+            return None
+        a, b = embeddings[0], embeddings[1]
+        dot = sum(x * y for x, y in zip(a, b))
+        mag_a = math.sqrt(sum(x**2 for x in a))
+        mag_b = math.sqrt(sum(x**2 for x in b))
+        if mag_a == 0 or mag_b == 0:
+            return None
+        return round(dot / (mag_a * mag_b), 4)
+    except Exception as exc:
+        logger.warning("[SemanticSim] Cohere embed failed: %s", exc)
+        return None
+
+
 def _retrieve_matches(
     document_id: str,
     query_variants: list[dict[str, str]],

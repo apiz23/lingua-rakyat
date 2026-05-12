@@ -38,3 +38,23 @@ def test_report_includes_avg_faithfulness():
     assert "faithfulness" in report
     assert abs(report["faithfulness"]["avg_faithfulness_score"] - 0.70) < 0.01
     assert report["faithfulness"]["scored_queries"] == 2
+
+
+def test_cosine_similarity_computation():
+    import math
+
+    def cosine(a: list[float], b: list[float]) -> float:
+        dot = sum(x * y for x, y in zip(a, b))
+        mag_a = math.sqrt(sum(x**2 for x in a))
+        mag_b = math.sqrt(sum(x**2 for x in b))
+        if mag_a == 0 or mag_b == 0:
+            return 0.0
+        return dot / (mag_a * mag_b)
+
+    a = [1.0, 0.0, 0.0]
+    b = [1.0, 0.0, 0.0]
+    assert cosine(a, b) == 1.0
+
+    c = [1.0, 0.0, 0.0]
+    d = [0.0, 1.0, 0.0]
+    assert cosine(c, d) == 0.0
