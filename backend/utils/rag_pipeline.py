@@ -793,6 +793,48 @@ def _cohere_rerank(question: str, matches: list[dict[str, Any]], top_n: int) -> 
     return reranked or matches[:top_n]
 
 
+def _compute_faithfulness(answer: str, source_chunks: list[str]) -> Optional[float]:
+    """
+    Compute faithfulness: how grounded the answer is in the retrieved chunks.
+    Uses the Cohere reranker with the answer as query and chunks as documents.
+    Highest relevance_score = faithfulness for this query.
+    Returns None if reranking is disabled or answer/chunks are empty.
+    """
+    cohere_key = os.getenv("COHERE_API_KEY")
+    if not ENABLE_COHERE_RERANK or not cohere_key or not source_chunks or not answer.strip():
+        return None
+
+    documents = [chunk for chunk in source_chunks if chunk.strip()]
+    if not documents:
+        return None
+
+    try:
+        response = requests.post(
+            "https://api.cohere.ai/v1/rerank",
+            json={
+                "query": answer,
+                "documents": documents,
+                "model": "rerank-multilingual-v3.0",
+                "top_n": len(documents),
+            },
+            headers={
+                "Authorization": f"Bearer {cohere_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=10,
+        )
+        if response.status_code != 200:
+            logger.warning("[Faithfulness] Rerank returned %d", response.status_code)
+            return None
+        results = response.json().get("results", [])
+        if not results:
+            return None
+        return round(max(r.get("relevance_score", 0.0) for r in results), 4)
+    except Exception as exc:
+        logger.warning("[Faithfulness] Cohere rerank failed: %s", exc)
+        return None
+
+
 def _retrieve_matches(
     document_id: str,
     query_variants: list[dict[str, str]],

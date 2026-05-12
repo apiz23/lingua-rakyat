@@ -204,13 +204,14 @@ class Evaluator:
 
     def record(
         self,
-        question:     str,
-        answer:       str,
-        ground_truth: Optional[str] = None,
-        language:     str = "en",
-        confidence:   float = 0.0,
-        latency_ms:   int = 0,
-        document_id:  str = "",
+        question:           str,
+        answer:             str,
+        ground_truth:       Optional[str] = None,
+        language:           str = "en",
+        confidence:         float = 0.0,
+        latency_ms:         int = 0,
+        document_id:        str = "",
+        faithfulness_score: Optional[float] = None,
     ) -> dict:
         """
         Compute metrics for one Q&A pair and store the record.
@@ -229,6 +230,9 @@ class Evaluator:
             # Readability (always computed)
             "fk_grade":    flesch_kincaid_grade(answer),
         }
+
+        if faithfulness_score is not None:
+            metrics["faithfulness_score"] = round(faithfulness_score, 4)
 
         if ground_truth:
             r1 = rouge_n(answer, ground_truth, 1)
@@ -313,6 +317,18 @@ class Evaluator:
                 "exact_match_rate": round(sum(1 for r in graded if r["exact_match"]) / ng * 100, 1),
             }
 
+        # ── Faithfulness (only queries with a score) ──────────────────────
+        faithful_records = [r for r in self._records if r.get("faithfulness_score") is not None]
+        faithfulness_stats: dict = {}
+        if faithful_records:
+            nf = len(faithful_records)
+            faithfulness_stats = {
+                "scored_queries": nf,
+                "avg_faithfulness_score": round(
+                    sum(r["faithfulness_score"] for r in faithful_records) / nf, 4
+                ),
+            }
+
         # ── Per-language breakdown ────────────────────────────────────────
         lang_stats: dict = defaultdict(lambda: {"count": 0, "total_conf": 0.0,
                                                   "total_latency": 0, "total_grade": 0.0})
@@ -364,6 +380,7 @@ class Evaluator:
             },
 
             "per_language": per_language,
+            "faithfulness": faithfulness_stats,
         }
 
         if rouge_bleu:

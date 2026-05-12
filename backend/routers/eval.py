@@ -51,13 +51,14 @@ class RecordRequest(BaseModel):
     Record a single Q&A interaction for evaluation.
     ground_truth is optional — ROUGE/BLEU scores are only computed when provided.
     """
-    question:     str
-    answer:       str
-    language:     str = "en"
-    confidence:   float = 0.0
-    latency_ms:   int = 0
-    document_id:  str = ""
-    ground_truth: Optional[str] = None
+    question:            str
+    answer:              str
+    language:            str = "en"
+    confidence:          float = 0.0
+    latency_ms:          int = 0
+    document_id:         str = ""
+    ground_truth:        Optional[str] = None
+    faithfulness_score:  Optional[float] = None
 
 
 class TestSuiteRequest(BaseModel):
@@ -113,6 +114,7 @@ async def record_interaction(req: RecordRequest):
         confidence=req.confidence,
         latency_ms=req.latency_ms,
         document_id=req.document_id,
+        faithfulness_score=req.faithfulness_score,
     )
     return {
         "recorded": True,

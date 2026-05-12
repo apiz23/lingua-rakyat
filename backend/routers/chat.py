@@ -116,7 +116,10 @@ def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, a
 
 
 def _record_eval(body: AskRequest, result: dict[str, Any], answer_text: str) -> None:
+    from utils.rag_pipeline import _compute_faithfulness
     try:
+        source_texts = [s.get("text", "") for s in result.get("sources", [])]
+        faithfulness = _compute_faithfulness(answer_text, source_texts)
         evaluator.record(
             question=body.question,
             answer=answer_text,
@@ -124,6 +127,7 @@ def _record_eval(body: AskRequest, result: dict[str, Any], answer_text: str) -> 
             confidence=result.get("confidence", 0.0),
             latency_ms=result.get("latency_ms", 0),
             document_id=body.document_id,
+            faithfulness_score=faithfulness,
         )
     except Exception as exc:
         logger.warning("[Eval] Failed to record interaction: %s", exc)
