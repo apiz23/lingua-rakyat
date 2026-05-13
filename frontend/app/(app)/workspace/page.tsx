@@ -30,6 +30,18 @@ const AGENCY_COLORS: Record<string, string> = {
   IMIGRESEN: "bg-blue-700",
 }
 
+// Fallback: treat these IDs as featured even if is_featured column not yet migrated
+const FEATURED_DOC_IDS = new Set(["jpn-mykad-faq", "imigresen-passport"])
+
+const FEATURED_DOC_AGENCY: Record<string, string> = {
+  "jpn-mykad-faq": "JPN",
+  "imigresen-passport": "IMIGRESEN",
+}
+
+function getAgency(doc: { id: string; agency?: string }): string | undefined {
+  return doc.agency ?? FEATURED_DOC_AGENCY[doc.id]
+}
+
 export default function WorkSpacePage() {
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
@@ -60,12 +72,20 @@ export default function WorkSpacePage() {
   }, [documents])
 
   const featuredDocs = useMemo(
-    () => sortedDocs.filter((d) => d.is_featured && d.status === "ready"),
+    () =>
+      sortedDocs.filter(
+        (d) =>
+          (d.is_featured || FEATURED_DOC_IDS.has(d.id)) &&
+          d.status === "ready"
+      ),
     [sortedDocs]
   )
 
   const userDocs = useMemo(
-    () => sortedDocs.filter((d) => !d.is_featured),
+    () =>
+      sortedDocs.filter(
+        (d) => !d.is_featured && !FEATURED_DOC_IDS.has(d.id)
+      ),
     [sortedDocs]
   )
 
@@ -167,20 +187,20 @@ export default function WorkSpacePage() {
                                 selectedDoc?.id === doc.id && "bg-primary/5"
                               )}
                             >
-                              {doc.agency && (
+                              {getAgency(doc) && (
                                 <div
                                   className={cn(
                                     "flex h-7 w-7 shrink-0 items-center justify-center rounded text-[9px] font-bold text-white",
-                                    AGENCY_COLORS[doc.agency] ?? "bg-muted"
+                                    AGENCY_COLORS[getAgency(doc)!] ?? "bg-muted"
                                   )}
                                 >
-                                  {doc.agency}
+                                  {getAgency(doc)}
                                 </div>
                               )}
                               <div className="min-w-0 flex-1">
                                 <div className="truncate font-medium text-sm">{doc.name}</div>
                                 <div className="text-[10px] text-muted-foreground">
-                                  {doc.agency} · Official document
+                                  {getAgency(doc)} · Official document
                                 </div>
                               </div>
                               <span className="shrink-0 bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
