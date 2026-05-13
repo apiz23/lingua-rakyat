@@ -148,7 +148,12 @@ export default function UploadModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") handleCancel()
+      }}
+    >
       <div
         className="animate-in fade-in absolute inset-0 bg-black/50 backdrop-blur-sm duration-150"
         onClick={handleCancel}
@@ -169,7 +174,7 @@ export default function UploadModal({
           </div>
           <button
             onClick={handleCancel}
-            className="rounded p-1 transition-colors hover:bg-accent active:scale-[0.93]"
+            className="rounded p-1 transition-colors hover:bg-accent active:scale-[0.93] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             disabled={uploading || verifying}
           >
             <X className="h-5 w-5" />

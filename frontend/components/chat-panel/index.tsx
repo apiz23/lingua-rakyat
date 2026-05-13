@@ -1239,7 +1239,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={toggleLanguage}
-                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary active:scale-[0.95]"
+                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 title={copy.language}
               >
                 {language === "ms" ? "EN" : "MS"}
@@ -1248,7 +1248,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 title={copy.newChat}
               >
                 <Plus className="h-4 w-4" />
@@ -1258,7 +1258,7 @@ export default function ChatPanel({
                 type="button"
                 onClick={() => setShowHistory((prev) => !prev)}
                 className={cn(
-                  "p-2 transition-colors hover:bg-muted",
+                  "p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                   showHistory
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -1272,7 +1272,7 @@ export default function ChatPanel({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     title={copy.options}
                   >
                     <MoreVertical className="h-4 w-4" />
@@ -1379,7 +1379,7 @@ export default function ChatPanel({
               onClick={toggleVoiceInput}
               disabled={!speechSupported || loading}
               className={cn(
-                "border border-border/50 bg-background/80 p-2 text-muted-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
+                "border border-border/50 bg-background/80 p-2 text-muted-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 isListening &&
                   "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/15"
               )}

@@ -314,7 +314,8 @@ export function AIMessageCard({
                 <button
                   type="button"
                   onClick={() => toggleSources(index)}
-                  className="flex items-center gap-1.5 border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5"
+                  aria-expanded={isSourcesOpen}
+                  className="flex items-center gap-1.5 border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
                   {message.sources.length}{" "}
@@ -421,9 +422,9 @@ export function AIMessageCard({
                             </p>
                           ) : null}
 
-                          <p className="text-xs leading-relaxed text-foreground/70">
+                          <div className="overflow-hidden text-xs leading-relaxed text-foreground/70">
                             {highlightSourceText(source.text, message.question)}
-                          </p>
+                          </div>
                         </div>
                       )
                     })}
