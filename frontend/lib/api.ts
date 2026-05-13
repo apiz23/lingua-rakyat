@@ -117,6 +117,10 @@ export type EvalReport = {
     avg_bleu: number
     exact_match_rate: number
   }
+  faithfulness?: {
+    scored_queries: number
+    avg_faithfulness_score: number
+  }
 }
 
 export type TestSuiteResult = {
@@ -132,6 +136,7 @@ export type TestSuiteResult = {
     avg_confidence: number
     avg_latency_ms: number
     readability_note: string
+    avg_semantic_similarity: number | null
   }
   results: Array<{
     case_index: number
@@ -148,6 +153,7 @@ export type TestSuiteResult = {
       fk_grade: number
       confidence: number
       latency_ms: number
+      semantic_similarity: number | null
     }
   }>
   errors: Array<{ case_index: number; question: string; error: string }>

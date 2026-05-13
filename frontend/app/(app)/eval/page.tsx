@@ -560,6 +560,33 @@ export default function EvalPage() {
                 />
               </div>
 
+              {/* Faithfulness + Semantic Similarity */}
+              {((report.faithfulness?.scored_queries ?? 0) > 0 ||
+                testResult?.aggregate.avg_semantic_similarity != null) && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {report.faithfulness && report.faithfulness.scored_queries > 0 && (
+                    <MetricCard
+                      label="Faithfulness Score"
+                      value={score(report.faithfulness.avg_faithfulness_score)}
+                      sub={`${report.faithfulness.scored_queries} queries scored`}
+                      color="text-primary"
+                      bg="bg-primary/5"
+                      icon={CheckCircle}
+                    />
+                  )}
+                  {testResult?.aggregate.avg_semantic_similarity != null && (
+                    <MetricCard
+                      label="Semantic Similarity"
+                      value={score(testResult.aggregate.avg_semantic_similarity)}
+                      sub="Answer vs ground truth"
+                      color="text-emerald-600"
+                      bg="bg-emerald-500/5"
+                      icon={Sparkles}
+                    />
+                  )}
+                </div>
+              )}
+
               {/* Readability note */}
               <div
                 className={cn(
@@ -602,6 +629,18 @@ export default function EvalPage() {
                       label="BLEU Score (n-gram precision)"
                       value={report.generation_quality!.avg_bleu}
                     />
+                    {report.faithfulness && report.faithfulness.scored_queries > 0 && (
+                      <ScoreBar
+                        label="Faithfulness Score (answer grounded in sources)"
+                        value={report.faithfulness.avg_faithfulness_score}
+                      />
+                    )}
+                    {testResult?.aggregate.avg_semantic_similarity != null && (
+                      <ScoreBar
+                        label="Semantic Similarity (vs ground truth)"
+                        value={testResult.aggregate.avg_semantic_similarity}
+                      />
+                    )}
                     <div className="flex items-center justify-between border-t border-border pt-3">
                       <span className="text-sm font-medium">
                         Exact Match Rate
@@ -992,6 +1031,16 @@ export default function EvalPage() {
                         {testResult.aggregate.avg_latency_ms}ms
                       </span>
                     </div>
+                    {testResult.aggregate.avg_semantic_similarity != null && (
+                      <div>
+                        <span className="text-muted-foreground">
+                          Semantic Sim:{" "}
+                        </span>
+                        <span className="font-mono font-medium">
+                          {testResult.aggregate.avg_semantic_similarity.toFixed(3)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {testResult.aggregate.readability_note}
@@ -1158,6 +1207,14 @@ export default function EvalPage() {
                                   Confidence: {pct(r.scores.confidence)}
                                 </span>
                                 <span>Latency: {r.scores.latency_ms}ms</span>
+                                {r.scores.semantic_similarity != null && (
+                                  <span>
+                                    Semantic Sim:{" "}
+                                    <span className="font-mono tabular-nums">
+                                      {r.scores.semantic_similarity.toFixed(3)}
+                                    </span>
+                                  </span>
+                                )}
                               </div>
                             </div>
                           )}
