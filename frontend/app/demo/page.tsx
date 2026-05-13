@@ -40,8 +40,11 @@ const SCENARIO_CARDS = [
   },
 ]
 
+const KNOWN_DOC_IDS = new Set(SCENARIO_CARDS.map((c) => c.docId))
+
 export default function DemoPage() {
   const [docs, setDocs] = useState<Record<string, Document>>({})
+  const [fetched, setFetched] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [initialQuestion, setInitialQuestion] = useState<string | undefined>()
   const [showChat, setShowChat] = useState(false)
@@ -50,7 +53,12 @@ export default function DemoPage() {
   useEffect(() => {
     listDocuments()
       .then((all) => {
-        const featured = all.filter((d) => d.is_featured && d.status === "ready")
+        // Match featured docs OR any ready doc whose ID matches a scenario card
+        const featured = all.filter(
+          (d) =>
+            d.status === "ready" &&
+            (d.is_featured || KNOWN_DOC_IDS.has(d.id))
+        )
         const byId = Object.fromEntries(featured.map((d) => [d.id, d]))
         setDocs(byId)
 
@@ -73,6 +81,7 @@ export default function DemoPage() {
         }
       })
       .catch(() => {})
+      .finally(() => setFetched(true))
   }, [])
 
   function handleScenarioClick(docId: string, question: string) {
@@ -90,6 +99,7 @@ export default function DemoPage() {
   }
 
   const docsReady = Object.keys(docs).length > 0
+  const loading = !fetched
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -160,9 +170,14 @@ export default function DemoPage() {
               })}
             </div>
 
-            {!docsReady && (
+            {loading && (
               <p className="mt-4 text-xs text-muted-foreground">
                 Loading featured documents…
+              </p>
+            )}
+            {fetched && !docsReady && (
+              <p className="mt-4 text-xs text-muted-foreground">
+                No featured documents available yet. Start the backend and run the seed endpoint.
               </p>
             )}
           </div>
