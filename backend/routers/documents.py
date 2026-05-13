@@ -581,32 +581,20 @@ async def delete_document(document_id: str):
     return {"success": True, "message": f"Document '{doc_to_delete['name']}' deleted"}
 
 
+_DEFAULT_PREWARM = [
+    "Summarize this document",
+    "Siapa yang layak memohon?",
+    "What documents do I need?",
+]
+
 PREWARM_QUESTIONS: dict[str, list[str]] = {
-    "lhdn-efiling-2024": [
-        "Summarize this document",
-        "Siapa yang layak memohon?",
-        "What documents do I need?",
-    ],
-    "kwsp-pengeluaran": [
-        "Summarize this document",
-        "Siapa yang layak memohon?",
-        "What documents do I need?",
-    ],
-    "jpn-mykad-faq": [
-        "Summarize this document",
-        "Siapa yang layak memohon?",
-        "What documents do I need?",
-    ],
-    "ptptn-peminjam": [
-        "Summarize this document",
-        "Siapa yang layak memohon?",
-        "What documents do I need?",
-    ],
+    doc["doc_id"]: _DEFAULT_PREWARM for doc in FEATURED_DOCS
 }
 
 
 @router.post("/seed")
-async def seed_featured_documents():
+@limiter.limit("5/minute")
+async def seed_featured_documents(request: Request):
     """
     Idempotent seeding of pre-approved Malaysian government PDFs.
     Checks Supabase by doc_id before ingesting — safe to call on every startup.
@@ -664,7 +652,7 @@ async def _prewarm_featured_docs():
     After seeding completes, silently fire 3 pre-warm questions per featured doc.
     Populates _query_cache so first judge query returns in ~200ms instead of ~2s.
     """
-    from utils.rag_pipeline import answer_question, _query_cache
+    from utils.rag_pipeline import answer_question
 
     existing_ids = {doc["id"] for doc in load_documents()}
     for featured in FEATURED_DOCS:
