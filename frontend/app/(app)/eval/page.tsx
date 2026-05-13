@@ -33,6 +33,7 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
+  Layers,
   FlaskConical,
   Clock,
   ShieldAlert,
@@ -563,7 +564,7 @@ export default function EvalPage() {
               {/* Faithfulness + Semantic Similarity */}
               {((report.faithfulness?.scored_queries ?? 0) > 0 ||
                 testResult?.aggregate.avg_semantic_similarity != null) && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
                   {report.faithfulness && report.faithfulness.scored_queries > 0 && (
                     <MetricCard
                       label="Faithfulness Score"
@@ -581,7 +582,7 @@ export default function EvalPage() {
                       sub="Answer vs ground truth"
                       color="text-emerald-600"
                       bg="bg-emerald-500/5"
-                      icon={Sparkles}
+                      icon={Layers}
                     />
                   )}
                 </div>
