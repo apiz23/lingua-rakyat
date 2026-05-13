@@ -6,12 +6,10 @@ from routers.documents import FEATURED_DOCS
 
 
 def test_featured_docs_defined():
-    assert len(FEATURED_DOCS) == 4
+    assert len(FEATURED_DOCS) == 2
     ids = [d["doc_id"] for d in FEATURED_DOCS]
-    assert "lhdn-efiling-2024" in ids
-    assert "kwsp-pengeluaran" in ids
     assert "jpn-mykad-faq" in ids
-    assert "ptptn-peminjam" in ids
+    assert "imigresen-passport" in ids
 
 
 def test_featured_docs_have_required_fields():
@@ -20,4 +18,4 @@ def test_featured_docs_have_required_fields():
         assert "name" in doc
         assert "agency" in doc
         assert "filename" in doc
-        assert doc["agency"] in ("LHDN", "KWSP", "JPN", "PTPTN")
+        assert doc["agency"] in ("JPN", "IMIGRESEN")

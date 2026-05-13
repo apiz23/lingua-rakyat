@@ -37,28 +37,16 @@ SAMPLE_DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "sample_docs")
 
 FEATURED_DOCS = [
     {
-        "doc_id": "lhdn-efiling-2024",
-        "name": "Panduan e-Filing 2024 (LHDN).pdf",
-        "agency": "LHDN",
-        "filename": "lhdn-efiling-2024.pdf",
-    },
-    {
-        "doc_id": "kwsp-pengeluaran",
-        "name": "Panduan Pengeluaran EPF (KWSP).pdf",
-        "agency": "KWSP",
-        "filename": "kwsp-pengeluaran.pdf",
-    },
-    {
         "doc_id": "jpn-mykad-faq",
-        "name": "Permohonan MyKad FAQ (JPN).pdf",
+        "name": "MyKad FAQ (JPN)",
         "agency": "JPN",
-        "filename": "jpn-mykad-faq.pdf",
+        "filename": "MyKad_FAQ.pdf",
     },
     {
-        "doc_id": "ptptn-peminjam",
-        "name": "Panduan Peminjam PTPTN.pdf",
-        "agency": "PTPTN",
-        "filename": "ptptn-peminjam.pdf",
+        "doc_id": "imigresen-passport",
+        "name": "Malaysian Passport Guidelines",
+        "agency": "IMIGRESEN",
+        "filename": "malaysian_passport_guidelines.pdf",
     },
 ]
 
