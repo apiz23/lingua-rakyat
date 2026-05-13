@@ -62,6 +62,7 @@ interface ChatPanelProps {
   onBack?: () => void
   composerTop?: React.ReactNode
   emptyState?: React.ReactNode
+  initialQuestion?: string
 }
 
 interface ChatThread {
@@ -182,6 +183,7 @@ export default function ChatPanel({
   onBack,
   composerTop,
   emptyState,
+  initialQuestion,
 }: ChatPanelProps) {
   const { language, toggleLanguage } = useLanguage()
   const shouldReduce = useReducedMotion()
@@ -475,6 +477,17 @@ export default function ChatPanel({
     window.localStorage.setItem(storageKey, nextSessionId)
     setSessionId(nextSessionId)
   }, [selectedDoc])
+
+  const initialQuestionFiredRef = useRef(false)
+
+  useEffect(() => {
+    if (!initialQuestion || !selectedDoc || !userId || !sessionId) return
+    if (initialQuestionFiredRef.current) return
+    initialQuestionFiredRef.current = true
+    const timer = window.setTimeout(() => submitQuestion(initialQuestion), 300)
+    return () => window.clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestion, selectedDoc, userId, sessionId])
 
   useEffect(() => {
     if (!selectedDoc || !userId || !sessionId) return
