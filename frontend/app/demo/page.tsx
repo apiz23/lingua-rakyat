@@ -40,7 +40,13 @@ const SCENARIO_CARDS = [
   },
 ]
 
-const KNOWN_DOC_IDS = new Set(SCENARIO_CARDS.map((c) => c.docId))
+const FEATURED_DOC_NAMES = new Set(["MyKad FAQ (JPN)", "Malaysian Passport Guidelines"])
+
+// Map doc name → docId so scenario cards can look up the right doc
+const DOC_NAME_TO_ID: Record<string, string> = {
+  "MyKad FAQ (JPN)": "jpn-mykad-faq",
+  "Malaysian Passport Guidelines": "imigresen-passport",
+}
 
 export default function DemoPage() {
   const [docs, setDocs] = useState<Record<string, Document>>({})
@@ -53,13 +59,18 @@ export default function DemoPage() {
   useEffect(() => {
     listDocuments()
       .then((all) => {
-        // Match featured docs OR any ready doc whose ID matches a scenario card
+        // Match featured docs by is_featured flag OR by name (fallback before migration)
         const featured = all.filter(
           (d) =>
             d.status === "ready" &&
-            (d.is_featured || KNOWN_DOC_IDS.has(d.id))
+            (d.is_featured || FEATURED_DOC_NAMES.has(d.name))
         )
-        const byId = Object.fromEntries(featured.map((d) => [d.id, d]))
+        // Key by the logical docId so scenario cards can look up by docId
+        const byId: Record<string, Document> = {}
+        for (const d of featured) {
+          const logicalId = DOC_NAME_TO_ID[d.name] ?? d.id
+          byId[logicalId] = d
+        }
         setDocs(byId)
 
         if (!prewarmRef.current && featured.length > 0) {

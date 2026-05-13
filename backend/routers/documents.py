@@ -585,19 +585,21 @@ PREWARM_QUESTIONS: dict[str, list[str]] = {
 async def seed_featured_documents(request: Request):
     """
     Idempotent seeding of pre-approved Malaysian government PDFs.
-    Checks Supabase by doc_id before ingesting — safe to call on every startup.
-    Returns counts of newly seeded vs already-present docs.
+    Uses uuid5 for deterministic Supabase IDs (lr_documents.id is UUID type).
+    Pinecone still uses the short doc_id string for vector metadata.
+    Idempotency checked by document name, not by id.
     """
     existing_docs = load_documents()
-    existing_ids = {doc["id"] for doc in existing_docs}
+    existing_names = {doc["name"] for doc in existing_docs}
 
     seeded = 0
     already_present = 0
 
     for featured in FEATURED_DOCS:
         doc_id = featured["doc_id"]
+        doc_name = featured["name"]
 
-        if doc_id in existing_ids:
+        if doc_name in existing_names:
             logger.info("[Seed] Already present: %s", doc_id)
             already_present += 1
             continue
@@ -607,15 +609,18 @@ async def seed_featured_documents(request: Request):
             logger.warning("[Seed] PDF not found, skipping: %s", pdf_path)
             continue
 
+        # Deterministic UUID so re-seeding always produces the same Supabase row id
+        supabase_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
+
         try:
             chunk_count, _ = ingest_document(
                 pdf_path=pdf_path,
                 document_id=doc_id,
-                document_name=featured["name"],
+                document_name=doc_name,
             )
             doc_record = {
-                "id": doc_id,
-                "name": featured["name"],
+                "id": supabase_id,
+                "name": doc_name,
                 "size_bytes": os.path.getsize(pdf_path),
                 "chunk_count": chunk_count,
                 "status": "ready",
@@ -627,7 +632,7 @@ async def seed_featured_documents(request: Request):
                 "agency": featured["agency"],
             }
             upsert_documents([doc_record])
-            logger.info("[Seed] Seeded %s (%d chunks)", doc_id, chunk_count)
+            logger.info("[Seed] Seeded %s as %s (%d chunks)", doc_id, supabase_id, chunk_count)
             seeded += 1
         except Exception as exc:
             logger.error("[Seed] Failed to ingest %s: %s", doc_id, exc)

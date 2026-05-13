@@ -30,16 +30,16 @@ const AGENCY_COLORS: Record<string, string> = {
   IMIGRESEN: "bg-blue-700",
 }
 
-// Fallback: treat these IDs as featured even if is_featured column not yet migrated
-const FEATURED_DOC_IDS = new Set(["jpn-mykad-faq", "imigresen-passport"])
+// Fallback: match featured docs by name when is_featured column not yet migrated
+const FEATURED_DOC_NAMES = new Set(["MyKad FAQ (JPN)", "Malaysian Passport Guidelines"])
 
-const FEATURED_DOC_AGENCY: Record<string, string> = {
-  "jpn-mykad-faq": "JPN",
-  "imigresen-passport": "IMIGRESEN",
+const FEATURED_DOC_NAME_AGENCY: Record<string, string> = {
+  "MyKad FAQ (JPN)": "JPN",
+  "Malaysian Passport Guidelines": "IMIGRESEN",
 }
 
-function getAgency(doc: { id: string; agency?: string }): string | undefined {
-  return doc.agency ?? FEATURED_DOC_AGENCY[doc.id]
+function getAgency(doc: { name: string; agency?: string }): string | undefined {
+  return doc.agency ?? FEATURED_DOC_NAME_AGENCY[doc.name]
 }
 
 export default function WorkSpacePage() {
@@ -75,7 +75,7 @@ export default function WorkSpacePage() {
     () =>
       sortedDocs.filter(
         (d) =>
-          (d.is_featured || FEATURED_DOC_IDS.has(d.id)) &&
+          (d.is_featured || FEATURED_DOC_NAMES.has(d.name)) &&
           d.status === "ready"
       ),
     [sortedDocs]
@@ -84,7 +84,7 @@ export default function WorkSpacePage() {
   const userDocs = useMemo(
     () =>
       sortedDocs.filter(
-        (d) => !d.is_featured && !FEATURED_DOC_IDS.has(d.id)
+        (d) => !d.is_featured && !FEATURED_DOC_NAMES.has(d.name)
       ),
     [sortedDocs]
   )
