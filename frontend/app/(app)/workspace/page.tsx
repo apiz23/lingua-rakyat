@@ -25,6 +25,11 @@ import {
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+const AGENCY_COLORS: Record<string, string> = {
+  JPN: "bg-purple-700",
+  IMIGRESEN: "bg-blue-700",
+}
+
 export default function WorkSpacePage() {
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
@@ -53,6 +58,16 @@ export default function WorkSpacePage() {
       a.uploaded_at < b.uploaded_at ? 1 : -1
     )
   }, [documents])
+
+  const featuredDocs = useMemo(
+    () => sortedDocs.filter((d) => d.is_featured && d.status === "ready"),
+    [sortedDocs]
+  )
+
+  const userDocs = useMemo(
+    () => sortedDocs.filter((d) => !d.is_featured),
+    [sortedDocs]
+  )
 
   const statusConfig = (status: Document["status"]) => {
     switch (status) {
@@ -134,17 +149,64 @@ export default function WorkSpacePage() {
                         <span>No document</span>
                       </button>
 
-                      {/* Document list */}
+                      {/* Featured gov docs section */}
+                      {featuredDocs.length > 0 && (
+                        <>
+                          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Featured — Malaysian Gov Docs
+                          </div>
+                          {featuredDocs.map((doc) => (
+                            <button
+                              key={doc.id}
+                              onClick={() => {
+                                setSelectedDoc(doc)
+                                setIsDocPickerOpen(false)
+                              }}
+                              className={cn(
+                                "flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent sm:py-2",
+                                selectedDoc?.id === doc.id && "bg-primary/5"
+                              )}
+                            >
+                              {doc.agency && (
+                                <div
+                                  className={cn(
+                                    "flex h-7 w-7 shrink-0 items-center justify-center rounded text-[9px] font-bold text-white",
+                                    AGENCY_COLORS[doc.agency] ?? "bg-muted"
+                                  )}
+                                >
+                                  {doc.agency}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-medium text-sm">{doc.name}</div>
+                                <div className="text-[10px] text-muted-foreground">
+                                  {doc.agency} · Official document
+                                </div>
+                              </div>
+                              <span className="shrink-0 bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                                READY
+                              </span>
+                            </button>
+                          ))}
+                          {userDocs.length > 0 && (
+                            <div className="mt-1 border-t border-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Your Uploads
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* User uploaded docs */}
                       {docsLoading ? (
                         Array.from({ length: 3 }).map((_, i) => (
                           <div key={i} className="mx-1 my-0.5 h-9 animate-pulse bg-muted/40" />
                         ))
-                      ) : sortedDocs.length === 0 ? (
+                      ) : userDocs.length === 0 && featuredDocs.length === 0 ? (
                         <div className="py-8 text-center text-sm text-muted-foreground">
                           No documents yet
                         </div>
                       ) : (
-                        sortedDocs.map((doc) => {
+                        userDocs.map((doc) => {
                           const {
                             icon: Icon,
                             color,

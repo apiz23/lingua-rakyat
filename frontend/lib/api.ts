@@ -24,6 +24,8 @@ export type Document = {
   error_message?: string
   storage_path?: string
   public_url?: string
+  is_featured?: boolean
+  agency?: string
 }
 
 export type UploadDocumentResponse = {
