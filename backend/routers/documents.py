@@ -618,7 +618,8 @@ async def seed_featured_documents(request: Request):
                 document_id=doc_id,
                 document_name=doc_name,
             )
-            doc_record = {
+            # Build safe base payload — only columns guaranteed to exist
+            base_payload = {
                 "id": supabase_id,
                 "name": doc_name,
                 "size_bytes": os.path.getsize(pdf_path),
@@ -628,10 +629,17 @@ async def seed_featured_documents(request: Request):
                 "storage_path": None,
                 "public_url": None,
                 "error_message": None,
-                "is_featured": True,
-                "agency": featured["agency"],
             }
-            upsert_documents([doc_record])
+            # Attempt with optional columns first; fall back to base if Supabase rejects
+            for payload in [
+                {**base_payload, "is_featured": True, "agency": featured["agency"]},
+                base_payload,
+            ]:
+                resp = get_supabase().table(get_documents_table()).upsert(payload).execute()
+                if getattr(resp, "data", None) is not None:
+                    logger.info("[Seed] Upserted %s (payload keys: %s)", doc_id, list(payload.keys()))
+                    break
+                logger.warning("[Seed] Upsert failed for %s, retrying without optional cols", doc_id)
             logger.info("[Seed] Seeded %s as %s (%d chunks)", doc_id, supabase_id, chunk_count)
             seeded += 1
         except Exception as exc:
