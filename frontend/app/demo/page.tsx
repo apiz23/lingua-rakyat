@@ -51,6 +51,8 @@ const DOC_NAME_TO_ID: Record<string, string> = {
 export default function DemoPage() {
   const [docs, setDocs] = useState<Record<string, Document>>({})
   const [fetched, setFetched] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [allDocCount, setAllDocCount] = useState(0)
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [initialQuestion, setInitialQuestion] = useState<string | undefined>()
   const [showChat, setShowChat] = useState(false)
@@ -59,6 +61,7 @@ export default function DemoPage() {
   useEffect(() => {
     listDocuments()
       .then((all) => {
+        setAllDocCount(all.length)
         // Match featured docs by is_featured flag OR by name (fallback before migration)
         const featured = all.filter(
           (d) =>
@@ -91,7 +94,9 @@ export default function DemoPage() {
           }
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        setFetchError(err instanceof Error ? err.message : String(err))
+      })
       .finally(() => setFetched(true))
   }, [])
 
@@ -187,9 +192,17 @@ export default function DemoPage() {
               </p>
             )}
             {fetched && !docsReady && (
-              <p className="mt-4 text-xs text-muted-foreground">
-                No featured documents available yet. Start the backend and run the seed endpoint.
-              </p>
+              <div className="mt-4 space-y-1">
+                {fetchError ? (
+                  <p className="text-xs text-destructive">
+                    API error: {fetchError}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No featured documents found. {allDocCount} total doc(s) returned — none matched filter.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
