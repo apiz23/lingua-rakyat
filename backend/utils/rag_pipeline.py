@@ -44,7 +44,7 @@ logging.basicConfig(
 logger = logging.getLogger("rag_pipeline")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "groq/compound")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -874,8 +874,11 @@ def _retrieve_matches(
     index = _get_index()
     all_matches: list[dict[str, Any]] = []
 
-    for variant in query_variants:
-        embedding = get_embeddings_cohere([variant["text"]], input_type="search_query")[0]
+    # Batch-embed all variant texts in a single Cohere call
+    variant_texts = [v["text"] for v in query_variants]
+    embeddings = get_embeddings_cohere(variant_texts, input_type="search_query")
+
+    for variant, embedding in zip(query_variants, embeddings):
         results = index.query(
             vector=embedding,
             top_k=top_k,
