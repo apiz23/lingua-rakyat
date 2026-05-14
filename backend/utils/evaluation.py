@@ -184,7 +184,7 @@ class Evaluator:
 
         # After each RAG response:
         ev.record(
-            question     = "How do I apply for housing aid?",
+            question     = "How long does MyKad processing take?",
             answer       = result["answer"],
             ground_truth = "1. Check eligibility 2. Prepare documents ...",
             language     = result["language"],
@@ -196,9 +196,22 @@ class Evaluator:
         report = ev.report()
     """
 
-    def __init__(self, persist_fn: Optional[Callable[[dict], None]] = None):
+    def __init__(
+        self,
+        persist_fn: Optional[Callable[[dict], None]] = None,
+        load_fn: Optional[Callable[[], list[dict]]] = None,
+    ):
         self._records: list[dict] = []
         self._persist_fn = persist_fn
+        if load_fn is not None:
+            try:
+                self._records = list(load_fn())
+                logger.info("[Eval] Loaded %d records from persistence", len(self._records))
+            except Exception as exc:
+                logger.warning("[Eval] Could not load records from persistence: %s", exc)
+
+    def __len__(self) -> int:
+        return len(self._records)
 
     # ── Record a single Q&A interaction ──────────────────────────────────
 
@@ -406,30 +419,13 @@ class Evaluator:
 # Used by run-test-suite-stream to only run relevant test cases.
 
 CATEGORY_KEYWORDS: dict[str, list[str]] = {
-    "housing": [
-        "housing", "perumahan", "rumah", "house", "home", "PR1MA", "PPR",
-        "bantuan perumahan", "residential", "apartment", "flat",
-        "NUP", "PPA1M", "MyHome", "rent", "sewa",
+    "identity": [
+        "mykad", "kad pengenalan", "identity card", "jpn", "pendaftaran negara",
+        "late registration", "daftar lewat", "cip", "fingerprint", "cap jari",
     ],
-    "healthcare": [
-        "health", "kesihatan", "hospital", "clinic", "klinik", "medical",
-        "perubatan", "peka", "medicine", "ubat", "rawatan", "treatment",
-        "doctor", "pharmacy", "farmasi",
-    ],
-    "student_loans": [
-        "PTPTN", "student loan", "pinjaman", "scholarship", "biasiswa",
-        "education", "pendidikan", "university", "universiti", "college",
-        "kolej", "loan", "repayment", "bayar balik",
-    ],
-    "social_welfare": [
-        "welfare", "kebajikan", "JKM", "bantuan", "BR1M", "STR", "rahmah",
-        "e-kasih", "OKU", "disability", "kurang upaya", "poverty", "miskin",
-        "social", "sosial", "zakat",
-    ],
-    "immigration": [
-        "immigration", "imigresen", "visa", "permit", "passport", "pasport",
-        "migrant", "pendatang", "work permit", "foreigner", "warga asing",
-        "citizenship", "kewarganegaraan",
+    "passport": [
+        "passport", "pasport", "imigresen", "immigration", "mykid",
+        "mytentera", "facial live capture", "biometric photo", "travel document",
     ],
 }
 
@@ -448,7 +444,7 @@ def detect_document_category(doc_name: str, doc_id: str = "") -> "str | None":
     Detect the most likely government service category from a document name.
 
     Returns:
-        Category string ("housing", "healthcare", etc.) or None if unrelated/unknown.
+        Category string ("identity", "passport") or None if unrelated/unknown.
     """
     text = (doc_name + " " + doc_id).lower()
 
@@ -490,347 +486,119 @@ def get_test_cases_for_document(doc_name: str, doc_id: str = "") -> "tuple[list,
 # In production, expand this with real annotated pairs from a domain expert.
 
 # ─── Annotated Test Dataset (30 cases) ──────────────────────────────────────
-# Covers: housing aid, healthcare assistance, student loans, social welfare,
-# immigration — in English (en), Malay (ms), and Chinese (zh-cn).
+# Covers the current bundled MyKad FAQ and Malaysian Passport Guidelines
+# documents in English (en), Malay (ms), and Chinese (zh-cn).
 # Ground truth answers follow the 3-5 bullet point format the LLM is prompted
 # to produce. Used by POST /api/eval/run-test-suite for ROUGE/BLEU scoring.
 
 BUILT_IN_TEST_CASES: list[dict] = [
-
-    # ── Housing Aid (EN) ─────────────────────────────────────────────────────
-    {
-        "language": "en",
-        "category": "housing",
-        "question": "How do I apply for housing aid?",
-        "ground_truth": (
-            "• Check if you are eligible by visiting the official portal.\n"
-            "• Prepare your identity card and income statement.\n"
-            "• Submit your application online through the government website.\n"
-            "• Wait 14 to 30 days for your application to be approved."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "housing",
-        "question": "Who is eligible for government housing assistance?",
-        "ground_truth": (
-            "• Malaysian citizens with a monthly household income below RM3,000.\n"
-            "• First-time home buyers who do not own any property.\n"
-            "• Applicants must be at least 18 years old.\n"
-            "• Priority is given to married couples and single parents."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "housing",
-        "question": "What documents do I need for a housing aid application?",
-        "ground_truth": (
-            "• Identity card (MyKad) for all household members.\n"
-            "• Latest income statement or payslip.\n"
-            "• Proof of residence such as a utility bill.\n"
-            "• Completed application form from the official portal."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "housing",
-        "question": "How long does housing aid approval take?",
-        "ground_truth": (
-            "• Processing usually takes 14 to 30 working days.\n"
-            "• You will receive an SMS or email when your application is reviewed.\n"
-            "• Incomplete applications take longer — make sure all documents are attached.\n"
-            "• You can check your application status online at any time."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "housing",
-        "question": "Can I appeal if my housing aid application is rejected?",
-        "ground_truth": (
-            "• Yes, you can submit an appeal within 30 days of rejection.\n"
-            "• Write a letter explaining why you think the decision should be changed.\n"
-            "• Attach any new supporting documents to strengthen your case.\n"
-            "• Send the appeal to the same department that processed your application."
-        ),
-    },
-
-    # ── Housing Aid (MS) ─────────────────────────────────────────────────────
     {
         "language": "ms",
-        "category": "housing",
-        "question": "Bagaimana nak mohon bantuan perumahan?",
+        "category": "identity",
+        "question": "Bilakah saya perlu menukar semula MyKad yang diperoleh kali pertama semasa umur 12 tahun?",
         "ground_truth": (
-            "• Semak kelayakan anda di portal rasmi kerajaan.\n"
-            "• Sediakan dokumen seperti IC dan penyata pendapatan.\n"
-            "• Hantar permohonan melalui laman web kerajaan.\n"
-            "• Tempoh kelulusan biasanya 14 hingga 30 hari bekerja."
+            "- MyKad perlu ditukar semula apabila pemohon mencapai umur 18 tahun.\n"
+            "- Kad pengenalan kali pertama biasanya diperoleh semasa umur 12 tahun.\n"
+            "- Jika penukaran dibuat dalam tempoh umur 18 hingga 25 tahun, tiada denda dikenakan."
         ),
     },
     {
         "language": "ms",
-        "category": "housing",
-        "question": "Siapa yang layak mendapat bantuan perumahan kerajaan?",
+        "category": "identity",
+        "question": "Apa perlu dibuat jika saya sudah berumur lebih 16 tahun tetapi masih belum ada kad pengenalan?",
         "ground_truth": (
-            "• Warganegara Malaysia dengan pendapatan isi rumah di bawah RM3,000 sebulan.\n"
-            "• Pembeli rumah pertama yang tidak memiliki sebarang harta.\n"
-            "• Pemohon mestilah berumur sekurang-kurangnya 18 tahun.\n"
-            "• Keutamaan diberikan kepada pasangan berkahwin dan ibu bapa tunggal."
+            "- Datang ke mana-mana JPN berhampiran untuk memohon daftar lewat kad pengenalan.\n"
+            "- Pemohon dan penganjur perlu hadir bersama untuk ditemuduga.\n"
+            "- Bawa Sijil Lahir, Sijil Anak Angkat, atau Borang W jika berkenaan.\n"
+            "- Bawa juga Permit Masuk atau Borang Pengesahan Taraf Warganegara jika berkaitan serta kad pengenalan penganjur."
+        ),
+    },
+    {
+        "language": "en",
+        "category": "identity",
+        "question": "How long does MyKad processing take?",
+        "ground_truth": (
+            "- MyKad can be ready in 30 minutes if collection is made at JPN headquarters or branches with distributed printing machines.\n"
+            "- Collection at branch offices in Peninsular Malaysia usually takes 5 working days.\n"
+            "- Collection at branch offices in Sabah, Sarawak, and Labuan usually takes 7 working days.\n"
+            "- This customer charter applies to Malaysian citizens with applications that are not problematic."
+        ),
+    },
+    {
+        "language": "en",
+        "category": "identity",
+        "question": "Can I change my address without replacing my MyKad?",
+        "ground_truth": (
+            "- No, changing the address on the chip only is not allowed.\n"
+            "- Address changes are only allowed when they involve issuing a new physical replacement identity card."
+        ),
+    },
+    {
+        "language": "en",
+        "category": "identity",
+        "question": "What payment methods does JPN accept for MyKad-related transactions?",
+        "ground_truth": (
+            "- JPN accepts electronic cashless payments.\n"
+            "- Payment can be made using credit card, debit card, and MEPS."
+        ),
+    },
+    {
+        "language": "en",
+        "category": "passport",
+        "question": "Who is eligible for a Malaysian international passport and how long is it valid?",
+        "ground_truth": (
+            "- Malaysian citizens are eligible to apply for a Malaysian international passport.\n"
+            "- The passport is valid for five years from the date of issue.\n"
+            "- Applications can be made at Immigration Offices in Malaysia and Malaysian Representative Offices abroad."
+        ),
+    },
+    {
+        "language": "en",
+        "category": "passport",
+        "question": "What is the passport fee for an ordinary applicant aged 13 to 59?",
+        "ground_truth": "- The standard fee for an ordinary applicant aged 13 to 59 is RM200.00."
+    },
+    {
+        "language": "en",
+        "category": "passport",
+        "question": "What documents are required for a first-time passport applicant aged 18 and above who was born in Malaysia?",
+        "ground_truth": (
+            "- The applicant must present themselves physically at the counter.\n"
+            "- An applicant born in Malaysia must provide their MyKad.\n"
+            "- If the MyKad is temporarily unavailable, a Temporary Identity Card (JPN.KPPK 09) and the original Birth Certificate must be provided."
         ),
     },
     {
         "language": "ms",
-        "category": "housing",
-        "question": "Berapa lama masa kelulusan bantuan perumahan?",
+        "category": "passport",
+        "question": "Apakah syarat gambar biometrik semasa permohonan pasport?",
         "ground_truth": (
-            "• Pemprosesan biasanya mengambil masa 14 hingga 30 hari bekerja.\n"
-            "• Anda akan menerima SMS atau e-mel apabila permohonan disemak.\n"
-            "• Permohonan tidak lengkap mengambil masa lebih lama.\n"
-            "• Anda boleh semak status permohonan secara dalam talian pada bila-bila masa."
-        ),
-    },
-
-    # ── Healthcare Assistance (EN) ───────────────────────────────────────────
-    {
-        "language": "en",
-        "category": "healthcare",
-        "question": "How do I get free or subsidised healthcare in Malaysia?",
-        "ground_truth": (
-            "• Malaysian citizens can get subsidised treatment at government clinics and hospitals.\n"
-            "• Bring your MyKad — you will only pay a small fee of RM1 to RM5 per visit.\n"
-            "• For specialist care, you need a referral letter from a government clinic.\n"
-            "• Low-income families may qualify for free treatment under the Bantuan Kesihatan scheme."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "healthcare",
-        "question": "What is the PeKa B40 health programme?",
-        "ground_truth": (
-            "• PeKa B40 is a free health screening programme for low-income Malaysians.\n"
-            "• It covers screenings for diabetes, high blood pressure, and certain cancers.\n"
-            "• You are eligible if your household income is below RM2,500 per month.\n"
-            "• Register at your nearest government clinic or through the MySejahtera app."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "healthcare",
-        "question": "How do I get medicine for free at a government hospital?",
-        "ground_truth": (
-            "• Bring your MyKad and your doctor's prescription to the hospital pharmacy.\n"
-            "• Patients from the B40 income group pay only RM1 per prescription.\n"
-            "• Chronic disease medicines like insulin and blood pressure pills are heavily subsidised.\n"
-            "• Show your Kad OKU or B40 certificate if you have one to get further discounts."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "healthcare",
-        "question": "What should I do if I cannot afford hospital bills?",
-        "ground_truth": (
-            "• Tell the hospital social worker that you cannot afford to pay.\n"
-            "• Apply for a bill waiver or reduction through the hospital's welfare unit.\n"
-            "• Bring proof of income such as a payslip or a letter from your employer.\n"
-            "• The hospital can also set up a payment plan so you pay in small instalments."
-        ),
-    },
-
-    # ── Healthcare Assistance (MS) ───────────────────────────────────────────
-    {
-        "language": "ms",
-        "category": "healthcare",
-        "question": "Bagaimana nak dapatkan rawatan percuma di hospital kerajaan?",
-        "ground_truth": (
-            "• Warganegara Malaysia boleh mendapat rawatan bersubsidi di klinik dan hospital kerajaan.\n"
-            "• Bawa MyKad anda — yuran adalah sangat kecil iaitu RM1 hingga RM5 sahaja.\n"
-            "• Untuk rawatan pakar, anda perlukan surat rujukan dari klinik kerajaan.\n"
-            "• Keluarga berpendapatan rendah mungkin layak mendapat rawatan percuma."
-        ),
-    },
-    {
-        "language": "ms",
-        "category": "healthcare",
-        "question": "Apa itu program PeKa B40?",
-        "ground_truth": (
-            "• PeKa B40 adalah program saringan kesihatan percuma untuk rakyat berpendapatan rendah.\n"
-            "• Ia merangkumi saringan kencing manis, darah tinggi, dan beberapa jenis kanser.\n"
-            "• Anda layak jika pendapatan isi rumah di bawah RM2,500 sebulan.\n"
-            "• Daftar di klinik kerajaan berhampiran atau melalui aplikasi MySejahtera."
-        ),
-    },
-
-    # ── Student Loans (EN) ───────────────────────────────────────────────────
-    {
-        "language": "en",
-        "category": "student_loans",
-        "question": "How do I apply for a PTPTN student loan?",
-        "ground_truth": (
-            "• Register an account on the PTPTN official website at ptptn.gov.my.\n"
-            "• Fill in the online application form with your personal and academic details.\n"
-            "• Upload your MyKad, latest results slip, and offer letter from your institution.\n"
-            "• Submit the application and wait for approval — usually 2 to 4 weeks."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "student_loans",
-        "question": "Who is eligible for a PTPTN loan?",
-        "ground_truth": (
-            "• Malaysian citizens enrolled in approved public or private higher education.\n"
-            "• Students in diploma, degree, or professional certificate programmes.\n"
-            "• Your household income must be below RM8,000 per month to qualify.\n"
-            "• Students with higher grades or low-income backgrounds may get larger loans."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "student_loans",
-        "question": "How do I repay my PTPTN loan?",
-        "ground_truth": (
-            "• Repayment starts one year after you finish your studies.\n"
-            "• You can repay monthly through salary deduction or direct bank transfer.\n"
-            "• The minimum monthly payment is RM50 — you can pay more to finish faster.\n"
-            "• Early full repayment gets you a 10% discount on the remaining balance."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "student_loans",
-        "question": "Can I get my PTPTN loan converted to a scholarship?",
-        "ground_truth": (
-            "• Yes — if you graduate with first class honours, your loan becomes a scholarship.\n"
-            "• Apply for conversion within 6 months of receiving your official results.\n"
-            "• Submit your transcript and graduation certificate to PTPTN.\n"
-            "• This means you do not need to repay the loan at all."
-        ),
-    },
-
-    # ── Student Loans (MS) ───────────────────────────────────────────────────
-    {
-        "language": "ms",
-        "category": "student_loans",
-        "question": "Bagaimana cara mohon pinjaman PTPTN?",
-        "ground_truth": (
-            "• Daftar akaun di laman web rasmi PTPTN di ptptn.gov.my.\n"
-            "• Isi borang permohonan dalam talian dengan maklumat peribadi dan akademik.\n"
-            "• Muat naik MyKad, slip keputusan terkini, dan surat tawaran institusi anda.\n"
-            "• Hantar permohonan dan tunggu kelulusan — biasanya 2 hingga 4 minggu."
-        ),
-    },
-    {
-        "language": "ms",
-        "category": "student_loans",
-        "question": "Siapa yang layak mendapat pinjaman PTPTN?",
-        "ground_truth": (
-            "• Warganegara Malaysia yang mendaftar di institusi pengajian tinggi yang diluluskan.\n"
-            "• Pelajar dalam program diploma, ijazah, atau sijil profesional.\n"
-            "• Pendapatan isi rumah mesti di bawah RM8,000 sebulan untuk layak.\n"
-            "• Pelajar dengan keputusan cemerlang atau latar belakang berpendapatan rendah mungkin mendapat pinjaman lebih besar."
-        ),
-    },
-    {
-        "language": "ms",
-        "category": "student_loans",
-        "question": "Bagaimana cara bayar balik pinjaman PTPTN?",
-        "ground_truth": (
-            "• Pembayaran balik bermula satu tahun selepas anda tamat pengajian.\n"
-            "• Anda boleh bayar setiap bulan melalui potongan gaji atau pindahan bank terus.\n"
-            "• Pembayaran minimum ialah RM50 sebulan — anda boleh bayar lebih untuk selesai lebih cepat.\n"
-            "• Pembayaran penuh awal mendapat diskaun 10 peratus pada baki yang tinggal."
-        ),
-    },
-
-    # ── Social Welfare (EN) ──────────────────────────────────────────────────
-    {
-        "language": "en",
-        "category": "social_welfare",
-        "question": "What is Bantuan Rakyat 1Malaysia (BR1M) or Sumbangan Tunai Rahmah?",
-        "ground_truth": (
-            "• It is a cash aid programme for low-income Malaysian households.\n"
-            "• Eligible households receive between RM100 and RM1,000 per year depending on income.\n"
-            "• You must register through e-Kasih or the official government portal.\n"
-            "• Payment is made directly to your bank account or through the post office."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "social_welfare",
-        "question": "How do I apply for welfare assistance (Jabatan Kebajikan Masyarakat)?",
-        "ground_truth": (
-            "• Visit your nearest JKM office or apply online at ebk.jkm.gov.my.\n"
-            "• Bring your MyKad, proof of income, and any supporting documents.\n"
-            "• A JKM officer will visit your home to assess your situation.\n"
-            "• Assistance types include monthly cash aid, food baskets, and medical help."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "social_welfare",
-        "question": "What help is available for persons with disabilities (OKU)?",
-        "ground_truth": (
-            "• Register as OKU at the nearest JKM office to access government benefits.\n"
-            "• Benefits include monthly financial aid, free medical care, and tax exemptions.\n"
-            "• OKU card holders get discounts on public transport and utility bills.\n"
-            "• Children with disabilities may qualify for free special education programmes."
-        ),
-    },
-
-    # ── Immigration (EN) ─────────────────────────────────────────────────────
-    {
-        "language": "en",
-        "category": "immigration",
-        "question": "How do migrant workers renew their work permit in Malaysia?",
-        "ground_truth": (
-            "• Your employer is responsible for renewing your work permit before it expires.\n"
-            "• Bring your passport, current permit, and medical check-up results.\n"
-            "• Your employer submits the application through the Immigration Department portal.\n"
-            "• Renewal usually takes 2 to 4 weeks — stay on valid status until it is done."
-        ),
-    },
-    {
-        "language": "en",
-        "category": "immigration",
-        "question": "What should I do if my visa is expired?",
-        "ground_truth": (
-            "• Do not wait — overstaying is a serious offence with heavy fines.\n"
-            "• Go to the nearest Immigration Department office as soon as possible.\n"
-            "• Bring your passport and any documents explaining your situation.\n"
-            "• You may be fined but can apply to regularise your status in some cases."
-        ),
-    },
-
-    # ── Chinese / Multilingual ───────────────────────────────────────────────
-    {
-        "language": "zh-cn",
-        "category": "housing",
-        "question": "如何申请政府房屋援助？",
-        "ground_truth": (
-            "• 访问官方门户网站检查您是否符合资格。\n"
-            "• 准备身份证和收入证明文件。\n"
-            "• 通过政府网站在线提交申请。\n"
-            "• 审批通常需要14至30个工作日。"
+            "- Pemohon mesti memakai pakaian berwarna gelap yang menutupi bahu dan dada.\n"
+            "- Jika memakai hijab, hijab mestilah berwarna gelap dan tidak menutup dahi atau muka.\n"
+            "- Mata mesti terbuka penuh, mulut tertutup, dan wajah memandang terus ke lensa kamera.\n"
+            "- Topi, aksesori rambut yang menghalang wajah, dan cermin mata adalah tidak dibenarkan semasa tangkapan foto."
         ),
     },
     {
         "language": "zh-cn",
-        "category": "student_loans",
-        "question": "如何申请PTPTN学生贷款？",
+        "category": "passport",
+        "question": "如何首次申请马来西亚护照？",
         "ground_truth": (
-            "• 在PTPTN官方网站ptptn.gov.my注册账户。\n"
-            "• 填写在线申请表格，填写个人和学术信息。\n"
-            "• 上传身份证、最新成绩单和大学录取通知书。\n"
-            "• 提交申请并等待批准，通常需要2至4周。"
+            "- 所有申请人都必须亲自到柜台办理申请。\n"
+            "- 在马来西亚境内的柜台通常使用数码现场人脸采集，因此一般不需要实体照片。\n"
+            "- 18岁及以上、在马来西亚出生的申请人需要提供自己的MyKad。\n"
+            "- 如果MyKad暂时无法提供，则必须提交临时身份证和出生证明正本。"
         ),
     },
     {
-        "language": "zh-cn",
-        "category": "healthcare",
-        "question": "如何在政府医院获得免费或补贴医疗？",
+        "language": "en",
+        "category": "passport",
+        "question": "What are the photo rules for children under 4 years old when applying for a passport?",
         "ground_truth": (
-            "• 马来西亚公民可在政府诊所和医院获得补贴治疗。\n"
-            "• 携带身份证，每次就诊只需支付RM1至RM5的小额费用。\n"
-            "• 专科护理需要政府诊所的转介信。\n"
-            "• 低收入家庭可能有资格获得免费治疗。"
+            "- Children under 4 years old are strongly encouraged to bring physical photos.\n"
+            "- The photo must measure exactly 35mm by 50mm.\n"
+            "- The background must be plain white with no shadow.\n"
+            "- The face should cover about 50% to 60% of the print size following ICAO standards."
         ),
     },
 ]

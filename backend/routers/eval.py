@@ -40,8 +40,22 @@ def _persist_eval_record(record: dict) -> None:
     get_supabase().table(table).insert(record).execute()
 
 
+def _load_eval_records() -> list[dict]:
+    from routers.documents import get_supabase
+    table = os.getenv("EVAL_TABLE", "lr_eval_records")
+    response = (
+        get_supabase()
+        .table(table)
+        .select("*")
+        .order("timestamp", desc=True)
+        .limit(1000)
+        .execute()
+    )
+    return response.data or []
+
+
 # ─── Shared evaluator — writes to Supabase lr_eval_records on each record ────
-_evaluator = Evaluator(persist_fn=_persist_eval_record)
+_evaluator = Evaluator(persist_fn=_persist_eval_record, load_fn=_load_eval_records)
 
 
 # ─── Request / Response Models ────────────────────────────────────────────────
@@ -65,7 +79,8 @@ class TestSuiteRequest(BaseModel):
     """
     Run the built-in test cases against a specific document.
     doc_name is used to auto-detect which category of test cases to run,
-    so housing questions only run against housing docs, etc.
+    so MyKad cases only run against identity docs and passport cases only run
+    against passport docs.
     """
     document_id: str
     doc_name: str = ""  # used for category auto-detection
@@ -150,9 +165,9 @@ async def run_test_suite(req: TestSuiteRequest):
         return {
             "status": "skipped",
             "reason": (
-                f"Document '{req.doc_name}' does not appear to be a government services document "
-                f"matching any supported category (housing, healthcare, student loans, welfare, immigration). "
-                f"The test suite is designed for these domains. Please upload a relevant document."
+                f"Document '{req.doc_name}' does not match the current evaluation dataset. "
+                f"The built-in suite is currently aligned to MyKad identity-card guidance and Malaysian passport guidelines. "
+                f"Please select one of those documents or update the annotated test cases."
             ),
             "detected_category": None,
             "aggregate": {},
@@ -328,7 +343,7 @@ async def augment_query(req: AugmentRequest):
 
     Example:
         POST /api/eval/augment-query
-        { "query": "How do I apply for housing aid?", "source_lang": "en" }
+        { "query": "What documents are required for a first-time passport application?", "source_lang": "en" }
     """
     augmenter = _get_augmenter()
     variants = augmenter.expand_query(
@@ -419,9 +434,8 @@ async def run_test_suite_stream(req: TestSuiteRequest):
             payload = _json.dumps({
                 "type": "skipped",
                 "reason": (
-                    f"Document '{req.doc_name}' does not match any supported category. "
-                    f"The test suite covers: housing, healthcare, student loans, welfare, immigration. "
-                    f"Please select a relevant government services document."
+                    f"Document '{req.doc_name}' does not match the current evaluation dataset. "
+                    f"The built-in suite currently covers MyKad identity-card guidance and Malaysian passport guidelines."
                 ),
                 "detected_category": None,
             })
