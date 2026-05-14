@@ -303,17 +303,17 @@ class Evaluator:
         graded = [r for r in self._records if r.get("has_ground_truth")]
 
         # ── Latency percentiles ───────────────────────────────────────────
-        latencies = sorted(r["latency_ms"] for r in self._records)
+        latencies = sorted(r.get("latency_ms", 0) for r in self._records)
         p50 = latencies[int(n * 0.50)]
         p95 = latencies[min(int(n * 0.95), n - 1)]
         p99 = latencies[min(int(n * 0.99), n - 1)]
 
         # ── Confidence stats ──────────────────────────────────────────────
-        confidences = [r["confidence"] for r in self._records]
+        confidences = [r.get("confidence", 0.0) for r in self._records]
         avg_confidence = round(sum(confidences) / n, 4)
 
         # ── Readability stats ─────────────────────────────────────────────
-        grades = [r["fk_grade"] for r in self._records]
+        grades = [r.get("fk_grade", 0.0) for r in self._records]
         avg_grade = round(sum(grades) / n, 2)
         pct_simple = round(sum(1 for g in grades if g <= 6) / n * 100, 1)
 
@@ -409,9 +409,6 @@ class Evaluator:
     def clear(self):
         self._records.clear()
         logger.info("[Eval] Records cleared.")
-
-    def __len__(self):
-        return len(self._records)
 
 
 # ─── Document Category Detection ────────────────────────────────────────────────
