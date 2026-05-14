@@ -357,7 +357,9 @@ export default function ChatPanel({
 
   useEffect(() => {
     isMountedRef.current = true
-    return () => { isMountedRef.current = false }
+    return () => {
+      isMountedRef.current = false
+    }
   }, [])
 
   useEffect(() => {
@@ -375,7 +377,10 @@ export default function ChatPanel({
 
   useEffect(() => {
     if (!settingsLoadedRef.current) return
-    window.localStorage.setItem("lr-augmentation", String(enableQueryAugmentation))
+    window.localStorage.setItem(
+      "lr-augmentation",
+      String(enableQueryAugmentation)
+    )
   }, [enableQueryAugmentation])
 
   useEffect(() => {
@@ -481,12 +486,16 @@ export default function ChatPanel({
   const initialQuestionFiredRef = useRef(false)
 
   useEffect(() => {
+    initialQuestionFiredRef.current = false
+  }, [initialQuestion, selectedDoc?.id])
+
+  useEffect(() => {
     if (!initialQuestion || !selectedDoc || !userId || !sessionId) return
     if (initialQuestionFiredRef.current) return
     initialQuestionFiredRef.current = true
     const timer = window.setTimeout(() => submitQuestion(initialQuestion), 300)
     return () => window.clearTimeout(timer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuestion, selectedDoc, userId, sessionId])
 
   useEffect(() => {
@@ -749,12 +758,11 @@ export default function ChatPanel({
       )
     } catch (error) {
       if (messageAdded) {
-        setMessages((prev) =>
-          prev.filter((message) => message.id !== msgId)
-        )
+        setMessages((prev) => prev.filter((message) => message.id !== msgId))
       }
 
-      const message = error instanceof Error ? error.message : "Please try again"
+      const message =
+        error instanceof Error ? error.message : "Please try again"
 
       if (message.toLowerCase().includes("too many requests")) {
         const waitSeconds = parseInt(message.match(/\d+/)?.[0] ?? "60", 10)
@@ -989,7 +997,7 @@ export default function ChatPanel({
     >
       <AiChatBody className="min-h-0">
         <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
-          <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6">
+          <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
             <AnimatePresence>
               {selectedDoc && showHistory ? (
                 <motion.div
@@ -1089,7 +1097,7 @@ export default function ChatPanel({
             </AnimatePresence>
 
             {!selectedDoc ? (
-              emptyState ?? (
+              (emptyState ?? (
                 <div className="flex min-h-[60vh] flex-col items-center justify-center">
                   <div className="max-w-md p-8 text-center">
                     <div className="mx-auto mb-6 inline-flex">
@@ -1103,7 +1111,7 @@ export default function ChatPanel({
                     <p className="text-muted-foreground">{copy.noDocDesc}</p>
                   </div>
                 </div>
-              )
+              ))
             ) : historyLoading ? (
               <div className="flex min-h-[40vh] items-center justify-center">
                 <TypingIndicator />
@@ -1195,6 +1203,7 @@ export default function ChatPanel({
                       toggleSources={toggleSources}
                       copiedId={copiedId}
                       copyToClipboard={copyToClipboard}
+                      docPublicUrl={selectedDoc?.public_url ?? undefined}
                     />
                   </div>
                 ))}
@@ -1252,7 +1261,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={toggleLanguage}
-                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
                 title={copy.language}
               >
                 {language === "ms" ? "EN" : "MS"}
@@ -1261,7 +1270,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
                 title={copy.newChat}
               >
                 <Plus className="h-4 w-4" />
@@ -1271,7 +1280,7 @@ export default function ChatPanel({
                 type="button"
                 onClick={() => setShowHistory((prev) => !prev)}
                 className={cn(
-                  "p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                  "p-2 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none",
                   showHistory
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
@@ -1285,7 +1294,7 @@ export default function ChatPanel({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
                     title={copy.options}
                   >
                     <MoreVertical className="h-4 w-4" />
@@ -1297,9 +1306,7 @@ export default function ChatPanel({
                   <DropdownMenuSeparator />
 
                   <DropdownMenuItem
-                    onClick={() =>
-                      setEnableQueryAugmentation((prev) => !prev)
-                    }
+                    onClick={() => setEnableQueryAugmentation((prev) => !prev)}
                   >
                     <Languages className="mr-2 h-4 w-4" />
                     {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
@@ -1313,10 +1320,7 @@ export default function ChatPanel({
                   ) : null}
 
                   {messages.length > 0 ? (
-                    <DropdownMenuItem
-                      onClick={clearChat}
-                      variant="destructive"
-                    >
+                    <DropdownMenuItem onClick={clearChat} variant="destructive">
                       <X className="mr-2 h-4 w-4" />
                       {copy.clearThread}
                     </DropdownMenuItem>
@@ -1334,7 +1338,9 @@ export default function ChatPanel({
             ref={inputRef}
             onSubmit={submitQuestion}
             loading={loading}
-            disabled={!selectedDoc || !sessionId || !userId || rateLimitedUntil !== null}
+            disabled={
+              !selectedDoc || !sessionId || !userId || rateLimitedUntil !== null
+            }
             placeholder={
               rateLimitedUntil !== null
                 ? `${copy.waitAgain} ${rateLimitSecondsLeft}s...`
@@ -1351,8 +1357,9 @@ export default function ChatPanel({
                   className="h-8 w-fit border border-border/50 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
                 >
                   {selectedPopoverModel
-                    ? (GROQ_MODELS.find((model) => model.id === selectedPopoverModel)
-                        ?.label ?? selectedPopoverModel)
+                    ? (GROQ_MODELS.find(
+                        (model) => model.id === selectedPopoverModel
+                      )?.label ?? selectedPopoverModel)
                     : copy.autoServer}
                 </button>
               </PopoverTrigger>
@@ -1392,7 +1399,7 @@ export default function ChatPanel({
               onClick={toggleVoiceInput}
               disabled={!speechSupported || loading}
               className={cn(
-                "border border-border/50 bg-background/80 p-2 text-muted-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                "border border-border/50 bg-background/80 p-2 text-muted-foreground transition-all hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
                 isListening &&
                   "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/15"
               )}

@@ -17,7 +17,14 @@ import {
   BookOpen,
   ThumbsUp,
   ThumbsDown,
+  ExternalLink,
 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export interface Message {
   id: string
@@ -94,6 +101,7 @@ export function AIMessageCard({
   toggleSources,
   copiedId,
   copyToClipboard,
+  docPublicUrl,
 }: {
   message: Message
   index: number
@@ -102,6 +110,7 @@ export function AIMessageCard({
   toggleSources: (index: number) => void
   copiedId: string | null
   copyToClipboard: (text: string, id: string) => void
+  docPublicUrl?: string
 }) {
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
@@ -113,6 +122,7 @@ export function AIMessageCard({
 
   const [isStreamed, setIsStreamed] = React.useState(message.cached)
   const [feedback, setFeedback] = React.useState<"up" | "down" | null>(null)
+  const [viewerPage, setViewerPage] = React.useState<number | null>(null)
 
   React.useEffect(() => {
     if (message.cached) {
@@ -395,6 +405,17 @@ export function AIMessageCard({
                                       }`
                                     : ""}
                                 </span>
+                                {source.page_start && docPublicUrl ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewerPage(source.page_start!)}
+                                    className="ml-1 inline-flex items-center gap-0.5 text-[10px] text-primary/70 underline-offset-2 hover:text-primary hover:underline"
+                                    title={language === "ms" ? "Lihat halaman asal" : "View source page"}
+                                  >
+                                    <ExternalLink className="h-2.5 w-2.5" />
+                                    {language === "ms" ? "lihat" : "view"}
+                                  </button>
+                                ) : null}
                               </div>
                             </div>
 
@@ -435,6 +456,26 @@ export function AIMessageCard({
           </div>
         </div>
       </div>
+
+      {docPublicUrl && viewerPage !== null ? (
+        <Dialog open onOpenChange={() => setViewerPage(null)}>
+          <DialogContent className="max-w-4xl p-0 sm:max-h-[90vh]">
+            <DialogHeader className="border-b border-border px-4 py-3">
+              <DialogTitle className="text-sm font-medium">
+                {message.sources.find(
+                  (s) => s.page_start === viewerPage
+                )?.doc_name ?? "Document"}{" "}
+                — {language === "ms" ? "Halaman" : "Page"} {viewerPage}
+              </DialogTitle>
+            </DialogHeader>
+            <iframe
+              src={`${docPublicUrl}#page=${viewerPage}`}
+              className="h-[75vh] w-full border-0"
+              title={`Page ${viewerPage}`}
+            />
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </div>
   )
 }
