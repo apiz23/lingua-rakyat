@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch
 import utils.rag_pipeline as rag
 
 
@@ -27,3 +27,10 @@ def test_batch_embed_called_once_for_multiple_variants():
         ["what is mykad", "apakah mykad", "什么是身份证"],
         input_type="search_query",
     )
+
+    # Verify each variant's embedding was sent to Pinecone in correct order
+    calls = mock_index.return_value.query.call_args_list
+    assert len(calls) == 3
+    assert calls[0].kwargs["vector"] == [0.1] * 1024
+    assert calls[1].kwargs["vector"] == [0.2] * 1024
+    assert calls[2].kwargs["vector"] == [0.3] * 1024
