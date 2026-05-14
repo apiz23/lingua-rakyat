@@ -346,7 +346,7 @@ class Evaluator:
         lang_stats: dict = defaultdict(lambda: {"count": 0, "total_conf": 0.0,
                                                   "total_latency": 0, "total_grade": 0.0})
         for r in self._records:
-            ls = lang_stats[r["language"]]
+            ls = lang_stats[r.get("language", "en")]
             ls["count"]         += 1
             ls["total_conf"]    += r.get("confidence", 0.0)
             ls["total_latency"] += r.get("latency_ms", 0)
