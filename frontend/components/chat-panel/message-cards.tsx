@@ -358,6 +358,7 @@ export function AIMessageCard({
                     </div>
 
                     {message.sources.map((source, sourceIndex) => {
+                      const pageStart = source.page_start
                       const scoreColor =
                         source.score >= 0.75
                           ? "bg-success"
@@ -405,11 +406,11 @@ export function AIMessageCard({
                                       }`
                                     : ""}
                                 </span>
-                                {source.page_start && docPublicUrl ? (
+                                {pageStart && docPublicUrl ? (
                                   <button
                                     type="button"
-                                    onClick={() => setViewerPage(source.page_start!)}
-                                    className="ml-1 inline-flex items-center gap-0.5 text-[10px] text-primary/70 underline-offset-2 hover:text-primary hover:underline"
+                                    onClick={() => setViewerPage(pageStart as number)}
+                                    className="ml-1 inline-flex items-center gap-0.5 text-[10px] text-primary/70 underline-offset-2 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                                     title={language === "ms" ? "Lihat halaman asal" : "View source page"}
                                   >
                                     <ExternalLink className="h-2.5 w-2.5" />
@@ -459,12 +460,15 @@ export function AIMessageCard({
 
       {docPublicUrl && viewerPage !== null ? (
         <Dialog open onOpenChange={() => setViewerPage(null)}>
-          <DialogContent className="max-w-4xl p-0 sm:max-h-[90vh]">
+          <DialogContent
+            className="max-w-4xl overflow-hidden p-0 sm:max-h-[90vh]"
+            aria-describedby={undefined}
+          >
             <DialogHeader className="border-b border-border px-4 py-3">
               <DialogTitle className="text-sm font-medium">
                 {message.sources.find(
                   (s) => s.page_start === viewerPage
-                )?.doc_name ?? "Document"}{" "}
+                )?.doc_name ?? (language === "ms" ? "Dokumen" : "Document")}{" "}
                 — {language === "ms" ? "Halaman" : "Page"} {viewerPage}
               </DialogTitle>
             </DialogHeader>
