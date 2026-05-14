@@ -11,7 +11,6 @@ Improvements in this version:
   - Startup banner with config summary
 """
 
-import asyncio
 import logging
 import sys
 import time
@@ -144,18 +143,6 @@ app.include_router(chat_router,      prefix="/api/chat",      tags=["Chat"])
 app.include_router(eval_router,      prefix="/api/eval",      tags=["Evaluation"])
 
 # ─── Startup: Seed + Prewarm ──────────────────────────────────────────────────
-@app.on_event("startup")
-async def startup_seed_and_prewarm():
-    async def _run():
-        try:
-            from routers.documents import seed_featured_documents, _prewarm_featured_docs
-            result = await seed_featured_documents()
-            logger.info("[Startup] Seed result: %s", result)
-            await _prewarm_featured_docs()
-        except Exception as exc:
-            logger.warning("[Startup] Seed/prewarm failed (non-fatal): %s", exc)
-    asyncio.create_task(_run())
-
 # ─── Health Check ─────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
 async def health_check():

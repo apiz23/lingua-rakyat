@@ -680,20 +680,24 @@ export async function runTestSuiteStream(
 
 // ── Available Groq models ──────────────────────────────────────────────────
 // rpm = requests/min, rpd = requests/day, tpm = tokens/min, tpd = tokens/day
-export const DEFAULT_CHAT_MODEL_ID = "groq/compound"
+export const DEFAULT_CHAT_MODEL_ID = "llama-3.3-70b-versatile"
 
 export const GROQ_MODELS = [
   {
-    id: "groq/compound",
-    label: "Groq Compound",
-    tag: "Recommended chat default",
+    id: "llama-3.3-70b-versatile",
+    label: "Llama 3.3 70B",
+    tag: "⭐ Recommended · 12K TPM · 100K/day",
+    rpm: 30,
+    rpd: "1K",
+    tpm: "12K",
+    tpd: "100K",
     recommended: true,
     tier: 1,
   },
   {
     id: "meta-llama/llama-4-scout-17b-16e-instruct",
     label: "Llama 4 Scout 17B",
-    tag: "⭐ Recommended · 30K TPM · 500K/day",
+    tag: "30K TPM · 500K/day",
     rpm: 30,
     rpd: "1K",
     tpm: "30K",
@@ -701,23 +705,19 @@ export const GROQ_MODELS = [
     recommended: false,
   },
   {
+    id: "groq/compound",
+    label: "Groq Compound",
+    tag: "May 413 on long context",
+    recommended: false,
+  },
+  {
     id: "groq/compound-mini",
     label: "Groq Compound Mini",
-    tag: "⚠️ Low TPM limit — may rate limit",
+    tag: "Low TPM — may rate limit",
     rpm: 30,
     rpd: "250",
     recommended: false,
     tier: 2,
-  },
-  {
-    id: "llama-3.3-70b-versatile",
-    label: "Llama 3.3 70B",
-    tag: "Best quality · 12K TPM · 100K/day",
-    rpm: 30,
-    rpd: "1K",
-    tpm: "12K",
-    tpd: "100K",
-    recommended: false,
   },
   {
     id: "qwen/qwen3-32b",

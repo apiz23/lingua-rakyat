@@ -18,6 +18,19 @@ import {
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import PageIntro from "@/components/page-intro"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   BarChart3,
   Zap,
@@ -91,21 +104,19 @@ function MetricCard({
 // ── Grade Badge ────────────────────────────────────────────────────────────
 
 function GradeBadge({ grade }: { grade: number }) {
-  const color =
-    grade <= 5
-      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-      : grade <= 7
-        ? "bg-primary/10 text-primary border-primary/20"
-        : "bg-orange-500/10 text-orange-600 border-orange-500/20"
+  const variant = grade <= 5 ? "secondary" : grade <= 7 ? "default" : "outline"
   return (
-    <span
+    <Badge
+      variant={variant}
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-        color
+        "border",
+        grade <= 5 &&
+          "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
+        grade > 7 && "border-orange-500/20 bg-orange-500/10 text-orange-600"
       )}
     >
       Grade {grade.toFixed(1)}
-    </span>
+    </Badge>
   )
 }
 
@@ -165,11 +176,8 @@ const LANG_LABELS: Record<string, { name: string; code: string }> = {
 // ── Category Labels ───────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<string, { label: string }> = {
   all: { label: "All" },
-  housing: { label: "Housing" },
-  healthcare: { label: "Healthcare" },
-  student_loans: { label: "Student Loans" },
-  social_welfare: { label: "Welfare" },
-  immigration: { label: "Immigration" },
+  identity: { label: "MyKad / Identity" },
+  passport: { label: "Passport" },
 }
 
 // ── Rate Limit Banner ──────────────────────────────────────────────────────
@@ -289,7 +297,7 @@ export default function EvalPage() {
     setDetectedCategory(null)
     setStreamProgress({
       completed: 0,
-      total: 30,
+      total: 0,
       currentQuestion: "",
       currentLang: "en",
       liveResults: [],
@@ -430,23 +438,27 @@ export default function EvalPage() {
           icon={FlaskConical}
           actions={
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-              <button
+              <Button
                 onClick={fetchReport}
                 disabled={loadingReport}
-                className="flex items-center justify-center gap-2 border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto"
               >
                 <RefreshCw
                   className={cn("h-4 w-4", loadingReport && "animate-spin")}
                 />
-                <span>Refresh</span>
-              </button>
-              <button
+                Refresh
+              </Button>
+              <Button
                 onClick={handleClear}
-                className="flex items-center justify-center gap-2 border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
+                variant="outline"
+                size="lg"
+                className="w-full text-muted-foreground hover:border-destructive/50 hover:text-destructive sm:w-auto"
               >
                 <Trash2 className="h-4 w-4" />
-                <span>Clear</span>
-              </button>
+                Clear
+              </Button>
             </div>
           }
         />
@@ -460,9 +472,9 @@ export default function EvalPage() {
             <BarChart3 className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Live Performance Metrics</h2>
             {hasMetrics && (
-              <span className="bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+              <Badge variant="secondary" className="h-auto px-2.5 py-1">
                 {report.total_queries} queries recorded
-              </span>
+              </Badge>
             )}
           </div>
 
@@ -565,20 +577,25 @@ export default function EvalPage() {
               {((report.faithfulness?.scored_queries ?? 0) > 0 ||
                 testResult?.aggregate.avg_semantic_similarity != null) && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
-                  {report.faithfulness && report.faithfulness.scored_queries > 0 && (
-                    <MetricCard
-                      label="Faithfulness Score"
-                      value={score(report.faithfulness.avg_faithfulness_score)}
-                      sub={`${report.faithfulness.scored_queries} queries scored`}
-                      color="text-primary"
-                      bg="bg-primary/5"
-                      icon={CheckCircle}
-                    />
-                  )}
+                  {report.faithfulness &&
+                    report.faithfulness.scored_queries > 0 && (
+                      <MetricCard
+                        label="Faithfulness Score"
+                        value={score(
+                          report.faithfulness.avg_faithfulness_score
+                        )}
+                        sub={`${report.faithfulness.scored_queries} queries scored`}
+                        color="text-primary"
+                        bg="bg-primary/5"
+                        icon={CheckCircle}
+                      />
+                    )}
                   {testResult?.aggregate.avg_semantic_similarity != null && (
                     <MetricCard
                       label="Semantic Similarity"
-                      value={score(testResult.aggregate.avg_semantic_similarity)}
+                      value={score(
+                        testResult.aggregate.avg_semantic_similarity
+                      )}
                       sub="Answer vs ground truth"
                       color="text-emerald-600"
                       bg="bg-emerald-500/5"
@@ -630,12 +647,13 @@ export default function EvalPage() {
                       label="BLEU Score (n-gram precision)"
                       value={report.generation_quality!.avg_bleu}
                     />
-                    {report.faithfulness && report.faithfulness.scored_queries > 0 && (
-                      <ScoreBar
-                        label="Faithfulness Score (answer grounded in sources)"
-                        value={report.faithfulness.avg_faithfulness_score}
-                      />
-                    )}
+                    {report.faithfulness &&
+                      report.faithfulness.scored_queries > 0 && (
+                        <ScoreBar
+                          label="Faithfulness Score (answer grounded in sources)"
+                          value={report.faithfulness.avg_faithfulness_score}
+                        />
+                      )}
                     {testResult?.aggregate.avg_semantic_similarity != null && (
                       <ScoreBar
                         label="Semantic Similarity (vs ground truth)"
@@ -660,81 +678,86 @@ export default function EvalPage() {
                   <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                     <Globe className="h-4 w-4" /> Per-Language Breakdown
                   </h3>
-                  <div className="overflow-hidden border border-border bg-card/40 backdrop-blur-sm">
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[720px] text-sm">
-                        <thead>
-                          <tr className="border-b border-border bg-muted/30">
-                            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                              Language
-                            </th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                              Queries
-                            </th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                              Avg Confidence
-                            </th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                              Avg Latency
-                            </th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                              Readability
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {Object.entries(report.per_language).map(
-                            ([lang, stats]) => {
-                              const info = LANG_LABELS[lang] ?? {
-                                name: lang,
-                                flag: "🌐",
+                  <Card className="gap-0 rounded-none border border-border bg-card/40 py-0 ring-0 backdrop-blur-sm">
+                    <CardContent className="px-0">
+                      <ScrollArea className="w-full whitespace-nowrap">
+                        <table className="w-full min-w-[720px] text-sm">
+                          <thead>
+                            <tr className="border-b border-border bg-muted/30">
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                                Language
+                              </th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                                Queries
+                              </th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                                Avg Confidence
+                              </th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                                Avg Latency
+                              </th>
+                              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                                Readability
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {Object.entries(report.per_language).map(
+                              ([lang, stats]) => {
+                                const info = LANG_LABELS[lang] ?? {
+                                  name: lang,
+                                  flag: "🌐",
+                                }
+                                return (
+                                  <tr
+                                    key={lang}
+                                    className="transition-colors hover:bg-muted/20"
+                                  >
+                                    <td className="px-4 py-3">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">
+                                          {info.name}
+                                        </span>
+                                        <Badge
+                                          variant="outline"
+                                          className="h-auto px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                                        >
+                                          ({lang})
+                                        </Badge>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-muted-foreground">
+                                      {stats.queries}
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <span
+                                        className={cn(
+                                          "font-mono tabular-nums",
+                                          stats.avg_confidence >= 0.75
+                                            ? "text-emerald-600"
+                                            : stats.avg_confidence >= 0.5
+                                              ? "text-primary"
+                                              : "text-orange-500"
+                                        )}
+                                      >
+                                        {pct(stats.avg_confidence)}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-mono text-muted-foreground tabular-nums">
+                                      {stats.avg_latency_ms}ms
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                      <GradeBadge grade={stats.avg_fk_grade} />
+                                    </td>
+                                  </tr>
+                                )
                               }
-                              return (
-                                <tr
-                                  key={lang}
-                                  className="transition-colors hover:bg-muted/20"
-                                >
-                                  <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">
-                                        {info.name}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        ({lang})
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 text-right text-muted-foreground">
-                                    {stats.queries}
-                                  </td>
-                                  <td className="px-4 py-3 text-right">
-                                    <span
-                                      className={cn(
-                                        "font-mono tabular-nums",
-                                        stats.avg_confidence >= 0.75
-                                          ? "text-emerald-600"
-                                          : stats.avg_confidence >= 0.5
-                                            ? "text-primary"
-                                            : "text-orange-500"
-                                      )}
-                                    >
-                                      {pct(stats.avg_confidence)}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3 text-right font-mono text-muted-foreground tabular-nums">
-                                    {stats.avg_latency_ms}ms
-                                  </td>
-                                  <td className="px-4 py-3 text-right">
-                                    <GradeBadge grade={stats.avg_fk_grade} />
-                                  </td>
-                                </tr>
-                              )
-                            }
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                            )}
+                          </tbody>
+                        </table>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </div>
@@ -754,7 +777,7 @@ export default function EvalPage() {
             <p className="mb-3 text-sm text-muted-foreground">
               Run the built-in{" "}
               <span className="font-medium text-foreground">
-                30 annotated Q&A cases
+                document-specific annotated Q&A cases
               </span>{" "}
               against a document to get ROUGE-1/2/L and BLEU scores with ground
               truth comparison.
@@ -763,11 +786,8 @@ export default function EvalPage() {
             {/* Category breakdown pills */}
             <div className="mb-4 flex flex-wrap gap-2">
               {[
-                { key: "housing", label: "Housing", count: 9 },
-                { key: "student_loans", label: "Student Loans", count: 8 },
-                { key: "healthcare", label: "Healthcare", count: 7 },
-                { key: "social_welfare", label: "Welfare", count: 3 },
-                { key: "immigration", label: "Immigration", count: 2 },
+                { key: "identity", label: "MyKad / Identity", count: 5 },
+                { key: "passport", label: "Passport", count: 6 },
               ].map((cat) => (
                 <span
                   key={cat.key}
@@ -795,10 +815,10 @@ export default function EvalPage() {
                     Document not matched to any test category
                   </p>
                   <p className="text-xs opacity-90">
-                    The test suite covers housing, healthcare, student loans,
-                    welfare, and immigration. Upload a relevant government
-                    services PDF — for example a housing policy, PTPTN guide, or
-                    healthcare assistance document.
+                    The test suite currently covers the shipped MyKad FAQ and
+                    Malaysian passport guideline documents. Select one of those
+                    documents or update the annotated cases to match your own
+                    data.
                   </p>
                 </div>
               </div>
@@ -821,54 +841,82 @@ export default function EvalPage() {
             )}
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <select
-                value={selectedDocId}
-                onChange={(e) => setSelectedDocId(e.target.value)}
-                disabled={loadingTest}
-                className="w-full flex-1 border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none disabled:opacity-50"
+              <Select
+                value={selectedDocId || "__none__"}
+                onValueChange={(value) =>
+                  setSelectedDocId(value === "__none__" ? "" : value)
+                }
+                disabled={loadingTest || documents.length === 0}
               >
-                {documents.length === 0 ? (
-                  <option value="">No documents ready</option>
-                ) : (
-                  documents.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))
-                )}
-              </select>
+                <SelectTrigger className="w-full flex-1 border border-border bg-background text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                  <SelectValue
+                    placeholder={
+                      documents.length === 0
+                        ? "No documents ready"
+                        : "Select a document"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="__none__">
+                      {documents.length === 0
+                        ? "No documents ready"
+                        : "Select a document"}
+                    </SelectItem>
+                    {documents.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               {/* Model selector for eval */}
-              <select
-                value={evalModel}
-                onChange={(e) => setEvalModel(e.target.value)}
+              <Select
+                value={evalModel || "__auto__"}
+                onValueChange={(value) =>
+                  setEvalModel(value === "__auto__" ? "" : value)
+                }
                 disabled={loadingTest}
-                className="w-full border border-border bg-background px-3 py-2 text-sm text-muted-foreground focus:border-primary focus:outline-none disabled:opacity-50 sm:w-72"
-                title="Model to use for test suite"
               >
-                <option value="">Auto (qwen3-32b default)</option>
-                {GROQ_MODELS.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label} — {m.tag}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  className="w-full border border-border bg-background text-sm text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary sm:w-72"
+                  title="Model to use for test suite"
+                >
+                  <SelectValue placeholder="Auto (qwen3-32b default)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="__auto__">
+                      Auto (qwen3-32b default)
+                    </SelectItem>
+                    {GROQ_MODELS.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.label} - {m.tag}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               {loadingTest ? (
-                <button
+                <Button
                   onClick={handleCancelTest}
-                  className="flex w-full items-center justify-center gap-2 border border-destructive/50 bg-destructive/10 px-5 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 sm:w-auto sm:justify-start"
+                  variant="destructive"
+                  className="w-full sm:w-auto sm:justify-start"
                 >
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Cancel
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   onClick={handleRunTestSuite}
                   disabled={!selectedDocId}
-                  className="flex w-full items-center justify-center gap-2 bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:justify-start"
+                  className="w-full sm:w-auto sm:justify-start"
                 >
                   <Play className="h-4 w-4" />
                   Run Test Suite
-                </button>
+                </Button>
               )}
             </div>
 
@@ -1038,7 +1086,9 @@ export default function EvalPage() {
                           Semantic Sim:{" "}
                         </span>
                         <span className="font-mono font-medium">
-                          {testResult.aggregate.avg_semantic_similarity.toFixed(3)}
+                          {testResult.aggregate.avg_semantic_similarity.toFixed(
+                            3
+                          )}
                         </span>
                       </div>
                     )}
@@ -1058,21 +1108,28 @@ export default function EvalPage() {
                             .length
                     if (key !== "all" && count === 0) return null
                     return (
-                      <button
+                      <Button
                         key={key}
                         onClick={() => setCategoryFilter(key)}
+                        variant={
+                          categoryFilter === key ? "secondary" : "outline"
+                        }
+                        size="sm"
                         className={cn(
-                          "flex items-center gap-1.5 border px-3 py-1 text-xs font-medium transition-all",
+                          "gap-1.5 text-xs",
                           categoryFilter === key
                             ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-card text-muted-foreground hover:border-primary/30"
+                            : "text-muted-foreground hover:border-primary/30"
                         )}
                       >
                         {val.label}
-                        <span className="rounded-full bg-muted px-1.5 text-[10px]">
+                        <Badge
+                          variant="outline"
+                          className="h-auto rounded-full bg-muted px-1.5 text-[10px]"
+                        >
                           {count}
-                        </span>
-                      </button>
+                        </Badge>
+                      </Button>
                     )
                   })}
                 </div>
@@ -1121,17 +1178,24 @@ export default function EvalPage() {
                           key={i}
                           className="overflow-hidden border border-border"
                         >
-                          <button
+                          <Button
                             onClick={() => toggleCase(i)}
-                            className="flex w-full items-center justify-between bg-card/40 px-4 py-3 text-left hover:bg-muted/30"
+                            variant="ghost"
+                            className="h-auto w-full justify-between rounded-none bg-card/40 px-4 py-3 text-left hover:bg-muted/30"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                              <Badge
+                                variant="outline"
+                                className="h-auto bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                              >
                                 {info.code}
-                              </span>
-                              <span className="hidden items-center gap-1 border border-border px-2 py-0.5 text-[10px] text-muted-foreground sm:inline-flex">
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className="hidden h-auto px-2 py-0.5 text-[10px] text-muted-foreground sm:inline-flex"
+                              >
                                 {catInfo.label}
-                              </span>
+                              </Badge>
                               <span className="line-clamp-1 max-w-xs text-sm font-medium">
                                 {r.question}
                               </span>
@@ -1149,7 +1213,7 @@ export default function EvalPage() {
                                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               )}
                             </div>
-                          </button>
+                          </Button>
                           {isOpen && (
                             <div className="space-y-4 border-t border-border bg-muted/10 p-4">
                               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -1309,27 +1373,30 @@ export default function EvalPage() {
               cross-lingual retrieval capability.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <select
-                value={augmentLang}
-                onChange={(e) => setAugmentLang(e.target.value)}
-                className="w-full border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none sm:w-56"
-              >
-                <option value="en">🇬🇧 English</option>
-                <option value="ms">🇲🇾 Malay</option>
-                <option value="zh-cn">🇨🇳 Chinese</option>
-              </select>
-              <input
+              <Select value={augmentLang} onValueChange={setAugmentLang}>
+                <SelectTrigger className="w-full border border-border bg-background text-sm focus:border-primary focus:ring-1 focus:ring-primary sm:w-56">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="ms">Malay</SelectItem>
+                    <SelectItem value="zh-cn">Chinese</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <Input
                 type="text"
                 value={augmentInput}
                 onChange={(e) => setAugmentInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAugment()}
-                placeholder="How do I apply for housing aid?"
-                className="w-full flex-1 border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                placeholder="What documents are required for a first-time passport application?"
+                className="h-10 flex-1 rounded-none border border-border bg-background px-4 text-sm shadow-none"
               />
-              <button
+              <Button
                 onClick={handleAugment}
                 disabled={loadingAugment || !augmentInput.trim()}
-                className="flex w-full items-center justify-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 {loadingAugment ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1337,7 +1404,7 @@ export default function EvalPage() {
                   <Globe className="h-4 w-4" />
                 )}
                 Expand
-              </button>
+              </Button>
             </div>
 
             {augmentResult && (

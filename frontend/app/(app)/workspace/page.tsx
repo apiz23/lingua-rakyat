@@ -5,6 +5,7 @@ import { Document, listDocuments } from "@/lib/api"
 import ChatPanel from "@/components/chat-panel"
 import { cn } from "@/lib/utils"
 import UploadModal from "@/components/upload-modal"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -24,14 +25,24 @@ import {
   Database,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const AGENCY_COLORS: Record<string, string> = {
   JPN: "bg-purple-700",
   IMIGRESEN: "bg-blue-700",
 }
 
-// Fallback: match featured docs by name when is_featured column not yet migrated
-const FEATURED_DOC_NAMES = new Set(["MyKad FAQ (JPN)", "Malaysian Passport Guidelines"])
+const QUICK_STARTS = [
+  "Summarize this document",
+  "Siapa yang layak memohon?",
+  "What documents do I need?",
+  "Bagaimana cara memohon langkah demi langkah?",
+]
+
+const FEATURED_DOC_NAMES = new Set([
+  "MyKad FAQ (JPN)",
+  "Malaysian Passport Guidelines",
+])
 
 const FEATURED_DOC_NAME_AGENCY: Record<string, string> = {
   "MyKad FAQ (JPN)": "JPN",
@@ -48,6 +59,7 @@ export default function WorkSpacePage() {
   const [docsLoading, setDocsLoading] = useState(false)
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [isDocPickerOpen, setIsDocPickerOpen] = useState(false)
+  const [initialQuestion, setInitialQuestion] = useState<string | undefined>()
 
   const loadDocuments = async () => {
     setDocsLoading(true)
@@ -64,6 +76,10 @@ export default function WorkSpacePage() {
   useEffect(() => {
     loadDocuments()
   }, [])
+
+  useEffect(() => {
+    setInitialQuestion(undefined)
+  }, [selectedDoc?.id])
 
   const sortedDocs = useMemo(() => {
     return [...documents].sort((a, b) =>
@@ -110,191 +126,231 @@ export default function WorkSpacePage() {
     <div className="flex h-full w-full flex-col bg-background">
       <ChatPanel
         selectedDoc={selectedDoc}
+        initialQuestion={initialQuestion}
         composerTop={
-          <div className="flex min-w-0 flex-col gap-2 px-1 sm:flex-row sm:justify-between">
-            {/* Document Selector */}
-            <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
-              <PopoverTrigger asChild>
-                <button className="group min-w-0 flex w-full flex-1 items-center justify-between border border-border bg-card px-3 py-2 text-sm transition-all hover:border-primary/30 hover:bg-accent/50 sm:max-w-[30vw]">
-                  <div className="flex min-w-0 items-center gap-2 truncate">
-                    {selectedDoc ? (
-                      <>
-                        {(() => {
-                          const { icon: Icon, color } = statusConfig(
-                            selectedDoc.status
-                          )
-                          return (
-                            <Icon
-                              className={cn("h-3.5 w-3.5 shrink-0", color)}
-                            />
-                          )
-                        })()}
-                        <span className="truncate font-medium">
-                          {selectedDoc.name}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Database className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          Select document
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <ChevronDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                </button>
-              </PopoverTrigger>
-
-              <PopoverContent
-                align="start"
-                className="w-[calc(100vw-2rem)] p-0 sm:w-full"
-                sideOffset={8}
-              >
-                <div className="flex flex-col">
-                  <ScrollArea className="max-h-60 sm:max-h-80">
-                    <div className="p-2 sm:p-1">
-                      {/* No document option */}
-                      <button
-                        onClick={() => {
-                          setSelectedDoc(null)
-                          setIsDocPickerOpen(false)
-                        }}
-                        className={cn(
-                          "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent sm:py-2",
-                          !selectedDoc && "bg-primary/5 text-primary"
-                        )}
-                      >
-                        <Database className="h-4 w-4" />
-                        <span>No document</span>
-                      </button>
-
-                      {/* Featured gov docs section */}
-                      {featuredDocs.length > 0 && (
+          <div className="space-y-3 px-1 sm:space-y-4">
+            <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+              {/* Document Selector */}
+              <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="group h-auto min-h-11 w-full min-w-0 justify-between rounded-none border-border bg-card px-3 py-2.5 text-sm shadow-none hover:border-primary/30 hover:bg-accent/50 sm:min-h-10 sm:max-w-[30rem] sm:px-3 sm:py-2"
+                  >
+                    <div className="flex min-w-0 items-center gap-2 truncate">
+                      {selectedDoc ? (
                         <>
-                          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                            Featured — Malaysian Gov Docs
-                          </div>
-                          {featuredDocs.map((doc) => (
-                            <button
-                              key={doc.id}
-                              onClick={() => {
-                                setSelectedDoc(doc)
-                                setIsDocPickerOpen(false)
-                              }}
-                              className={cn(
-                                "flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent sm:py-2",
-                                selectedDoc?.id === doc.id && "bg-primary/5"
-                              )}
-                            >
-                              {getAgency(doc) && (
-                                <div
-                                  className={cn(
-                                    "flex h-7 w-7 shrink-0 items-center justify-center rounded text-[9px] font-bold text-white",
-                                    AGENCY_COLORS[getAgency(doc)!] ?? "bg-muted"
-                                  )}
-                                >
-                                  {getAgency(doc)}
-                                </div>
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <div className="truncate font-medium text-sm">{doc.name}</div>
-                                <div className="text-[10px] text-muted-foreground">
-                                  {getAgency(doc)} · Official document
-                                </div>
-                              </div>
-                              <span className="shrink-0 bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
-                                READY
-                              </span>
-                            </button>
-                          ))}
-                          {userDocs.length > 0 && (
-                            <div className="mt-1 border-t border-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              Your Uploads
-                            </div>
-                          )}
+                          {(() => {
+                            const { icon: Icon, color } = statusConfig(
+                              selectedDoc.status
+                            )
+                            return (
+                              <Icon
+                                className={cn("h-3.5 w-3.5 shrink-0", color)}
+                              />
+                            )
+                          })()}
+                          <span className="truncate font-medium">
+                            {selectedDoc.name}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Database className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="text-muted-foreground">
+                            Select document
+                          </span>
                         </>
                       )}
-
-                      {/* User uploaded docs */}
-                      {docsLoading ? (
-                        Array.from({ length: 3 }).map((_, i) => (
-                          <div key={i} className="mx-1 my-0.5 h-9 animate-pulse bg-muted/40" />
-                        ))
-                      ) : userDocs.length === 0 && featuredDocs.length === 0 ? (
-                        <div className="py-8 text-center text-sm text-muted-foreground">
-                          No documents yet
-                        </div>
-                      ) : (
-                        userDocs.map((doc) => {
-                          const {
-                            icon: Icon,
-                            color,
-                            label,
-                          } = statusConfig(doc.status)
-                          return (
-                            <button
-                              key={doc.id}
-                              onClick={() => {
-                                setSelectedDoc(doc)
-                                setIsDocPickerOpen(false)
-                              }}
-                              className={cn(
-                                "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent sm:py-2",
-                                selectedDoc?.id === doc.id && "bg-primary/5"
-                              )}
-                            >
-                              <Icon className={cn("h-4 w-4 shrink-0", color)} />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="truncate font-medium">
-                                    {doc.name}
-                                  </span>
-                                  <span className="border border-border/50 bg-muted/30 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                                    {label}
-                                  </span>
-                                </div>
-                              </div>
-                              {selectedDoc?.id === doc.id && (
-                                <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
-                              )}
-                            </button>
-                          )
-                        })
-                      )}
                     </div>
-                  </ScrollArea>
-                </div>
-              </PopoverContent>
-            </Popover>
+                    <ChevronDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
 
-            {/* Refresh Button */}
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Refresh documents"
-                onClick={loadDocuments}
-                disabled={docsLoading}
-                className="h-10 w-10 sm:h-full sm:w-fit sm:p-3"
-              >
-                {docsLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin sm:h-3.5 sm:w-3.5" />
-                ) : (
-                  <RotateCcw className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-                )}
-              </Button>
+                <PopoverContent
+                  align="start"
+                  className="w-[min(calc(100vw-1rem),28rem)] max-w-[calc(100vw-1rem)] p-0 sm:w-[30rem] sm:max-w-[30rem]"
+                  sideOffset={8}
+                >
+                  <div className="flex flex-col">
+                    <ScrollArea className="max-h-[min(65vh,26rem)] sm:max-h-[28rem]">
+                      <div className="p-2 sm:p-1">
+                        {/* No document option */}
+                        <Button
+                          onClick={() => {
+                            setSelectedDoc(null)
+                            setIsDocPickerOpen(false)
+                          }}
+                          variant="ghost"
+                          className={cn(
+                            "h-auto min-h-11 w-full justify-start rounded-none px-3 py-2.5 text-left text-sm sm:min-h-10 sm:py-2",
+                            !selectedDoc && "bg-primary/5 text-primary"
+                          )}
+                        >
+                          <Database className="h-4 w-4" />
+                          <span>No document</span>
+                        </Button>
 
-              {/* Upload Button */}
-              <Button
-                size="icon"
-                aria-label="Upload document"
-                onClick={() => setIsUploadOpen(true)}
-                className="h-10 w-10 shrink-0 bg-primary shadow-sm hover:bg-primary/90 sm:h-full sm:w-fit sm:p-3"
-              >
-                <Upload className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              </Button>
+                        {/* Featured gov docs section */}
+                        {featuredDocs.length > 0 && (
+                          <>
+                            <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                              Featured — Malaysian Gov Docs
+                            </div>
+                            {featuredDocs.map((doc) => (
+                              <Button
+                                key={doc.id}
+                                onClick={() => {
+                                  setSelectedDoc(doc)
+                                  setIsDocPickerOpen(false)
+                                }}
+                                variant="ghost"
+                                className={cn(
+                                  "h-auto min-h-11 w-full justify-start rounded-none px-3 py-2.5 text-left text-sm sm:min-h-10 sm:py-2",
+                                  selectedDoc?.id === doc.id && "bg-primary/5"
+                                )}
+                              >
+                                {getAgency(doc) && (
+                                  <div
+                                    className={cn(
+                                      "flex h-7 w-7 shrink-0 items-center justify-center rounded text-[9px] font-bold text-white",
+                                      AGENCY_COLORS[getAgency(doc)!] ??
+                                        "bg-muted"
+                                    )}
+                                  >
+                                    {getAgency(doc)}
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-sm font-medium">
+                                    {doc.name}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground">
+                                    {getAgency(doc)} · Official document
+                                  </div>
+                                </div>
+                                <Badge className="ml-auto h-auto shrink-0 self-start bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                                  READY
+                                </Badge>
+                              </Button>
+                            ))}
+                            {userDocs.length > 0 && (
+                              <div className="mt-1 border-t border-border px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                                Your Uploads
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {/* User uploaded docs */}
+                        {docsLoading ? (
+                          Array.from({ length: 3 }).map((_, i) => (
+                            <Skeleton
+                              key={i}
+                              className="mx-1 my-0.5 h-9 animate-pulse bg-muted/40"
+                            />
+                          ))
+                        ) : userDocs.length === 0 &&
+                          featuredDocs.length === 0 ? (
+                          <div className="py-8 text-center text-sm text-muted-foreground">
+                            No documents yet
+                          </div>
+                        ) : (
+                          userDocs.map((doc) => {
+                            const {
+                              icon: Icon,
+                              color,
+                              label,
+                            } = statusConfig(doc.status)
+                            return (
+                              <Button
+                                key={doc.id}
+                                onClick={() => {
+                                  setSelectedDoc(doc)
+                                  setIsDocPickerOpen(false)
+                                }}
+                                variant="ghost"
+                                className={cn(
+                                  "h-auto min-h-11 w-full justify-start rounded-none px-3 py-2.5 text-left text-sm sm:min-h-10 sm:py-2",
+                                  selectedDoc?.id === doc.id && "bg-primary/5"
+                                )}
+                              >
+                                <Icon
+                                  className={cn("h-4 w-4 shrink-0", color)}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="truncate font-medium">
+                                      {doc.name}
+                                    </span>
+                                    <Badge
+                                      variant="outline"
+                                      className="h-auto border-border/50 bg-muted/30 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                                    >
+                                      {label}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                {selectedDoc?.id === doc.id && (
+                                  <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
+                                )}
+                              </Button>
+                            )
+                          })
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Refresh Button */}
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  aria-label="Refresh documents"
+                  onClick={loadDocuments}
+                  disabled={docsLoading}
+                  className="min-h-11 w-full px-4 sm:min-h-10 sm:w-auto"
+                >
+                  {docsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4" />
+                  )}
+                  <span className="sm:hidden">Refresh</span>
+                </Button>
+
+                {/* Upload Button */}
+                <Button
+                  size="lg"
+                  aria-label="Upload document"
+                  onClick={() => setIsUploadOpen(true)}
+                  className="min-h-11 w-full bg-primary shadow-sm hover:bg-primary/90 sm:min-h-10 sm:w-auto sm:px-4"
+                >
+                  <Upload className="h-4 w-4" />
+                  <span className="sm:hidden">Upload</span>
+                </Button>
+              </div>
             </div>
+
+            {selectedDoc?.status === "ready" ? (
+              <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+                {QUICK_STARTS.map((question) => (
+                  <Button
+                    key={question}
+                    type="button"
+                    onClick={() => setInitialQuestion(question)}
+                    variant="outline"
+                    size="sm"
+                    className="h-auto min-h-10 justify-start rounded-none border-border/50 bg-background px-3 py-2 text-left text-xs text-muted-foreground shadow-none hover:border-primary/30 hover:bg-primary/5 hover:text-foreground sm:min-h-0 sm:justify-center sm:py-1.5 sm:text-center"
+                  >
+                    {question}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
           </div>
         }
       />

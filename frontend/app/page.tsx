@@ -51,14 +51,15 @@ import {
   MediaPlayerPiP,
 } from "@/components/ui/media-player"
 import logo from "@/public/icons/android-chrome-512x512.png"
-import {
-  HeroLiquidMetalMobileVisual,
-  HeroLiquidMetalRoot,
-  HeroLiquidMetalVisual,
-} from "@/components/ui/hero-liquid-metal"
 import { HyperText } from "@/components/ui/hyper-text"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Backlight } from "@/components/ui/backlight"
+import bgNew from "@/public/assets/background-new3.png"
+import bgMobile from "@/public/assets/bg-mobile.png"
+import mykadImg from "@/public/assets/MyKad.png"
+import passportImg from "@/public/assets/passport.png"
+import personImg from "@/public/assets/person.png"
+
 const ease = [0.16, 1, 0.3, 1] as const
 
 function SkeletonCard() {
@@ -241,6 +242,11 @@ export default function Home() {
   const { scrollYProgress } = useScroll()
   const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.8])
   const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.98])
+  const surfaceClass = isDark
+    ? "border-white/10 bg-background/72 shadow-[0_18px_45px_-28px_rgba(0,0,0,0.65)]"
+    : "border-border bg-card/40 shadow-sm"
+  const mutedTextClass = isDark ? "text-foreground/78" : "text-muted-foreground"
+  const faintTextClass = isDark ? "text-foreground/60" : "text-muted-foreground"
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -539,8 +545,21 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-dvh bg-accent/5">
-      <main className="relative mx-auto w-full max-w-[1152px] px-4 sm:px-6 lg:px-10 xl:px-12">
+    <div className="relative min-h-dvh">
+      {/* Background Image */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url(${isMobile ? bgMobile.src : bgNew.src})`,
+        }}
+      />
+
+      {/* Optional overlay for better text readability */}
+      <div
+        className={`absolute inset-0 z-[1] ${isDark ? "bg-background/72 backdrop-blur-[2px]" : "bg-background/40 backdrop-blur-[1px]"}`}
+      />
+
+      <main className="relative z-10 mx-auto w-full max-w-[1152px] px-4 sm:px-6 lg:px-10 xl:px-12">
         <motion.section
           style={{ opacity: heroOpacity, scale: heroScale }}
           className="relative flex items-center pt-10 pb-12 sm:pt-24 sm:pb-16 lg:pt-20 lg:pb-14"
@@ -560,7 +579,9 @@ export default function Home() {
                   height={32}
                   className="rounded-full object-cover"
                 />
-                <span className="font-heading text-xs font-semibold tracking-[0.35em] text-muted-foreground uppercase">
+                <span
+                  className={`font-heading text-xs font-semibold tracking-[0.35em] uppercase ${faintTextClass}`}
+                >
                   Lingua Rakyat
                 </span>
               </div>
@@ -573,7 +594,7 @@ export default function Home() {
                       ? "Switch to English"
                       : "Tukar ke Bahasa Melayu"
                   }
-                  className="border border-border/50 bg-background/40 px-3 py-1.5 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase backdrop-blur-sm transition-colors hover:border-primary/30 hover:text-primary"
+                  className={`border px-3 py-1.5 text-xs font-semibold tracking-[0.18em] uppercase backdrop-blur-sm transition-colors hover:border-primary/30 hover:text-primary ${isDark ? "border-white/12 bg-background/75 text-foreground/78" : "border-border/50 bg-background/40 text-muted-foreground"}`}
                 >
                   {language === "ms" ? "EN" : "MS"}
                 </button>
@@ -585,47 +606,82 @@ export default function Home() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.55, delay: 0.15, ease }}
-                className="relative h-[240px] w-full overflow-hidden sm:h-[280px] lg:h-[400px] lg:w-5/12 xl:h-[500px]"
+                className="relative h-[280px] w-full overflow-visible sm:h-[360px] lg:h-[440px] lg:w-5/12 xl:h-[520px]"
               >
-                <HeroLiquidMetalRoot
-                  desktopShaderProps={{
-                    scale: 0.9,
-                    speed: 0.7,
-                    repetition: 7,
-                    softness: 0.9,
-                    distortion: 0.3,
-                    colorTint: isDark ? "#4ade80" : "#1a7a4f",
-                  }}
-                  image="https://shaders.paper.design/images/logos/diamond.svg"
+                <div className="absolute inset-x-6 top-10 bottom-0 rounded-[2rem] bg-primary/8 blur-3xl sm:inset-x-8 sm:top-12" />
+                <div
+                  className={`relative h-full overflow-hidden rounded-[1.8rem] border backdrop-blur-sm sm:rounded-[2.2rem] ${surfaceClass}`}
                 >
-                  <div className="relative h-full w-full">
-                    <div className="hidden h-full w-full lg:block">
-                      <HeroLiquidMetalVisual
-                        desktopShaderProps={{
-                          scale: 0.9,
-                          speed: 0.7,
-                          repetition: 7,
-                          softness: 0.9,
-                          distortion: 0.3,
-                          colorTint: isDark ? "#4ade80" : "#1a7a4f",
-                        }}
-                      />
-                    </div>
-
-                    <div className="-mt-8 h-full w-full lg:hidden">
-                      <HeroLiquidMetalMobileVisual
-                        mobileShaderProps={{
-                          scale: 0.75,
-                          speed: 0.7,
-                          repetition: 6,
-                          softness: 0.85,
-                          distortion: 0.25,
-                          colorTint: isDark ? "#4ade80" : "#1a7a4f",
-                        }}
-                      />
-                    </div>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_24%,rgba(74,222,128,0.12),transparent_30%),radial-gradient(circle_at_38%_78%,rgba(34,197,94,0.08),transparent_26%)] dark:bg-[radial-gradient(circle_at_68%_24%,rgba(74,222,128,0.18),transparent_32%),radial-gradient(circle_at_38%_78%,rgba(74,222,128,0.12),transparent_28%)]" />
+                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/28 via-background/8 to-transparent sm:h-32" />
+                  <div className="absolute top-4 left-4 z-20 max-w-[42%] rounded-2xl border border-primary/15 bg-background/88 px-3 py-2 text-left shadow-lg backdrop-blur-sm sm:top-6 sm:left-6 sm:px-4">
+                    <p className="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase">
+                      {language === "ms" ? "Panduan" : "Guidance"}
+                    </p>
+                    <p
+                      className={`mt-1 text-xs leading-relaxed sm:text-sm ${mutedTextClass}`}
+                    >
+                      {language === "ms"
+                        ? "Baca dokumen rasmi dalam bahasa yang lebih jelas."
+                        : "Read official documents in language that feels clearer."}
+                    </p>
                   </div>
-                </HeroLiquidMetalRoot>
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                      y: shouldReduce ? 0 : -14,
+                      rotate: -6,
+                    }}
+                    animate={{ opacity: 1, y: 0, rotate: -6 }}
+                    transition={{ duration: 0.5, delay: 0.7, ease }}
+                    className="absolute top-[18%] right-[4%] z-20 w-[108px] sm:w-[132px] lg:w-[150px]"
+                  >
+                    <div className="rounded-[1.15rem] border border-white/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
+                      <div className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
+                        MyKad
+                      </div>
+                      <Image
+                        src={mykadImg}
+                        alt="Malaysian MyKad identity card"
+                        width={150}
+                        height={96}
+                        className="h-auto w-full rounded-lg object-contain"
+                      />
+                    </div>
+                  </motion.div>
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                      x: shouldReduce ? 0 : 14,
+                      rotate: 8,
+                    }}
+                    animate={{ opacity: 1, x: 0, rotate: 8 }}
+                    transition={{ duration: 0.5, delay: 0.92, ease }}
+                    className="absolute bottom-[10%] left-[8%] z-20 w-[84px] sm:w-[102px] lg:w-[112px]"
+                  >
+                    <div className="rounded-[1.15rem] border border-white/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
+                      <div className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
+                        Passport
+                      </div>
+                      <Image
+                        src={passportImg}
+                        alt="Malaysian passport"
+                        width={112}
+                        height={148}
+                        className="h-auto w-full rounded-lg object-contain"
+                      />
+                    </div>
+                  </motion.div>
+                  <div className="absolute right-[4%] bottom-0 z-10 h-[96%] w-[78%] sm:right-[6%] sm:w-[72%] lg:w-[80%]">
+                    <Image
+                      src={personImg}
+                      alt="Malaysian civic guide helping users understand official documents"
+                      fill
+                      priority
+                      className="object-contain object-bottom drop-shadow-[0_28px_42px_rgba(0,0,0,0.22)]"
+                    />
+                  </div>
+                </div>
               </motion.div>
 
               <motion.div
@@ -652,7 +708,7 @@ export default function Home() {
                     animateOnHover={!shouldReduce}
                     duration={shouldReduce ? 1 : 900}
                     delay={shouldReduce ? 0 : 100}
-                    className="block py-0 font-heading text-3xl text-foreground sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl"
+                    className="block py-0 font-heading text-3xl text-foreground sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl"
                   >
                     {copy.headline1}
                   </HyperText>
@@ -662,7 +718,7 @@ export default function Home() {
                     animateOnHover={!shouldReduce}
                     duration={shouldReduce ? 1 : 900}
                     delay={shouldReduce ? 0 : 240}
-                    className="mt-1 block py-0 font-heading text-3xl text-primary sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl"
+                    className="mt-1 block py-0 font-heading text-3xl text-primary sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl"
                   >
                     {copy.headline2}
                   </HyperText>
@@ -670,7 +726,7 @@ export default function Home() {
 
                 <motion.p
                   variants={itemVariants}
-                  className="relative z-10 mx-auto mb-6 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:mb-8 sm:text-base lg:mx-0 lg:text-lg xl:text-xl"
+                  className={`relative z-10 mx-auto mb-6 max-w-2xl text-sm leading-relaxed sm:mb-8 sm:text-base lg:mx-0 lg:text-lg xl:text-xl ${mutedTextClass}`}
                 >
                   {copy.subhead}
                 </motion.p>
@@ -718,16 +774,18 @@ export default function Home() {
                   </motion.div>
                 </motion.div>
 
-                <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3 border-t border-border/30 pt-6 text-xs text-muted-foreground sm:mt-10 sm:gap-5 sm:pt-8 lg:mt-12 lg:justify-start lg:gap-6 lg:border-0 lg:pt-0 lg:text-sm">
+                <div
+                  className={`relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3 border-t border-border/30 pt-6 text-xs sm:mt-10 sm:gap-5 sm:pt-8 lg:mt-12 lg:justify-start lg:gap-6 lg:border-0 lg:pt-0 lg:text-sm ${mutedTextClass}`}
+                >
                   {copy.strip.map((item, i) => (
                     <div
                       key={item.label}
-                      className="flex items-center gap-1.5 border border-border/40 bg-muted/20 px-2.5 py-1 sm:gap-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                      className={`flex items-center gap-1.5 px-2.5 py-1 sm:gap-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 ${isDark ? "border border-white/10 bg-background/55" : "border border-border/40 bg-muted/20"}`}
                     >
                       <item.icon className="h-3 w-3 shrink-0 text-primary/70 sm:h-3.5 sm:w-3.5" />
                       <span className="font-medium">{item.label}</span>
                       {i < copy.strip.length - 1 && (
-                        <span className="hidden text-muted-foreground/20 sm:ml-1 sm:inline">
+                        <span className="hidden text-foreground/25 sm:ml-1 sm:inline">
                           •
                         </span>
                       )}
@@ -741,11 +799,15 @@ export default function Home() {
 
         <FadeInUp>
           <section className="pb-16 sm:pb-24 lg:pb-32">
-            <div className="group relative overflow-hidden border border-border bg-card/40 p-4 shadow-sm backdrop-blur-sm transition-all hover:shadow-md sm:p-6 lg:p-8">
+            <div
+              className={`group relative overflow-hidden border p-4 backdrop-blur-sm transition-all hover:shadow-md sm:p-6 lg:p-8 ${surfaceClass}`}
+            >
               <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 
               <div className="relative">
-                <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground/60 sm:mb-4">
+                <div
+                  className={`mb-3 flex items-center gap-2 text-xs sm:mb-4 ${faintTextClass}`}
+                >
                   <FileText className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
                   <span className="font-mono text-xs tracking-[0.12em] uppercase">
                     BANTUAN_RAKYAT_1MALAYSIA_2024.PDF
@@ -758,9 +820,13 @@ export default function Home() {
                     <span className="text-foreground">{copy.previewQ}</span>
                   </div>
 
-                  <div className="bg-muted/20 px-3 py-2 text-muted-foreground sm:px-4">
+                  <div
+                    className={`px-3 py-2 sm:px-4 ${isDark ? "bg-background/58 text-foreground/78" : "bg-muted/20 text-muted-foreground"}`}
+                  >
                     <p className="leading-relaxed">{copy.previewA}</p>
-                    <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground/50 sm:mt-3">
+                    <div
+                      className={`mt-2 flex items-center gap-1.5 text-xs sm:mt-3 ${faintTextClass}`}
+                    >
                       <BookOpen className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
                       <span>&mdash; {copy.previewSrc}</span>
                     </div>
@@ -787,7 +853,9 @@ export default function Home() {
         {/* Comparison */}
         <section className="pb-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p className="mt-5 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            <p
+              className={`mt-5 text-xs font-semibold tracking-[0.22em] uppercase ${faintTextClass}`}
+            >
               {comparison.kicker}
             </p>
           </FadeInLeft>
@@ -799,27 +867,35 @@ export default function Home() {
           </FadeInLeft>
 
           <FadeInLeft delay={0.1}>
-            <p className="mt-4 max-w-[72ch] text-sm leading-relaxed text-muted-foreground sm:text-base">
+            <p
+              className={`mt-4 max-w-[72ch] text-sm leading-relaxed sm:text-base ${mutedTextClass}`}
+            >
               {comparison.subhead}
             </p>
           </FadeInLeft>
 
           <FadeInUp>
-            <div className="mt-8 overflow-x-auto border border-border bg-background/40 backdrop-blur-sm">
+            <div
+              className={`mt-8 overflow-x-auto border backdrop-blur-sm ${isDark ? "border-white/10 bg-background/74" : "border-border bg-background/40"}`}
+            >
               <table className="w-full min-w-[640px] border-collapse text-sm sm:min-w-[860px]">
-                <thead className="bg-muted/30">
+                <thead className={isDark ? "bg-background/90" : "bg-muted/30"}>
                   <tr>
-                    <th className="w-[320px] border-b border-border px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                    <th
+                      className={`w-[320px] border-b px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase ${isDark ? "border-white/10 text-foreground/72" : "border-border text-muted-foreground"}`}
+                    >
                       Feature
                     </th>
                     {comparison.columns.map((col, colIdx) => (
                       <th
                         key={col}
                         className={[
-                          "border-b border-border px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase",
+                          `border-b px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase ${isDark ? "border-white/10" : "border-border"}`,
                           colIdx === 0
-                            ? "bg-primary/[0.04] text-primary"
-                            : "text-muted-foreground",
+                            ? "bg-primary/[0.08] text-primary"
+                            : isDark
+                              ? "text-foreground/72"
+                              : "text-muted-foreground",
                           colIdx >= 3 ? "hidden sm:table-cell" : "",
                         ].join(" ")}
                       >
@@ -830,7 +906,12 @@ export default function Home() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {comparison.rows.map((row) => (
-                    <tr key={row.label} className="hover:bg-muted/20">
+                    <tr
+                      key={row.label}
+                      className={
+                        isDark ? "hover:bg-background/80" : "hover:bg-muted/20"
+                      }
+                    >
                       <td className="px-4 py-3 font-medium text-foreground/80">
                         {row.label}
                       </td>
@@ -839,7 +920,7 @@ export default function Home() {
                           key={idx}
                           className={[
                             "px-4 py-3",
-                            idx === 0 ? "bg-primary/[0.06]" : "",
+                            idx === 0 ? "bg-primary/[0.08]" : "",
                             idx >= 3 ? "hidden sm:table-cell" : "",
                           ].join(" ")}
                         >
@@ -849,7 +930,13 @@ export default function Home() {
                               <span className="sr-only">yes</span>
                             </span>
                           ) : (
-                            <span className="text-muted-foreground">
+                            <span
+                              className={
+                                isDark
+                                  ? "text-foreground/55"
+                                  : "text-muted-foreground"
+                              }
+                            >
                               &mdash;
                             </span>
                           )}
@@ -860,7 +947,7 @@ export default function Home() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className={`mt-3 text-xs ${mutedTextClass}`}>
               {comparison.footnote}
             </p>
           </FadeInUp>
@@ -877,7 +964,7 @@ export default function Home() {
             {copy.steps.map((step, i) => (
               <FadeInUp key={step.n} delay={i * 0.1}>
                 <motion.div
-                  className="group relative min-h-60 overflow-hidden border border-border bg-card/40 p-5 backdrop-blur-sm hover:border-primary/30 hover:bg-card/60 hover:shadow-lg sm:p-6"
+                  className={`group relative min-h-60 overflow-hidden border p-5 backdrop-blur-sm hover:border-primary/30 hover:shadow-lg sm:p-6 ${surfaceClass} ${isDark ? "hover:bg-background/80" : "hover:bg-card/60"}`}
                   whileHover={shouldReduce ? {} : { y: -4, scale: 1.012 }}
                   whileTap={shouldReduce ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 280, damping: 22 }}
@@ -889,7 +976,9 @@ export default function Home() {
                   <h3 className="relative font-heading text-lg font-semibold text-foreground sm:text-xl">
                     {step.title}
                   </h3>
-                  <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground sm:mt-3 sm:text-sm">
+                  <p
+                    className={`relative mt-2 text-xs leading-relaxed sm:mt-3 sm:text-sm ${mutedTextClass}`}
+                  >
                     {step.desc}
                   </p>
                 </motion.div>
@@ -914,7 +1003,9 @@ export default function Home() {
           <div className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4">
             {copy.features.map((f, i) => (
               <FadeInUp key={f.label} delay={i * 0.07}>
-                <div className="group flex h-full flex-col border border-border bg-background/40 p-5 backdrop-blur-sm transition-all hover:border-primary/30 hover:bg-primary/[0.03] hover:shadow-md sm:p-6">
+                <div
+                  className={`group flex h-full flex-col border p-5 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-md sm:p-6 ${isDark ? "border-white/10 bg-background/72 hover:bg-background/80" : "border-border bg-background/40 hover:bg-primary/[0.03]"}`}
+                >
                   <div className="flex items-center gap-2.5">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/15">
                       <f.icon className="h-4 w-4 text-primary/70 transition-colors group-hover:text-primary" />
@@ -923,7 +1014,9 @@ export default function Home() {
                       {f.label}
                     </h4>
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                  <p
+                    className={`mt-4 text-sm leading-relaxed ${mutedTextClass}`}
+                  >
                     {f.desc}
                   </p>
                 </div>
@@ -1002,7 +1095,9 @@ export default function Home() {
                 { name: "Supabase", url: "https://supabase.com" },
               ].map((tech) => (
                 <LinkPreview key={tech.name} url={tech.url}>
-                  <span className="inline-block cursor-pointer border border-border bg-background/40 px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary hover:shadow-sm sm:px-5 sm:py-2 sm:text-sm">
+                  <span
+                    className={`inline-block cursor-pointer border px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary hover:shadow-sm sm:px-5 sm:py-2 sm:text-sm ${isDark ? "border-white/10 bg-background/72" : "border-border bg-background/40"}`}
+                  >
                     {tech.name}
                   </span>
                 </LinkPreview>
@@ -1028,7 +1123,9 @@ export default function Home() {
           </ScaleIn>
         </section>
       </main>
-      <Footer />
+      <div className="relative z-50 bg-background/30">
+        <Footer />
+      </div>
     </div>
   )
 }

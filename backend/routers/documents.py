@@ -237,6 +237,9 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
                     doc["storage_path"] = storage_match["storage_path"]
                     doc["public_url"] = storage_match["public_url"]
                 valid_documents.append(normalize_document_row(doc))
+            elif storage_path is None:
+                # Seeded doc — no storage backing by design, keep it
+                valid_documents.append(normalize_document_row(doc))
             else:
                 removed_ids.append(doc["id"])
                 logger.info("[Sync] Removing orphaned row for %s", doc["id"])
@@ -580,14 +583,11 @@ PREWARM_QUESTIONS: dict[str, list[str]] = {
 }
 
 
-@router.post("/seed")
-@limiter.limit("5/minute")
-async def seed_featured_documents(request: Request):
+async def _do_seed() -> dict:
     """
-    Idempotent seeding of pre-approved Malaysian government PDFs.
-    Uses uuid5 for deterministic Supabase IDs (lr_documents.id is UUID type).
-    Pinecone still uses the short doc_id string for vector metadata.
-    Idempotency checked by document name, not by id.
+    Seed logic decoupled from FastAPI request — callable from startup and the HTTP route.
+    Uses uuid5 for deterministic Supabase IDs. Pinecone namespace = supabase_id so the
+    chat API (which receives doc.id from the frontend) hits the correct namespace.
     """
     existing_docs = load_documents()
     existing_names = {doc["name"] for doc in existing_docs}
@@ -609,16 +609,15 @@ async def seed_featured_documents(request: Request):
             logger.warning("[Seed] PDF not found, skipping: %s", pdf_path)
             continue
 
-        # Deterministic UUID so re-seeding always produces the same Supabase row id
+        # Deterministic UUID — used for BOTH Supabase row id and Pinecone namespace
         supabase_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
 
         try:
             chunk_count, _ = ingest_document(
                 pdf_path=pdf_path,
-                document_id=doc_id,
+                document_id=supabase_id,
                 document_name=doc_name,
             )
-            # Build safe base payload — only columns guaranteed to exist
             base_payload = {
                 "id": supabase_id,
                 "name": doc_name,
@@ -648,6 +647,13 @@ async def seed_featured_documents(request: Request):
     return {"seeded": seeded, "already_present": already_present}
 
 
+@router.post("/seed")
+@limiter.limit("5/minute")
+async def seed_featured_documents(request: Request):
+    _ = request
+    return await _do_seed()
+
+
 async def _prewarm_featured_docs():
     """
     After seeding completes, silently fire 3 pre-warm questions per featured doc.
@@ -658,13 +664,14 @@ async def _prewarm_featured_docs():
     existing_ids = {doc["id"] for doc in load_documents()}
     for featured in FEATURED_DOCS:
         doc_id = featured["doc_id"]
-        if doc_id not in existing_ids:
+        supabase_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
+        if supabase_id not in existing_ids:
             continue
         for question in PREWARM_QUESTIONS.get(doc_id, []):
             try:
                 answer_question(
                     question=question,
-                    document_id=doc_id,
+                    document_id=supabase_id,
                     enable_query_augmentation=False,
                 )
                 logger.info("[Prewarm] Cached: %s / %s", doc_id, question[:40])

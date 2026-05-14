@@ -18,3 +18,9 @@ node_modules/
 .DS_Store
 .tmp_docx
 .tmp_links.zip
+.superpowers
+.claude/
+.agents/
+.vscode
+.codex-plugins/
+.pytest_cache/
