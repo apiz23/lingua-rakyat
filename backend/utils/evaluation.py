@@ -348,9 +348,9 @@ class Evaluator:
         for r in self._records:
             ls = lang_stats[r["language"]]
             ls["count"]         += 1
-            ls["total_conf"]    += r["confidence"]
-            ls["total_latency"] += r["latency_ms"]
-            ls["total_grade"]   += r["fk_grade"]
+            ls["total_conf"]    += r.get("confidence", 0.0)
+            ls["total_latency"] += r.get("latency_ms", 0)
+            ls["total_grade"]   += r.get("fk_grade", 0.0)
 
         per_language = {}
         for lang, ls in lang_stats.items():
