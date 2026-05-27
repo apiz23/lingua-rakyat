@@ -96,6 +96,82 @@ function highlightSourceText(text: string, question: string) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// SourcePills — always-visible page citation badges below the answer
+// ---------------------------------------------------------------------------
+
+interface SourcePillData {
+  pageStart: number
+  pageEnd: number | null
+  sectionTitle: string
+  sourceIndex: number
+}
+
+function SourcePills({
+  sources,
+  language,
+  onPillClick,
+}: {
+  sources: SourceChunk[]
+  language: string
+  onPillClick: (sourceIndex: number, pageStart: number) => void
+}) {
+  // Deduplicate by page_start — keep highest-scoring source per page
+  const pillMap = new Map<number, SourcePillData>()
+  sources.forEach((source, idx) => {
+    const page = source.page_start
+    if (!page) return
+    const existing = pillMap.get(page)
+    if (!existing || source.score > (sources[existing.sourceIndex]?.score ?? 0)) {
+      pillMap.set(page, {
+        pageStart: page,
+        pageEnd: source.page_end ?? null,
+        sectionTitle: source.section_title ?? "",
+        sourceIndex: idx,
+      })
+    }
+  })
+
+  // Sort by page_start ascending (document reading order), cap at 5
+  const pills = Array.from(pillMap.values())
+    .sort((a, b) => a.pageStart - b.pageStart)
+    .slice(0, 5)
+
+  if (pills.length === 0) return null
+
+  const pageLabel = (pill: SourcePillData): string => {
+    const range =
+      pill.pageEnd && pill.pageEnd !== pill.pageStart
+        ? `${pill.pageStart}–${pill.pageEnd}`
+        : `${pill.pageStart}`
+    if (language === "ms") return `Hlm ${range}`
+    if (language === "zh-cn") return `页 ${range}`
+    return `Page ${range}`
+  }
+
+  return (
+    <div className="mt-3 mb-1 flex flex-wrap gap-1.5">
+      {pills.map((pill) => (
+        <button
+          key={pill.pageStart}
+          type="button"
+          onClick={() => onPillClick(pill.sourceIndex, pill.pageStart)}
+          className="inline-flex items-center gap-1.5 border border-primary/30 bg-primary/5 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          title={pill.sectionTitle || pageLabel(pill)}
+        >
+          <FileText className="h-3 w-3 shrink-0" />
+          <span>{pageLabel(pill)}</span>
+          {pill.sectionTitle ? (
+            <span className="max-w-[90px] overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground">
+              · {pill.sectionTitle}
+            </span>
+          ) : null}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function AIMessageCard({
   message,
   index,
@@ -128,6 +204,18 @@ export function AIMessageCard({
   const [isStreamed, setIsStreamed] = React.useState(message.cached)
   const [feedback, setFeedback] = React.useState<"up" | "down" | null>(null)
   const [viewerPage, setViewerPage] = React.useState<number | null>(null)
+  const [highlightedSourceIdx, setHighlightedSourceIdx] = React.useState<number | null>(null)
+
+  const handlePillClick = React.useCallback(
+    (sourceIndex: number, _pageStart: number) => {
+      // Open sources panel if closed
+      if (!expandedSources.has(index)) toggleSources(index)
+      // Briefly highlight the matching source card
+      setHighlightedSourceIdx(sourceIndex)
+      setTimeout(() => setHighlightedSourceIdx(null), 1500)
+    },
+    [expandedSources, toggleSources, index]
+  )
 
   const { play } = useTTS()
 
@@ -271,6 +359,14 @@ export function AIMessageCard({
               <ChatMarkdown content={message.answer} />
             )}
 
+            {!message.isStreaming && message.sources.length > 0 && (
+              <SourcePills
+                sources={message.sources}
+                language={message.language}
+                onPillClick={handlePillClick}
+              />
+            )}
+
             {!message.isStreaming && (
               <VoiceSpeaker text={message.answer} language={message.language} />
             )}
@@ -378,7 +474,12 @@ export function AIMessageCard({
                       return (
                         <div
                           key={sourceIndex}
-                          className="animate-in fade-in slide-in-from-top-1 relative border border-border/50 bg-muted/20 p-3 transition-colors duration-200 hover:bg-muted/40 sm:p-4"
+                          className={cn(
+                            "animate-in fade-in slide-in-from-top-1 relative border p-3 transition-all duration-300 sm:p-4",
+                            highlightedSourceIdx === sourceIndex
+                              ? "border-primary/60 bg-primary/5 ring-1 ring-primary/30"
+                              : "border-border/50 bg-muted/20 hover:bg-muted/40"
+                          )}
                           style={{ animationDelay: `${sourceIndex * 50}ms` }}
                         >
                           <div className="mb-2 flex items-center justify-between gap-3">
