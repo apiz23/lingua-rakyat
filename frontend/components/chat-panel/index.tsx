@@ -1229,30 +1229,28 @@ export default function ChatPanel({
               titleIdle={copy.voiceStart}
               titleRecording={copy.voiceStop}
             />
+
+            <button
+              type="button"
+              onClick={toggleAutoSpeak}
+              className={cn(
+                "flex items-center gap-1 border px-2 py-1 text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
+                autoSpeak
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+              title="Auto-baca jawapan"
+              aria-label="Auto-baca jawapan"
+              aria-pressed={autoSpeak}
+            >
+              <Volume2 className={cn("h-3 w-3", autoSpeak && "fill-current")} />
+              <span className="hidden sm:inline">Auto-baca</span>
+            </button>
           </ChatInput>
 
-          <div className="mt-2 hidden justify-between px-2 sm:mt-3 sm:flex">
-            <p className="text-xs text-muted-foreground">Enter {copy.send}</p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={toggleAutoSpeak}
-                className={cn(
-                  "flex items-center gap-1.5 text-xs transition-colors",
-                  autoSpeak ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                )}
-                title="Auto-baca jawapan"
-                aria-label="Auto-baca jawapan"
-                aria-pressed={autoSpeak}
-              >
-                <Volume2 className={cn("h-3 w-3", autoSpeak && "fill-current")} />
-                Auto-baca
-              </button>
-              <p className="text-xs text-muted-foreground">
-                Shift + Enter {copy.newLine}
-              </p>
-            </div>
-          </div>
+          <p className="mt-1.5 hidden px-1 text-[10px] text-muted-foreground sm:block">
+            Enter → {copy.send} · Shift+Enter → {copy.newLine}
+          </p>
         </div>
       </AiChatFooter>
     </AiChat>
