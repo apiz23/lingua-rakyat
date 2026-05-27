@@ -105,9 +105,10 @@ interface SourcePillData {
   pageEnd: number | null
   sectionTitle: string
   sourceIndex: number
+  score: number
 }
 
-function SourcePills({
+const SourcePills = React.memo(function SourcePills({
   sources,
   language,
   onPillClick,
@@ -120,14 +121,15 @@ function SourcePills({
   const pillMap = new Map<number, SourcePillData>()
   sources.forEach((source, idx) => {
     const page = source.page_start
-    if (!page) return
+    if (page == null) return
     const existing = pillMap.get(page)
-    if (!existing || source.score > (sources[existing.sourceIndex]?.score ?? 0)) {
+    if (!existing || source.score > existing.score) {
       pillMap.set(page, {
         pageStart: page,
         pageEnd: source.page_end ?? null,
         sectionTitle: source.section_title ?? "",
         sourceIndex: idx,
+        score: source.score,
       })
     }
   })
@@ -157,6 +159,7 @@ function SourcePills({
           type="button"
           onClick={() => onPillClick(pill.sourceIndex, pill.pageStart)}
           className="inline-flex items-center gap-1.5 border border-primary/30 bg-primary/5 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={`${pageLabel(pill)}${pill.sectionTitle ? ` — ${pill.sectionTitle}` : ""}`}
           title={pill.sectionTitle || pageLabel(pill)}
         >
           <FileText className="h-3 w-3 shrink-0" />
@@ -170,7 +173,7 @@ function SourcePills({
       ))}
     </div>
   )
-}
+})
 
 export function AIMessageCard({
   message,
@@ -205,17 +208,29 @@ export function AIMessageCard({
   const [feedback, setFeedback] = React.useState<"up" | "down" | null>(null)
   const [viewerPage, setViewerPage] = React.useState<number | null>(null)
   const [highlightedSourceIdx, setHighlightedSourceIdx] = React.useState<number | null>(null)
+  const highlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handlePillClick = React.useCallback(
     (sourceIndex: number, _pageStart: number) => {
       // Open sources panel if closed
       if (!expandedSources.has(index)) toggleSources(index)
+      // Cancel any in-flight highlight timer (prevents stacked timers on rapid clicks)
+      if (highlightTimerRef.current !== null) clearTimeout(highlightTimerRef.current)
       // Briefly highlight the matching source card
       setHighlightedSourceIdx(sourceIndex)
-      setTimeout(() => setHighlightedSourceIdx(null), 1500)
+      highlightTimerRef.current = setTimeout(() => {
+        highlightTimerRef.current = null
+        setHighlightedSourceIdx(null)
+      }, 1500)
     },
     [expandedSources, toggleSources, index]
   )
+
+  React.useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current !== null) clearTimeout(highlightTimerRef.current)
+    }
+  }, [])
 
   const { play } = useTTS()
 
