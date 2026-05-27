@@ -15,7 +15,7 @@ export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
     if (state === "playing") {
       stop()
     } else {
-      play(text, language)
+      play(text, language) // also handles "error" state — retries
     }
   }
 
@@ -24,8 +24,18 @@ export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
       onClick={handleClick}
       disabled={state === "loading"}
       className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-      title={state === "playing" ? "Henti" : "Dengar jawapan"}
-      aria-label={state === "playing" ? "Henti" : "Dengar jawapan"}
+      title={
+        state === "loading" ? "Memuatkan audio…" :
+        state === "playing" ? "Henti" :
+        state === "error" ? "Cuba semula" :
+        "Dengar jawapan"
+      }
+      aria-label={
+        state === "loading" ? "Memuatkan audio…" :
+        state === "playing" ? "Henti" :
+        state === "error" ? "Cuba semula" :
+        "Dengar jawapan"
+      }
     >
       {state === "loading" && <Loader2 className="h-3 w-3 animate-spin" />}
       {state === "playing" && <Square className="h-3 w-3 fill-current" />}

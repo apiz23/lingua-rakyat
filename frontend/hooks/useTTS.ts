@@ -41,8 +41,14 @@ export function useTTS(): UseTTSReturn {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const objectUrlRef = useRef<string | null>(null)
   const abortCtrlRef = useRef<AbortController | null>(null)
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const stop = useCallback(() => {
+    // Cancel fallback timer if running
+    if (fallbackTimerRef.current !== null) {
+      clearTimeout(fallbackTimerRef.current)
+      fallbackTimerRef.current = null
+    }
     // Cancel any in-flight fetch
     if (abortCtrlRef.current) {
       abortCtrlRef.current.abort()
@@ -100,7 +106,7 @@ export function useTTS(): UseTTSReturn {
           URL.revokeObjectURL(url)
           objectUrlRef.current = null
           audioRef.current = null
-          setState("idle")
+          setState("error")
         }
 
         setState("playing")
@@ -111,7 +117,10 @@ export function useTTS(): UseTTSReturn {
         setState("playing")
         // speechSynthesis has no reliable onend — reset after estimated duration
         const estimatedMs = Math.max(2000, text.length * 60)
-        setTimeout(() => setState("idle"), estimatedMs)
+        fallbackTimerRef.current = setTimeout(() => {
+          fallbackTimerRef.current = null
+          setState("idle")
+        }, estimatedMs)
       }
     } catch (err) {
       // Don't fallback if request was intentionally aborted
@@ -122,7 +131,10 @@ export function useTTS(): UseTTSReturn {
       speakFallback(text, language)
       setState("playing")
       const estimatedMs = Math.max(2000, text.length * 60)
-      setTimeout(() => setState("idle"), estimatedMs)
+      fallbackTimerRef.current = setTimeout(() => {
+        fallbackTimerRef.current = null
+        setState("idle")
+      }, estimatedMs)
     }
   }, [stop])
 
