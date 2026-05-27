@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -137,6 +137,9 @@ export function useTTS(): UseTTSReturn {
       }, estimatedMs)
     }
   }, [stop])
+
+  // Cleanup on unmount — stop audio, clear timers, cancel speech
+  useEffect(() => () => { stop() }, [stop])
 
   return { play, stop, state }
 }
