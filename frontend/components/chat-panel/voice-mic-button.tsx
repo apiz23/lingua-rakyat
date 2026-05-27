@@ -9,9 +9,12 @@ interface VoiceMicButtonProps {
   onTranscript: (text: string, language: string) => void
   onError?: (message: string) => void
   disabled?: boolean
+  titleIdle?: string
+  titleRecording?: string
+  titleTranscribing?: string
 }
 
-export function VoiceMicButton({ onTranscript, onError, disabled }: VoiceMicButtonProps) {
+export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, titleRecording, titleTranscribing }: VoiceMicButtonProps) {
   const { state, transcript, language, errorMessage, startRecording, stopRecording, reset } =
     useVoiceRecorder()
 
@@ -45,16 +48,19 @@ export function VoiceMicButton({ onTranscript, onError, disabled }: VoiceMicButt
   const isTranscribing = state === "transcribing"
   const isDone = state === "done"
 
+  const ariaLabel = isRecording
+    ? (titleRecording ?? "Ketuk untuk berhenti")
+    : isTranscribing
+    ? (titleTranscribing ?? "Mentranskrip…")
+    : (titleIdle ?? "Rakam soalan")
+
   return (
     <button
       type="button"
       onClick={handleClick}
       disabled={disabled || isTranscribing}
-      title={
-        isRecording ? "Ketuk untuk berhenti" :
-        isTranscribing ? "Mentranskrip…" :
-        "Rakam soalan"
-      }
+      aria-label={ariaLabel}
+      title={ariaLabel}
       className={cn(
         "relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
         // idle

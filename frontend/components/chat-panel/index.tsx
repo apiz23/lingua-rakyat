@@ -1216,8 +1216,10 @@ export default function ChatPanel({
 
             <VoiceMicButton
               disabled={loading}
-              onTranscript={(text) => setInput(text)}
+              onTranscript={(text, _language) => setInput(text)}
               onError={(msg) => toast.error(msg)}
+              titleIdle={copy.voiceStart}
+              titleRecording={copy.voiceStop}
             />
           </ChatInput>
 
