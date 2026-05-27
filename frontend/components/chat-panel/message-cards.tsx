@@ -220,17 +220,17 @@ export function AIMessageCard({
 
             {/* Compact secondary line: evidence dot + label + cached + latency */}
             <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-              <span className={cn("h-1.5 w-1.5 rounded-full", evidenceState.dotColor)} />
+              <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", evidenceState.dotColor)} />
               <span>{evidenceState.label}</span>
               {message.cached ? (
                 <>
-                  <span>·</span>
+                  <span aria-hidden="true">·</span>
                   <span>{language === "ms" ? "cache" : "cached"}</span>
                 </>
               ) : null}
               {message.latency_ms > 0 ? (
                 <>
-                  <span>·</span>
+                  <span aria-hidden="true">·</span>
                   <span>
                     {message.latency_ms < 1000
                       ? `${message.latency_ms}ms`
