@@ -46,6 +46,7 @@ import {
   MoreVertical,
   Plus,
   Sparkles,
+  Volume2,
   X,
 } from "lucide-react"
 import {
@@ -186,6 +187,19 @@ export default function ChatPanel({
   const [documentHistory, setDocumentHistory] = useState<ChatHistoryMessage[]>(
     []
   )
+  const [autoSpeak, setAutoSpeak] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem("lingua-autospeak") === "true"
+  })
+
+  const toggleAutoSpeak = () => {
+    setAutoSpeak((prev) => {
+      const next = !prev
+      localStorage.setItem("lingua-autospeak", String(next))
+      return next
+    })
+  }
+
   const copy =
     language === "ms"
       ? {
@@ -1225,9 +1239,25 @@ export default function ChatPanel({
 
           <div className="mt-2 hidden justify-between px-2 sm:mt-3 sm:flex">
             <p className="text-xs text-muted-foreground">Enter {copy.send}</p>
-            <p className="text-xs text-muted-foreground">
-              Shift + Enter {copy.newLine}
-            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={toggleAutoSpeak}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs transition-colors",
+                  autoSpeak ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Auto-baca jawapan"
+                aria-label="Auto-baca jawapan"
+                aria-pressed={autoSpeak}
+              >
+                <Volume2 className={cn("h-3 w-3", autoSpeak && "fill-current")} />
+                Auto-baca
+              </button>
+              <p className="text-xs text-muted-foreground">
+                Shift + Enter {copy.newLine}
+              </p>
+            </div>
           </div>
         </div>
       </AiChatFooter>

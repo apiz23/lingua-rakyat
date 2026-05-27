@@ -7,6 +7,8 @@ import { useLanguage } from "@/components/language-provider"
 import AgentAvatar from "@/components/smoothui/agent-avatar"
 import { StreamingText } from "@/components/elements/ai-elements/chat/streaming-text"
 import { ChatMarkdown } from "./chat-markdown"
+import { VoiceSpeaker } from "./voice-speaker"
+import { useTTS } from "@/hooks/useTTS"
 import {
   FileText,
   ChevronDown,
@@ -123,6 +125,19 @@ export function AIMessageCard({
   const [isStreamed, setIsStreamed] = React.useState(message.cached)
   const [feedback, setFeedback] = React.useState<"up" | "down" | null>(null)
   const [viewerPage, setViewerPage] = React.useState<number | null>(null)
+
+  const { play } = useTTS()
+
+  React.useEffect(() => {
+    if (!isLatest) return
+    if (message.isStreaming) return
+
+    const autoSpeak = localStorage.getItem("lingua-autospeak") === "true"
+    if (!autoSpeak) return
+
+    play(message.answer, message.language)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message.isStreaming, isLatest])
 
   React.useEffect(() => {
     if (message.cached) {
@@ -277,6 +292,10 @@ export function AIMessageCard({
               </div>
             ) : (
               <ChatMarkdown content={message.answer} />
+            )}
+
+            {!message.isStreaming && (
+              <VoiceSpeaker text={message.answer} language={message.language} />
             )}
 
             <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
