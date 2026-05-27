@@ -9,18 +9,18 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from utils.voice_helpers import TranscriptionError, text_to_speech, transcribe_audio
+from utils.voice_helpers import TranscriptionError, MAX_TTS_CHARS, text_to_speech, transcribe_audio
 
 logger = logging.getLogger("voice_router")
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
-MIN_AUDIO_BYTES = 1  # reject truly empty uploads
+MIN_AUDIO_BYTES = 1  # rejects zero-byte uploads; real duration check is Groq's response
 
 
 class TTSRequest(BaseModel):
     text: str = Field(min_length=1)
-    language: str = "en"
+    language: str = "en"  # reserved for future per-language voice selection; currently unused
 
 
 # ── /transcribe ───────────────────────────────────────────────────────────────
@@ -61,4 +61,5 @@ async def tts(request: Request, body: TTSRequest):
         # ElevenLabs quota exceeded — tell frontend to use speechSynthesis
         return JSONResponse(content={"fallback": True})
 
-    return Response(content=audio_bytes, media_type="audio/mpeg")
+    extra_headers = {"X-TTS-Truncated": "true"} if len(body.text) > MAX_TTS_CHARS else {}
+    return Response(content=audio_bytes, media_type="audio/mpeg", headers=extra_headers)

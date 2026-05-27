@@ -67,3 +67,16 @@ def test_tts_rejects_empty_text():
         json={"text": "", "language": "en"},
     )
     assert resp.status_code == 422  # Pydantic validation
+
+
+def test_transcribe_returns_422_on_transcription_error():
+    from utils.voice_helpers import TranscriptionError
+    with patch("routers.voice.transcribe_audio", side_effect=TranscriptionError("groq down")):
+        client = _make_client()
+        audio_bytes = b"fake_webm_audio_data"
+        resp = client.post(
+            "/api/voice/transcribe",
+            files={"audio": ("recording.webm", audio_bytes, "audio/webm")},
+        )
+    assert resp.status_code == 422
+    assert "groq down" in resp.json()["detail"]

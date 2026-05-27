@@ -44,6 +44,8 @@ def transcribe_audio(audio_bytes: bytes, filename: str) -> dict:
     Raises:
         TranscriptionError: On empty input or Groq API failure.
     """
+    # Defensive guard — router rejects empty bytes at HTTP layer (400),
+    # but this protects non-HTTP callers too.
     if not audio_bytes:
         raise TranscriptionError("empty audio: no bytes received")
 
@@ -84,6 +86,10 @@ def text_to_speech(text: str) -> bytes | None:
     Raises:
         Exception: On unexpected ElevenLabs errors (not 429).
     """
+    if len(text) > MAX_TTS_CHARS:
+        logger.warning(
+            "TTS text truncated from %d to %d chars", len(text), MAX_TTS_CHARS
+        )
     text = text[:MAX_TTS_CHARS]
 
     try:
