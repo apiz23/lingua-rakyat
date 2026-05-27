@@ -40,8 +40,14 @@ export function useTTS(): UseTTSReturn {
   const [state, setState] = useState<TTSState>("idle")
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const objectUrlRef = useRef<string | null>(null)
+  const abortCtrlRef = useRef<AbortController | null>(null)
 
   const stop = useCallback(() => {
+    // Cancel any in-flight fetch
+    if (abortCtrlRef.current) {
+      abortCtrlRef.current.abort()
+      abortCtrlRef.current = null
+    }
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current = null
@@ -57,15 +63,20 @@ export function useTTS(): UseTTSReturn {
   }, [])
 
   const play = useCallback(async (text: string, language: string) => {
-    stop()
+    stop()  // this now also aborts previous in-flight fetch
     setState("loading")
+
+    const ctrl = new AbortController()
+    abortCtrlRef.current = ctrl
 
     try {
       const res = await fetch(`${API_URL}/api/voice/tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, language }),
+        signal: ctrl.signal,
       })
+      abortCtrlRef.current = null
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
@@ -85,10 +96,15 @@ export function useTTS(): UseTTSReturn {
           audioRef.current = null
           setState("idle")
         }
-        audio.onerror = () => setState("idle")
+        audio.onerror = () => {
+          URL.revokeObjectURL(url)
+          objectUrlRef.current = null
+          audioRef.current = null
+          setState("idle")
+        }
 
-        await audio.play()
         setState("playing")
+        await audio.play()
       } else {
         // Backend returned { fallback: true } — quota exceeded
         speakFallback(text, language)
@@ -97,10 +113,16 @@ export function useTTS(): UseTTSReturn {
         const estimatedMs = Math.max(2000, text.length * 60)
         setTimeout(() => setState("idle"), estimatedMs)
       }
-    } catch {
+    } catch (err) {
+      // Don't fallback if request was intentionally aborted
+      if (err instanceof Error && err.name === "AbortError") {
+        return
+      }
       // Network error — best-effort fallback
       speakFallback(text, language)
-      setState("idle")
+      setState("playing")
+      const estimatedMs = Math.max(2000, text.length * 60)
+      setTimeout(() => setState("idle"), estimatedMs)
     }
   }, [stop])
 
