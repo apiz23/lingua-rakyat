@@ -827,10 +827,6 @@ export default function ChatPanel({
   }
 
   const threads = buildThreads(documentHistory)
-  const activeThreadLabel =
-    threads.find((thread) => thread.sessionId === sessionId)?.previewQuestion ||
-    copy.currentThread
-
   const chatStatus = loading ? "streaming" : "ready"
 
   return (
