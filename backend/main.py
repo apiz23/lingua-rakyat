@@ -47,6 +47,7 @@ logger.info("Starting Lingua Rakyat backend (lightweight mode — Cohere + Groq)
 from routers.documents import router as documents_router
 from routers.chat import router as chat_router
 from routers.eval import router as eval_router
+from routers.voice import router as voice_router
 
 # ─── App instance ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -141,6 +142,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(documents_router, prefix="/api/documents", tags=["Documents"])
 app.include_router(chat_router,      prefix="/api/chat",      tags=["Chat"])
 app.include_router(eval_router,      prefix="/api/eval",      tags=["Evaluation"])
+app.include_router(voice_router,     prefix="/api/voice",     tags=["Voice"])
 
 # ─── Startup: Seed + Prewarm ──────────────────────────────────────────────────
 # ─── Health Check ─────────────────────────────────────────────────────────────
