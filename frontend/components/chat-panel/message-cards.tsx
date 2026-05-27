@@ -136,8 +136,8 @@ export function AIMessageCard({
     if (!autoSpeak) return
 
     play(message.answer, message.language)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.isStreaming, isLatest])
+    // play is stable (useCallback with no deps) — safe to include, prevents stale closure if deps change
+  }, [message.isStreaming, isLatest, play])
 
   React.useEffect(() => {
     if (message.cached) {
