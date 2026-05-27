@@ -257,6 +257,8 @@ export default function ChatPanel({
           options: "Pilihan",
           back: "Kembali",
           answerError: "Gagal mendapatkan jawapan",
+          autoSpeakTitle: "Auto-baca jawapan",
+          autoSpeakShort: "Auto-baca",
         }
       : {
           historyLoadError: "Failed to load chat history",
@@ -303,6 +305,8 @@ export default function ChatPanel({
           options: "Options",
           back: "Back",
           answerError: "Failed to get answer",
+          autoSpeakTitle: "Auto-read answers",
+          autoSpeakShort: "Auto-read",
         }
 
   const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
@@ -1043,6 +1047,7 @@ export default function ChatPanel({
                       copiedId={copiedId}
                       copyToClipboard={copyToClipboard}
                       docPublicUrl={selectedDoc?.public_url ?? undefined}
+                      autoSpeak={autoSpeak}
                     />
                   </div>
                 ))}
@@ -1234,17 +1239,17 @@ export default function ChatPanel({
               type="button"
               onClick={toggleAutoSpeak}
               className={cn(
-                "flex items-center gap-1 border px-2 py-1 text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
+                "flex items-center gap-1 rounded border px-2 py-1 text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
                 autoSpeak
                   ? "border-primary/30 bg-primary/10 text-primary"
                   : "border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
-              title="Auto-baca jawapan"
-              aria-label="Auto-baca jawapan"
+              title={copy.autoSpeakTitle}
+              aria-label={copy.autoSpeakTitle}
               aria-pressed={autoSpeak}
             >
               <Volume2 className={cn("h-3 w-3", autoSpeak && "fill-current")} />
-              <span className="hidden sm:inline">Auto-baca</span>
+              <span className="hidden sm:inline">{copy.autoSpeakShort}</span>
             </button>
           </ChatInput>
 

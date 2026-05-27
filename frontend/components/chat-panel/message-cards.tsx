@@ -104,6 +104,7 @@ export function AIMessageCard({
   copiedId,
   copyToClipboard,
   docPublicUrl,
+  autoSpeak,
 }: {
   message: Message
   index: number
@@ -113,6 +114,7 @@ export function AIMessageCard({
   copiedId: string | null
   copyToClipboard: (text: string, id: string) => void
   docPublicUrl?: string
+  autoSpeak?: boolean
 }) {
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
@@ -131,13 +133,11 @@ export function AIMessageCard({
   React.useEffect(() => {
     if (!isLatest) return
     if (message.isStreaming) return
-
-    const autoSpeak = localStorage.getItem("lingua-autospeak") === "true"
     if (!autoSpeak) return
 
     play(message.answer, message.language)
     // play is stable (useCallback with no deps) — safe to include, prevents stale closure if deps change
-  }, [message.isStreaming, isLatest, play])
+  }, [message.isStreaming, isLatest, autoSpeak, play])
 
   React.useEffect(() => {
     if (message.cached) {
