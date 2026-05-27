@@ -43,8 +43,6 @@ import {
   History,
   Languages,
   MessageSquare,
-  Mic,
-  MicOff,
   MoreVertical,
   Plus,
   Sparkles,
@@ -56,6 +54,7 @@ import {
   TypingIndicator,
   UserMessageBubble,
 } from "./message-cards"
+import { VoiceMicButton } from "./voice-mic-button"
 
 interface ChatPanelProps {
   selectedDoc: Document | null
@@ -72,38 +71,6 @@ interface ChatThread {
   messageCount: number
 }
 
-interface SpeechRecognitionAlternative {
-  transcript: string
-}
-
-interface SpeechRecognitionResultLike {
-  isFinal: boolean
-  0: SpeechRecognitionAlternative
-  length: number
-}
-
-interface SpeechRecognitionEventLike extends Event {
-  resultIndex: number
-  results: ArrayLike<SpeechRecognitionResultLike>
-}
-
-interface SpeechRecognitionErrorEventLike extends Event {
-  error: string
-}
-
-interface SpeechRecognitionLike extends EventTarget {
-  continuous: boolean
-  interimResults: boolean
-  lang: string
-  onstart: ((event: Event) => void) | null
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null
-  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null
-  onend: ((event: Event) => void) | null
-  start: () => void
-  stop: () => void
-}
-
-type SpeechRecognitionCtor = new () => SpeechRecognitionLike
 
 const SUGGESTIONS = [
   {
@@ -219,9 +186,6 @@ export default function ChatPanel({
   const [documentHistory, setDocumentHistory] = useState<ChatHistoryMessage[]>(
     []
   )
-  const [speechSupported, setSpeechSupported] = useState(false)
-  const [isListening, setIsListening] = useState(false)
-
   const copy =
     language === "ms"
       ? {
@@ -323,37 +287,9 @@ export default function ChatPanel({
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
-  const speechCtorRef = useRef<SpeechRecognitionCtor | null>(null)
-  const dictationBaseRef = useRef("")
   const isMountedRef = useRef(true)
   const historyAbortRef = useRef<AbortController | null>(null)
 
-  const getSpeechLocale = (lang: string) => {
-    switch (lang) {
-      case "ms":
-      case "id":
-        return "ms-MY"
-      case "zh":
-      case "zh-cn":
-        return "zh-CN"
-      case "zh-tw":
-        return "zh-TW"
-      default:
-        return "en-US"
-    }
-  }
-
-  const mergeVoiceTranscript = (
-    baseText: string,
-    finalTranscript: string,
-    interimTranscript: string
-  ) => {
-    const normalizedBase = baseText.trim()
-    const spokenText = `${finalTranscript} ${interimTranscript}`.trim()
-    if (!spokenText) return baseText
-    return normalizedBase ? `${normalizedBase} ${spokenText}` : spokenText
-  }
 
   useEffect(() => {
     isMountedRef.current = true
@@ -408,31 +344,6 @@ export default function ChatPanel({
     }
   }, [input])
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-
-    const speechCtor =
-      (
-        window as Window & {
-          SpeechRecognition?: SpeechRecognitionCtor
-          webkitSpeechRecognition?: SpeechRecognitionCtor
-        }
-      ).SpeechRecognition ??
-      (
-        window as Window & {
-          webkitSpeechRecognition?: SpeechRecognitionCtor
-        }
-      ).webkitSpeechRecognition ??
-      null
-
-    speechCtorRef.current = speechCtor
-    setSpeechSupported(Boolean(speechCtor))
-
-    return () => {
-      recognitionRef.current?.stop()
-      recognitionRef.current = null
-    }
-  }, [])
 
   useEffect(() => {
     const userStorageKey = "lr-user-id"
@@ -565,8 +476,6 @@ export default function ChatPanel({
       })
       return
     }
-
-    if (isListening) stopVoiceInput()
 
     setInput("")
     setLoading(true)
@@ -799,95 +708,6 @@ export default function ChatPanel({
     })
   }
 
-  const stopVoiceInput = () => {
-    recognitionRef.current?.stop()
-  }
-
-  const startVoiceInput = () => {
-    const SpeechRecognitionImpl = speechCtorRef.current
-
-    if (!SpeechRecognitionImpl) {
-      toast.error(copy.voiceUnsupported)
-      return
-    }
-
-    try {
-      recognitionRef.current?.stop()
-
-      const recognition = new SpeechRecognitionImpl()
-      recognition.continuous = true
-      recognition.interimResults = true
-      recognition.lang = getSpeechLocale(language)
-
-      dictationBaseRef.current = input.trim()
-
-      recognition.onstart = () => {
-        setIsListening(true)
-      }
-
-      recognition.onresult = (event) => {
-        let finalTranscript = ""
-        let interimTranscript = ""
-
-        for (let index = 0; index < event.results.length; index += 1) {
-          const result = event.results[index]
-          const transcript = result[0]?.transcript?.trim() ?? ""
-
-          if (!transcript) continue
-
-          if (result.isFinal) {
-            finalTranscript += `${transcript} `
-          } else {
-            interimTranscript += `${transcript} `
-          }
-        }
-
-        setInput(
-          mergeVoiceTranscript(
-            dictationBaseRef.current,
-            finalTranscript.trim(),
-            interimTranscript.trim()
-          )
-        )
-      }
-
-      recognition.onerror = (event) => {
-        if (isMountedRef.current) setIsListening(false)
-
-        if (
-          event.error === "not-allowed" ||
-          event.error === "service-not-allowed"
-        ) {
-          toast.error(copy.voiceBlocked)
-          return
-        }
-
-        if (event.error === "no-speech" || event.error === "aborted") return
-        toast.error(copy.voiceUnavailable)
-      }
-
-      recognition.onend = () => {
-        if (isMountedRef.current) setIsListening(false)
-        recognitionRef.current = null
-      }
-
-      recognitionRef.current = recognition
-      recognition.start()
-      inputRef.current?.focus()
-    } catch {
-      setIsListening(false)
-      toast.error(copy.voiceUnavailable)
-    }
-  }
-
-  const toggleVoiceInput = () => {
-    if (isListening) {
-      stopVoiceInput()
-      return
-    }
-
-    startVoiceInput()
-  }
 
   const exportChatHistory = () => {
     if (!messages.length) return
@@ -1394,23 +1214,11 @@ export default function ChatPanel({
               </PopoverContent>
             </Popover>
 
-            <button
-              type="button"
-              onClick={toggleVoiceInput}
-              disabled={!speechSupported || loading}
-              className={cn(
-                "border border-border/50 bg-background/80 p-2 text-muted-foreground transition-all hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-                isListening &&
-                  "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/15"
-              )}
-              title={isListening ? copy.voiceStop : copy.voiceStart}
-            >
-              {isListening ? (
-                <MicOff className="h-4 w-4" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-            </button>
+            <VoiceMicButton
+              disabled={loading}
+              onTranscript={(text) => setInput(text)}
+              onError={(msg) => toast.error(msg)}
+            />
           </ChatInput>
 
           <div className="mt-2 hidden justify-between px-2 sm:mt-3 sm:flex">
