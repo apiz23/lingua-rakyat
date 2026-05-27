@@ -2,6 +2,7 @@
 
 import React from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { cn } from "@/lib/utils"
 import { SourceChunk } from "@/lib/api"
 import { useLanguage } from "@/components/language-provider"
 import AgentAvatar from "@/components/smoothui/agent-avatar"
@@ -151,22 +152,12 @@ export function AIMessageCard({
   const evidenceState = message.sufficient_evidence
     ? {
         label: language === "ms" ? "Bukti kukuh" : "Strong evidence",
-        badge: "border-success/20 bg-success/10 text-success",
-        panel: "border-success/20 bg-success/5 text-success",
-        description:
-          language === "ms"
-            ? "Jawapan ini disokong terus oleh kandungan dokumen yang dimuat naik."
-            : "This answer is directly supported by the uploaded document.",
+        dotColor: "bg-success",
       }
     : {
         label:
           language === "ms" ? "Padanan terdekat sahaja" : "Closest match only",
-        badge: "border-warning/20 bg-warning/10 text-warning",
-        panel: "border-warning/20 bg-warning/5 text-warning",
-        description:
-          language === "ms"
-            ? "Dokumen tidak mempunyai bukti yang cukup kuat, jadi pembantu menggunakan jawapan selamat tanpa membuat andaian."
-            : "The document did not contain strong enough evidence, so the assistant used a safe fallback instead of guessing.",
+        dotColor: "bg-warning",
       }
 
   return (
@@ -181,8 +172,9 @@ export function AIMessageCard({
         <div className="relative border border-border/50 bg-card shadow-sm transition-all hover:shadow-md">
           <div className="h-1 w-full bg-linear-to-r from-primary via-primary/60 to-transparent" />
           <div className="p-3.5 sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {/* Primary row: 2 essential badges + copy button */}
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <div className="flex items-center gap-1.5 border border-primary/20 bg-primary/10 px-2 py-1">
                   <span className="bg-primary/20 px-1 font-mono text-[10px] text-primary">
                     {langInfo.code}
@@ -191,16 +183,6 @@ export function AIMessageCard({
                     {langInfo.name}
                   </span>
                 </div>
-
-                <span className="bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground sm:text-xs">
-                  {language === "ms" ? "Pembantu AI" : "AI Assistant"}
-                </span>
-
-                {message.cached ? (
-                  <span className="border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                    cached
-                  </span>
-                ) : null}
 
                 {message.confidence > 0 ? (
                   <span
@@ -215,25 +197,7 @@ export function AIMessageCard({
                   >
                     {message.confidence_label
                       ? message.confidence_label.toUpperCase()
-                      : `${Math.round(message.confidence * 100)}%`}{" "}
-                    {language === "ms" ? "keyakinan" : "confidence"}
-                  </span>
-                ) : null}
-
-                <span
-                  className={[
-                    "border px-2 py-0.5 text-[10px] font-medium",
-                    evidenceState.badge,
-                  ].join(" ")}
-                >
-                  {evidenceState.label}
-                </span>
-
-                {message.latency_ms > 0 ? (
-                  <span className="border border-border/50 bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
-                    {message.latency_ms < 1000
-                      ? `${message.latency_ms}ms`
-                      : `${(message.latency_ms / 1000).toFixed(1)}s`}
+                      : `${Math.round(message.confidence * 100)}%`}
                   </span>
                 ) : null}
               </div>
@@ -254,13 +218,26 @@ export function AIMessageCard({
               </button>
             </div>
 
-            <div
-              className={[
-                "mb-4 border px-3 py-2 text-xs leading-relaxed",
-                evidenceState.panel,
-              ].join(" ")}
-            >
-              {evidenceState.description}
+            {/* Compact secondary line: evidence dot + label + cached + latency */}
+            <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className={cn("h-1.5 w-1.5 rounded-full", evidenceState.dotColor)} />
+              <span>{evidenceState.label}</span>
+              {message.cached ? (
+                <>
+                  <span>·</span>
+                  <span>{language === "ms" ? "cache" : "cached"}</span>
+                </>
+              ) : null}
+              {message.latency_ms > 0 ? (
+                <>
+                  <span>·</span>
+                  <span>
+                    {message.latency_ms < 1000
+                      ? `${message.latency_ms}ms`
+                      : `${(message.latency_ms / 1000).toFixed(1)}s`}
+                  </span>
+                </>
+              ) : null}
             </div>
 
             {message.isStreaming ? (
