@@ -211,6 +211,7 @@ export function AIMessageCard({
   const highlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handlePillClick = React.useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (sourceIndex: number, _pageStart: number) => {
       // Open sources panel if closed
       if (!expandedSources.has(index)) toggleSources(index)
