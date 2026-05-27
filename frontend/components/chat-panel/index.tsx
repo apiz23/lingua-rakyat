@@ -57,6 +57,15 @@ import {
 } from "./message-cards"
 import { VoiceMicButton } from "./voice-mic-button"
 
+function shortModelLabel(modelId: string): string {
+  if (!modelId) return "Auto"
+  const sizeMatch = modelId.match(/(\d+b)/i)
+  if (sizeMatch) return sizeMatch[1].toUpperCase()
+  if (modelId.toLowerCase().includes("gemma")) return "Gemma"
+  if (modelId.toLowerCase().includes("mixtral")) return "MoE"
+  return modelId.split("-")[0].slice(0, 6)
+}
+
 interface ChatPanelProps {
   selectedDoc: Document | null
   onBack?: () => void
@@ -1077,12 +1086,6 @@ export default function ChatPanel({
                       <span>PDF</span>
                       <span className="h-1 w-1 rounded-full bg-primary" />
                       <span>{copy.ready}</span>
-                      <span className="hidden min-w-0 items-center gap-2 sm:inline-flex">
-                        <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                        <span className="truncate">
-                          {copy.thread}: {activeThreadLabel.slice(0, 20)}
-                        </span>
-                      </span>
                     </>
                   ) : (
                     <span className="truncate">{copy.noDocDesc}</span>
@@ -1110,20 +1113,6 @@ export default function ChatPanel({
                 <Plus className="h-4 w-4" />
               </button>
 
-              <button
-                type="button"
-                onClick={() => setShowHistory((prev) => !prev)}
-                className={cn(
-                  "p-2 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none",
-                  showHistory
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                title={copy.history}
-              >
-                <History className="h-4 w-4" />
-              </button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -1137,6 +1126,19 @@ export default function ChatPanel({
 
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>{copy.options}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    onClick={() => setShowHistory((prev) => !prev)}
+                  >
+                    <History className="mr-2 h-4 w-4" />
+                    {showHistory
+                      ? language === "ms"
+                        ? "Sembunyikan sejarah"
+                        : "Hide history"
+                      : copy.history}
+                  </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
 
                   <DropdownMenuItem
@@ -1190,11 +1192,7 @@ export default function ChatPanel({
                   type="button"
                   className="h-8 w-fit border border-border/50 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
                 >
-                  {selectedPopoverModel
-                    ? (GROQ_MODELS.find(
-                        (model) => model.id === selectedPopoverModel
-                      )?.label ?? selectedPopoverModel)
-                    : copy.autoServer}
+                  {shortModelLabel(selectedPopoverModel)}
                 </button>
               </PopoverTrigger>
 
