@@ -55,6 +55,7 @@ import {
   TypingIndicator,
   UserMessageBubble,
 } from "./message-cards"
+import PdfPanel from "./pdf-panel"
 import { VoiceMicButton } from "./voice-mic-button"
 
 function shortModelLabel(modelId: string): string {
@@ -201,6 +202,12 @@ export default function ChatPanel({
     return localStorage.getItem("lingua-autospeak") === "true"
   })
 
+  interface PdfViewerState {
+    page: number
+    highlightText: string | null
+  }
+  const [pdfViewerState, setPdfViewerState] = useState<PdfViewerState | null>(null)
+
   const toggleAutoSpeak = () => {
     setAutoSpeak((prev) => {
       const next = !prev
@@ -208,6 +215,17 @@ export default function ChatPanel({
       return next
     })
   }
+
+  const handleOpenPdf = React.useCallback(
+    (page: number, text: string | null) => {
+      setPdfViewerState({ page, highlightText: text })
+    },
+    []
+  )
+
+  const handleClosePdf = React.useCallback(() => {
+    setPdfViewerState(null)
+  }, [])
 
   const copy =
     language === "ms"
@@ -397,6 +415,8 @@ export default function ChatPanel({
   }, [])
 
   useEffect(() => {
+    setPdfViewerState(null)   // Close PDF panel when document changes
+
     if (!selectedDoc) {
       setMessages([])
       setExpandedSources(new Set())
@@ -833,11 +853,16 @@ export default function ChatPanel({
   const threads = buildThreads(documentHistory)
   const chatStatus = loading ? "streaming" : "ready"
 
+  const docPublicUrl = selectedDoc?.public_url ?? null
+  const pdfOpen = pdfViewerState !== null && !!docPublicUrl
+
   return (
-    <AiChat
-      status={chatStatus}
-      className="h-full min-h-0 bg-background font-sans"
-    >
+    <div className={cn("flex h-full min-h-0 bg-background", pdfOpen && "lg:flex-row")}>
+      {/* Chat column */}
+      <AiChat
+        status={chatStatus}
+        className={cn("min-w-0 font-sans", pdfOpen ? "lg:flex-1" : "h-full")}
+      >
       <AiChatBody className="min-h-0">
         <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
           <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
@@ -1048,6 +1073,7 @@ export default function ChatPanel({
                       copyToClipboard={copyToClipboard}
                       docPublicUrl={selectedDoc?.public_url ?? undefined}
                       autoSpeak={autoSpeak}
+                      onOpenPdf={handleOpenPdf}
                     />
                   </div>
                 ))}
@@ -1258,6 +1284,35 @@ export default function ChatPanel({
           </p>
         </div>
       </AiChatFooter>
-    </AiChat>
+      </AiChat>
+
+      {/* PDF panel — desktop side column */}
+      {pdfOpen && (
+        <PdfPanel
+          url={docPublicUrl!}
+          targetPage={pdfViewerState!.page}
+          highlightText={pdfViewerState!.highlightText}
+          docName={selectedDoc!.name}
+          documentId={selectedDoc!.id}
+          language={language}
+          onClose={handleClosePdf}
+          className="hidden lg:flex lg:w-[420px] xl:w-[480px]"
+        />
+      )}
+
+      {/* PDF panel — mobile bottom sheet */}
+      {pdfOpen && (
+        <PdfPanel
+          url={docPublicUrl!}
+          targetPage={pdfViewerState!.page}
+          highlightText={pdfViewerState!.highlightText}
+          docName={selectedDoc!.name}
+          documentId={selectedDoc!.id}
+          language={language}
+          onClose={handleClosePdf}
+          className="fixed inset-x-0 bottom-0 z-50 h-[60vh] border-t shadow-2xl lg:hidden"
+        />
+      )}
+    </div>
   )
 }
