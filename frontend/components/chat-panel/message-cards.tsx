@@ -22,12 +22,6 @@ import {
   ThumbsDown,
   ExternalLink,
 } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 
 export interface Message {
   id: string
@@ -185,6 +179,7 @@ export function AIMessageCard({
   copyToClipboard,
   docPublicUrl,
   autoSpeak,
+  onOpenPdf,
 }: {
   message: Message
   index: number
@@ -195,6 +190,7 @@ export function AIMessageCard({
   copyToClipboard: (text: string, id: string) => void
   docPublicUrl?: string
   autoSpeak?: boolean
+  onOpenPdf?: (page: number, text: string | null) => void
 }) {
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
@@ -206,25 +202,25 @@ export function AIMessageCard({
 
   const [isStreamed, setIsStreamed] = React.useState(message.cached)
   const [feedback, setFeedback] = React.useState<"up" | "down" | null>(null)
-  const [viewerPage, setViewerPage] = React.useState<number | null>(null)
   const [highlightedSourceIdx, setHighlightedSourceIdx] = React.useState<number | null>(null)
   const highlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handlePillClick = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (sourceIndex: number, _pageStart: number) => {
-      // Open sources panel if closed
+      const source = message.sources[sourceIndex]
+      // Open PDF panel with cited passage highlighted
+      onOpenPdf?.(source?.page_start ?? 1, source?.text ?? null)
+      // Open sources panel if closed + highlight the matching card
       if (!expandedSources.has(index)) toggleSources(index)
-      // Cancel any in-flight highlight timer (prevents stacked timers on rapid clicks)
       if (highlightTimerRef.current !== null) clearTimeout(highlightTimerRef.current)
-      // Briefly highlight the matching source card
       setHighlightedSourceIdx(sourceIndex)
       highlightTimerRef.current = setTimeout(() => {
         highlightTimerRef.current = null
         setHighlightedSourceIdx(null)
       }, 1500)
     },
-    [expandedSources, toggleSources, index]
+    [expandedSources, toggleSources, index, message.sources, onOpenPdf]
   )
 
   React.useEffect(() => {
@@ -522,7 +518,7 @@ export function AIMessageCard({
                                 {pageStart && docPublicUrl ? (
                                   <button
                                     type="button"
-                                    onClick={() => setViewerPage(pageStart as number)}
+                                    onClick={() => onOpenPdf?.(pageStart as number, source.text ?? null)}
                                     className="ml-1 inline-flex items-center gap-0.5 text-[10px] text-primary/70 underline-offset-2 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                                     title={language === "ms" ? "Lihat halaman asal" : "View source page"}
                                   >
@@ -571,28 +567,6 @@ export function AIMessageCard({
         </div>
       </div>
 
-      {docPublicUrl && viewerPage !== null ? (
-        <Dialog open onOpenChange={() => setViewerPage(null)}>
-          <DialogContent
-            className="max-w-4xl overflow-hidden p-0 sm:max-h-[90vh]"
-            aria-describedby={undefined}
-          >
-            <DialogHeader className="border-b border-border px-4 py-3">
-              <DialogTitle className="text-sm font-medium">
-                {message.sources.find(
-                  (s) => s.page_start === viewerPage
-                )?.doc_name ?? (language === "ms" ? "Dokumen" : "Document")}{" "}
-                — {language === "ms" ? "Halaman" : "Page"} {viewerPage}
-              </DialogTitle>
-            </DialogHeader>
-            <iframe
-              src={`${docPublicUrl}#page=${viewerPage}`}
-              className="h-[75vh] w-full border-0"
-              title={`Page ${viewerPage}`}
-            />
-          </DialogContent>
-        </Dialog>
-      ) : null}
     </div>
   )
 }
