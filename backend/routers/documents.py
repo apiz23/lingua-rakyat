@@ -572,6 +572,26 @@ async def delete_document(document_id: str):
     return {"success": True, "message": f"Document '{doc_to_delete['name']}' deleted"}
 
 
+@router.get("/{document_id}/pdf-url")
+def get_pdf_signed_url(document_id: str):
+    """Return a 1-hour signed URL for the document PDF. Fallback for private buckets."""
+    sb = get_supabase()
+    rows = (
+        sb.table(get_documents_table())
+        .select("storage_path")
+        .eq("id", document_id)
+        .limit(1)
+        .execute()
+    )
+    if not rows.data:
+        raise HTTPException(status_code=404, detail="Document not found")
+    storage_path = rows.data[0].get("storage_path")
+    if not storage_path:
+        raise HTTPException(status_code=404, detail="No storage path for this document")
+    result = sb.storage.from_(get_bucket()).create_signed_url(storage_path, 3600)
+    return {"url": result["signedURL"], "expires_in": 3600}
+
+
 _DEFAULT_PREWARM = [
     "Summarize this document",
     "Siapa yang layak memohon?",
