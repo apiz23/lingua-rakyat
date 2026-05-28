@@ -156,6 +156,11 @@ function buildThreads(history: ChatHistoryMessage[]): ChatThread[] {
   )
 }
 
+interface PdfViewerState {
+  page: number
+  highlightText: string | null
+}
+
 export default function ChatPanel({
   selectedDoc,
   onBack,
@@ -202,10 +207,6 @@ export default function ChatPanel({
     return localStorage.getItem("lingua-autospeak") === "true"
   })
 
-  interface PdfViewerState {
-    page: number
-    highlightText: string | null
-  }
   const [pdfViewerState, setPdfViewerState] = useState<PdfViewerState | null>(null)
 
   const toggleAutoSpeak = () => {
@@ -1286,7 +1287,7 @@ export default function ChatPanel({
       </AiChatFooter>
       </AiChat>
 
-      {/* PDF panel — desktop side column */}
+      {/* PDF panel — bottom sheet on mobile, side column on desktop */}
       {pdfOpen && (
         <PdfPanel
           url={docPublicUrl!}
@@ -1296,21 +1297,7 @@ export default function ChatPanel({
           documentId={selectedDoc!.id}
           language={language}
           onClose={handleClosePdf}
-          className="hidden lg:flex lg:w-[420px] xl:w-[480px]"
-        />
-      )}
-
-      {/* PDF panel — mobile bottom sheet */}
-      {pdfOpen && (
-        <PdfPanel
-          url={docPublicUrl!}
-          targetPage={pdfViewerState!.page}
-          highlightText={pdfViewerState!.highlightText}
-          docName={selectedDoc!.name}
-          documentId={selectedDoc!.id}
-          language={language}
-          onClose={handleClosePdf}
-          className="fixed inset-x-0 bottom-0 z-50 h-[60vh] border-t shadow-2xl lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-50 h-[60vh] border-t shadow-2xl lg:static lg:inset-auto lg:z-auto lg:h-auto lg:w-[420px] lg:border-t-0 lg:shadow-none xl:w-[480px]"
         />
       )}
     </div>

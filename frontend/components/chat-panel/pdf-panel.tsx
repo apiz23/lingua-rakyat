@@ -94,6 +94,13 @@ export default function PdfPanel({
     triedSignedRef.current = false
   }, [url])
 
+  // Abort any in-flight signed URL fetch on unmount
+  useEffect(() => {
+    return () => {
+      signedFetchAbortRef.current?.abort()
+    }
+  }, [])
+
   // Track panel container width so the PDF fills the panel at any size
   useEffect(() => {
     if (!containerRef.current) return
@@ -119,27 +126,35 @@ export default function PdfPanel({
     [activeHighlight]
   )
 
-  const fetchSignedUrl = async () => {
-    try {
-      const res = await fetch(
-        `${API_URL}/api/documents/${documentId}/pdf-url`
-      )
-      if (!res.ok) throw new Error("signed url fetch failed")
-      const { url: signedUrl } = (await res.json()) as { url: string }
-      setResolvedUrl(signedUrl)
-      setLoadError(false)
-    } catch {
-      setLoadError(true)
-    }
+  const signedFetchAbortRef = useRef<AbortController | null>(null)
+
+  const fetchSignedUrl = () => {
+    signedFetchAbortRef.current?.abort()
+    const controller = new AbortController()
+    signedFetchAbortRef.current = controller
+
+    fetch(`${API_URL}/api/documents/${documentId}/pdf-url`, {
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("signed url fetch failed")
+        return res.json() as Promise<{ url: string }>
+      })
+      .then(({ url: signedUrl }) => {
+        setResolvedUrl(signedUrl)
+        setLoadError(false)
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === "AbortError") return
+        setLoadError(true)
+      })
   }
 
   const handleLoadError = () => {
     if (!triedSignedRef.current) {
-      // First failure: try signed URL fallback (for private Supabase buckets)
       triedSignedRef.current = true
       fetchSignedUrl()
     } else {
-      // Signed URL also failed — show error state
       setLoadError(true)
     }
   }

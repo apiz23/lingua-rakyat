@@ -573,7 +573,9 @@ async def delete_document(document_id: str):
 
 
 @router.get("/{document_id}/pdf-url")
-def get_pdf_signed_url(document_id: str):
+@limiter.limit("20/minute")
+def get_pdf_signed_url(request: Request, document_id: str):
+    _ = request
     """Return a 1-hour signed URL for the document PDF. Fallback for private buckets."""
     sb = get_supabase()
     rows = (
