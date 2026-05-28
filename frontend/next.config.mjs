@@ -1,4 +1,12 @@
 import createMDX from "@next/mdx"
+import CopyPlugin from "copy-webpack-plugin"
+import { createRequire } from "module"
+
+// pnpm does not hoist transitive deps, so we resolve pdfjs-dist from react-pdf
+const _require = createRequire(
+  createRequire(import.meta.url).resolve("react-pdf/package.json")
+)
+const pdfWorkerSrc = _require.resolve("pdfjs-dist/build/pdf.worker.min.mjs")
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -17,6 +25,25 @@ const nextConfig = {
         hostname: "thesvg.org",
       },
     ],
+  },
+
+  webpack: (config, { isServer }) => {
+    // react-pdf / PDF.js: disable canvas (not needed for text rendering)
+    config.resolve.alias.canvas = false
+    // Copy PDF.js worker to public/ for production builds
+    if (!isServer) {
+      config.plugins.push(
+        new CopyPlugin({
+          patterns: [
+            {
+              from: pdfWorkerSrc,
+              to: "../public/pdf.worker.min.mjs",
+            },
+          ],
+        })
+      )
+    }
+    return config
   },
 }
 
