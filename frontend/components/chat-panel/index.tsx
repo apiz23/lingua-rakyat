@@ -121,6 +121,7 @@ function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
     cached: true,
     model_used: row.model_used,
     sufficient_evidence: row.sufficient_evidence ?? true,
+    faithfulness: row.faithfulness ?? null,
   }
 }
 
@@ -636,6 +637,7 @@ export default function ChatPanel({
               cached: event.cached ?? false,
               model_used: event.model_used,
               sufficient_evidence: event.sufficient_evidence ?? true,
+              faithfulness: event.faithfulness ?? null,
               isStreaming: false,
             }
 
@@ -675,6 +677,7 @@ export default function ChatPanel({
                 latency_ms: event.latency_ms ?? 0,
                 model_used: event.model_used,
                 sufficient_evidence: event.sufficient_evidence ?? true,
+                faithfulness: event.faithfulness ?? null,
               },
               ...prev,
             ])

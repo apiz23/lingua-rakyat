@@ -21,6 +21,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   ExternalLink,
+  ShieldCheck,
 } from "lucide-react"
 
 export interface Message {
@@ -36,6 +37,7 @@ export interface Message {
   cached: boolean
   model_used?: string
   sufficient_evidence: boolean
+  faithfulness?: number | null
   isStreaming?: boolean
 }
 
@@ -298,6 +300,29 @@ export function AIMessageCard({
                     {message.confidence_label
                       ? message.confidence_label.toUpperCase()
                       : `${Math.round(message.confidence * 100)}%`}
+                  </span>
+                ) : null}
+
+                {typeof message.faithfulness === "number" &&
+                message.faithfulness > 0 ? (
+                  <span
+                    className={[
+                      "inline-flex items-center gap-1 border px-2 py-0.5 text-[10px] font-medium",
+                      message.faithfulness >= 0.75
+                        ? "border-success/20 bg-success/10 text-success"
+                        : message.faithfulness >= 0.5
+                          ? "border-primary/20 bg-primary/10 text-primary"
+                          : "border-warning/20 bg-warning/10 text-warning",
+                    ].join(" ")}
+                    title={
+                      language === "ms"
+                        ? "Sejauh mana jawapan ini berasaskan petikan sumber"
+                        : "How well this answer is grounded in the source excerpts"
+                    }
+                  >
+                    <ShieldCheck className="h-2.5 w-2.5" />
+                    {language === "ms" ? "Berdasar sumber" : "Grounded"}{" "}
+                    {Math.round(message.faithfulness * 100)}%
                   </span>
                 ) : null}
               </div>

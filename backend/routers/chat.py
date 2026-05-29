@@ -21,6 +21,7 @@ from utils.chat_history import (
     insert_chat_message,
     list_chat_messages,
 )
+from rate_limits import CHAT_LIMIT
 from utils.rag_pipeline import answer_question, stream_answer_question
 
 logger = logging.getLogger("chat_router")
@@ -66,6 +67,7 @@ class AskResponse(BaseModel):
     query_variants_used: list[str] = Field(default_factory=list)
     top_query_variant: str = ""
     sufficient_evidence: bool = True
+    faithfulness: Optional[float] = None
 
 
 class ChatMessage(BaseModel):
@@ -116,10 +118,9 @@ def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, a
 
 
 def _record_eval(body: AskRequest, result: dict[str, Any], answer_text: str) -> None:
-    from utils.rag_pipeline import _compute_faithfulness
     try:
-        source_texts = [s.get("text", "") for s in result.get("sources", [])]
-        faithfulness = _compute_faithfulness(answer_text, source_texts)
+        # Faithfulness is computed once in the RAG pipeline (_build_result) and
+        # carried on the result, so we reuse it here instead of a second Cohere call.
         evaluator.record(
             question=body.question,
             answer=answer_text,
@@ -127,7 +128,7 @@ def _record_eval(body: AskRequest, result: dict[str, Any], answer_text: str) -> 
             confidence=result.get("confidence", 0.0),
             latency_ms=result.get("latency_ms", 0),
             document_id=body.document_id,
-            faithfulness_score=faithfulness,
+            faithfulness_score=result.get("faithfulness"),
         )
     except Exception as exc:
         logger.warning("[Eval] Failed to record interaction: %s", exc)
@@ -145,7 +146,7 @@ def clear_chat_history(
 
 
 @router.post("/ask", response_model=AskResponse)
-@limiter.limit("30/minute")
+@limiter.limit(CHAT_LIMIT)
 async def ask_question(request: Request, body: AskRequest):
     _ = request
     _validate_ask_request(body)
@@ -181,11 +182,12 @@ async def ask_question(request: Request, body: AskRequest):
         query_variants_used=result.get("query_variants_used", []),
         top_query_variant=result.get("top_query_variant", ""),
         sufficient_evidence=result.get("sufficient_evidence", True),
+        faithfulness=result.get("faithfulness"),
     )
 
 
 @router.post("/ask-stream")
-@limiter.limit("30/minute")
+@limiter.limit(CHAT_LIMIT)
 async def ask_question_stream(request: Request, body: AskRequest):
     _ = request
     _validate_ask_request(body)

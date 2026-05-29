@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from rate_limits import VOICE_LIMIT
 from utils.voice_helpers import TranscriptionError, MAX_TTS_CHARS, text_to_speech, transcribe_audio
 
 logger = logging.getLogger("voice_router")
@@ -26,7 +27,7 @@ class TTSRequest(BaseModel):
 # ── /transcribe ───────────────────────────────────────────────────────────────
 
 @router.post("/transcribe")
-@limiter.limit("10/minute")
+@limiter.limit(VOICE_LIMIT)
 async def transcribe(request: Request, audio: UploadFile = File(...)):
     """
     Receive WebM/Opus audio from browser MediaRecorder.
@@ -49,7 +50,7 @@ async def transcribe(request: Request, audio: UploadFile = File(...)):
 # ── /tts ──────────────────────────────────────────────────────────────────────
 
 @router.post("/tts")
-@limiter.limit("10/minute")
+@limiter.limit(VOICE_LIMIT)
 async def tts(request: Request, body: TTSRequest):
     """
     Convert text to speech via ElevenLabs multilingual v2.

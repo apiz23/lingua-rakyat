@@ -29,9 +29,12 @@ from slowapi.middleware import SlowAPIMiddleware
 load_dotenv()
 
 # ─── Rate Limiter ────────────────────────────────────────────────────────────
-# 60 requests/minute per IP for chat, 20/minute for uploads
-# This prevents abuse and shows production-readiness to judges.
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+# Per-IP limits prevent abuse and show production-readiness to judges.
+# Values are env-gated (see rate_limits.py): set BOOTH_MODE=true at a demo booth
+# where all visitors share one public IP, otherwise buckets fill and judges 429.
+from rate_limits import BOOTH_MODE, GLOBAL_DEFAULT
+
+limiter = Limiter(key_func=get_remote_address, default_limits=[GLOBAL_DEFAULT])
 
 # ─── Logging Setup ───────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -42,6 +45,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("main")
 logger.info("Starting Lingua Rakyat backend (lightweight mode — Cohere + Groq)")
+if BOOTH_MODE:
+    logger.warning("[RateLimit] BOOTH_MODE=true — using generous demo limits (global=%s)", GLOBAL_DEFAULT)
 
 # ─── Router imports ───────────────────────────────────────────────────────────
 from routers.documents import router as documents_router
@@ -161,6 +166,7 @@ async def health_check():
             "llm_model":  os.getenv("GROQ_MODEL", "groq/compound"),
             "embeddings": "cohere/embed-multilingual-v3.0",
             "vector_db":  "pinecone/" + os.getenv("PINECONE_INDEX", "docuquery"),
+            "booth_mode": BOOTH_MODE,
         },
         "cache": {
             "entries":  len(_query_cache),

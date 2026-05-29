@@ -135,6 +135,11 @@ lingua-rakyat/
 - `GET /api/eval/data-quality`
 - `DELETE /api/eval/clear`
 
+### Voice
+
+- `POST /api/voice/transcribe` — speech-to-text (Groq Whisper)
+- `POST /api/voice/tts` — text-to-speech (ElevenLabs, falls back to browser speechSynthesis)
+
 ## Local Setup
 
 ### 1. Backend
@@ -219,8 +224,8 @@ BACKEND_URL=
 ### Ingestion
 
 - PDF validation checks file type, encryption, size, and page count
-- text extraction uses `pypdf`
-- chunking uses overlapping word windows
+- text extraction uses `pypdf`, with a per-page OCR fallback (PyMuPDF + Tesseract) for low-text/scanned pages
+- chunking is section-aware (detects headers, splits long sections with word overlap)
 - embeddings are generated with Cohere
 - vectors are stored in Pinecone under the document namespace
 - metadata and source files are stored in Supabase
@@ -229,9 +234,11 @@ BACKEND_URL=
 
 - language is detected with keyword matching, CJK heuristics, and `langdetect`
 - optional query augmentation expands the question into multilingual variants
-- semantic retrieval pulls relevant chunks from Pinecone
-- the prompt is built in the detected output language
+- semantic retrieval pulls relevant chunks from Pinecone, then a Cohere cross-encoder reranks them
+- an evidence guard refuses to answer (rather than hallucinate) when no retrieved chunk clears the confidence threshold
+- the prompt is built in the detected output language; answers stream token-by-token via `POST /api/chat/ask-stream`
 - Groq models generate a short, grounded answer from retrieved context only
+- a faithfulness score (answer vs. sources) is computed per answer via the Cohere reranker
 
 ### Evaluation
 
@@ -252,11 +259,9 @@ BACKEND_URL=
 
 These are the main limitations visible from the current code:
 
-- Text-based PDFs only. Scanned PDFs or image-only PDFs are not handled because OCR is not implemented.
+- Text-based PDFs are the primary path. Scanned/image-only pages fall back to OCR (PyMuPDF + Tesseract) when Tesseract is installed and `TESSERACT_CMD` is configured; without it, scanned PDFs are rejected.
 - The primary supported answer languages are English, Bahasa Melayu, and Simplified Chinese. Some other language codes are mapped into those outputs, but full direct support is not implemented for every language mentioned in UI copy.
-- Chat history is saved in the backend, but the current frontend does not load and render persisted history yet.
-- A streaming chat endpoint exists, but the current chat UI uses the non-streaming `POST /api/chat/ask` route.
-- The evaluation `data-quality` endpoint exists, but upload-side quality logging is not currently wired into the document ingestion flow.
+- The data-quality log is in-memory and resets on backend restart (per-process, not persisted).
 - Some competition-facing content in the UI is static or promotional, so this README should be treated as the more reliable technical reference.
 
 ## Suggested Demo Flow

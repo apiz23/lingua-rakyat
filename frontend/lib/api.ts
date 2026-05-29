@@ -61,6 +61,7 @@ export type AskResponse = {
   query_variants_used?: string[]
   top_query_variant?: string
   sufficient_evidence?: boolean
+  faithfulness?: number | null
 }
 
 export type ChatHistoryMessage = {
@@ -78,6 +79,7 @@ export type ChatHistoryMessage = {
   latency_ms: number
   model_used?: string
   sufficient_evidence?: boolean
+  faithfulness?: number | null
 }
 
 // ── Evaluation Types ───────────────────────────────────────────────────────
@@ -451,6 +453,7 @@ export type ChatStreamEvent =
       retrieval_mode?: string
       query_variants_used?: string[]
       top_query_variant?: string
+      faithfulness?: number | null
     }
   | { type: "error"; detail: string }
 
@@ -596,6 +599,7 @@ export async function askQuestionStream(
               latency_ms: event.latency_ms,
               model_used: event.model_used,
               sufficient_evidence: event.sufficient_evidence,
+              faithfulness: event.faithfulness,
             },
           ])
         }

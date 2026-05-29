@@ -1179,8 +1179,18 @@ def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -
     total_ms = round((time.time() - prepared["started_at"]) * 1000)
     top_score = prepared["filtered_matches"][0]["reranked_score"] if prepared["filtered_matches"] else 0.0
     confidence_label = _confidence_label(top_score, prepared["sufficient_evidence"])
+
+    # Faithfulness: how grounded the answer is in the retrieved chunks. Skipped
+    # for the canned "insufficient evidence" reply (grounding it is meaningless)
+    # and for cached/offline paths that never reach this builder.
+    faithfulness: Optional[float] = None
+    if prepared.get("evidence_mode") != "insufficient":
+        source_texts = [m["metadata"].get("text", "") for m in prepared["filtered_matches"]]
+        faithfulness = _compute_faithfulness(answer_text, source_texts)
+
     result = {
         "answer": answer_text.strip(),
+        "faithfulness": faithfulness,
         "language": prepared["language"],
         "sources": [
             {

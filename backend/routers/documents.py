@@ -18,6 +18,7 @@ from slowapi.util import get_remote_address
 from supabase import Client, create_client
 from pinecone import Pinecone
 
+from rate_limits import DOC_LIMIT, PDF_URL_LIMIT, SEED_LIMIT
 from utils.chat_history import delete_chat_messages_for_document
 from utils.rag_pipeline import (
     delete_document_from_vectorstore,
@@ -321,7 +322,7 @@ class RenameDocumentRequest(BaseModel):
 
 
 @router.post("/verify-token")
-@limiter.limit("10/minute")
+@limiter.limit(DOC_LIMIT)
 async def verify_token(request: Request, token: str):
     _ = request
     if not token or len(token) > 256:
@@ -333,7 +334,7 @@ async def verify_token(request: Request, token: str):
 
 
 @router.post("/upload", response_model=UploadResponse)
-@limiter.limit("10/minute")
+@limiter.limit(DOC_LIMIT)
 async def upload_document(request: Request, file: UploadFile = File(...), upload_token: str = ""):
     _ = request
 
@@ -394,6 +395,9 @@ async def upload_document(request: Request, file: UploadFile = File(...), upload
         extraction_method = str(ingest_quality.get("extraction_method", "text"))
         doc_record["chunk_count"] = chunk_count
         doc_record["status"] = "ready"
+        # Feed the /api/eval/data-quality dashboard with this document's metrics.
+        from routers.eval import log_data_quality
+        log_data_quality({**ingest_quality, "document_id": document_id, "doc_name": safe_filename})
         logger.info(
             "[Upload] Ingestion complete for %s: %d chunks via %s",
             document_id,
@@ -403,6 +407,8 @@ async def upload_document(request: Request, file: UploadFile = File(...), upload
     except Exception as exc:
         doc_record["status"] = "error"
         doc_record["error_message"] = str(exc)
+        from routers.eval import log_data_quality
+        log_data_quality({"valid": False, "error": str(exc), "document_id": document_id, "doc_name": safe_filename})
         logger.warning("[Upload] Ingestion failed for %s: %s", document_id, exc)
     finally:
         if tmp_path and os.path.exists(tmp_path):
@@ -429,7 +435,7 @@ async def list_documents():
 
 
 @router.patch("/{document_id}/rename", response_model=DocumentResponse)
-@limiter.limit("10/minute")
+@limiter.limit(DOC_LIMIT)
 async def rename_document(request: Request, document_id: str, body: RenameDocumentRequest):
     _ = request
 
@@ -573,7 +579,7 @@ async def delete_document(document_id: str):
 
 
 @router.get("/{document_id}/pdf-url")
-@limiter.limit("20/minute")
+@limiter.limit(PDF_URL_LIMIT)
 def get_pdf_signed_url(request: Request, document_id: str):
     _ = request
     """Return a 1-hour signed URL for the document PDF. Fallback for private buckets."""
@@ -670,7 +676,7 @@ async def _do_seed() -> dict:
 
 
 @router.post("/seed")
-@limiter.limit("5/minute")
+@limiter.limit(SEED_LIMIT)
 async def seed_featured_documents(request: Request):
     _ = request
     return await _do_seed()
