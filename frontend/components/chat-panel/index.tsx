@@ -1287,6 +1287,7 @@ export default function ChatPanel({
               onError={(msg) => toast.error(msg)}
               titleIdle={copy.voiceStart}
               titleRecording={copy.voiceStop}
+              uiLanguage={language}
             />
 
             <button
@@ -1324,7 +1325,7 @@ export default function ChatPanel({
           documentId={selectedDoc!.id}
           language={language}
           onClose={handleClosePdf}
-          className="fixed inset-x-0 bottom-0 z-50 h-[60vh] border-t shadow-2xl lg:static lg:inset-auto lg:z-auto lg:h-auto lg:w-[420px] lg:border-t-0 lg:shadow-none xl:w-[480px]"
+          className="fixed inset-x-0 bottom-0 z-50 h-[45vh] border-t shadow-2xl lg:static lg:inset-auto lg:z-auto lg:h-auto lg:w-[420px] lg:border-t-0 lg:shadow-none xl:w-[480px]"
         />
       )}
     </div>

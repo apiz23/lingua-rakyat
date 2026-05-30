@@ -8,8 +8,14 @@ interface VoiceSpeakerProps {
   language: string
 }
 
+const TTS_COPY = {
+  ms: { loading: "Memuatkan audio…", stop: "Henti", retry: "Cuba semula", listen: "Dengar Jawapan" },
+  en: { loading: "Loading audio…",   stop: "Stop",  retry: "Retry",       listen: "Listen" },
+}
+
 export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
   const { play, stop, state } = useTTS()
+  const t = TTS_COPY[language === "ms" ? "ms" : "en"]
 
   const handleClick = () => {
     if (state === "playing") {
@@ -19,30 +25,24 @@ export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
     }
   }
 
+  const label =
+    state === "loading" ? t.loading :
+    state === "playing" ? t.stop :
+    state === "error"   ? t.retry :
+    t.listen
+
   return (
     <button
       onClick={handleClick}
       disabled={state === "loading"}
       className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-background px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-      title={
-        state === "loading" ? "Memuatkan audio…" :
-        state === "playing" ? "Henti" :
-        state === "error" ? "Cuba semula" :
-        "Dengar jawapan"
-      }
-      aria-label={
-        state === "loading" ? "Memuatkan audio…" :
-        state === "playing" ? "Henti" :
-        state === "error" ? "Cuba semula" :
-        "Dengar jawapan"
-      }
+      title={label}
+      aria-label={label}
     >
       {state === "loading" && <Loader2 className="h-3 w-3 animate-spin" />}
       {state === "playing" && <Square className="h-3 w-3 fill-current" />}
       {(state === "idle" || state === "error") && <Volume2 className="h-3 w-3" />}
-      {state === "loading" && "Memuatkan…"}
-      {state === "playing" && "Henti"}
-      {(state === "idle" || state === "error") && "Dengar Jawapan"}
+      {label}
     </button>
   )
 }

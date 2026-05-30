@@ -12,11 +12,12 @@ interface VoiceMicButtonProps {
   titleIdle?: string
   titleRecording?: string
   titleTranscribing?: string
+  uiLanguage?: string
 }
 
-export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, titleRecording, titleTranscribing }: VoiceMicButtonProps) {
+export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, titleRecording, titleTranscribing, uiLanguage = "en" }: VoiceMicButtonProps) {
   const { state, transcript, language, errorMessage, startRecording, stopRecording, reset } =
-    useVoiceRecorder()
+    useVoiceRecorder(uiLanguage)
 
   // Fire callback when transcription is done, then reset after 1.5s
   useEffect(() => {

@@ -17,7 +17,26 @@ export interface UseVoiceRecorderReturn {
   reset: () => void
 }
 
-export function useVoiceRecorder(): UseVoiceRecorderReturn {
+const ERRORS = {
+  micBlocked: {
+    ms: "Benarkan akses mikrofon dalam tetapan pelayar",
+    en: "Allow microphone access in your browser settings",
+  },
+  tooShort: {
+    ms: "Rakaman terlalu pendek — cuba lagi",
+    en: "Recording too short — try again",
+  },
+  transcribeFailed: {
+    ms: "Gagal mentranskrip — taip soalan anda",
+    en: "Transcription failed — type your question instead",
+  },
+}
+
+function voiceError(key: keyof typeof ERRORS, uiLang: string): string {
+  return uiLang === "ms" ? ERRORS[key].ms : ERRORS[key].en
+}
+
+export function useVoiceRecorder(uiLanguage = "en"): UseVoiceRecorderReturn {
   const [state, setState] = useState<RecorderState>("idle")
   const [transcript, setTranscript] = useState("")
   const [language, setLanguage] = useState("en")
@@ -39,7 +58,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch {
-      setError("Benarkan akses mikrofon dalam tetapan pelayar")
+      setError(voiceError("micBlocked", uiLanguage))
       return
     }
 
@@ -61,7 +80,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
       const durationMs = Date.now() - startTimeRef.current
       if (durationMs < MIN_DURATION_MS) {
-        setError("Rakaman terlalu pendek — cuba lagi")
+        setError(voiceError("tooShort", uiLanguage))
         return
       }
 
@@ -86,7 +105,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         setLanguage(data.language || "en")
         setState("done")
       } catch {
-        setError("Gagal mentranskrip — taip soalan anda")
+        setError(voiceError("transcribeFailed", uiLanguage))
       }
     }
 

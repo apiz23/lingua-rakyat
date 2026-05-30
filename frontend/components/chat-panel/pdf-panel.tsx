@@ -7,8 +7,10 @@ import "react-pdf/dist/Page/AnnotationLayer.css"
 import { cn } from "@/lib/utils"
 import {
   AlertTriangle,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   FileX,
   Loader2,
   X,
@@ -77,6 +79,8 @@ export default function PdfPanel({
   const [loadError, setLoadError] = useState(false)
   const [resolvedUrl, setResolvedUrl] = useState(url)
   const [panelWidth, setPanelWidth] = useState(420)
+  // Mobile only: collapse to header bar so composer stays accessible
+  const [collapsed, setCollapsed] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   // Track whether the signed URL fallback was already attempted
   const triedSignedRef = useRef(false)
@@ -164,15 +168,27 @@ export default function PdfPanel({
       ref={containerRef}
       className={cn(
         "flex flex-col border-l border-border bg-background",
-        className
+        className,
+        // On mobile collapse to just the header so the composer stays reachable
+        collapsed && "!h-10 overflow-hidden"
       )}
     >
       {/* Header */}
       <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3">
-        <span className="truncate text-xs font-medium text-foreground">
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
           {docName}
         </span>
-        <button onClick={onClose} aria-label="Close PDF viewer">
+        {/* Collapse toggle — only visible on mobile (hidden at lg breakpoint) */}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          aria-label={collapsed ? "Expand PDF viewer" : "Collapse PDF viewer"}
+          className="mr-1 shrink-0 lg:hidden"
+        >
+          {collapsed
+            ? <ChevronUp className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            : <ChevronDown className="h-4 w-4 text-muted-foreground hover:text-foreground" />}
+        </button>
+        <button onClick={onClose} aria-label="Close PDF viewer" className="shrink-0">
           <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
         </button>
       </div>
