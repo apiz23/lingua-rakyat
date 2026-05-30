@@ -11,7 +11,6 @@ import {
   MessageSquare,
   Languages,
 } from "lucide-react"
-import logo from "@/public/icons/android-chrome-512x512.png"
 
 import {
   Sidebar,
@@ -109,9 +108,9 @@ export function AppSidebar() {
     <Sidebar
       collapsible="icon"
       className="border-r border-border/50 bg-background data-[state=collapsed]:w-16"
-      variant="inset"
+      variant="sidebar"
     >
-      <SidebarHeader className="border-b border-border/50 pb-4">
+      <SidebarHeader className="border-b border-border/50">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -119,16 +118,17 @@ export function AppSidebar() {
               size="lg"
               tooltip={copy.appName}
               className="hover:bg-primary/5 data-[state=open]:bg-primary/5"
-              onClick={handleNavigation} // Close on mobile when clicked
+              onClick={handleNavigation}
             >
               <Link href="/" className="group">
                 <div className="flex aspect-square size-8 items-center justify-center">
                   <Image
-                    src={logo}
+                    src="/icons/android-chrome-512x512.png"
                     alt="Lingua Rakyat logo"
                     width={64}
                     height={64}
                     className="rounded-full"
+                    unoptimized
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
@@ -215,7 +215,6 @@ export function AppSidebar() {
                 <span>{copy.language}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
