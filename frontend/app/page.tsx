@@ -286,7 +286,7 @@ export default function Home() {
           headline2: "Generation",
 
           subhead:
-            "Sistem soal jawab dokumen kerajaan berasaskan AI yang menggunakan Cohere embeddings, pangkalan data vektor Pinecone, dan Groq LLM. Menyokong Bahasa Melayu, English, dan Mandarin.",
+            "Sistem soal jawab dokumen kerajaan berasaskan AI yang menggunakan Cohere multilingual embeddings, penyusunan semula neural Cohere, dan Groq LLaMA 3.3 70B. Jawapan bersumberkan dokumen dengan skor ketepatan, dalam Bahasa Melayu, English, dan Mandarin.",
 
           cta: "Terokai Demo Teknikal",
           ctaSecondary: "Tonton Demo",
@@ -304,19 +304,19 @@ export default function Home() {
             {
               n: "01",
               title: "Ingestion",
-              desc: "PDF → pengekstrakan teks → pembahagian (500 perkataan setiap chunk, overlap 50) → embedding Cohere (multilingual) → Pinecone.",
+              desc: "PDF → pengekstrakan teks → pembahagian bahagian-sedar (360 patah perkataan, overlap 45) → embedding Cohere multilingual-v3 → Pinecone.",
               icon: FileText,
             },
             {
               n: "02",
               title: "Retrieval",
-              desc: "Embedding soalan → carian semantik di Pinecone → ambil top-k chunks → augmentasi pertanyaan (pilihan).",
+              desc: "Pengesanan bahasa → augmentasi pertanyaan (×4 varian) → embedding Cohere → carian vektor Pinecone → penyusunan semula neural Cohere → top-k chunks.",
               icon: Languages,
             },
             {
               n: "03",
               title: "Generation",
-              desc: "Prompt berasaskan konteks → Groq LLM (Llama 3) → jawapan ringkas + petikan + skor keyakinan.",
+              desc: "Pengawal bukti → prompt berasaskan konteks → Groq LLaMA 3.3 70B → jawapan beranak + petikan sumber + skor keyakinan + skor ketepatan.",
               icon: FileSearch,
             },
           ],
@@ -338,14 +338,14 @@ export default function Home() {
               icon: BarChart3,
             },
             {
-              label: "Live Testing",
-              desc: "Jalankan ujian dan lihat keputusan secara langsung dalam papan pemuka /eval.",
-              icon: Shield,
+              label: "Suara I/O",
+              desc: "Tanya melalui suara (Groq Whisper STT) dan dengar jawapan dibaca balik (ElevenLabs TTS). Sokongan speechSynthesis pelayar sebagai sandaran.",
+              icon: Mic,
             },
             {
-              label: "Query Augmentation",
-              desc: "Mengembangkan soalan ke pelbagai bahasa untuk meningkatkan ketepatan carian.",
-              icon: Mic,
+              label: "Pengawal Bukti",
+              desc: "Menolak berhalusinasi — hanya menjawab apabila bukti kukuh. Setiap jawapan disertai skor ketepatan (faithfulness) terhadap sumber.",
+              icon: Shield,
             },
           ],
 
@@ -366,7 +366,7 @@ export default function Home() {
           headline2: "Generation",
 
           subhead:
-            "An AI-powered government document Q&A system using Cohere embeddings, Pinecone vector database, and Groq LLM. Supports Malay, English, and Chinese.",
+            "An AI-powered government document Q&A system using Cohere multilingual embeddings, Cohere neural reranking, and Groq LLaMA 3.3 70B. Source-cited answers with faithfulness scoring in Malay, English, and Chinese.",
 
           cta: "Explore Technical Demo",
           ctaSecondary: "Watch Demo",
@@ -384,19 +384,19 @@ export default function Home() {
             {
               n: "01",
               title: "Ingestion",
-              desc: "PDF → text extraction → chunking (500-word window, 50 overlap) → Cohere embeddings (multilingual) → Pinecone.",
+              desc: "PDF → text extraction → section-aware chunking (360-word window, 45-word overlap) → Cohere embed-multilingual-v3 → Pinecone.",
               icon: FileText,
             },
             {
               n: "02",
               title: "Retrieval",
-              desc: "Question embedding → semantic search in Pinecone → retrieve top-k chunks → optional query augmentation.",
+              desc: "Language detection → multi-query augmentation (×4 variants) → Cohere embedding → Pinecone vector search → Cohere neural reranking → top-k chunks.",
               icon: Languages,
             },
             {
               n: "03",
               title: "Generation",
-              desc: "Context-aware prompt → Groq LLM (Llama 3) → concise answer + citations + confidence score.",
+              desc: "Evidence guard → context-aware prompt → Groq LLaMA 3.3 70B → streamed answer + source citations + confidence + faithfulness score.",
               icon: FileSearch,
             },
           ],
@@ -418,14 +418,14 @@ export default function Home() {
               icon: BarChart3,
             },
             {
-              label: "Live Testing",
-              desc: "Run test suites and view results in real time in the /eval dashboard.",
-              icon: Shield,
+              label: "Voice I/O",
+              desc: "Ask by voice (Groq Whisper STT) and hear answers read back (ElevenLabs TTS). Browser speechSynthesis fallback when offline.",
+              icon: Mic,
             },
             {
-              label: "Query Augmentation",
-              desc: "Expands queries across languages to improve retrieval accuracy.",
-              icon: Mic,
+              label: "Evidence Guard",
+              desc: "Refuses to hallucinate — only answers when retrieved evidence clears the confidence threshold. Every answer carries a faithfulness score.",
+              icon: Shield,
             },
           ],
 
@@ -486,6 +486,14 @@ export default function Home() {
               label: "Metrik penilaian (ROUGE/BLEU)",
               values: [true, false, false, false, false],
             },
+            {
+              label: "Skor ketepatan sumber (faithfulness)",
+              values: [true, false, false, false, false],
+            },
+            {
+              label: "Suara I/O (STT + TTS)",
+              values: [true, false, false, false, false],
+            },
           ],
           footnote:
             "Nota: Mod luar talian bergantung pada dokumen dan petikan yang telah dicache semasa dalam talian.",
@@ -532,7 +540,15 @@ export default function Home() {
               values: [true, false, false, true, false],
             },
             {
-              label: "Built-in eval metrics",
+              label: "Built-in eval metrics (ROUGE/BLEU)",
+              values: [true, false, false, false, false],
+            },
+            {
+              label: "Faithfulness scoring (answer vs sources)",
+              values: [true, false, false, false, false],
+            },
+            {
+              label: "Voice I/O (STT + TTS)",
               values: [true, false, false, false, false],
             },
           ],
