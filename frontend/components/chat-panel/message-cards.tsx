@@ -39,6 +39,7 @@ export interface Message {
   sufficient_evidence: boolean
   faithfulness?: number | null
   isStreaming?: boolean
+  suggestions?: string[]
 }
 
 const LANGUAGE_LABELS: Record<string, { name: string; code: string }> = {
@@ -182,6 +183,7 @@ export function AIMessageCard({
   docPublicUrl,
   autoSpeak,
   onOpenPdf,
+  onSuggestionClick,
 }: {
   message: Message
   index: number
@@ -193,6 +195,7 @@ export function AIMessageCard({
   docPublicUrl?: string
   autoSpeak?: boolean
   onOpenPdf?: (page: number, text: string | null) => void
+  onSuggestionClick?: (question: string) => void
 }) {
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
@@ -362,6 +365,26 @@ export function AIMessageCard({
                 faithfulness={message.faithfulness}
                 language={message.language}
               />
+            )}
+
+            {!message.isStreaming && message.suggestions && message.suggestions.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                  {message.language === "ms" ? "Soalan susulan:" : message.language === "zh-cn" ? "后续问题：" : "Follow-up questions:"}
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {message.suggestions.map((q, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => onSuggestionClick?.(q)}
+                      className="w-fit max-w-full truncate border border-primary/20 bg-primary/5 px-3 py-1.5 text-left text-xs font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             {!message.isStreaming && message.sources.length > 0 && (

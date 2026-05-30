@@ -363,7 +363,10 @@ export default function WorkSpacePage() {
           const latest = docs?.sort((a, b) =>
             a.uploaded_at < b.uploaded_at ? 1 : -1
           )[0]
-          if (latest) setSelectedDoc(latest)
+          if (latest) {
+            setSelectedDoc(latest)
+            setInitialQuestion("Summarize this document")
+          }
         }}
       />
     </div>

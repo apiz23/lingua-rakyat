@@ -1109,6 +1109,63 @@ def _insufficient_evidence_answer(lang: str) -> str:
     return answers.get(lang, answers["en"])
 
 
+def _inject_history(prompt: str, chat_history: list[dict] | None, lang: str) -> str:
+    """Prepend last-3 Q&A turns before the Context block so the LLM handles follow-ups."""
+    if not chat_history:
+        return prompt
+    turns = [
+        t for t in chat_history[-3:]
+        if t.get("question", "").strip() and t.get("answer", "").strip()
+    ]
+    if not turns:
+        return prompt
+    label = {
+        "ms": "Perbualan sebelumnya (konteks sahaja — jawab dari dokumen di bawah):",
+        "zh-cn": "之前的对话（仅供参考——请从以下文件中作答）：",
+    }.get(lang, "Previous conversation (context only — answer from the document below, not from memory):")
+    lines = [label]
+    for t in turns:
+        lines.append(f"Q: {t['question'].strip()[:200]}")
+        lines.append(f"A: {t['answer'].strip()[:300]}")
+        lines.append("")
+    history_block = "\n".join(lines) + "\n"
+    for marker in ("Context:\n", "Konteks:\n", "Document excerpts:\n", "Petikan dokumen:\n", "上下文:\n", "文件摘录:\n"):
+        if marker in prompt:
+            return prompt.replace(marker, history_block + marker, 1)
+    return history_block + prompt
+
+
+def _generate_suggestions(question: str, answer: str, lang: str) -> list[str]:
+    """Use the fast model to suggest 3 follow-up questions in the same language."""
+    import json as _json
+    lang_instr = {
+        "ms": "dalam Bahasa Melayu",
+        "zh-cn": "用中文",
+    }.get(lang, "in English")
+    prompt = (
+        f"Based on this Q&A about a Malaysian government document, suggest 3 short follow-up questions "
+        f"{lang_instr} that a citizen would naturally ask next. "
+        f"Return ONLY a JSON array of 3 strings. No explanation.\n\n"
+        f"Q: {question[:200]}\nA: {answer[:350]}\n\nJSON array:"
+    )
+    try:
+        response = _get_client().chat.completions.create(
+            model=GROQ_MODEL_FAST,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5,
+            stream=False,
+            max_tokens=180,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        match = re.search(r"\[.*?\]", raw, re.DOTALL)
+        if match:
+            items = _json.loads(match.group())
+            return [q.strip() for q in items if isinstance(q, str) and q.strip()][:3]
+    except Exception as exc:
+        logger.warning("[Suggestions] Failed: %s", exc)
+    return []
+
+
 def _confidence_label(score: float, sufficient_evidence: bool) -> str:
     if not sufficient_evidence or score < 0.5:
         return "low"
@@ -1122,6 +1179,7 @@ def _prepare_pipeline(
     document_id: str,
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
+    chat_history: list[dict] | None = None,
 ) -> dict[str, Any]:
     t_start = time.time()
     lang = detect_language(question)
@@ -1153,10 +1211,10 @@ def _prepare_pipeline(
         prompt_text = _summary_prompt(context, lang)
     elif sufficient_evidence:
         evidence_mode = "strong"
-        prompt_text = _qa_prompt(context, question, lang)
+        prompt_text = _inject_history(_qa_prompt(context, question, lang), chat_history, lang)
     elif usable_evidence:
         evidence_mode = "cautious"
-        prompt_text = _cautious_qa_prompt(context, question, lang)
+        prompt_text = _inject_history(_cautious_qa_prompt(context, question, lang), chat_history, lang)
     else:
         evidence_mode = "insufficient"
         prompt_text = _qa_prompt(context, question, lang)
@@ -1397,9 +1455,12 @@ def answer_question(
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
     bypass_cache: bool = False,
+    chat_history: list[dict] | None = None,
 ) -> dict[str, Any]:
     question = _sanitize_question(question)
-    cached = None if bypass_cache else cache_get(
+    # Skip cache when conversation history is present — same question has different context
+    skip_cache = bypass_cache or bool(chat_history)
+    cached = None if skip_cache else cache_get(
         question,
         document_id,
         model_override=model_override,
@@ -1413,19 +1474,21 @@ def answer_question(
         document_id,
         model_override=model_override,
         enable_query_augmentation=enable_query_augmentation,
+        chat_history=chat_history,
     )
     if prepared["sufficient_evidence"] or prepared.get("usable_evidence", False):
         answer_text, model_used = _generate_completion(prepared["prompt_text"], prepared["model_name"])
     else:
         answer_text, model_used = _insufficient_evidence_answer(prepared["language"]), "evidence-guard"
     result = _build_result(prepared, answer_text, model_used)
-    cache_set(
-        question,
-        document_id,
-        result,
-        model_override=model_override,
-        enable_query_augmentation=enable_query_augmentation,
-    )
+    if not skip_cache:
+        cache_set(
+            question,
+            document_id,
+            result,
+            model_override=model_override,
+            enable_query_augmentation=enable_query_augmentation,
+        )
     return result
 
 
@@ -1435,9 +1498,11 @@ def stream_answer_question(
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
     bypass_cache: bool = False,
+    chat_history: list[dict] | None = None,
 ) -> Generator[dict[str, Any], None, None]:
     question = _sanitize_question(question)
-    cached = None if bypass_cache else cache_get(
+    skip_cache = bypass_cache or bool(chat_history)
+    cached = None if skip_cache else cache_get(
         question,
         document_id,
         model_override=model_override,
@@ -1464,6 +1529,7 @@ def stream_answer_question(
         document_id,
         model_override=model_override,
         enable_query_augmentation=enable_query_augmentation,
+        chat_history=chat_history,
     )
     yield {
         "type": "retrieval",
@@ -1489,15 +1555,22 @@ def stream_answer_question(
 
     answer_text = "".join(pieces).strip()
     result = _build_result(prepared, answer_text, model_used)
-    cache_set(
-        question,
-        document_id,
-        result,
-        model_override=model_override,
-        enable_query_augmentation=enable_query_augmentation,
-    )
+    if not skip_cache:
+        cache_set(
+            question,
+            document_id,
+            result,
+            model_override=model_override,
+            enable_query_augmentation=enable_query_augmentation,
+        )
     yield {"type": "sources", "sources": result["sources"]}
     yield {"type": "complete", **result}
+
+    # Suggested follow-ups — generated after complete so they don't block the answer stream
+    if prepared.get("evidence_mode") not in ("insufficient",):
+        suggestions = _generate_suggestions(question, answer_text, prepared["language"])
+        if suggestions:
+            yield {"type": "suggestions", "questions": suggestions}
 
 
 def delete_document_from_vectorstore(document_id: str) -> None:

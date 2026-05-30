@@ -565,6 +565,12 @@ export default function ChatPanel({
     messageAdded = true
 
     try {
+      // Last 3 completed turns as multi-turn context
+      const chatHistory = messages
+        .filter(m => !m.isStreaming && m.answer)
+        .slice(-3)
+        .map(m => ({ question: m.question, answer: m.answer.slice(0, 400) }))
+
       await askQuestionStream(
         userId,
         selectedDoc.id,
@@ -708,6 +714,22 @@ export default function ChatPanel({
             return
           }
 
+          if (event.type === "suggestions") {
+            setMessages((prev) => {
+              let idx = -1
+              for (let i = prev.length - 1; i >= 0; i -= 1) {
+                if (prev[i].id === msgId) { idx = i; break }
+              }
+              if (idx === -1) return prev
+              return [
+                ...prev.slice(0, idx),
+                { ...prev[idx], suggestions: event.questions },
+                ...prev.slice(idx + 1),
+              ]
+            })
+            return
+          }
+
           if (event.type === "error") {
             if (messageAdded) {
               setMessages((prev) =>
@@ -738,7 +760,9 @@ export default function ChatPanel({
               description: detail || copy.retryLater,
             })
           }
-        }
+        },
+        undefined,   // signal — not used here
+        chatHistory, // multi-turn context
       )
     } catch (error) {
       if (messageAdded) {
@@ -765,8 +789,7 @@ export default function ChatPanel({
   }
 
   const handleSuggestionClick = (suggestion: string) => {
-    setInput(suggestion)
-    inputRef.current?.focus()
+    submitQuestion(suggestion)
   }
 
   const toggleSources = (messageIndex: number) => {
@@ -1102,6 +1125,7 @@ export default function ChatPanel({
                       docPublicUrl={selectedDoc?.public_url ?? undefined}
                       autoSpeak={autoSpeak}
                       onOpenPdf={handleOpenPdf}
+                      onSuggestionClick={handleSuggestionClick}
                     />
                   </div>
                 ))}

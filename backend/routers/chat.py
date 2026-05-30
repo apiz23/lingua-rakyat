@@ -38,6 +38,8 @@ class AskRequest(BaseModel):
     model_override: str = ""
     enable_query_augmentation: bool = True
     bypass_cache: bool = False
+    # Last N Q&A turns for multi-turn context. Each: {"question": str, "answer": str}
+    chat_history: list[dict] = Field(default_factory=list)
 
 
 class SourceChunk(BaseModel):
@@ -158,6 +160,7 @@ async def ask_question(request: Request, body: AskRequest):
             model_override=body.model_override or None,
             enable_query_augmentation=body.enable_query_augmentation,
             bypass_cache=body.bypass_cache,
+            chat_history=body.chat_history or None,
         )
     except Exception as exc:
         logger.error("[Chat] Q&A failed: %s", exc)
@@ -206,6 +209,7 @@ async def ask_question_stream(request: Request, body: AskRequest):
                 model_override=body.model_override or None,
                 enable_query_augmentation=body.enable_query_augmentation,
                 bypass_cache=body.bypass_cache,
+                chat_history=body.chat_history or None,
             ):
                 if event["type"] == "token":
                     answer_pieces.append(event["text"])

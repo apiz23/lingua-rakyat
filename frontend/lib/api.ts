@@ -455,6 +455,7 @@ export type ChatStreamEvent =
       top_query_variant?: string
       faithfulness?: number | null
     }
+  | { type: "suggestions"; questions: string[] }
   | { type: "error"; detail: string }
 
 export async function askQuestionStream(
@@ -467,7 +468,8 @@ export async function askQuestionStream(
   enableQueryAugmentation: boolean = true,
   bypassCache: boolean = false,
   onEvent: (event: ChatStreamEvent) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  chatHistory?: Array<{ question: string; answer: string }>,
 ): Promise<void> {
   const runOfflineFallback = () => {
     const startedAt = Date.now()
@@ -538,6 +540,7 @@ export async function askQuestionStream(
         model_override: modelOverride,
         enable_query_augmentation: enableQueryAugmentation,
         bypass_cache: bypassCache,
+        chat_history: chatHistory ?? [],
       }),
       signal,
     })
