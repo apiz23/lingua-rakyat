@@ -21,8 +21,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   ExternalLink,
-  ShieldCheck,
 } from "lucide-react"
+import { AnswerMetrics } from "./answer-metrics"
 
 export interface Message {
   id: string
@@ -274,57 +274,17 @@ export function AIMessageCard({
         <div className="relative border border-border/50 bg-card shadow-sm transition-all hover:shadow-md">
           <div className="h-1 w-full bg-linear-to-r from-primary via-primary/60 to-transparent" />
           <div className="p-3.5 sm:p-5">
-            {/* Primary row: 2 essential badges + copy button */}
+            {/* Primary row: language badge + copy button */}
             <div className="mb-1.5 flex items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <div className="flex items-center gap-1.5 border border-primary/20 bg-primary/10 px-2 py-1">
                   <span className="bg-primary/20 px-1 font-mono text-[10px] text-primary">
                     {langInfo.code}
                   </span>
-                  <span className="text-xs font-medium text-primary">
+                  <span className="truncate text-xs font-medium text-primary">
                     {langInfo.name}
                   </span>
                 </div>
-
-                {message.confidence > 0 ? (
-                  <span
-                    className={[
-                      "border px-2 py-0.5 text-[10px] font-medium",
-                      message.confidence >= 0.75
-                        ? "border-success/20 bg-success/10 text-success"
-                        : message.confidence >= 0.5
-                          ? "border-primary/20 bg-primary/10 text-primary"
-                          : "border-warning/20 bg-warning/10 text-warning",
-                    ].join(" ")}
-                  >
-                    {message.confidence_label
-                      ? message.confidence_label.toUpperCase()
-                      : `${Math.round(message.confidence * 100)}%`}
-                  </span>
-                ) : null}
-
-                {typeof message.faithfulness === "number" &&
-                message.faithfulness > 0 ? (
-                  <span
-                    className={[
-                      "inline-flex items-center gap-1 border px-2 py-0.5 text-[10px] font-medium",
-                      message.faithfulness >= 0.75
-                        ? "border-success/20 bg-success/10 text-success"
-                        : message.faithfulness >= 0.5
-                          ? "border-primary/20 bg-primary/10 text-primary"
-                          : "border-warning/20 bg-warning/10 text-warning",
-                    ].join(" ")}
-                    title={
-                      language === "ms"
-                        ? "Sejauh mana jawapan ini berasaskan petikan sumber"
-                        : "How well this answer is grounded in the source excerpts"
-                    }
-                  >
-                    <ShieldCheck className="h-2.5 w-2.5" />
-                    {language === "ms" ? "Berdasar sumber" : "Grounded"}{" "}
-                    {Math.round(message.faithfulness * 100)}%
-                  </span>
-                ) : null}
               </div>
 
               <button
@@ -394,6 +354,14 @@ export function AIMessageCard({
               </div>
             ) : (
               <ChatMarkdown content={message.answer} />
+            )}
+
+            {!message.isStreaming && (
+              <AnswerMetrics
+                confidence={message.confidence}
+                faithfulness={message.faithfulness}
+                language={message.language}
+              />
             )}
 
             {!message.isStreaming && message.sources.length > 0 && (
