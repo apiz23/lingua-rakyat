@@ -64,7 +64,11 @@ CHUNK_TARGET_WORDS = 360
 CHUNK_MAX_WORDS = 520
 CHUNK_OVERLAP_WORDS = 45
 CONFIDENCE_THRESHOLD = 0.50
-MIN_USABLE_CONFIDENCE = 0.25
+# Below CONFIDENCE_THRESHOLD but at/above this, answer cautiously (grounded in
+# the closest chunk; the cautious prompt self-refuses if truly irrelevant).
+# Only below this do we fall back to the canned "insufficient evidence" reply —
+# kept low so the booth rarely sees a hard refusal.
+MIN_USABLE_CONFIDENCE = 0.12
 OCR_MIN_CHARS = 50
 PROMPT_RETRY_CHAR_LIMITS = [2500, 1200]
 ENABLE_COHERE_RERANK = os.getenv("ENABLE_COHERE_RERANK", "true").lower() == "true"
@@ -82,6 +86,13 @@ SUMMARIZE_KEYWORDS: list[str] = [
     "rumusan", "apa isi", "apakah dokumen", "ceritakan", "terangkan dokumen",
     "apa yang penting", "kandungan dokumen", "huraikan", "jelaskan dokumen",
     "apa dokumen ini", "总结", "概述", "摘要", "这个文件", "主要内容",
+    # Open-ended "what else / what other / tell me more" — these vague meta
+    # questions retrieve poorly as pinpoint QA and otherwise trip the evidence
+    # guard, so route them to the broad summary path instead.
+    "apa lagi", "apa lain", "ada apa lagi", "lagi dalam dokumen",
+    "lain dalam dokumen", "apa lagi dalam", "what else", "anything else",
+    "what other", "tell me more", "anything more", "what's in this",
+    "whats in this", "还有什么", "还有别的", "其他内容", "里面还有",
 ]
 
 

@@ -264,6 +264,14 @@ These are the main limitations visible from the current code:
 - The data-quality log is in-memory and resets on backend restart (per-process, not persisted).
 - Some competition-facing content in the UI is static or promotional, so this README should be treated as the more reliable technical reference.
 
+## Demo / Booth Mode
+
+All API routes are rate-limited per client IP. At a booth, every visitor shares
+one public WiFi IP and therefore one rate-limit bucket, which can trigger
+`HTTP 429` mid-demo. Set `BOOTH_MODE=true` to switch to generous limits for the
+event, then `false` afterward. Full instructions and the limit table:
+[`docs/BOOTH_MODE.md`](docs/BOOTH_MODE.md).
+
 ## Suggested Demo Flow
 
 For a presentation or judging demo:

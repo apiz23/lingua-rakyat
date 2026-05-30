@@ -49,14 +49,17 @@ import {
   Volume2,
   X,
 } from "lucide-react"
+import dynamic from "next/dynamic"
 import {
   AIMessageCard,
   Message,
   TypingIndicator,
   UserMessageBubble,
 } from "./message-cards"
-import PdfPanel from "./pdf-panel"
 import { VoiceMicButton } from "./voice-mic-button"
+
+// react-pdf (pdf.js) touches browser-only DOMMatrix at module load — never SSR it
+const PdfPanel = dynamic(() => import("./pdf-panel"), { ssr: false })
 
 function shortModelLabel(modelId: string): string {
   if (!modelId) return "Auto"
@@ -540,6 +543,27 @@ export default function ChatPanel({
         : `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`
     let messageAdded = false
 
+    // Show the question + a streaming placeholder immediately, before the
+    // first SSE event arrives — otherwise the user's question is invisible
+    // during the retrieval gap.
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: msgId,
+        question,
+        answer: "",
+        sources: [],
+        timestamp,
+        language: language === "ms" ? "ms" : "en",
+        confidence: 0,
+        latency_ms: 0,
+        cached: false,
+        sufficient_evidence: true,
+        isStreaming: true,
+      },
+    ])
+    messageAdded = true
+
     try {
       await askQuestionStream(
         userId,
@@ -865,7 +889,7 @@ export default function ChatPanel({
       {/* Chat column */}
       <AiChat
         status={chatStatus}
-        className={cn("min-w-0 font-sans", pdfOpen ? "lg:flex-1" : "h-full")}
+        className={cn("min-w-0 flex-1 font-sans", !pdfOpen && "h-full")}
       >
       <AiChatBody className="min-h-0">
         <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
