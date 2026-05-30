@@ -62,6 +62,12 @@ function benchmarkGrade(
     result?.aggregate.avg_fk_grade ?? report?.readability?.avg_fk_grade ?? 12
   const latency =
     result?.aggregate.avg_latency_ms ?? report?.latency?.avg_ms ?? 4000
+  // Faithfulness: how grounded answers are in sources. Use 0.75 as neutral
+  // fallback when not yet scored so the grade isn't penalised unfairly.
+  const faithfulness =
+    report?.faithfulness?.scored_queries
+      ? report.faithfulness.avg_faithfulness_score
+      : 0.75
 
   // ROUGE 0.15–0.30 is the expected range for open-domain generative RAG.
   // Scale so 0.25 = full score; don't penalise for normal RAG behaviour.
@@ -71,13 +77,14 @@ function benchmarkGrade(
     Math.min(1, 1 - Math.max(readability - 5, 0) / 7)
   )
   const latencyScore = Math.max(0, Math.min(1, 1 - latency / 6000))
-  // Weights: confidence (primary retrieval signal) 40%, readability 20%,
-  // latency 20%, ROUGE word-overlap 20%.
+  // Weights: confidence 35%, faithfulness 20%, readability 15%,
+  // latency 15%, ROUGE word-overlap 15%.
   const blended =
-    rougeScore * 0.2 +
-    confidence * 0.4 +
-    readabilityScore * 0.2 +
-    latencyScore * 0.2
+    rougeScore * 0.15 +
+    confidence * 0.35 +
+    readabilityScore * 0.15 +
+    latencyScore * 0.15 +
+    faithfulness * 0.20
 
   return Math.round(blended * 100)
 }
@@ -693,6 +700,16 @@ export default function BenchmarkPage() {
                       {report.readability?.pct_simple_language ?? 0}%
                     </span>
                   </div>
+                  {(report.faithfulness?.scored_queries ?? 0) > 0 && (
+                    <div className="flex items-center justify-between bg-muted/20 px-4 py-3">
+                      <span className="text-muted-foreground">
+                        {language === "ms" ? "Skor Ketepatan Sumber" : "Faithfulness score"}
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        {(report.faithfulness!.avg_faithfulness_score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mt-5 border border-dashed border-border bg-muted/10 px-4 py-6 text-sm text-muted-foreground">

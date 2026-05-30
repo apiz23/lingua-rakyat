@@ -189,11 +189,11 @@ function RateLimitBanner() {
         <span className="font-medium text-foreground">
           API Rate Limits active:
         </span>{" "}
-        Chat is limited to{" "}
-        <span className="font-mono font-medium">30 req/min</span>, uploads to{" "}
-        <span className="font-mono font-medium">10 req/min</span> per IP.
-        Returns HTTP 429 with{" "}
+        All routes are limited per IP. Returns HTTP 429 with a{" "}
         <span className="font-mono font-medium">Retry-After</span> header.
+        {" "}For demo-day use, set{" "}
+        <span className="font-mono font-medium">BOOTH_MODE=true</span> on the
+        backend to lift limits for shared WiFi.
       </div>
     </div>
   )
@@ -884,12 +884,12 @@ export default function EvalPage() {
                   className="w-full border border-border bg-background text-sm text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary sm:w-72"
                   title="Model to use for test suite"
                 >
-                  <SelectValue placeholder="Auto (qwen3-32b default)" />
+                  <SelectValue placeholder="Auto (server fast model)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     <SelectItem value="__auto__">
-                      Auto (qwen3-32b default)
+                      Auto (server fast model)
                     </SelectItem>
                     {GROQ_MODELS.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
@@ -937,7 +937,7 @@ export default function EvalPage() {
                     <div
                       className="h-full rounded-full bg-primary transition-all duration-500"
                       style={{
-                        width: `${Math.round((streamProgress.completed / streamProgress.total) * 100)}%`,
+                        width: `${Math.round((streamProgress.completed / Math.max(1, streamProgress.total)) * 100)}%`,
                       }}
                     />
                   </div>
