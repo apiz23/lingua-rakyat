@@ -64,7 +64,7 @@ function PdfErrorState({
 }
 
 export default function PdfPanel({
-  url,
+  url: _url,
   targetPage,
   highlightText,
   docName,
@@ -73,17 +73,17 @@ export default function PdfPanel({
   onClose,
   className,
 }: PdfPanelProps) {
+  const proxyUrl = `${API_URL}/api/documents/${documentId}/pdf`
+
   const [numPages, setNumPages] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(targetPage)
   const [hasTextLayer, setHasTextLayer] = useState<boolean | null>(null) // null = unknown
   const [loadError, setLoadError] = useState(false)
-  const [resolvedUrl, setResolvedUrl] = useState(url)
+  const [resolvedUrl, setResolvedUrl] = useState(proxyUrl)
   const [panelWidth, setPanelWidth] = useState(420)
   // Mobile only: collapse to header bar so composer stays accessible
   const [collapsed, setCollapsed] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  // Track whether the signed URL fallback was already attempted
-  const triedSignedRef = useRef(false)
 
   // When targetPage changes (user clicks a different pill), jump to that page
   useEffect(() => {
@@ -91,19 +91,11 @@ export default function PdfPanel({
     setHasTextLayer(null)
   }, [targetPage])
 
-  // When url prop changes (document switched), reset resolved URL and error
+  // When documentId changes (document switched), reset to proxy URL and clear error
   useEffect(() => {
-    setResolvedUrl(url)
+    setResolvedUrl(`${API_URL}/api/documents/${documentId}/pdf`)
     setLoadError(false)
-    triedSignedRef.current = false
-  }, [url])
-
-  // Abort any in-flight signed URL fetch on unmount
-  useEffect(() => {
-    return () => {
-      signedFetchAbortRef.current?.abort()
-    }
-  }, [])
+  }, [documentId])
 
   // Track panel container width so the PDF fills the panel at any size
   useEffect(() => {
@@ -130,37 +122,8 @@ export default function PdfPanel({
     [activeHighlight]
   )
 
-  const signedFetchAbortRef = useRef<AbortController | null>(null)
-
-  const fetchSignedUrl = () => {
-    signedFetchAbortRef.current?.abort()
-    const controller = new AbortController()
-    signedFetchAbortRef.current = controller
-
-    fetch(`${API_URL}/api/documents/${documentId}/pdf-url`, {
-      signal: controller.signal,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("signed url fetch failed")
-        return res.json() as Promise<{ url: string }>
-      })
-      .then(({ url: signedUrl }) => {
-        setResolvedUrl(signedUrl)
-        setLoadError(false)
-      })
-      .catch((err) => {
-        if (err instanceof Error && err.name === "AbortError") return
-        setLoadError(true)
-      })
-  }
-
   const handleLoadError = () => {
-    if (!triedSignedRef.current) {
-      triedSignedRef.current = true
-      fetchSignedUrl()
-    } else {
-      setLoadError(true)
-    }
+    setLoadError(true)
   }
 
   return (
@@ -212,8 +175,7 @@ export default function PdfPanel({
             language={language}
             onRetry={() => {
               setLoadError(false)
-              setResolvedUrl(url)
-              triedSignedRef.current = false
+              setResolvedUrl(`${API_URL}/api/documents/${documentId}/pdf`)
             }}
           />
         ) : (

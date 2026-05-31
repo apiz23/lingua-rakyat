@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 from pypdf import PdfReader
 from slowapi import Limiter
@@ -598,6 +599,37 @@ def get_pdf_signed_url(request: Request, document_id: str):
         raise HTTPException(status_code=404, detail="No storage path for this document")
     result = sb.storage.from_(get_bucket()).create_signed_url(storage_path, 3600)
     return {"url": result["signedURL"], "expires_in": 3600}
+
+
+@router.get("/{document_id}/pdf")
+@limiter.limit(PDF_URL_LIMIT)
+def proxy_pdf(request: Request, document_id: str):
+    """Stream PDF bytes through backend — avoids CORS and private-bucket 400s."""
+    _ = request
+    sb = get_supabase()
+    rows = (
+        sb.table(get_documents_table())
+        .select("storage_path, name")
+        .eq("id", document_id)
+        .limit(1)
+        .execute()
+    )
+    if not rows.data:
+        raise HTTPException(status_code=404, detail="Document not found")
+    row = rows.data[0]
+    storage_path = row.get("storage_path")
+    if not storage_path:
+        raise HTTPException(status_code=404, detail="No storage path for this document")
+    data: bytes = sb.storage.from_(get_bucket()).download(storage_path)
+    safe_name = (row.get("name") or "document").replace('"', "").replace("\\", "")
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{safe_name}.pdf"',
+            "Cache-Control": "private, max-age=3600",
+        },
+    )
 
 
 _DEFAULT_PREWARM = [
