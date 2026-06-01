@@ -362,4 +362,20 @@
   background: oklch(0.85 0.15 85 / 0.65);
   padding: 1px 0;
   border-radius: 2px;
+  animation: pdf-hl-pulse 1.8s ease-out forwards;
+}
+
+@keyframes pdf-hl-pulse {
+  0% {
+    background: oklch(0.78 0.18 85 / 0.9);
+    outline: 2px solid oklch(0.65 0.18 85 / 0.6);
+  }
+  60% {
+    background: oklch(0.85 0.15 85 / 0.7);
+    outline: 2px solid oklch(0.65 0.18 85 / 0.2);
+  }
+  100% {
+    background: oklch(0.85 0.15 85 / 0.65);
+    outline: 2px solid transparent;
+  }
 }

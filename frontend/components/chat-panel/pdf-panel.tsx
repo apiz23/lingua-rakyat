@@ -5,31 +5,42 @@ import { Document, Page, pdfjs } from "react-pdf"
 import "react-pdf/dist/Page/TextLayer.css"
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import { cn } from "@/lib/utils"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import {
   AlertTriangle,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   FileX,
   Loader2,
   X,
 } from "lucide-react"
 
-// Set worker once, outside component — must match the file copied to public/
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-interface PdfPanelProps {
-  url: string               // Supabase public_url (or signed URL after fallback)
-  targetPage: number        // Page to open immediately
-  highlightText: string | null  // source.text from the chunk — used for highlighting
-  docName: string           // Shown in panel header
-  documentId: string        // Used for signed URL fallback fetch
-  language: string          // "ms" | "en"
+export interface PdfPanelProps {
+  open: boolean
+  url: string
+  targetPage: number
+  highlightText: string | null
+  docName: string
+  documentId: string
+  language: string
   onClose: () => void
-  className?: string
+}
+
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)")
+    setIsDesktop(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener("change", handler)
+    return () => mq.removeEventListener("change", handler)
+  }, [])
+  return isDesktop
 }
 
 function PdfLoadingSpinner() {
@@ -63,52 +74,72 @@ function PdfErrorState({
   )
 }
 
-export default function PdfPanel({
-  url: _url,
+interface PdfViewerProps {
+  documentId: string
+  targetPage: number
+  highlightText: string | null
+  language: string
+}
+
+function PdfViewer({
+  documentId,
   targetPage,
   highlightText,
-  docName,
-  documentId,
   language,
-  onClose,
-  className,
-}: PdfPanelProps) {
+}: PdfViewerProps) {
   const proxyUrl = `${API_URL}/api/documents/${documentId}/pdf`
 
   const [numPages, setNumPages] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(targetPage)
-  const [hasTextLayer, setHasTextLayer] = useState<boolean | null>(null) // null = unknown
+  const [hasTextLayer, setHasTextLayer] = useState<boolean | null>(null)
   const [loadError, setLoadError] = useState(false)
   const [resolvedUrl, setResolvedUrl] = useState(proxyUrl)
-  const [panelWidth, setPanelWidth] = useState(420)
-  // Mobile only: collapse to header bar so composer stays accessible
-  const [collapsed, setCollapsed] = useState(false)
+  const [panelWidth, setPanelWidth] = useState(440)
   const containerRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  // When targetPage changes (user clicks a different pill), jump to that page
+  // Declare before any useEffect that references it
+  const activeHighlight = currentPage === targetPage ? highlightText : null
+
   useEffect(() => {
     setCurrentPage(targetPage)
     setHasTextLayer(null)
   }, [targetPage])
 
-  // When documentId changes (document switched), reset to proxy URL and clear error
   useEffect(() => {
     setResolvedUrl(`${API_URL}/api/documents/${documentId}/pdf`)
     setLoadError(false)
   }, [documentId])
 
-  // Track panel container width so the PDF fills the panel at any size
   useEffect(() => {
     if (!containerRef.current) return
-    const ro = new ResizeObserver(([entry]) => {
+    const ro = new ResizeObserver(([entry]) =>
       setPanelWidth(entry.contentRect.width)
-    })
+    )
     ro.observe(containerRef.current)
     return () => ro.disconnect()
   }, [])
 
-  // Only highlight on the targetPage; other pages render without marks
-  const activeHighlight = currentPage === targetPage ? highlightText : null
+  // Auto-scroll to first highlight mark after text layer renders
+  useEffect(() => {
+    if (!activeHighlight || !scrollAreaRef.current) return
+    const container = scrollAreaRef.current
+
+    const scrollToMark = () => {
+      const mark = container.querySelector<HTMLElement>("mark.pdf-hl")
+      if (!mark) return false
+      mark.scrollIntoView({ behavior: "smooth", block: "center" })
+      return true
+    }
+
+    if (scrollToMark()) return
+
+    const observer = new MutationObserver(() => {
+      if (scrollToMark()) observer.disconnect()
+    })
+    observer.observe(container, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [currentPage, activeHighlight])
 
   const customTextRenderer = useCallback(
     ({ str }: { str: string }) => {
@@ -122,41 +153,8 @@ export default function PdfPanel({
     [activeHighlight]
   )
 
-  const handleLoadError = () => {
-    setLoadError(true)
-  }
-
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "flex flex-col border-l border-border bg-background",
-        className,
-        // On mobile collapse to just the header so the composer stays reachable
-        collapsed && "!h-10 overflow-hidden"
-      )}
-    >
-      {/* Header */}
-      <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3">
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-          {docName}
-        </span>
-        {/* Collapse toggle — only visible on mobile (hidden at lg breakpoint) */}
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          aria-label={collapsed ? "Expand PDF viewer" : "Collapse PDF viewer"}
-          className="mr-1 shrink-0 lg:hidden"
-        >
-          {collapsed
-            ? <ChevronUp className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-            : <ChevronDown className="h-4 w-4 text-muted-foreground hover:text-foreground" />}
-        </button>
-        <button onClick={onClose} aria-label="Close PDF viewer" className="shrink-0">
-          <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-        </button>
-      </div>
-
-      {/* Scanned PDF banner — shown when PDF has no text layer but highlight was requested */}
+    <div ref={containerRef} className="flex h-full flex-col">
       {hasTextLayer === false && highlightText && (
         <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
@@ -168,8 +166,7 @@ export default function PdfPanel({
         </div>
       )}
 
-      {/* PDF canvas — scrollable */}
-      <div className="flex-1 overflow-y-auto bg-[#525659]">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto bg-[#525659]">
         {loadError ? (
           <PdfErrorState
             language={language}
@@ -182,16 +179,16 @@ export default function PdfPanel({
           <Document
             file={resolvedUrl}
             onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-            onLoadError={handleLoadError}
+            onLoadError={() => setLoadError(true)}
             loading={<PdfLoadingSpinner />}
           >
             <Page
               pageNumber={currentPage}
               width={panelWidth - 24}
               customTextRenderer={customTextRenderer}
-              onGetTextSuccess={(textContent) => {
+              onGetTextSuccess={(textContent) =>
                 setHasTextLayer(textContent.items.length > 0)
-              }}
+              }
               renderTextLayer={true}
               renderAnnotationLayer={false}
               loading={<PdfLoadingSpinner />}
@@ -200,13 +197,12 @@ export default function PdfPanel({
         )}
       </div>
 
-      {/* Footer — page navigation */}
       <div className="flex h-10 shrink-0 items-center justify-between border-t border-border px-3">
         <button
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage <= 1}
           aria-label="Previous page"
-          className="disabled:opacity-40"
+          className="p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -220,11 +216,82 @@ export default function PdfPanel({
           }
           disabled={numPages !== null && currentPage >= numPages}
           aria-label="Next page"
-          className="disabled:opacity-40"
+          className="p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
     </div>
+  )
+}
+
+function PanelHeader({
+  docName,
+  onClose,
+}: {
+  docName: string
+  onClose: () => void
+}) {
+  return (
+    <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3">
+      <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+        {docName}
+      </span>
+      <button
+        onClick={onClose}
+        aria-label="Close PDF viewer"
+        className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
+export default function PdfPanel({
+  open,
+  targetPage,
+  highlightText,
+  docName,
+  documentId,
+  language,
+  onClose,
+}: PdfPanelProps) {
+  const isDesktop = useIsDesktop()
+
+  const viewer = (
+    <PdfViewer
+      documentId={documentId}
+      targetPage={targetPage}
+      highlightText={highlightText}
+      language={language}
+    />
+  )
+
+  if (isDesktop) {
+    return (
+      <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          className="flex flex-col gap-0 p-0"
+          style={{ width: "min(680px, 92vw)", maxWidth: "min(680px, 92vw)" }}
+        >
+          <SheetTitle className="sr-only">{docName}</SheetTitle>
+          <PanelHeader docName={docName} onClose={onClose} />
+          <div className="min-h-0 flex-1">{viewer}</div>
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent className="flex max-h-[80vh] flex-col gap-0 p-0">
+        <DrawerTitle className="sr-only">{docName}</DrawerTitle>
+        <PanelHeader docName={docName} onClose={onClose} />
+        <div className="min-h-0 flex-1">{viewer}</div>
+      </DrawerContent>
+    </Drawer>
   )
 }

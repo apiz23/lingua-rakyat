@@ -63,11 +63,11 @@ const PdfPanel = dynamic(() => import("./pdf-panel"), { ssr: false })
 
 function shortModelLabel(modelId: string): string {
   if (!modelId) return "Auto"
-  const sizeMatch = modelId.match(/(\d+b)/i)
-  if (sizeMatch) return sizeMatch[1].toUpperCase()
-  if (modelId.toLowerCase().includes("gemma")) return "Gemma"
-  if (modelId.toLowerCase().includes("mixtral")) return "MoE"
-  return modelId.split("-")[0].slice(0, 6)
+  // Prefer the full, human-readable label from the model registry (e.g.
+  // "Llama 3.3 70B") instead of an abbreviated token like "70B".
+  const known = GROQ_MODELS.find((m) => m.id === modelId)
+  if (known) return known.label
+  return modelId
 }
 
 interface ChatPanelProps {
@@ -908,11 +908,11 @@ export default function ChatPanel({
   const pdfOpen = pdfViewerState !== null && !!docPublicUrl
 
   return (
-    <div className={cn("flex h-full min-h-0 bg-background", pdfOpen && "lg:flex-row")}>
+    <div className="flex h-full min-h-0 bg-background">
       {/* Chat column */}
       <AiChat
         status={chatStatus}
-        className={cn("min-w-0 flex-1 font-sans", !pdfOpen && "h-full")}
+        className="h-full min-w-0 flex-1 font-sans"
       >
       <AiChatBody className="min-h-0">
         <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
@@ -1142,7 +1142,7 @@ export default function ChatPanel({
 
       <AiChatFooter className="bg-background/95 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
               {onBack ? (
                 <button
@@ -1245,7 +1245,7 @@ export default function ChatPanel({
             </div>
           </div>
 
-          {composerTop ? <div className="mb-2">{composerTop}</div> : null}
+          {composerTop ? <div className="mb-1.5">{composerTop}</div> : null}
 
           <ChatInput
             value={input}
@@ -1339,19 +1339,17 @@ export default function ChatPanel({
       </AiChatFooter>
       </AiChat>
 
-      {/* PDF panel — bottom sheet on mobile, side column on desktop */}
-      {pdfOpen && (
-        <PdfPanel
-          url={docPublicUrl!}
-          targetPage={pdfViewerState!.page}
-          highlightText={pdfViewerState!.highlightText}
-          docName={selectedDoc!.name}
-          documentId={selectedDoc!.id}
-          language={language}
-          onClose={handleClosePdf}
-          className="fixed inset-x-0 bottom-0 z-50 h-[45vh] border-t shadow-2xl lg:static lg:inset-auto lg:z-auto lg:h-auto lg:w-[420px] lg:border-t-0 lg:shadow-none xl:w-[480px]"
-        />
-      )}
+      {/* PDF panel — Sheet on desktop, Drawer on mobile */}
+      <PdfPanel
+        open={pdfOpen}
+        url={docPublicUrl ?? ""}
+        targetPage={pdfViewerState?.page ?? 1}
+        highlightText={pdfViewerState?.highlightText ?? null}
+        docName={selectedDoc?.name ?? ""}
+        documentId={selectedDoc?.id ?? ""}
+        language={language}
+        onClose={handleClosePdf}
+      />
     </div>
   )
 }

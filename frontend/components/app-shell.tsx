@@ -67,7 +67,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     >
       <SidebarKeyboardShortcut />
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="">
         <header className="sticky top-0 z-10 flex h-fit shrink-0 items-center gap-2 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
           <SidebarTrigger className="-ml-1 text-muted-foreground transition-colors hover:text-primary" />
 

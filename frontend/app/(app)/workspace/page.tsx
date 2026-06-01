@@ -128,14 +128,14 @@ export default function WorkSpacePage() {
         selectedDoc={selectedDoc}
         initialQuestion={initialQuestion}
         composerTop={
-          <div className="space-y-3 px-1 sm:space-y-4">
+          <div className="space-y-2 px-1">
             <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               {/* Document Selector */}
               <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="group h-auto min-h-11 w-full min-w-0 justify-between rounded-none border-border bg-card px-3 py-2.5 text-sm shadow-none hover:border-primary/30 hover:bg-accent/50 sm:min-h-10 sm:max-w-[30rem] sm:px-3 sm:py-2"
+                    className="group h-auto min-h-9 w-full min-w-0 justify-between rounded-none border-border bg-card px-3 py-2 text-sm shadow-none hover:border-primary/30 hover:bg-accent/50 sm:max-w-[30rem]"
                   >
                     <div className="flex min-w-0 items-center gap-2 truncate">
                       {selectedDoc ? (
@@ -308,11 +308,11 @@ export default function WorkSpacePage() {
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
                 <Button
                   variant="outline"
-                  size="lg"
+                  size="sm"
                   aria-label="Refresh documents"
                   onClick={loadDocuments}
                   disabled={docsLoading}
-                  className="min-h-11 w-full px-4 sm:min-h-10 sm:w-auto"
+                  className="min-h-9 w-full px-3 sm:w-auto"
                 >
                   {docsLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -324,10 +324,10 @@ export default function WorkSpacePage() {
 
                 {/* Upload Button */}
                 <Button
-                  size="lg"
+                  size="sm"
                   aria-label="Upload document"
                   onClick={() => setIsUploadOpen(true)}
-                  className="min-h-11 w-full bg-primary shadow-sm hover:bg-primary/90 sm:min-h-10 sm:w-auto sm:px-4"
+                  className="min-h-9 w-full bg-primary shadow-sm hover:bg-primary/90 sm:w-auto sm:px-3"
                 >
                   <Upload className="h-4 w-4" />
                   <span className="sm:hidden">Upload</span>
@@ -335,7 +335,7 @@ export default function WorkSpacePage() {
               </div>
             </div>
 
-            {selectedDoc?.status === "ready" ? (
+            {/* {selectedDoc?.status === "ready" ? (
               <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                 {QUICK_STARTS.map((question) => (
                   <Button
@@ -350,7 +350,7 @@ export default function WorkSpacePage() {
                   </Button>
                 ))}
               </div>
-            ) : null}
+            ) : null} */}
           </div>
         }
       />

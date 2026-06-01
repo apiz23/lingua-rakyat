@@ -127,10 +127,10 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         placeholder={placeholder}
         rows={1}
         disabled={disabled || loading}
-        className="max-h-32 w-full resize-none rounded-2xl bg-transparent px-3 py-3 text-sm focus:outline-none sm:px-4 sm:py-4"
+        className="max-h-28 w-full resize-none rounded-2xl bg-transparent px-3 py-2.5 text-sm focus:outline-none sm:px-4"
       />
 
-      <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 sm:px-3 sm:pb-3">
+      <div className="flex items-center justify-between gap-2 px-2 pb-2 sm:px-3 sm:pb-2.5">
         <div className="flex min-w-0 items-center gap-2">
           {allowAttachments && (
             <>
