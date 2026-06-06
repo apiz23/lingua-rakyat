@@ -39,7 +39,10 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "LinguaRakyat – AI for Government Documents",
+  title: {
+    template: "%s – Lingua Rakyat",
+    default: "Lingua Rakyat – AI for Government Documents",
+  },
   description:
     "LinguaRakyat is an AI-powered system that helps citizens understand government documents using Retrieval-Augmented Generation (RAG).",
   keywords: [
@@ -53,10 +56,10 @@ export const metadata: Metadata = {
   authors: [{ name: "Hafiz" }],
   creator: "Hafiz",
   openGraph: {
-    title: "LinguaRakyat – AI for Government Documents",
+    title: "Lingua Rakyat – AI for Government Documents",
     description:
       "Ask questions about government policies and programs using AI.",
-    url: "https://docuquery.vercel.app",
+    url: "https://lingua-rakyat.my",
     siteName: "LinguaRakyat",
     locale: "en_US",
     type: "website",
