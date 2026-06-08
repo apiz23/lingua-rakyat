@@ -39,3 +39,6 @@ pydantic-settings==2.13.1
 
 # Voice I/O
 elevenlabs>=1.0.0
+
+# Telegram Bot
+python-telegram-bot[webhooks]==21.6

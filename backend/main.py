@@ -54,6 +54,7 @@ from routers.chat import router as chat_router
 from routers.eval import router as eval_router
 from routers.voice import router as voice_router
 from routers.whatsapp import router as whatsapp_router
+from routers.telegram import router as telegram_router
 
 # ─── App instance ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -150,6 +151,7 @@ app.include_router(chat_router,      prefix="/api/chat",      tags=["Chat"])
 app.include_router(eval_router,      prefix="/api/eval",      tags=["Evaluation"])
 app.include_router(voice_router,     prefix="/api/voice",     tags=["Voice"])
 app.include_router(whatsapp_router,  prefix="/api/whatsapp",  tags=["WhatsApp"])
+app.include_router(telegram_router,  prefix="/api/telegram",  tags=["Telegram"])
 
 # ─── Startup: Seed + Prewarm ──────────────────────────────────────────────────
 # ─── Health Check ─────────────────────────────────────────────────────────────
