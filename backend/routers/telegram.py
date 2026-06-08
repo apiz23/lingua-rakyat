@@ -19,12 +19,6 @@ import uuid
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from telegram import (
-    Bot,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Update,
-)
 
 from routers.documents import load_documents, sync_documents_with_storage, upsert_documents
 from utils.rag_pipeline import answer_question, ingest_document
@@ -36,7 +30,8 @@ router = APIRouter()
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
 
-def _bot() -> Bot:
+def _bot():
+    from telegram import Bot
     return Bot(token=BOT_TOKEN)
 
 
@@ -120,7 +115,7 @@ def _format_answer(result: dict) -> str:
 
 # ── Update handlers ───────────────────────────────────────────────────────────
 
-async def _handle_message(bot: Bot, update: Update) -> None:
+async def _handle_message(bot, update) -> None:
     message = update.message
     if not message:
         return
@@ -163,6 +158,7 @@ async def _handle_message(bot: Bot, update: Update) -> None:
         session["doc_map"] = doc_map
         _save_session(chat_id, session)
 
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
         keyboard = [
             [InlineKeyboardButton(doc["name"][:40], callback_data=f"sel:{doc['id'][:50]}")]
             for doc in docs[:10]
@@ -258,7 +254,7 @@ async def _handle_message(bot: Bot, update: Update) -> None:
     await bot.send_message(chat_id=chat_id, text=_format_answer(result))
 
 
-async def _handle_callback(bot: Bot, update: Update) -> None:
+async def _handle_callback(bot, update) -> None:
     query = update.callback_query
     if not query:
         return
@@ -291,6 +287,7 @@ async def telegram_webhook(request: Request):
         return JSONResponse({"error": "BOT_TOKEN not set"}, status_code=500)
 
     try:
+        from telegram import Update
         data = await request.json()
         bot = _bot()
         update = Update.de_json(data, bot)
