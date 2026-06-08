@@ -7,8 +7,13 @@ import os
 
 from dotenv import load_dotenv
 from groq import Groq
-from elevenlabs.client import ElevenLabs
-from elevenlabs.core.api_error import ApiError
+
+try:
+    from elevenlabs.client import ElevenLabs
+    from elevenlabs.core.api_error import ApiError
+except ImportError:
+    ElevenLabs = None  # type: ignore[assignment,misc]
+    ApiError = Exception  # type: ignore[assignment,misc]
 
 load_dotenv()
 
@@ -16,7 +21,7 @@ logger = logging.getLogger("voice_helpers")
 
 # ── Clients (module-level singletons) ────────────────────────────────────────
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-_elevenlabs_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+_elevenlabs_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY")) if ElevenLabs is not None else None
 
 VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 TTS_MODEL = "eleven_multilingual_v2"
