@@ -58,10 +58,22 @@ def _get_session(phone: str) -> dict:
 
 def _twiml_reply(message: str) -> Response:
     """Return TwiML XML response Twilio uses to send a WhatsApp message."""
-    safe = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    # Strip markdown bold/italic that WhatsApp doesn't need via TwiML
+    clean = message.replace("*", "").replace("_", " ").replace("`", "")
+    # Truncate to WhatsApp's 4096 char limit
+    clean = clean[:4000]
+    # Escape XML special chars
+    safe = (
+        clean
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Message>{safe}</Message>
+    <Message><![CDATA[{message[:4000]}]]></Message>
 </Response>"""
     return Response(content=xml, media_type="application/xml")
 
