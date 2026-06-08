@@ -135,7 +135,7 @@ export default function WorkSpacePage() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="group h-auto min-h-9 w-full min-w-0 justify-between rounded-none border-border bg-card px-3 py-2 text-sm shadow-none hover:border-primary/30 hover:bg-accent/50 sm:max-w-[30rem]"
+                    className="group h-auto min-h-10 w-full min-w-0 justify-between rounded-md border-border bg-card px-3 py-2.5 text-sm shadow-none hover:border-primary/30 hover:bg-accent/50 sm:min-h-9 sm:max-w-[30rem] sm:rounded-none sm:py-2"
                   >
                     <div className="flex min-w-0 items-center gap-2 truncate">
                       {selectedDoc ? (
@@ -169,11 +169,12 @@ export default function WorkSpacePage() {
 
                 <PopoverContent
                   align="start"
-                  className="w-[min(calc(100vw-1rem),28rem)] max-w-[calc(100vw-1rem)] p-0 sm:w-[30rem] sm:max-w-[30rem]"
-                  sideOffset={8}
+                  collisionPadding={12}
+                  className="w-[calc(100vw-1.5rem)] p-0 sm:w-[30rem] sm:max-w-[30rem]"
+                  sideOffset={6}
                 >
                   <div className="flex flex-col">
-                    <ScrollArea className="max-h-[min(65vh,26rem)] sm:max-h-[28rem]">
+                    <ScrollArea className="max-h-[45vh] sm:max-h-[28rem]">
                       <div className="p-2 sm:p-1">
                         {/* No document option */}
                         <Button
@@ -183,7 +184,7 @@ export default function WorkSpacePage() {
                           }}
                           variant="ghost"
                           className={cn(
-                            "h-auto min-h-11 w-full justify-start rounded-none px-3 py-2.5 text-left text-sm sm:min-h-10 sm:py-2",
+                            "h-auto min-h-12 w-full justify-start gap-2 rounded-none px-3 py-3 text-left text-sm sm:min-h-10 sm:py-2",
                             !selectedDoc && "bg-primary/5 text-primary"
                           )}
                         >
@@ -206,7 +207,7 @@ export default function WorkSpacePage() {
                                 }}
                                 variant="ghost"
                                 className={cn(
-                                  "h-auto min-h-11 w-full justify-start rounded-none px-3 py-2.5 text-left text-sm sm:min-h-10 sm:py-2",
+                                  "h-auto min-h-12 w-full justify-start gap-2 rounded-none px-3 py-3 text-left text-sm sm:min-h-10 sm:py-2",
                                   selectedDoc?.id === doc.id && "bg-primary/5"
                                 )}
                               >
@@ -271,7 +272,7 @@ export default function WorkSpacePage() {
                                 }}
                                 variant="ghost"
                                 className={cn(
-                                  "h-auto min-h-11 w-full justify-start rounded-none px-3 py-2.5 text-left text-sm sm:min-h-10 sm:py-2",
+                                  "h-auto min-h-12 w-full justify-start gap-2 rounded-none px-3 py-3 text-left text-sm sm:min-h-10 sm:py-2",
                                   selectedDoc?.id === doc.id && "bg-primary/5"
                                 )}
                               >
@@ -312,7 +313,7 @@ export default function WorkSpacePage() {
                   aria-label="Refresh documents"
                   onClick={loadDocuments}
                   disabled={docsLoading}
-                  className="min-h-9 w-full px-3 sm:w-auto"
+                  className="min-h-10 w-full gap-2 rounded-md px-3 sm:min-h-9 sm:w-auto sm:rounded-none"
                 >
                   {docsLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -327,7 +328,7 @@ export default function WorkSpacePage() {
                   size="sm"
                   aria-label="Upload document"
                   onClick={() => setIsUploadOpen(true)}
-                  className="min-h-9 w-full bg-primary shadow-sm hover:bg-primary/90 sm:w-auto sm:px-3"
+                  className="min-h-10 w-full gap-2 rounded-md bg-primary shadow-sm hover:bg-primary/90 sm:min-h-9 sm:w-auto sm:rounded-none sm:px-3"
                 >
                   <Upload className="h-4 w-4" />
                   <span className="sm:hidden">Upload</span>
