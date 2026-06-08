@@ -166,7 +166,7 @@ const SourcePills = React.memo(function SourcePills({
               · {pill.sectionTitle}
             </span>
           ) : null}
-          <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+          <ExternalLink className="h-3 w-3 shrink-0 text-primary/60" />
         </button>
       ))}
     </div>
@@ -536,7 +536,7 @@ export function AIMessageCard({
                                   <button
                                     type="button"
                                     onClick={() => onOpenPdf?.(pageStart as number, source.text ?? null)}
-                                    className="ml-1 inline-flex items-center gap-1 border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                    className="ml-1 inline-flex items-center gap-1 border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:border-primary/80 hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                                     title={language === "ms" ? "Lihat halaman asal" : "View source page"}
                                   >
                                     <ExternalLink className="h-3 w-3" />
