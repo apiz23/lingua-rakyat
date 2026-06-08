@@ -81,6 +81,8 @@ allowed_origins = [
     "http://127.0.0.1:3001",
     "https://lingua-rakyat.vercel.app",
     "https://www.lingua-rakyat.vercel.app",
+    "https://lingua-rakyat.my",
+    "https://www.lingua-rakyat.my",
 ]
 
 for env_key in ("VERCEL_URL", "FRONTEND_URL", "BACKEND_URL"):
