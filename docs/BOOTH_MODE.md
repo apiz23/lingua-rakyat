@@ -17,21 +17,21 @@ All values live in one file: [`backend/rate_limits.py`](../backend/rate_limits.p
 
 ## How to activate
 
-### On Render (production demo)
+### On Vercel (production demo)
 
-1. Render dashboard → your backend service → **Environment**.
+1. Vercel dashboard → `lingua-rakyat-ai` project → **Settings → Environment Variables**.
 2. Add an env var:
 
    | Key          | Value  |
    | ------------ | ------ |
    | `BOOTH_MODE` | `true` |
 
-3. **Save Changes** → Render redeploys automatically (~1–2 min).
-4. Confirm it took effect: open `https://<your-backend>/` (health check). The
+3. **Save** → trigger a redeploy (Deployments → Redeploy latest).
+4. Confirm it took effect: open `https://lingua-rakyat-ai.vercel.app/` (health check). The
    JSON response includes `"booth_mode": true`. The startup log also prints a
    `BOOTH_MODE ENABLED` warning.
 
-**After the event:** set `BOOTH_MODE=false` (or delete the var) and save.
+**After the event:** set `BOOTH_MODE=false` (or delete the var) and redeploy.
 
 ### Locally
 

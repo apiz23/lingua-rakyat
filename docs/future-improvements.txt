@@ -1,0 +1,213 @@
+LINGUA RAKYAT — FUTURE IMPROVEMENTS
+=====================================
+Generated: 2026-06-08
+Status legend: [DONE] = already built, [TODO] = not yet built
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. MESSAGING BOTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[DONE] Telegram Bot
+  - Webhook mode (works on Vercel serverless)
+  - Supabase-backed sessions (lr_tg_sessions)
+  - PDF upload, voice STT, /docs inline keyboard
+  - Endpoint: POST /api/telegram/webhook
+  - Setup: GET /api/telegram/setup (register webhook once after deploy)
+  - Env var needed: BOT_TOKEN
+
+[DONE] WhatsApp Bot (Twilio Sandbox)
+  - Endpoint: POST /api/whatsapp/webhook
+  - Supabase-backed sessions (lr_wa_sessions)
+  - PDF upload, audio STT, list/number doc selection
+  - Env vars needed: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN
+  - Limitation: Twilio sandbox (not production) — need WhatsApp Business approval for real deployment
+
+[TODO] WhatsApp Business API (Production)
+  - Replace Twilio sandbox with Meta's official WhatsApp Business API
+  - Requires Meta Business account + phone number verification
+  - No "join sandbox" step for users — send to any number
+  - Cost: Meta charges per conversation (free tier available)
+
+[TODO] LINE / WeChat Bot
+  - LINE popular in some Malaysian Chinese communities
+  - WeChat for Chinese-speaking users
+  - Same webhook pattern as Telegram
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. MOBILE APP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TODO] Expo React Native App
+  - Reuse same FastAPI backend (no backend changes needed)
+  - UI screens to build:
+      * HomeScreen — upload PDF or pick from list
+      * ChatScreen — message bubble UI, voice input button
+      * DocumentsScreen — list of uploaded docs with status
+      * ResultsScreen — answer + sources + confidence badge
+  - Key Expo libraries:
+      * expo-document-picker — pick PDF from device
+      * expo-av — record voice message
+      * expo-file-system — upload PDF bytes to /api/documents/upload
+      * @expo/vector-icons — icons
+      * react-native-gifted-chat — chat UI (optional)
+  - API calls: same endpoints as web, point to https://lingua-rakyat-ai.vercel.app
+  - Auth: reuse upload token system (verify-token endpoint)
+  - Offline: cache last 5 answers in AsyncStorage for no-network viewing
+  - Distribution: Expo Go for testing, EAS Build for APK/IPA
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. AI / RAG IMPROVEMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TODO] Better Malay Language Support
+  - Current: Cohere embed-multilingual-v3.0 handles Malay reasonably
+  - Improvement: fine-tune or add a dedicated Malay embedding model
+  - Resource: Malaysia AI (MIMOS/NACSA) open-source Malay NLP models
+
+[TODO] Table + Form Extraction
+  - Current: plain text chunking misses structured data in tables (LHDN forms, KWSP schedules)
+  - Fix: use camelot or pdfplumber for table-aware chunking
+  - Each table row becomes a separate chunk with column headers as context
+
+[TODO] Document Comparison Mode
+  - User uploads two PDFs (e.g., KWSP 2023 vs 2024 guidelines)
+  - Ask: "What changed between these two versions?"
+  - Implementation: two-namespace Pinecone query + diff prompt
+
+[TODO] Answer Confidence Explanation
+  - Current: high/medium/low badge
+  - Improvement: one-sentence reason why confidence is low ("Only 1 matching chunk found, score 0.42")
+  - Helps users know when to verify with official source
+
+[TODO] Source Page Preview
+  - On answer, show exact PDF page where the answer came from (already have page_start)
+  - Highlight the relevant sentence on the PDF viewer
+  - Already have PDF proxy endpoint — just need frontend highlight overlay
+
+[TODO] Multi-Document Q&A
+  - Current: one document per session
+  - Improvement: query across all uploaded docs simultaneously
+  - Use case: "Which document mentions this tax relief?"
+  - Implementation: remove namespace filter in Pinecone query, group results by doc
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. MORE DOCUMENT TYPES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TODO] Pre-loaded Government Document Library
+  - Seed more official PDFs automatically (LHDN, KWSP, MySejahtera, PTPTN, SSM)
+  - Users browse and select without uploading
+  - Keeps documents always up-to-date via scheduled re-ingest
+
+[TODO] URL Ingestion
+  - User pastes a government URL (e.g., LHDN FAQ page)
+  - Backend scrapes + converts to PDF + ingests
+  - Libraries: playwright or requests-html for scraping
+
+[TODO] Image / Scan Support
+  - Current: OCR fallback with Tesseract exists
+  - Improvement: use GPT-4o Vision or Google Document AI for handwritten forms
+  - Use case: scanned IC, handwritten MyKad application forms
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. VOICE IMPROVEMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TODO] Text-to-Speech (TTS) Answers
+  - Read answers aloud — useful for elderly / low-literacy users
+  - API: ElevenLabs, Google TTS, or browser Web Speech API (free)
+  - Add speaker icon next to answer
+
+[TODO] Malay + Chinese TTS Voice
+  - Default TTS voices are English-accented
+  - Use a Malay-native TTS model for better pronunciation of government terms
+
+[TODO] Voice Language Auto-Detect
+  - Current: language detected from text after transcription
+  - Improvement: detect spoken language before transcription to route to correct Whisper model
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. USER EXPERIENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TODO] Shareable Answer Links
+  - Generate a short URL for any answer
+  - Citizens can share "what I found out" with family
+  - Implementation: store answer in Supabase, generate slug, /share/<slug> page
+
+[TODO] Citizen Feedback on Answers
+  - Thumbs up / thumbs down per answer
+  - Feeds back into eval dashboard
+  - Helps identify which documents need better chunking
+
+[TODO] Saved Questions / Bookmarks
+  - User can bookmark frequently asked questions
+  - Stored in localStorage or Supabase by user_id
+
+[TODO] Print / Export Answer as PDF
+  - Export the answer + sources as a clean PDF receipt
+  - Useful for submitting to government counters as reference
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. BACKEND / INFRASTRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TODO] Async Ingestion Queue
+  - Current: PDF ingestion blocks the upload response (can timeout on large PDFs)
+  - Fix: push ingest job to a queue (Supabase Edge Function / Redis / Celery)
+  - Frontend polls status until "ready"
+
+[TODO] Analytics Dashboard
+  - Track: most asked questions, most used documents, language breakdown
+  - Use Supabase's built-in analytics or PostHog (open source)
+  - Helps prioritize which government docs to pre-load
+
+[TODO] Admin Panel
+  - Web UI to manage documents, view eval results, toggle BOOTH_MODE, revoke tokens
+  - Can be a simple /admin Next.js route behind a password
+
+[TODO] Rate Limit Per User (Not Just IP)
+  - Current: slowapi limits by IP (shared IPs at booths cause false 429s)
+  - Fix: limit by upload_token or user_id instead
+  - BOOTH_MODE is the current workaround
+
+[TODO] Webhook / Callback After Ingest
+  - Notify the frontend (via WebSocket or SSE) when background ingestion completes
+  - Better UX than polling
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. COMPETITION / ACADEMIC IMPROVEMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[TODO] Expand Benchmark to More Document Types
+  - Current: 15 test cases (MyKad + Passport, 3 languages)
+  - Add: LHDN e-Filing, KWSP i-Akaun, MySejahtera, PTPTN categories
+  - Target: 50+ cases across 5 document types
+
+[TODO] Semantic Similarity in Eval
+  - Current: ROUGE/BLEU (n-gram overlap)
+  - Add: sentence-transformers cosine similarity for semantic correctness
+  - ROUGE misses paraphrased correct answers
+
+[TODO] Human Evaluation Study
+  - Recruit 10-20 Malaysian citizens, measure task completion rate
+  - Compare with: searching the PDF manually, asking ChatGPT, Google Search
+  - Strong evidence for competition judges and publications
+
+[TODO] Multilingual Robustness Tests
+  - Test code-switching (Malay + English mixed in one question)
+  - Test dialect variations (Sabah/Sarawak Malay)
+  - Test Chinese simplified vs traditional
+
+[TODO] Latency Benchmarks by Region
+  - Measure response time from Malaysia vs Singapore vs US
+  - Vercel edge functions vs single-region serverless
+  - Relevant if pitching to MAMPU/NACSA for national deployment
