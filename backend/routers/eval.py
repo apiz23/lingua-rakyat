@@ -165,9 +165,9 @@ async def run_test_suite(req: TestSuiteRequest):
         return {
             "status": "skipped",
             "reason": (
-                f"Document '{req.doc_name}' does not match the current evaluation dataset. "
-                f"The built-in suite is currently aligned to MyKad identity-card guidance and Malaysian passport guidelines. "
-                f"Please select one of those documents or update the annotated test cases."
+                f"Benchmark suite targets MyKad identity-card and Malaysian passport documents. "
+                f"Upload either of those to run scored ROUGE/BLEU evaluation across 3 languages. "
+                f"Document '{req.doc_name}' does not match either category."
             ),
             "detected_category": None,
             "aggregate": {},
@@ -434,8 +434,9 @@ async def run_test_suite_stream(req: TestSuiteRequest):
             payload = _json.dumps({
                 "type": "skipped",
                 "reason": (
-                    f"Document '{req.doc_name}' does not match the current evaluation dataset. "
-                    f"The built-in suite currently covers MyKad identity-card guidance and Malaysian passport guidelines."
+                    f"Benchmark suite targets MyKad identity-card and Malaysian passport documents. "
+                    f"Upload either of those to run scored ROUGE/BLEU evaluation across 3 languages. "
+                    f"Document '{req.doc_name}' does not match either category."
                 ),
                 "detected_category": None,
             })

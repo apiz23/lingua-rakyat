@@ -540,6 +540,35 @@ BUILT_IN_TEST_CASES: list[dict] = [
         ),
     },
     {
+        "language": "zh-cn",
+        "category": "identity",
+        "question": "申请MyKad需要多长时间才能领取？",
+        "ground_truth": (
+            "- 如果在JPN总部或设有分散式打印机的分行领取，MyKad可在30分钟内准备好。\n"
+            "- 在半岛马来西亚的分行领取通常需要5个工作日。\n"
+            "- 在沙巴、砂拉越和纳闽的分行领取通常需要7个工作日。\n"
+            "- 此服务水平承诺适用于申请手续没有问题的马来西亚公民。"
+        ),
+    },
+    {
+        "language": "zh-cn",
+        "category": "identity",
+        "question": "JPN接受哪些付款方式？",
+        "ground_truth": (
+            "- JPN接受电子无现金付款。\n"
+            "- 可以使用信用卡、借记卡和MEPS付款。"
+        ),
+    },
+    {
+        "language": "zh-cn",
+        "category": "identity",
+        "question": "我可以在不换发新MyKad的情况下更改地址吗？",
+        "ground_truth": (
+            "- 不可以，不允许仅更改芯片上的地址。\n"
+            "- 地址更改只能在补发新实体身份证时一并进行。"
+        ),
+    },
+    {
         "language": "en",
         "category": "passport",
         "question": "Who is eligible for a Malaysian international passport and how long is it valid?",
