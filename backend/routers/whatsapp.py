@@ -30,10 +30,13 @@ import requests
 from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import PlainTextResponse
 
+from routers.documents import load_documents, sync_documents_with_storage
+from utils.rag_pipeline import answer_question
+from utils.voice_helpers import transcribe_audio
+
 logger = logging.getLogger("whatsapp_router")
 router = APIRouter()
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 
@@ -91,15 +94,17 @@ def _format_answer(result: dict) -> str:
     return f"{answer}{source_line}\n{confidence_emoji}".strip()
 
 
-def _list_documents() -> str:
+def _get_documents() -> list:
     try:
-        resp = requests.get(f"{BACKEND_URL}/api/documents/", timeout=10)
-        resp.raise_for_status()
-        docs = resp.json()
+        docs = load_documents()
+        return sync_documents_with_storage(docs)
     except Exception as exc:
         logger.error("Failed to fetch docs: %s", exc)
-        return "❌ Could not fetch documents."
+        return []
 
+
+def _list_documents() -> str:
+    docs = _get_documents()
     if not docs:
         return "No documents uploaded yet. Send a PDF to get started."
 
@@ -130,22 +135,33 @@ async def whatsapp_webhook(
     if num_media > 0 and "pdf" in MediaContentType0.lower():
         try:
             pdf_bytes = _fetch_twilio_media(MediaUrl0)
-            filename = "document.pdf"
+            import tempfile, os as _os
+            from utils.rag_pipeline import ingest_document
+            from routers.documents import upsert_documents
 
-            resp = requests.post(
-                f"{BACKEND_URL}/api/documents/upload",
-                files={"file": (filename, BytesIO(pdf_bytes), "application/pdf")},
-                data={"user_id": session["user_id"]},
-                timeout=60,
-            )
-            resp.raise_for_status()
-            result = resp.json()
-            session["document_id"] = result["id"]
-            session["doc_name"] = result["name"]
+            doc_id = str(uuid.uuid4())
+            doc_name = "whatsapp_upload.pdf"
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                tmp.write(pdf_bytes)
+                tmp_path = tmp.name
+
+            try:
+                chunk_count, _ = ingest_document(tmp_path, doc_id, doc_name)
+                upsert_documents([{
+                    "id": doc_id, "name": doc_name,
+                    "size_bytes": len(pdf_bytes), "chunk_count": chunk_count,
+                    "status": "ready", "uploaded_at": "",
+                    "storage_path": "", "public_url": "",
+                }])
+            finally:
+                _os.unlink(tmp_path)
+
+            session["document_id"] = doc_id
+            session["doc_name"] = doc_name
             session["history"] = []
 
             return _twiml_reply(
-                f"✅ *{result['name']}* loaded!\n\nAsk me anything about this document in Malay, English, or Chinese."
+                f"✅ *{doc_name}* loaded!\n\nAsk me anything about this document in Malay, English, or Chinese."
             )
         except Exception as exc:
             logger.error("PDF upload failed: %s", exc)
@@ -155,13 +171,8 @@ async def whatsapp_webhook(
     if num_media > 0 and "audio" in MediaContentType0.lower():
         try:
             audio_bytes = _fetch_twilio_media(MediaUrl0)
-            resp = requests.post(
-                f"{BACKEND_URL}/api/voice/transcribe",
-                files={"audio": ("voice.ogg", BytesIO(audio_bytes), "audio/ogg")},
-                timeout=20,
-            )
-            resp.raise_for_status()
-            transcript = resp.json().get("transcript", "").strip()
+            result = transcribe_audio(audio_bytes, "voice.ogg")
+            transcript = result.get("transcript", "").strip()
         except Exception as exc:
             logger.error("Transcription failed: %s", exc)
             return _twiml_reply(f"❌ Could not transcribe audio: {exc}")
@@ -174,14 +185,8 @@ async def whatsapp_webhook(
 
     # ── "list" command ────────────────────────────────────────────────────────
     if text.lower() in ("list", "senarai", "列表", "/list", "/docs"):
-        # Cache doc list for number selection
-        try:
-            resp = requests.get(f"{BACKEND_URL}/api/documents/", timeout=10)
-            resp.raise_for_status()
-            docs = resp.json()
-            session["_doc_list"] = docs
-        except Exception:
-            docs = []
+        docs = _get_documents()
+        session["_doc_list"] = docs
         return _twiml_reply(_list_documents())
 
     # ── Number selection (after "list") ───────────────────────────────────────
@@ -211,20 +216,11 @@ async def whatsapp_webhook(
         )
 
     try:
-        resp = requests.post(
-            f"{BACKEND_URL}/api/chat/ask",
-            json={
-                "question": text,
-                "document_id": session["document_id"],
-                "document_name": session["doc_name"],
-                "user_id": session["user_id"],
-                "session_id": session["session_id"],
-                "chat_history": session["history"][-6:],
-            },
-            timeout=30,
+        result = answer_question(
+            question=text,
+            document_id=session["document_id"],
+            chat_history=session["history"][-6:] or None,
         )
-        resp.raise_for_status()
-        result = resp.json()
     except Exception as exc:
         logger.error("Q&A failed: %s", exc)
         return _twiml_reply(f"❌ Error: {exc}")
