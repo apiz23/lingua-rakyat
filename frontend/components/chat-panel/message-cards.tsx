@@ -93,6 +93,43 @@ function highlightSourceText(text: string, question: string) {
   )
 }
 
+function computeConfidenceReason(
+  confidence: number,
+  sources: SourceChunk[],
+  sufficientEvidence: boolean,
+  language: string,
+): string {
+  const n = sources.length
+  const topScore = sources[0]?.score ?? 0
+  const pct = Math.round(topScore * 100)
+  const ms = language === "ms"
+  const zh = language === "zh-cn" || language === "zh"
+
+  if (!sufficientEvidence) {
+    if (zh) return "未找到强匹配 — 显示最接近的段落"
+    if (ms) return "Tiada padanan kukuh — menunjukkan petikan terdekat"
+    return "No strong match — showing closest passage"
+  }
+  if (n === 1 && topScore < 0.5) {
+    if (zh) return `仅找到 1 个来源，匹配度 ${pct}% — 请以官方文件核实`
+    if (ms) return `1 sumber ditemui, padanan ${pct}% — sahkan dengan sumber rasmi`
+    return `1 source found, ${pct}% match — verify with official source`
+  }
+  if (confidence < 0.5) {
+    if (zh) return `找到 ${n} 个来源，最佳匹配 ${pct}% — 部分匹配`
+    if (ms) return `${n} sumber ditemui, padanan terbaik ${pct}% — padanan separa`
+    return `${n} sources found, best ${pct}% — partial match`
+  }
+  if (confidence < 0.75) {
+    if (zh) return `找到 ${n} 个来源，最佳匹配 ${pct}%`
+    if (ms) return `${n} sumber ditemui, padanan terbaik ${pct}%`
+    return `${n} sources found, best ${pct}% match`
+  }
+  if (zh) return `找到 ${n} 个来源，匹配强度 ${pct}%`
+  if (ms) return `${n} sumber ditemui, kekuatan padanan ${pct}%`
+  return `${n} sources found, ${pct}% match strength`
+}
+
 // ---------------------------------------------------------------------------
 // SourcePills — always-visible page citation badges below the answer
 // ---------------------------------------------------------------------------
@@ -365,6 +402,16 @@ export function AIMessageCard({
                 confidence={message.confidence}
                 faithfulness={message.faithfulness}
                 language={message.language}
+                confidenceReason={
+                  message.sources.length > 0
+                    ? computeConfidenceReason(
+                        message.confidence,
+                        message.sources,
+                        message.sufficient_evidence,
+                        message.language,
+                      )
+                    : undefined
+                }
               />
             )}
 

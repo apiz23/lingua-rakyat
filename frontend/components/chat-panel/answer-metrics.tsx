@@ -66,10 +66,12 @@ export function AnswerMetrics({
   confidence,
   faithfulness,
   language,
+  confidenceReason,
 }: {
   confidence: number
   faithfulness?: number | null
   language: string
+  confidenceReason?: string
 }) {
   const ms = language === "ms"
   const hasFaithfulness = typeof faithfulness === "number" && faithfulness > 0
@@ -98,6 +100,11 @@ export function AnswerMetrics({
               : "How well this answer is grounded in the source excerpts"
           }
         />
+      ) : null}
+      {confidenceReason ? (
+        <p className="text-[10px] leading-relaxed text-muted-foreground/70">
+          {confidenceReason}
+        </p>
       ) : null}
     </div>
   )
