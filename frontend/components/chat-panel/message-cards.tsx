@@ -222,6 +222,8 @@ export function AIMessageCard({
   autoSpeak,
   onOpenPdf,
   onSuggestionClick,
+  sessionId,
+  docId,
 }: {
   message: Message
   index: number
@@ -234,6 +236,8 @@ export function AIMessageCard({
   autoSpeak?: boolean
   onOpenPdf?: (page: number, text: string | null) => void
   onSuggestionClick?: (question: string) => void
+  sessionId?: string
+  docId?: string
 }) {
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
@@ -264,6 +268,29 @@ export function AIMessageCard({
       }, 1500)
     },
     [expandedSources, toggleSources, index, message.sources, onOpenPdf]
+  )
+
+  const handleFeedback = React.useCallback(
+    async (value: "up" | "down") => {
+      const next = feedback === value ? null : value
+      setFeedback(next)
+      if (!next || !sessionId) return
+      try {
+        await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            question: message.question,
+            doc_id: docId ?? message.sources[0]?.document_id ?? "",
+            feedback: next,
+          }),
+        })
+      } catch {
+        // silent — don't interrupt demo on network failure
+      }
+    },
+    [feedback, sessionId, docId, message.question, message.sources],
   )
 
   React.useEffect(() => {
@@ -460,7 +487,7 @@ export function AIMessageCard({
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setFeedback(feedback === "up" ? null : "up")}
+                      onClick={() => handleFeedback("up")}
                       className={[
                         "p-1 transition-colors hover:text-success",
                         feedback === "up"
@@ -473,7 +500,7 @@ export function AIMessageCard({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFeedback(feedback === "down" ? null : "down")}
+                      onClick={() => handleFeedback("down")}
                       className={[
                         "p-1 transition-colors hover:text-destructive",
                         feedback === "down"

@@ -1126,6 +1126,8 @@ export default function ChatPanel({
                       autoSpeak={autoSpeak}
                       onOpenPdf={handleOpenPdf}
                       onSuggestionClick={handleSuggestionClick}
+                      sessionId={sessionId}
+                      docId={selectedDoc?.id}
                     />
                   </div>
                 ))}
