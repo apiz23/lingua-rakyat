@@ -155,7 +155,7 @@ const SourcePills = React.memo(function SourcePills({
           key={pill.pageStart}
           type="button"
           onClick={() => onPillClick(pill.sourceIndex, pill.pageStart)}
-          className="inline-flex items-center gap-1.5 border border-primary/30 bg-primary/5 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="inline-flex items-center gap-1.5 border border-primary/70 bg-primary/15 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary hover:bg-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label={`${pageLabel(pill)}${pill.sectionTitle ? ` — ${pill.sectionTitle}` : ""}`}
           title={pill.sectionTitle || pageLabel(pill)}
         >
@@ -166,6 +166,7 @@ const SourcePills = React.memo(function SourcePills({
               · {pill.sectionTitle}
             </span>
           ) : null}
+          <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
         </button>
       ))}
     </div>
@@ -535,10 +536,10 @@ export function AIMessageCard({
                                   <button
                                     type="button"
                                     onClick={() => onOpenPdf?.(pageStart as number, source.text ?? null)}
-                                    className="ml-1 inline-flex items-center gap-0.5 text-[10px] text-primary/70 underline-offset-2 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                                    className="ml-1 inline-flex items-center gap-1 border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                     title={language === "ms" ? "Lihat halaman asal" : "View source page"}
                                   >
-                                    <ExternalLink className="h-2.5 w-2.5" />
+                                    <ExternalLink className="h-3 w-3" />
                                     {language === "ms" ? "lihat" : "view"}
                                   </button>
                                 ) : null}
