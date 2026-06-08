@@ -40,20 +40,48 @@ router = APIRouter()
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 
-# ── In-memory sessions: phone_number → { document_id, doc_name, session_id, history }
-_sessions: dict[str, dict] = {}
+
+# ── Supabase-backed sessions (survives Vercel serverless restarts) ────────────
+
+def _supabase():
+    from routers.documents import get_supabase
+    return get_supabase()
 
 
 def _get_session(phone: str) -> dict:
-    if phone not in _sessions:
-        _sessions[phone] = {
-            "document_id": None,
-            "doc_name": "",
-            "session_id": str(uuid.uuid4()),
-            "user_id": f"wa_{phone.replace('+', '').replace('whatsapp:', '')}",
-            "history": [],
-        }
-    return _sessions[phone]
+    try:
+        result = _supabase().table("lr_wa_sessions").select("*").eq("phone", phone).execute()
+        if result.data:
+            row = result.data[0]
+            return {
+                "document_id": row.get("document_id"),
+                "doc_name": row.get("doc_name", ""),
+                "session_id": row.get("session_id") or str(uuid.uuid4()),
+                "user_id": f"wa_{phone.replace('+', '').replace('whatsapp:', '')}",
+                "history": row.get("history") or [],
+            }
+    except Exception as exc:
+        logger.warning("Session fetch failed, using empty: %s", exc)
+    return {
+        "document_id": None,
+        "doc_name": "",
+        "session_id": str(uuid.uuid4()),
+        "user_id": f"wa_{phone.replace('+', '').replace('whatsapp:', '')}",
+        "history": [],
+    }
+
+
+def _save_session(phone: str, session: dict) -> None:
+    try:
+        _supabase().table("lr_wa_sessions").upsert({
+            "phone": phone,
+            "document_id": session.get("document_id"),
+            "doc_name": session.get("doc_name", ""),
+            "session_id": session.get("session_id", ""),
+            "history": session.get("history", [])[-6:],
+        }).execute()
+    except Exception as exc:
+        logger.warning("Session save failed: %s", exc)
 
 
 def _twiml_reply(message: str) -> Response:
@@ -171,6 +199,7 @@ async def whatsapp_webhook(
             session["document_id"] = doc_id
             session["doc_name"] = doc_name
             session["history"] = []
+            _save_session(phone, session)
 
             return _twiml_reply(
                 f"✅ *{doc_name}* loaded!\n\nAsk me anything about this document in Malay, English, or Chinese."
@@ -211,7 +240,8 @@ async def whatsapp_webhook(
             session["doc_name"] = doc["name"]
             session["history"] = []
             session.pop("_doc_list", None)
-            return _twiml_reply(f"✅ Selected: *{doc['name']}*\nNow ask your question.")
+            _save_session(phone, session)
+            return _twiml_reply(f"✅ Selected: {doc['name']}\nNow ask your question.")
         return _twiml_reply("Invalid number. Send 'list' to see documents again.")
 
     # ── "clear" command ───────────────────────────────────────────────────────
@@ -219,6 +249,7 @@ async def whatsapp_webhook(
         session["document_id"] = None
         session["doc_name"] = ""
         session["history"] = []
+        _save_session(phone, session)
         return _twiml_reply("🗑️ Cleared. Send a PDF or 'list' to select a document.")
 
     # ── Text Q&A ──────────────────────────────────────────────────────────────
@@ -241,5 +272,6 @@ async def whatsapp_webhook(
         "question": text,
         "answer": result.get("answer", ""),
     })
+    _save_session(phone, session)
 
     return _twiml_reply(_format_answer(result))
