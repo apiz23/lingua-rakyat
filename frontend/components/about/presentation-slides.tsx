@@ -41,7 +41,7 @@ function SlideOverview() {
             <div className="flex h-6 w-6 items-center justify-center bg-red-500/10">
               <FileText className="h-3.5 w-3.5 text-red-500" />
             </div>
-            <span className="text-sm font-semibold text-foreground">The Problem</span>
+            <span className="text-base font-semibold text-foreground">The Problem</span>
           </div>
           <ul className="space-y-2">
             {[
@@ -50,7 +50,7 @@ function SlideOverview() {
               "No equal access across Malay, English, and Chinese speakers",
               "Eligibility criteria buried in paragraphs",
             ].map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
                 {item}
               </li>
@@ -63,7 +63,7 @@ function SlideOverview() {
             <div className="flex h-6 w-6 items-center justify-center bg-primary/10">
               <Check className="h-3.5 w-3.5 text-primary" />
             </div>
-            <span className="text-sm font-semibold text-foreground">The Solution</span>
+            <span className="text-base font-semibold text-foreground">The Solution</span>
           </div>
           <ul className="space-y-2">
             {[
@@ -72,7 +72,7 @@ function SlideOverview() {
               "Every answer grounded in document text with page citations",
               "Evidence guard refuses to hallucinate — shows confidence",
             ].map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <Check className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
                 {item}
               </li>
@@ -115,11 +115,11 @@ function SlidePipeline({
               <div className={cn("min-w-0 flex-1 pb-4", isLast && "pb-0")}>
                 <div className="mb-1 flex items-center gap-2">
                   <Icon className="h-3.5 w-3.5 shrink-0 text-primary/60" />
-                  <span className="text-sm font-semibold text-foreground">{step.title}</span>
+                  <span className="text-base font-semibold text-foreground">{step.title}</span>
                 </div>
                 <ul className="space-y-0.5">
                   {step.items.map((item, j) => (
-                    <li key={j} className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <li key={j} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-primary/40" />
                       {item}
                     </li>
@@ -139,19 +139,19 @@ function SlideTechStack() {
     <div className="h-full overflow-auto p-8">
       <div className="space-y-5">
         <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
             Backend
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {BACKEND_STACK.map((tech) => (
               <div key={tech.name} className="border border-border/60 bg-card/40 px-3 py-2">
                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs font-semibold text-foreground">{tech.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{tech.name}</span>
                   <Badge className={cn("border text-[10px] font-medium", tech.color)}>
                     {tech.role}
                   </Badge>
                 </div>
-                <p className="text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
+                <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">
                   <span className="font-medium text-primary/80">Why: </span>{tech.why}
                 </p>
               </div>
@@ -160,19 +160,19 @@ function SlideTechStack() {
         </div>
 
         <div>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
             Frontend &amp; Deployment
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {FRONTEND_STACK.map((tech) => (
               <div key={tech.name} className="border border-border/60 bg-card/40 px-3 py-2">
                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs font-semibold text-foreground">{tech.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{tech.name}</span>
                   <Badge className={cn("border text-[10px] font-medium", tech.color)}>
                     {tech.role}
                   </Badge>
                 </div>
-                <p className="text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
+                <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">
                   <span className="font-medium text-primary/80">Why: </span>{tech.why}
                 </p>
               </div>
@@ -196,11 +196,11 @@ function SlideFeatures() {
                 <div className={cn("flex h-6 w-6 items-center justify-center", feat.bg)}>
                   <Icon className={cn("h-3.5 w-3.5", feat.color)} />
                 </div>
-                <span className="text-sm font-semibold text-foreground">{feat.label}</span>
+                <span className="text-base font-semibold text-foreground">{feat.label}</span>
               </div>
               <ul className="space-y-1">
                 {feat.points.map((pt, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                     <ArrowRight className="mt-0.5 h-3 w-3 shrink-0 text-primary/40" />
                     {pt}
                   </li>
@@ -225,14 +225,14 @@ function SlideMetrics() {
               <div className="mb-1.5 flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4 shrink-0 text-primary/60" />
-                  <span className="text-sm font-semibold text-foreground">{m.name}</span>
+                  <span className="text-base font-semibold text-foreground">{m.name}</span>
                 </div>
                 <Badge variant="outline" className="shrink-0 border-border/60 font-mono text-[10px] text-muted-foreground">
                   {m.range}
                 </Badge>
               </div>
-              <p className="mb-1.5 text-xs leading-relaxed text-muted-foreground">{m.what}</p>
-              <p className="border border-border/40 bg-muted/20 px-2 py-1 text-[11px] leading-relaxed text-muted-foreground">
+              <p className="mb-1.5 text-sm leading-relaxed text-muted-foreground">{m.what}</p>
+              <p className="border border-border/40 bg-muted/20 px-2 py-1 text-xs leading-relaxed text-muted-foreground">
                 {m.detail}
               </p>
             </div>
@@ -328,7 +328,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-1">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/40">
+        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-white/40">
           Lingua Rakyat — Presentation
         </span>
         <div className="flex items-center gap-2">
@@ -348,7 +348,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
               : <Play className="h-3.5 w-3.5" />
             }
           </button>
-          <span className="text-[11px] text-white/35">5s</span>
+          <span className="text-xs text-white/35">5s</span>
           <button
             onClick={onClose}
             aria-label="Close presentation"
@@ -364,11 +364,11 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
         {/* Sidebar */}
         <div className="flex w-[240px] shrink-0 flex-col justify-between border-r border-border bg-card p-7 overflow-hidden">
           <div>
-            <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.15em] text-primary">
+            <div className="mb-1 text-xs font-bold uppercase tracking-[0.15em] text-primary">
               {String(currentSlide + 1).padStart(2, "0")} / {String(TOTAL).padStart(2, "0")}
             </div>
             <div className="mb-4 h-0.5 w-8 bg-primary" />
-            <h2 className="font-heading text-xl font-black leading-tight text-foreground">
+            <h2 className="font-heading text-2xl font-black leading-tight text-foreground">
               {SLIDE_LABELS[currentSlide]}
             </h2>
           </div>
@@ -377,6 +377,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
               <button
                 key={i}
                 onClick={() => { goTo(i); setIsPlaying(false) }}
+                aria-current={i === currentSlide ? "true" : undefined}
                 className={cn(
                   "flex items-center gap-2.5 text-left transition-opacity",
                   i === currentSlide ? "opacity-100" : "opacity-35 hover:opacity-65",
@@ -390,7 +391,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
                 />
                 <span
                   className={cn(
-                    "text-[11px]",
+                    "text-xs",
                     i === currentSlide
                       ? "font-semibold text-primary"
                       : "text-muted-foreground",
@@ -427,7 +428,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
           />
         </div>
 
-        <span className="min-w-[44px] text-center text-[11px] tabular-nums text-white/35">
+        <span className="min-w-[44px] text-center text-xs tabular-nums text-white/35">
           {currentSlide + 1} / {TOTAL}
         </span>
 
