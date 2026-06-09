@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import dynamic from "next/dynamic"
 import {
   Document,
   listDocuments,
@@ -28,10 +29,16 @@ import {
   FileCheck,
   Plus,
   Pencil,
+  Eye,
 } from "lucide-react"
 import UploadModal from "@/components/upload-modal"
 import { useLanguage } from "@/components/language-provider"
 import PageIntro from "@/components/page-intro"
+
+const PdfPanel = dynamic(
+  () => import("@/components/chat-panel/pdf-panel"),
+  { ssr: false }
+)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -207,6 +214,7 @@ export default function ManagePage() {
     description: string
     onConfirm: () => void
   }>({ open: false, title: "", description: "", onConfirm: () => {} })
+  const [viewingDoc, setViewingDoc] = useState<Document | null>(null)
 
   // Add a ref to track if initial load has been done
   const initialLoadDone = useRef(false)
@@ -244,6 +252,7 @@ export default function ManagePage() {
           noDocs: "Belum ada dokumen",
           noDocsHint: "Klik butang 'Muat Naik PDF' di atas untuk bermula",
           uploadFirstBtn: "Muat Naik Dokumen Pertama",
+          viewDoc: "Lihat dokumen",
           cancelBtn: "Batal",
           confirmDeleteBtn: "Padam",
           confirmDeleteTitle: "Padam dokumen ini?",
@@ -284,6 +293,7 @@ export default function ManagePage() {
           noDocs: "No documents yet",
           noDocsHint: "Click 'Upload PDF' above to get started",
           uploadFirstBtn: "Upload First Document",
+          viewDoc: "View document",
           cancelBtn: "Cancel",
           confirmDeleteBtn: "Delete",
           confirmDeleteTitle: "Delete this document?",
@@ -804,6 +814,15 @@ export default function ManagePage() {
                               <Loader2 className="h-4 w-4 animate-spin text-destructive" />
                             ) : (
                               <>
+                                {doc.status === "ready" && (
+                                  <button
+                                    onClick={() => setViewingDoc(doc)}
+                                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                    title={copy.viewDoc}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => openRenameDialog(doc)}
                                   className="rounded p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
@@ -855,6 +874,19 @@ export default function ManagePage() {
           refreshDocuments()
           setUploadModalOpen(false)
         }}
+      />
+
+      {/* ── PDF Viewer ── */}
+      <PdfPanel
+        open={viewingDoc !== null}
+        url=""
+        targetPage={1}
+        highlightText={null}
+        docName={viewingDoc?.name ?? ""}
+        documentId={viewingDoc?.id ?? ""}
+        language={language}
+        onClose={() => setViewingDoc(null)}
+        mobileVariant="dialog"
       />
 
       {/* ── Confirm Dialog ── */}

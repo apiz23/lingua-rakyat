@@ -7,6 +7,7 @@ import "react-pdf/dist/Page/AnnotationLayer.css"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
+import SmoothDialog from "@/components/smoothui/dialog"
 import {
   AlertTriangle,
   ChevronLeft,
@@ -29,6 +30,7 @@ export interface PdfPanelProps {
   documentId: string
   language: string
   onClose: () => void
+  mobileVariant?: "drawer" | "dialog"
 }
 
 function useIsDesktop() {
@@ -256,6 +258,7 @@ export default function PdfPanel({
   documentId,
   language,
   onClose,
+  mobileVariant = "drawer",
 }: PdfPanelProps) {
   const isDesktop = useIsDesktop()
 
@@ -282,6 +285,22 @@ export default function PdfPanel({
           <div className="min-h-0 flex-1">{viewer}</div>
         </SheetContent>
       </Sheet>
+    )
+  }
+
+  if (mobileVariant === "dialog") {
+    return (
+      <SmoothDialog
+        open={open}
+        onOpenChange={(o) => !o && onClose()}
+        showCloseButton={false}
+        className="max-w-[min(95vw,540px)] gap-0 overflow-hidden p-0"
+      >
+        <div className="flex flex-col" style={{ height: "80vh" }}>
+          <PanelHeader docName={docName} onClose={onClose} />
+          <div className="min-h-0 flex-1">{viewer}</div>
+        </div>
+      </SmoothDialog>
     )
   }
 
