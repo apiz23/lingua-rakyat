@@ -1,6 +1,8 @@
 "use client"
 
 import React from "react"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { SourceChunk } from "@/lib/api"
@@ -276,7 +278,7 @@ export function AIMessageCard({
       setFeedback(next)
       if (!next || !sessionId) return
       try {
-        await fetch("/api/feedback", {
+        await fetch(`${API_URL}/api/feedback`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

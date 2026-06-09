@@ -123,11 +123,22 @@ DIALECT_KEYWORDS: dict[str, list[str]] = {
 }
 
 
+# Word-boundary regex for Malay keywords \u2014 prevents "ini" matching "initial",
+# "dia" matching "media"/"India", "itu" matching "institution", "ada" matching "adapted", etc.
+_MS_KEYWORD_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(k) for k in DIALECT_KEYWORDS["ms"]) + r")\b"
+)
+
+
 def detect_language(text: str) -> str:
     text_lower = text.lower()
-    for lang, keywords in DIALECT_KEYWORDS.items():
-        if any(keyword in text_lower for keyword in keywords):
-            return lang
+
+    if _MS_KEYWORD_RE.search(text_lower):
+        return "ms"
+
+    # CJK keywords: substring match safe since these chars never appear in Latin text
+    if any(kw in text_lower for kw in DIALECT_KEYWORDS.get("zh-cn", [])):
+        return "zh-cn"
 
     cjk_count = sum(1 for char in text if "\u4E00" <= char <= "\u9FFF" or "\u3040" <= char <= "\u309F")
     if text and cjk_count / len(text) > 0.15:

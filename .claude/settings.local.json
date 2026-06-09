@@ -74,7 +74,10 @@
       "PowerShell(cd \"C:\\\\Users\\\\SCSM11\\\\Desktop\\\\Developer\\\\lingua-rakyat\"; Get-ChildItem -Name | Where-Object { $_ -match \"requirements|setup|venv|\\\\.venv|pyproject\" })",
       "Bash(pnpm build *)",
       "Bash(python3 -m pytest tests/test_rag_pipeline_batch_embed.py tests/test_evaluator_load.py -v)",
-      "Skill(superpowers:finishing-a-development-branch)"
+      "Skill(superpowers:finishing-a-development-branch)",
+      "Bash(python3 -m pytest tests/test_feedback_router.py -v)",
+      "Read(//usr/local/**)",
+      "Read(//usr/**)"
     ]
   }
 }
