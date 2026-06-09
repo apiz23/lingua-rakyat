@@ -336,6 +336,7 @@ export default function ChatPanel({
   const [rateLimitSecondsLeft, setRateLimitSecondsLeft] = useState(0)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const isMountedRef = useRef(true)
   const historyAbortRef = useRef<AbortController | null>(null)
@@ -384,7 +385,9 @@ export default function ChatPanel({
   }, [rateLimitedUntil])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    const el = scrollContainerRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
   }, [messages, loading])
 
   useEffect(() => {
@@ -915,7 +918,7 @@ export default function ChatPanel({
         className="h-full min-w-0 flex-1 font-sans"
       >
       <AiChatBody className="min-h-0">
-        <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
+        <div ref={scrollContainerRef} className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
           <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
             <AnimatePresence>
               {selectedDoc && showHistory ? (

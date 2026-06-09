@@ -1064,7 +1064,7 @@ export default function Home() {
                   <MediaPlayer>
                     <MediaPlayerVideo className="h-full w-full">
                       <source
-                        src="https://stream.mux.com/VZtzUzGRv02OhRnZCxcNg49OilvolTqdnFLEqBsTwaxU/medium.mp4"
+                        src="https://otmlfmgyscrohtbpqqoi.supabase.co/storage/v1/object/public/videos/lv_0_20260609134554.mp4"
                         type="video/mp4"
                       />
                     </MediaPlayerVideo>
@@ -1124,9 +1124,6 @@ export default function Home() {
           <ScaleIn>
             <div className="mt-6 w-full overflow-x-hidden sm:mt-8">
               <div className="relative w-full">
-                <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-linear-to-r from-background to-transparent md:hidden" />
-                <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-linear-to-l from-background to-transparent md:hidden" />
-
                 <Backlight blur={6}>
                   <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted-foreground/20 flex justify-center overflow-x-auto overflow-y-visible pb-4">
                     <div className="min-w-[300px]">
@@ -1145,3 +1142,4 @@ export default function Home() {
     </div>
   )
 }
+

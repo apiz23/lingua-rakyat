@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import { Document, listDocuments } from "@/lib/api"
@@ -123,7 +123,7 @@ export default function WorkSpacePage() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col bg-background">
+    <div className="flex h-full w-full flex-col overflow-hidden bg-background">
       <ChatPanel
         selectedDoc={selectedDoc}
         initialQuestion={initialQuestion}
@@ -196,7 +196,7 @@ export default function WorkSpacePage() {
                         {featuredDocs.length > 0 && (
                           <>
                             <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                              Featured — Malaysian Gov Docs
+                              Featured â€” Malaysian Gov Docs
                             </div>
                             {featuredDocs.map((doc) => (
                               <Button
@@ -227,7 +227,7 @@ export default function WorkSpacePage() {
                                     {doc.name}
                                   </div>
                                   <div className="text-[10px] text-muted-foreground">
-                                    {getAgency(doc)} · Official document
+                                    {getAgency(doc)} Â· Official document
                                   </div>
                                 </div>
                                 <Badge className="ml-auto h-auto shrink-0 self-start bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
@@ -373,3 +373,4 @@ export default function WorkSpacePage() {
     </div>
   )
 }
+

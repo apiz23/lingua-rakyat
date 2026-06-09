@@ -10,6 +10,7 @@ import {
   Command,
   MessageSquare,
   Languages,
+  BookOpen,
 } from "lucide-react"
 
 import {
@@ -64,6 +65,11 @@ const navItems: NavItem[] = [
     href: "/results",
     label: "Showcase",
     icon: Target,
+  },
+  {
+    href: "/about",
+    label: "About",
+    icon: BookOpen,
   },
 ] as const
 

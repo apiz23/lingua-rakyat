@@ -58,6 +58,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider
       defaultOpen={true}
+      className="h-dvh"
       style={
         {
           "--sidebar-width": "20rem",
@@ -123,7 +124,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-auto bg-linear-to-br from-background via-background to-muted/5">
+        <main className="min-h-0 flex-1 overflow-hidden bg-linear-to-br from-background via-background to-muted/5">
           {children}
         </main>
       </SidebarInset>
