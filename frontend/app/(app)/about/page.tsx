@@ -45,7 +45,6 @@ import {
   QA_STEPS,
   KEY_FEATURES,
 } from "./data"
-// @ts-ignore
 import { PresentationSlides } from "@/components/about/presentation-slides"
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
