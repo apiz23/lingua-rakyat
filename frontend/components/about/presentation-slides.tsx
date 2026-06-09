@@ -20,7 +20,6 @@ import {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const TOTAL = 6
 const SLIDE_LABELS = [
   "Overview",
   "Ingestion Pipeline",
@@ -29,6 +28,7 @@ const SLIDE_LABELS = [
   "Key Features",
   "Eval Metrics",
 ]
+const TOTAL = SLIDE_LABELS.length
 
 // ── Slide content components ───────────────────────────────────────────────
 
@@ -334,8 +334,10 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsPlaying((p) => !p)}
+            aria-label={isPlaying ? "Pause autoplay" : "Resume autoplay"}
+            aria-pressed={isPlaying}
             className={cn(
-              "flex h-8 w-8 items-center justify-center border text-xs transition-colors",
+              "flex h-8 w-8 items-center justify-center border text-xs transition-colors focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none",
               isPlaying
                 ? "border-primary bg-primary text-white"
                 : "border-white/20 bg-white/8 text-white/60 hover:bg-white/12",
@@ -349,7 +351,8 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
           <span className="text-[11px] text-white/35">5s</span>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center border border-white/20 bg-white/8 text-white/60 hover:bg-white/12"
+            aria-label="Close presentation"
+            className="flex h-8 w-8 items-center justify-center border border-white/20 bg-white/8 text-white/60 hover:bg-white/12 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -411,7 +414,8 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
         <button
           onClick={() => { setCurrentSlide((c) => Math.max(0, c - 1)); setIsPlaying(false) }}
           disabled={currentSlide === 0}
-          className="flex h-10 w-10 items-center justify-center border border-white/20 bg-white/8 text-white/70 transition-colors hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-25"
+          aria-label="Previous slide"
+          className="flex h-10 w-10 items-center justify-center border border-white/20 bg-white/8 text-white/70 transition-colors hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-25 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -430,7 +434,8 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
         <button
           onClick={() => { setCurrentSlide((c) => Math.min(TOTAL - 1, c + 1)); setIsPlaying(false) }}
           disabled={currentSlide === TOTAL - 1}
-          className="flex h-10 w-10 items-center justify-center border border-white/20 bg-white/8 text-white/70 transition-colors hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-25"
+          aria-label="Next slide"
+          className="flex h-10 w-10 items-center justify-center border border-white/20 bg-white/8 text-white/70 transition-colors hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-25 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
