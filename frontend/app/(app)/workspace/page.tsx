@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import { Document, listDocuments } from "@/lib/api"
@@ -16,28 +16,20 @@ import {
   CheckCircle,
   CircleAlert,
   Clock,
-  FileText,
   Loader2,
   RotateCcw,
   Upload,
   ChevronDown,
-  Plus,
   Database,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useLanguage } from "@/components/language-provider"
 
 const AGENCY_COLORS: Record<string, string> = {
   JPN: "bg-purple-700",
   IMIGRESEN: "bg-blue-700",
 }
-
-const QUICK_STARTS = [
-  "Summarize this document",
-  "Siapa yang layak memohon?",
-  "What documents do I need?",
-  "Bagaimana cara memohon langkah demi langkah?",
-]
 
 const FEATURED_DOC_NAMES = new Set([
   "MyKad FAQ (JPN)",
@@ -54,6 +46,40 @@ function getAgency(doc: { name: string; agency?: string }): string | undefined {
 }
 
 export default function WorkSpacePage() {
+  const { language } = useLanguage()
+
+  const copy = language === "ms"
+    ? {
+        selectDoc: "Pilih dokumen",
+        noDocument: "Tiada dokumen",
+        featured: "Dokumen Kerajaan Malaysia Pilihan",
+        yourUploads: "Muat Naik Anda",
+        noDocs: "Tiada dokumen lagi",
+        officialDoc: "Dokumen rasmi",
+        ready: "SEDIA",
+        refresh: "Muat Semula",
+        upload: "Muat Naik",
+        statusReady: "Sedia",
+        statusProcessing: "Sedang diproses",
+        statusError: "Ralat",
+        statusPending: "Menunggu",
+      }
+    : {
+        selectDoc: "Select document",
+        noDocument: "No document",
+        featured: "Featured — Malaysian Gov Docs",
+        yourUploads: "Your Uploads",
+        noDocs: "No documents yet",
+        officialDoc: "Official document",
+        ready: "READY",
+        refresh: "Refresh",
+        upload: "Upload",
+        statusReady: "Ready",
+        statusProcessing: "Processing",
+        statusError: "Error",
+        statusPending: "Pending",
+      }
+
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [docsLoading, setDocsLoading] = useState(false)
@@ -108,17 +134,13 @@ export default function WorkSpacePage() {
   const statusConfig = (status: Document["status"]) => {
     switch (status) {
       case "ready":
-        return { icon: CheckCircle, color: "text-emerald-500", label: "Ready" }
+        return { icon: CheckCircle, color: "text-emerald-500", label: copy.statusReady }
       case "processing":
-        return {
-          icon: Loader2,
-          color: "text-amber-500 animate-spin",
-          label: "Processing",
-        }
+        return { icon: Loader2, color: "text-amber-500 animate-spin", label: copy.statusProcessing }
       case "error":
-        return { icon: CircleAlert, color: "text-red-500", label: "Error" }
+        return { icon: CircleAlert, color: "text-red-500", label: copy.statusError }
       default:
-        return { icon: Clock, color: "text-muted-foreground", label: "Pending" }
+        return { icon: Clock, color: "text-muted-foreground", label: copy.statusPending }
     }
   }
 
@@ -141,25 +163,15 @@ export default function WorkSpacePage() {
                       {selectedDoc ? (
                         <>
                           {(() => {
-                            const { icon: Icon, color } = statusConfig(
-                              selectedDoc.status
-                            )
-                            return (
-                              <Icon
-                                className={cn("h-3.5 w-3.5 shrink-0", color)}
-                              />
-                            )
+                            const { icon: Icon, color } = statusConfig(selectedDoc.status)
+                            return <Icon className={cn("h-3.5 w-3.5 shrink-0", color)} />
                           })()}
-                          <span className="truncate font-medium">
-                            {selectedDoc.name}
-                          </span>
+                          <span className="truncate font-medium">{selectedDoc.name}</span>
                         </>
                       ) : (
                         <>
                           <Database className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="text-muted-foreground">
-                            Select document
-                          </span>
+                          <span className="text-muted-foreground">{copy.selectDoc}</span>
                         </>
                       )}
                     </div>
@@ -189,14 +201,14 @@ export default function WorkSpacePage() {
                           )}
                         >
                           <Database className="h-4 w-4" />
-                          <span>No document</span>
+                          <span>{copy.noDocument}</span>
                         </Button>
 
                         {/* Featured gov docs section */}
                         {featuredDocs.length > 0 && (
                           <>
                             <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                              Featured â€” Malaysian Gov Docs
+                              {copy.featured}
                             </div>
                             {featuredDocs.map((doc) => (
                               <Button
@@ -215,29 +227,26 @@ export default function WorkSpacePage() {
                                   <div
                                     className={cn(
                                       "flex h-7 w-7 shrink-0 items-center justify-center rounded text-[9px] font-bold text-white",
-                                      AGENCY_COLORS[getAgency(doc)!] ??
-                                        "bg-muted"
+                                      AGENCY_COLORS[getAgency(doc)!] ?? "bg-muted"
                                     )}
                                   >
                                     {getAgency(doc)}
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-medium">
-                                    {doc.name}
-                                  </div>
+                                  <div className="truncate text-sm font-medium">{doc.name}</div>
                                   <div className="text-[10px] text-muted-foreground">
-                                    {getAgency(doc)} Â· Official document
+                                    {getAgency(doc)} · {copy.officialDoc}
                                   </div>
                                 </div>
                                 <Badge className="ml-auto h-auto shrink-0 self-start bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
-                                  READY
+                                  {copy.ready}
                                 </Badge>
                               </Button>
                             ))}
                             {userDocs.length > 0 && (
                               <div className="mt-1 border-t border-border px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                                Your Uploads
+                                {copy.yourUploads}
                               </div>
                             )}
                           </>
@@ -246,23 +255,15 @@ export default function WorkSpacePage() {
                         {/* User uploaded docs */}
                         {docsLoading ? (
                           Array.from({ length: 3 }).map((_, i) => (
-                            <Skeleton
-                              key={i}
-                              className="mx-1 my-0.5 h-9 animate-pulse bg-muted/40"
-                            />
+                            <Skeleton key={i} className="mx-1 my-0.5 h-9 animate-pulse bg-muted/40" />
                           ))
-                        ) : userDocs.length === 0 &&
-                          featuredDocs.length === 0 ? (
+                        ) : userDocs.length === 0 && featuredDocs.length === 0 ? (
                           <div className="py-8 text-center text-sm text-muted-foreground">
-                            No documents yet
+                            {copy.noDocs}
                           </div>
                         ) : (
                           userDocs.map((doc) => {
-                            const {
-                              icon: Icon,
-                              color,
-                              label,
-                            } = statusConfig(doc.status)
+                            const { icon: Icon, color, label } = statusConfig(doc.status)
                             return (
                               <Button
                                 key={doc.id}
@@ -276,14 +277,10 @@ export default function WorkSpacePage() {
                                   selectedDoc?.id === doc.id && "bg-primary/5"
                                 )}
                               >
-                                <Icon
-                                  className={cn("h-4 w-4 shrink-0", color)}
-                                />
+                                <Icon className={cn("h-4 w-4 shrink-0", color)} />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="truncate font-medium">
-                                      {doc.name}
-                                    </span>
+                                    <span className="truncate font-medium">{doc.name}</span>
                                     <Badge
                                       variant="outline"
                                       className="h-auto border-border/50 bg-muted/30 px-1.5 py-0.5 text-[10px] text-muted-foreground"
@@ -305,12 +302,12 @@ export default function WorkSpacePage() {
                 </PopoverContent>
               </Popover>
 
-              {/* Refresh Button */}
+              {/* Action buttons */}
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label="Refresh documents"
+                  aria-label={copy.refresh}
                   onClick={loadDocuments}
                   disabled={docsLoading}
                   className="min-h-10 w-full gap-2 rounded-md px-3 sm:min-h-9 sm:w-auto sm:rounded-none"
@@ -320,38 +317,20 @@ export default function WorkSpacePage() {
                   ) : (
                     <RotateCcw className="h-4 w-4" />
                   )}
-                  <span className="sm:hidden">Refresh</span>
+                  <span className="sm:hidden">{copy.refresh}</span>
                 </Button>
 
-                {/* Upload Button */}
                 <Button
                   size="sm"
-                  aria-label="Upload document"
+                  aria-label={copy.upload}
                   onClick={() => setIsUploadOpen(true)}
                   className="min-h-10 w-full gap-2 rounded-md bg-primary shadow-sm hover:bg-primary/90 sm:min-h-9 sm:w-auto sm:rounded-none sm:px-3"
                 >
                   <Upload className="h-4 w-4" />
-                  <span className="sm:hidden">Upload</span>
+                  <span className="sm:hidden">{copy.upload}</span>
                 </Button>
               </div>
             </div>
-
-            {/* {selectedDoc?.status === "ready" ? (
-              <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-                {QUICK_STARTS.map((question) => (
-                  <Button
-                    key={question}
-                    type="button"
-                    onClick={() => setInitialQuestion(question)}
-                    variant="outline"
-                    size="sm"
-                    className="h-auto min-h-10 justify-start rounded-none border-border/50 bg-background px-3 py-2 text-left text-xs text-muted-foreground shadow-none hover:border-primary/30 hover:bg-primary/5 hover:text-foreground sm:min-h-0 sm:justify-center sm:py-1.5 sm:text-center"
-                  >
-                    {question}
-                  </Button>
-                ))}
-              </div>
-            ) : null} */}
           </div>
         }
       />
@@ -373,4 +352,3 @@ export default function WorkSpacePage() {
     </div>
   )
 }
-

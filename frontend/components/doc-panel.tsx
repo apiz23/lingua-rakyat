@@ -17,7 +17,6 @@ import {
   ArrowLeftFromLine,
   Plus,
   RotateCcw,
-  FlaskConical,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
@@ -54,7 +53,6 @@ export default function DocumentPanel({
           yesterday: "Semalam",
           daysAgo: "hari lalu",
           reloadTitle: "Muat semula senarai dokumen",
-          evalTitle: "Papan penilaian",
           benchmarkTitle: "Makmal benchmark",
           back: "Kembali",
           search: "Cari dokumen...",
@@ -79,7 +77,6 @@ export default function DocumentPanel({
           yesterday: "Yesterday",
           daysAgo: "days ago",
           reloadTitle: "Reload document list",
-          evalTitle: "Evaluation dashboard",
           benchmarkTitle: "Benchmark lab",
           back: "Back",
           search: "Search documents...",
@@ -219,13 +216,6 @@ export default function DocumentPanel({
                   className={cn("h-4 w-4", isReloading && "animate-spin")}
                 />
               </Button>
-              <Link
-                href="/eval"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary transition-colors hover:bg-primary/10"
-                title={copy.evalTitle}
-              >
-                <FlaskConical className="h-4 w-4" />
-              </Link>
               <Link
                 href="/benchmark"
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary transition-colors hover:bg-primary/10"

@@ -65,6 +65,7 @@ def insert_chat_message(payload: dict[str, Any]) -> bool:
                 "sufficient_evidence",
                 "latency_ms",
                 "document_name",
+                "faithfulness",
             ]
             retry_payload = dict(payload)
             removed_any = False

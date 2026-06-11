@@ -11,28 +11,63 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import {
   BACKEND_STACK,
+  BACKEND_STACK_MS,
   FRONTEND_STACK,
+  FRONTEND_STACK_MS,
   EVAL_METRICS,
+  EVAL_METRICS_MS,
   KEY_FEATURES,
+  KEY_FEATURES_MS,
   INGESTION_STEPS,
+  INGESTION_STEPS_MS,
   QA_STEPS,
+  QA_STEPS_MS,
 } from "@/app/(app)/about/data"
-
-// ── Constants ──────────────────────────────────────────────────────────────
-
-const SLIDE_LABELS = [
-  "Overview",
-  "Ingestion Pipeline",
-  "Q&A Pipeline",
-  "Tech Stack",
-  "Key Features",
-  "Eval Metrics",
-]
-const TOTAL = SLIDE_LABELS.length
+import { useLanguage } from "@/components/language-provider"
 
 // ── Slide content components ───────────────────────────────────────────────
 
 function SlideOverview() {
+  const { language } = useLanguage()
+
+  const copy = language === "ms"
+    ? {
+        problemTitle: "Masalah",
+        problemItems: [
+          "PDF kerajaan ditulis dalam bahasa undang-undang — bukan bahasa mudah",
+          "Dokumen panjang tiada antara muka soal jawab boleh cari",
+          "Tiada akses saksama untuk penutur Melayu, Inggeris, dan Cina",
+          "Kriteria kelayakan tersembunyi dalam perenggan",
+        ],
+        solutionTitle: "Penyelesaian",
+        solutionItems: [
+          "Muat naik mana-mana PDF kerajaan — boleh ditanya serta-merta",
+          "Tanya dalam Melayu, Inggeris, atau Mandarin — jawapan dalam bahasa sama",
+          "Setiap jawapan berpunca daripada teks dokumen dengan petikan halaman",
+          "Penjaga bukti menolak halusinasi — menunjukkan keyakinan",
+        ],
+        ragLabel: "RAG dalam satu ayat: ",
+        ragText: "Berbanding LLM yang meneka daripada ingatan latihan, Lingua Rakyat terlebih dahulu mencari petikan berkaitan dalam dokumen sebenar, kemudian menghantar hanya petikan itu kepada LLM — supaya jawapan sentiasa boleh dikesan kepada sumber nyata.",
+      }
+    : {
+        problemTitle: "The Problem",
+        problemItems: [
+          "Government PDFs written in legalese — not plain language",
+          "Long documents with no searchable Q&A interface",
+          "No equal access across Malay, English, and Chinese speakers",
+          "Eligibility criteria buried in paragraphs",
+        ],
+        solutionTitle: "The Solution",
+        solutionItems: [
+          "Upload any government PDF — queryable instantly",
+          "Ask in Malay, English, or Mandarin — answer in same language",
+          "Every answer grounded in document text with page citations",
+          "Evidence guard refuses to hallucinate — shows confidence",
+        ],
+        ragLabel: "RAG in one sentence: ",
+        ragText: "Instead of an LLM guessing from training memory, Lingua Rakyat first searches the actual document for relevant passages, then passes only those passages to the LLM — so the answer is always traceable to a real source.",
+      }
+
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto p-8">
       <div className="grid flex-1 gap-4 sm:grid-cols-2">
@@ -41,15 +76,10 @@ function SlideOverview() {
             <div className="flex h-6 w-6 items-center justify-center bg-red-500/10">
               <FileText className="h-3.5 w-3.5 text-red-500" />
             </div>
-            <span className="text-base font-semibold text-foreground">The Problem</span>
+            <span className="text-base font-semibold text-foreground">{copy.problemTitle}</span>
           </div>
           <ul className="space-y-2">
-            {[
-              "Government PDFs written in legalese — not plain language",
-              "Long documents with no searchable Q&A interface",
-              "No equal access across Malay, English, and Chinese speakers",
-              "Eligibility criteria buried in paragraphs",
-            ].map((item, i) => (
+            {copy.problemItems.map((item, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
                 {item}
@@ -63,15 +93,10 @@ function SlideOverview() {
             <div className="flex h-6 w-6 items-center justify-center bg-primary/10">
               <Check className="h-3.5 w-3.5 text-primary" />
             </div>
-            <span className="text-base font-semibold text-foreground">The Solution</span>
+            <span className="text-base font-semibold text-foreground">{copy.solutionTitle}</span>
           </div>
           <ul className="space-y-2">
-            {[
-              "Upload any government PDF — queryable instantly",
-              "Ask in Malay, English, or Mandarin — answer in same language",
-              "Every answer grounded in document text with page citations",
-              "Evidence guard refuses to hallucinate — shows confidence",
-            ].map((item, i) => (
+            {copy.solutionItems.map((item, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <Check className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
                 {item}
@@ -83,10 +108,8 @@ function SlideOverview() {
 
       <div className="border border-primary/15 bg-primary/5 px-5 py-4">
         <p className="text-sm text-foreground/80">
-          <span className="font-semibold text-primary">RAG in one sentence: </span>
-          Instead of an LLM guessing from training memory, Lingua Rakyat first searches the actual
-          document for relevant passages, then passes only those passages to the LLM — so the answer
-          is always traceable to a real source.
+          <span className="font-semibold text-primary">{copy.ragLabel}</span>
+          {copy.ragText}
         </p>
       </div>
     </div>
@@ -134,16 +157,22 @@ function SlidePipeline({
   )
 }
 
-function SlideTechStack() {
+function SlideTechStack({ backend, frontend }: { backend: typeof BACKEND_STACK; frontend: typeof FRONTEND_STACK }) {
+  const { language } = useLanguage()
+
+  const copy = language === "ms"
+    ? { backendLabel: "Backend", frontendLabel: "Frontend & Penempatan", why: "Kenapa: " }
+    : { backendLabel: "Backend", frontendLabel: "Frontend & Deployment", why: "Why: " }
+
   return (
     <div className="h-full overflow-auto p-8">
       <div className="space-y-5">
         <div>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            Backend
+            {copy.backendLabel}
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {BACKEND_STACK.map((tech) => (
+            {backend.map((tech) => (
               <div key={tech.name} className="border border-border/60 bg-card/40 px-3 py-2">
                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
                   <span className="text-sm font-semibold text-foreground">{tech.name}</span>
@@ -152,7 +181,7 @@ function SlideTechStack() {
                   </Badge>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">
-                  <span className="font-medium text-primary/80">Why: </span>{tech.why}
+                  <span className="font-medium text-primary/80">{copy.why}</span>{tech.why}
                 </p>
               </div>
             ))}
@@ -161,10 +190,10 @@ function SlideTechStack() {
 
         <div>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-            Frontend &amp; Deployment
+            {copy.frontendLabel}
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {FRONTEND_STACK.map((tech) => (
+            {frontend.map((tech) => (
               <div key={tech.name} className="border border-border/60 bg-card/40 px-3 py-2">
                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
                   <span className="text-sm font-semibold text-foreground">{tech.name}</span>
@@ -173,7 +202,7 @@ function SlideTechStack() {
                   </Badge>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">
-                  <span className="font-medium text-primary/80">Why: </span>{tech.why}
+                  <span className="font-medium text-primary/80">{copy.why}</span>{tech.why}
                 </p>
               </div>
             ))}
@@ -184,11 +213,11 @@ function SlideTechStack() {
   )
 }
 
-function SlideFeatures() {
+function SlideFeatures({ features }: { features: typeof KEY_FEATURES }) {
   return (
     <div className="h-full overflow-auto p-8">
       <div className="grid gap-3 sm:grid-cols-2">
-        {KEY_FEATURES.map((feat) => {
+        {features.map((feat) => {
           const Icon = feat.icon
           return (
             <div key={feat.label} className="border border-border/60 bg-card/40 p-4">
@@ -214,11 +243,11 @@ function SlideFeatures() {
   )
 }
 
-function SlideMetrics() {
+function SlideMetrics({ metrics }: { metrics: typeof EVAL_METRICS }) {
   return (
     <div className="h-full overflow-auto p-8">
       <div className="grid gap-3 sm:grid-cols-2">
-        {EVAL_METRICS.map((m) => {
+        {metrics.map((m) => {
           const Icon = m.icon
           return (
             <div key={m.name} className="border border-border/60 bg-card/40 p-4">
@@ -243,17 +272,6 @@ function SlideMetrics() {
   )
 }
 
-// ── Slide registry ─────────────────────────────────────────────────────────
-
-const SLIDES = [
-  <SlideOverview key="overview" />,
-  <SlidePipeline key="ingestion" steps={INGESTION_STEPS} />,
-  <SlidePipeline key="qa" steps={QA_STEPS} />,
-  <SlideTechStack key="tech" />,
-  <SlideFeatures key="features" />,
-  <SlideMetrics key="metrics" />,
-]
-
 // ── Main component ─────────────────────────────────────────────────────────
 
 interface PresentationSlidesProps {
@@ -265,10 +283,10 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const { language } = useLanguage()
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Reset state when opened
   useEffect(() => {
     if (open) {
       setCurrentSlide(0)
@@ -276,11 +294,56 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
     }
   }, [open])
 
+  const copy = language === "ms"
+    ? {
+        header: "Lingua Rakyat — Pembentangan",
+        pause: "Jeda main automatik",
+        resume: "Sambung main automatik",
+        close: "Tutup pembentangan",
+        prev: "Slaid sebelumnya",
+        next: "Slaid seterusnya",
+        slideLabels: [
+          "Gambaran Keseluruhan",
+          "Saluran Pengambilan",
+          "Saluran S&J",
+          "Timbunan Teknologi",
+          "Ciri Utama",
+          "Metrik Penilaian",
+        ],
+      }
+    : {
+        header: "Lingua Rakyat — Presentation",
+        pause: "Pause autoplay",
+        resume: "Resume autoplay",
+        close: "Close presentation",
+        prev: "Previous slide",
+        next: "Next slide",
+        slideLabels: [
+          "Overview",
+          "Ingestion Pipeline",
+          "Q&A Pipeline",
+          "Tech Stack",
+          "Key Features",
+          "Eval Metrics",
+        ],
+      }
+
+  const TOTAL = copy.slideLabels.length
+  const isMalay = language === "ms"
+
+  const SLIDES = [
+    <SlideOverview key="overview" />,
+    <SlidePipeline key="ingestion" steps={isMalay ? INGESTION_STEPS_MS : INGESTION_STEPS} />,
+    <SlidePipeline key="qa" steps={isMalay ? QA_STEPS_MS : QA_STEPS} />,
+    <SlideTechStack key="tech" backend={isMalay ? BACKEND_STACK_MS : BACKEND_STACK} frontend={isMalay ? FRONTEND_STACK_MS : FRONTEND_STACK} />,
+    <SlideFeatures key="features" features={isMalay ? KEY_FEATURES_MS : KEY_FEATURES} />,
+    <SlideMetrics key="metrics" metrics={isMalay ? EVAL_METRICS_MS : EVAL_METRICS} />,
+  ]
+
   const goTo = useCallback((idx: number) => {
     setCurrentSlide(Math.max(0, Math.min(TOTAL - 1, idx)))
-  }, [])
+  }, [TOTAL])
 
-  // Autoplay — restarts whenever currentSlide or isPlaying changes
   useEffect(() => {
     if (!open || !isPlaying) return
     const id = setInterval(() => {
@@ -293,9 +356,8 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
       })
     }, 5000)
     return () => clearInterval(id)
-  }, [open, isPlaying, currentSlide])
+  }, [open, isPlaying, currentSlide, TOTAL])
 
-  // Keyboard shortcuts
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -319,7 +381,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [open, onClose])
+  }, [open, onClose, TOTAL])
 
   if (!mounted || !open) return null
 
@@ -329,12 +391,12 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
       {/* Top bar */}
       <div className="flex items-center justify-between px-1">
         <span className="text-xs font-semibold uppercase tracking-[0.12em] text-white/40">
-          Lingua Rakyat — Presentation
+          {copy.header}
         </span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsPlaying((p) => !p)}
-            aria-label={isPlaying ? "Pause autoplay" : "Resume autoplay"}
+            aria-label={isPlaying ? copy.pause : copy.resume}
             aria-pressed={isPlaying}
             className={cn(
               "flex h-8 w-8 items-center justify-center border text-xs transition-colors focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none",
@@ -351,7 +413,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
           <span className="text-xs text-white/35">5s</span>
           <button
             onClick={onClose}
-            aria-label="Close presentation"
+            aria-label={copy.close}
             className="flex h-8 w-8 items-center justify-center border border-white/20 bg-white/8 text-white/60 hover:bg-white/12 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none"
           >
             <X className="h-3.5 w-3.5" />
@@ -369,11 +431,11 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
             </div>
             <div className="mb-4 h-0.5 w-8 bg-primary" />
             <h2 className="font-heading text-2xl font-black leading-tight text-foreground">
-              {SLIDE_LABELS[currentSlide]}
+              {copy.slideLabels[currentSlide]}
             </h2>
           </div>
           <nav className="flex flex-col gap-2.5">
-            {SLIDE_LABELS.map((label, i) => (
+            {copy.slideLabels.map((label, i) => (
               <button
                 key={i}
                 onClick={() => { goTo(i); setIsPlaying(false) }}
@@ -415,7 +477,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
         <button
           onClick={() => { setCurrentSlide((c) => Math.max(0, c - 1)); setIsPlaying(false) }}
           disabled={currentSlide === 0}
-          aria-label="Previous slide"
+          aria-label={copy.prev}
           className="flex h-10 w-10 items-center justify-center border border-white/20 bg-white/8 text-white/70 transition-colors hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-25 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -435,7 +497,7 @@ export function PresentationSlides({ open, onClose }: PresentationSlidesProps) {
         <button
           onClick={() => { setCurrentSlide((c) => Math.min(TOTAL - 1, c + 1)); setIsPlaying(false) }}
           disabled={currentSlide === TOTAL - 1}
-          aria-label="Next slide"
+          aria-label={copy.next}
           className="flex h-10 w-10 items-center justify-center border border-white/20 bg-white/8 text-white/70 transition-colors hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-25 focus-visible:ring-1 focus-visible:ring-white/40 focus-visible:outline-none"
         >
           <ChevronRight className="h-5 w-5" />

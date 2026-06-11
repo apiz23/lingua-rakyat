@@ -7,6 +7,7 @@ import {
   listDocuments,
   deleteDocument,
   renameDocument,
+  reindexDocument,
 } from "@/lib/api"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -30,6 +31,7 @@ import {
   Plus,
   Pencil,
   Eye,
+  RotateCcw,
 } from "lucide-react"
 import UploadModal from "@/components/upload-modal"
 import { useLanguage } from "@/components/language-provider"
@@ -200,6 +202,13 @@ export default function ManagePage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set())
   const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [reindexingId, setReindexingId] = useState<string | null>(null)
+  const [reindexDialog, setReindexDialog] = useState<{
+    open: boolean
+    document: Document | null
+    token: string
+    error: string
+  }>({ open: false, document: null, token: "", error: "" })
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [renameDialog, setRenameDialog] = useState<{
     open: boolean
@@ -533,6 +542,39 @@ export default function ManagePage() {
     }
   }
 
+  const doReindex = async () => {
+    const doc = reindexDialog.document
+    const token = reindexDialog.token.trim()
+    if (!doc || !token) {
+      setReindexDialog((prev) => ({
+        ...prev,
+        error: language === "ms" ? "Token diperlukan" : "Token is required",
+      }))
+      return
+    }
+    setReindexingId(doc.id)
+    setReindexDialog((prev) => ({ ...prev, error: "" }))
+    try {
+      const result = await reindexDocument(doc.id, token)
+      setDocuments((prev) =>
+        prev.map((item) =>
+          item.id === doc.id ? { ...item, chunk_count: result.chunk_count, status: "ready" } : item
+        )
+      )
+      toast.success(
+        language === "ms"
+          ? `Pengindeksan semula selesai — ${result.chunk_count} kepingan`
+          : `Re-indexed — ${result.chunk_count} chunks`
+      )
+      setReindexDialog({ open: false, document: null, token: "", error: "" })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : language === "ms" ? "Gagal" : "Failed"
+      setReindexDialog((prev) => ({ ...prev, error: msg }))
+    } finally {
+      setReindexingId(null)
+    }
+  }
+
   const filteredDocuments = documents.filter((doc) =>
     doc.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -810,7 +852,7 @@ export default function ManagePage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-center gap-1">
-                            {isDeleting || renamingId === doc.id ? (
+                            {isDeleting || renamingId === doc.id || reindexingId === doc.id ? (
                               <Loader2 className="h-4 w-4 animate-spin text-destructive" />
                             ) : (
                               <>
@@ -834,6 +876,26 @@ export default function ManagePage() {
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </button>
+                                {doc.storage_path && (
+                                  <button
+                                    onClick={() =>
+                                      setReindexDialog({
+                                        open: true,
+                                        document: doc,
+                                        token: "",
+                                        error: "",
+                                      })
+                                    }
+                                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                    title={
+                                      language === "ms"
+                                        ? "Indeks semula dokumen"
+                                        : "Re-index document"
+                                    }
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => confirmDelete(doc)}
                                   className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
@@ -967,6 +1029,75 @@ export default function ManagePage() {
                 {renamingId ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : language === "ms" ? "Simpan" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Re-index Dialog ── */}
+      {reindexDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-start gap-4">
+              <div className="bg-primary/10 p-2.5">
+                <RotateCcw className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {language === "ms" ? "Indeks Semula Dokumen" : "Re-index Document"}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {language === "ms"
+                    ? "Proses semula dokumen untuk mendapatkan nombor halaman dan sorotan teks."
+                    : "Reprocess the document to get page numbers and text highlighting."}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6">
+              <label className="block">
+                <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                  Token
+                </span>
+                <input
+                  value={reindexDialog.token}
+                  type="password"
+                  onChange={(e) =>
+                    setReindexDialog((prev) => ({ ...prev, token: e.target.value }))
+                  }
+                  onKeyDown={(e) => e.key === "Enter" && doReindex()}
+                  className="mt-2 w-full border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  autoFocus
+                />
+              </label>
+            </div>
+            {reindexDialog.error && (
+              <div className="mt-4 flex items-center gap-2 border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {reindexDialog.error}
+              </div>
+            )}
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() =>
+                  setReindexDialog({ open: false, document: null, token: "", error: "" })
+                }
+                className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+              >
+                {language === "ms" ? "Batal" : "Cancel"}
+              </button>
+              <button
+                onClick={doReindex}
+                disabled={reindexingId !== null}
+                className="bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              >
+                {reindexingId ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : language === "ms" ? (
+                  "Indeks Semula"
+                ) : (
+                  "Re-index"
+                )}
               </button>
             </div>
           </div>

@@ -272,6 +272,21 @@ export async function renameDocument(
   return updated
 }
 
+export async function reindexDocument(
+  documentId: string,
+  uploadToken: string
+): Promise<{ success: boolean; chunk_count: number; message: string }> {
+  const res = await apiFetch(
+    `${API_URL}/api/documents/${documentId}/reindex?upload_token=${encodeURIComponent(uploadToken)}`,
+    { method: "POST" }
+  )
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Re-index failed" }))
+    throw new Error(error.detail || "Re-index failed")
+  }
+  return res.json()
+}
+
 // ── FIX: Re-sync chunk counts from Pinecone ───────────────────────────────
 // Fixes existing documents that show chunk_count=0 because they were
 // uploaded before the backend fix. Queries Pinecone for real vector counts.

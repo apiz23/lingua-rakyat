@@ -23,7 +23,10 @@ logger = logging.getLogger("voice_helpers")
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 _elevenlabs_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY")) if ElevenLabs is not None else None
 
-VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+# Male voice for English responses (default: Adam)
+VOICE_ID_EN = os.getenv("ELEVENLABS_VOICE_ID_EN", os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB"))
+# Female voice for Malay / other languages (default: Rachel)
+VOICE_ID_MS = os.getenv("ELEVENLABS_VOICE_ID_MS", "21m00Tcm4TlvDq8ikWAM")
 TTS_MODEL = "eleven_multilingual_v2"
 WHISPER_MODEL = "whisper-large-v3"
 MAX_TTS_CHARS = 4500
@@ -77,12 +80,20 @@ def transcribe_audio(audio_bytes: bytes, filename: str) -> dict:
 
 # ── TTS ───────────────────────────────────────────────────────────────────────
 
-def text_to_speech(text: str) -> bytes | None:
+_MALAY_LANGS = {"ms", "id"}
+
+def _pick_voice(language: str) -> str:
+    """Male for English, female for Malay/other languages."""
+    return VOICE_ID_EN if language not in _MALAY_LANGS else VOICE_ID_MS
+
+
+def text_to_speech(text: str, language: str = "en") -> bytes | None:
     """
     Convert text to speech using ElevenLabs multilingual v2.
 
     Args:
         text: Answer text to speak. Truncated to MAX_TTS_CHARS if too long.
+        language: BCP-47 / langdetect code — used to select voice gender.
 
     Returns:
         audio/mpeg bytes on success.
@@ -99,7 +110,7 @@ def text_to_speech(text: str) -> bytes | None:
 
     try:
         audio_generator = _elevenlabs_client.text_to_speech.convert(
-            voice_id=VOICE_ID,
+            voice_id=_pick_voice(language),
             text=text,
             model_id=TTS_MODEL,
         )

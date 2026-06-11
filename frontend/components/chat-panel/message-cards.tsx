@@ -175,7 +175,27 @@ const SourcePills = React.memo(function SourcePills({
     .sort((a, b) => a.pageStart - b.pageStart)
     .slice(0, 5)
 
-  if (pills.length === 0) return null
+  // No page-numbered pills but sources exist → show a generic "Open PDF" pill
+  if (pills.length === 0) {
+    if (sources.length === 0) return null
+    const label =
+      language === "ms" ? "Buka PDF" : language === "zh-cn" ? "打开PDF" : "Open PDF"
+    return (
+      <div className="mt-3 mb-1 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => onPillClick(0, 1)}
+          className="inline-flex items-center gap-1.5 border border-primary/70 bg-primary/15 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary hover:bg-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={label}
+          title={label}
+        >
+          <FileText className="h-3 w-3 shrink-0" />
+          <span>{label}</span>
+          <ExternalLink className="h-3 w-3 shrink-0 text-primary/60" />
+        </button>
+      </div>
+    )
+  }
 
   const pageLabel = (pill: SourcePillData): string => {
     const range =
@@ -431,6 +451,7 @@ export function AIMessageCard({
                 confidence={message.confidence}
                 faithfulness={message.faithfulness}
                 language={message.language}
+                sources={message.sources}
                 confidenceReason={
                   message.sources.length > 0
                     ? computeConfidenceReason(
@@ -608,10 +629,10 @@ export function AIMessageCard({
                                       }`
                                     : ""}
                                 </span>
-                                {pageStart && docPublicUrl ? (
+                                {onOpenPdf ? (
                                   <button
                                     type="button"
-                                    onClick={() => onOpenPdf?.(pageStart as number, source.text ?? null)}
+                                    onClick={() => onOpenPdf(pageStart ?? 1, source.text ?? null)}
                                     className="ml-1 inline-flex items-center gap-1 border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:border-primary/80 hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                                     title={language === "ms" ? "Lihat halaman asal" : "View source page"}
                                   >

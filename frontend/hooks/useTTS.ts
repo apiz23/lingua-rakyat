@@ -28,11 +28,30 @@ function toBCP47(language: string): string {
   }
 }
 
+const MALAY_LANGS = new Set(["ms", "id"])
+
 function speakFallback(text: string, language: string): void {
   if (!("speechSynthesis" in window)) return
   window.speechSynthesis.cancel()
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = toBCP47(language)
+
+  // Match backend gender rule: Malay = female, English/other = male
+  const wantFemale = MALAY_LANGS.has(language)
+  const voices = window.speechSynthesis.getVoices()
+  if (voices.length > 0) {
+    const langPrefix = utterance.lang.split("-")[0].toLowerCase()
+    // Score voices: prefer matching lang, then matching gender heuristic
+    const femaleHints = ["female", "woman", "girl", "samantha", "victoria", "karen", "moira", "fiona", "tessa", "zira", "hazel"]
+    const maleHints   = ["male", "man", "daniel", "alex", "fred", "jorge", "arthur", "mark", "thomas", "david"]
+    const genderHints = wantFemale ? femaleHints : maleHints
+    const matched = voices.find((v) => {
+      const name = v.name.toLowerCase()
+      return v.lang.toLowerCase().startsWith(langPrefix) && genderHints.some((h) => name.includes(h))
+    }) ?? voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix))
+    if (matched) utterance.voice = matched
+  }
+
   window.speechSynthesis.speak(utterance)
 }
 

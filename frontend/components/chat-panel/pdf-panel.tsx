@@ -34,10 +34,15 @@ export interface PdfPanelProps {
 }
 
 function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(false)
+  // PdfPanel is SSR-disabled (dynamic import, ssr:false) so window is always
+  // available here. Initialise synchronously to avoid Drawer→Sheet swap on
+  // first render, which caused Radix's onOpenChange(false) to fire and close
+  // the panel immediately after it opened.
+  const [isDesktop, setIsDesktop] = useState(
+    () => window.matchMedia("(min-width: 1024px)").matches
+  )
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)")
-    setIsDesktop(mq.matches)
     const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
     mq.addEventListener("change", handler)
     return () => mq.removeEventListener("change", handler)
@@ -100,8 +105,9 @@ function PdfViewer({
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  // Declare before any useEffect that references it
-  const activeHighlight = currentPage === targetPage ? highlightText : null
+  // Highlight on every page — lets user navigate to find the source text
+  // even when page_start was not stored (null) and we fell back to page 1.
+  const activeHighlight = highlightText
 
   useEffect(() => {
     setCurrentPage(targetPage)

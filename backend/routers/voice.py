@@ -21,7 +21,7 @@ MIN_AUDIO_BYTES = 1  # rejects zero-byte uploads; real duration check is Groq's 
 
 class TTSRequest(BaseModel):
     text: str = Field(min_length=1)
-    language: str = "en"  # reserved for future per-language voice selection; currently unused
+    language: str = "en"
 
 
 # ── /transcribe ───────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ async def tts(request: Request, body: TTSRequest):
     Convert text to speech via ElevenLabs multilingual v2.
     Returns audio/mpeg on success, or { fallback: true } if quota exceeded.
     """
-    audio_bytes = text_to_speech(body.text)
+    audio_bytes = text_to_speech(body.text, body.language)
 
     if audio_bytes is None:
         # ElevenLabs quota exceeded — tell frontend to use speechSynthesis

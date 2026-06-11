@@ -27,6 +27,7 @@ create table if not exists public.lr_chat_messages (
   latency_ms integer not null default 0,
   model_used text not null default '',
   sufficient_evidence boolean not null default true,
+  faithfulness double precision,
   created_at timestamptz not null default now()
 );
 

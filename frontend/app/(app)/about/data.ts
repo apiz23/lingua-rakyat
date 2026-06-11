@@ -45,7 +45,7 @@ export type ApiEndpoint = {
   desc: string
 }
 
-// ── Tech Stack ─────────────────────────────────────────────────────────────
+// ── Tech Stack — English ───────────────────────────────────────────────────
 
 export const BACKEND_STACK: StackItem[] = [
   {
@@ -193,6 +193,114 @@ export const FRONTEND_STACK: StackItem[] = [
   },
 ]
 
+// ── Tech Stack — Malay ─────────────────────────────────────────────────────
+
+export const BACKEND_STACK_MS: StackItem[] = [
+  {
+    ...BACKEND_STACK[0],
+    what: "Kerangka web Python async. Jana dokumen Swagger secara automatik di /docs. Daya pemrosesan tinggi melalui I/O async.",
+    why: "Melayani semua titik akhir — sembang, dokumen, penilaian, suara — dengan dokumentasi OpenAPI automatik untuk hakim.",
+  },
+  {
+    ...BACKEND_STACK[1],
+    what: "LLM sumber terbuka Meta (70B param) berjalan pada perkakasan inferens LPU tersuai Groq. Penjanaan token yang sangat pantas.",
+    why: "Menjana jawapan berasas dan bersumber dalam Bahasa Melayu, Inggeris, atau Cina daripada konteks dokumen yang diambil.",
+  },
+  {
+    ...BACKEND_STACK[2],
+    what: "Varian LLaMA yang lebih kecil dan pantas untuk tugasan kependaman rendah di mana 70B penuh berlebihan.",
+    why: "Menjana cadangan soalan susulan selepas setiap jawapan tanpa menyekat aliran respons utama.",
+  },
+  {
+    ...BACKEND_STACK[3],
+    what: "Model pembenaman menyokong 100+ bahasa. Menukar teks kepada vektor 1024-dim yang menangkap makna semantik.",
+    why: "Membenamkan kedua-dua chunk dokumen (semasa pengambilan) dan pertanyaan (semasa carian) membolehkan carian semantik silang bahasa.",
+  },
+  {
+    ...BACKEND_STACK[4],
+    what: "Model penyulit silang yang menilai semula calon yang diambil dengan membaca pertanyaan + dokumen bersama.",
+    why: "Memeringkat semula hasil carian vektor dalam konteks — ketepatan lebih tinggi berbanding persamaan kosinus semata-mata. Juga mengira kesetiaan.",
+  },
+  {
+    ...BACKEND_STACK[5],
+    what: "Pangkalan data vektor awan yang diurus. Menyimpan dan mencari pembenaman dimensi tinggi pada skala.",
+    why: "Menyimpan semua vektor chunk dokumen. Setiap dokumen mendapat ruang namanya sendiri untuk carian terpencil.",
+  },
+  {
+    ...BACKEND_STACK[6],
+    what: "Alternatif Firebase sumber terbuka — PostgreSQL + storan fail + langganan masa nyata.",
+    why: "Menyimpan PDF mentah (baldi Storan), metadata dokumen, sejarah sembang setiap pengguna/dokumen, maklum balas ibu jari.",
+  },
+  {
+    ...BACKEND_STACK[7],
+    what: "pypdf: pengekstrakan teks Python semata-mata. PyMuPDF (fitz): pemapar PDF berasaskan C untuk melukis halaman kepada imej.",
+    why: "pypdf mengendalikan PDF berasaskan teks. PyMuPDF melukis halaman yang diimbas untuk sandaran Tesseract OCR.",
+  },
+  {
+    ...BACKEND_STACK[8],
+    what: "Enjin OCR sumber terbuka oleh Google. Membaca teks daripada imej. Menyokong eng+msa+chi_sim.",
+    why: "Mengendalikan halaman PDF yang diimbas/berasaskan imej yang pypdf tidak boleh mengekstrak teks daripadanya.",
+  },
+  {
+    ...BACKEND_STACK[9],
+    what: "Port Python pustaka ID bahasa Google. Pengesanan kebarangkalian daripada sampel teks pendek.",
+    why: "Pengesanan bahasa sandaran apabila pemadanan kata kunci Melayu/CJK tidak konklusif.",
+  },
+  {
+    ...BACKEND_STACK[10],
+    what: "API TTS komersial dengan model v2 pelbagai bahasa. Pertuturan berkualiti tinggi dan semula jadi.",
+    why: "Membaca jawapan semula kepada pengguna dalam mod Suara I/O. Bertukar kepada speechSynthesis pelayar apabila kuota terlampaui.",
+  },
+  {
+    ...BACKEND_STACK[11],
+    what: "Model Whisper OpenAI yang dihoskan di Groq. Transkripsi audio kepada teks pada kelajuan tinggi.",
+    why: "Menukar audio WebM/Opus MediaRecorder pelayar kepada teks soalan untuk ciri input suara.",
+  },
+  {
+    ...BACKEND_STACK[12],
+    what: "Perisian tengah pengehadan kadar per-IP untuk FastAPI, dibina pada had + backend serasi Redis.",
+    why: "Mencegah penyalahgunaan API. BOOTH_MODE=true melonggarkan had untuk acara demo di mana semua pelawat berkongsi satu IP.",
+  },
+]
+
+export const FRONTEND_STACK_MS: StackItem[] = [
+  {
+    ...FRONTEND_STACK[0],
+    what: "Kerangka React dengan App Router, komponen pelayan, penghalaan berasaskan fail, SSR/SSG.",
+    why: "Kerangka frontend penuh. Laluan memetakan ke /, /workspace, /manage, /eval, /about.",
+  },
+  {
+    ...FRONTEND_STACK[1],
+    what: "Superset JavaScript bertaip. Menangkap ralat pada masa kompilasi berbanding masa jalan.",
+    why: "Keselamatan jenis merentasi semua komponen dan bentuk respons API.",
+  },
+  {
+    ...FRONTEND_STACK[2],
+    what: "Kerangka CSS utiliti pertama. Gaya melalui nama kelas, tiada fail CSS berasingan.",
+    why: "Semua penggayaan. oklch(0.38 0.13 145) hijau sivik sebagai warna utama.",
+  },
+  {
+    ...FRONTEND_STACK[3],
+    what: "Komponen salin-tampal dibina pada primitif Radix UI. Asas boleh diakses dan tidak bergaya.",
+    why: "Butang, kad, dialog, gelangsar, tab — asas boleh diakses dengan kawalan gaya penuh.",
+  },
+  {
+    ...FRONTEND_STACK[4],
+    what: "Pustaka animasi React dengan primitif gerakan deklaratif dan sokongan gerak isyarat.",
+    why: "Pudar masuk dicetuskan skrol, parallax wira, kesan hover kad pada halaman pendaratan.",
+  },
+  {
+    ...FRONTEND_STACK[5],
+    what: "Platform pengehosan Next.js dengan CDN tepi global dan penempatan automatik daripada git.",
+    why: "Frontend dilayan secara global. Penempatan automatik apabila tolak ke master.",
+  },
+  {
+    ...FRONTEND_STACK[6],
+    what: "PaaS awan untuk aplikasi dalam bekas. Peringkat percuma dengan 512MB RAM.",
+    why: "Mengehoskan backend FastAPI. requirements.txt menanggalkan torch/transformers untuk muat dalam had RAM.",
+  },
+]
+
 // ── API Endpoints ──────────────────────────────────────────────────────────
 
 export const API_ENDPOINTS: ApiEndpoint[] = [
@@ -211,13 +319,29 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
   { method: "POST",   path: "/api/feedback",                      desc: "Submit thumbs up/down → persisted in Supabase" },
 ]
 
+export const API_ENDPOINTS_MS: ApiEndpoint[] = [
+  { method: "POST",   path: "/api/documents/upload",              desc: "Muat naik + sahkan + ingest PDF ke Pinecone" },
+  { method: "GET",    path: "/api/documents/",                    desc: "Senaraikan semua dokumen dengan metadata" },
+  { method: "DELETE", path: "/api/documents/{id}",                desc: "Padam PDF daripada Supabase + vektor daripada Pinecone" },
+  { method: "POST",   path: "/api/chat/ask-stream",               desc: "S&J penstriman melalui Server-Sent Events" },
+  { method: "POST",   path: "/api/chat/ask",                      desc: "S&J dibuffer (bukan penstriman)" },
+  { method: "GET",    path: "/api/chat/history",                  desc: "Muatkan sejarah sembang untuk dokumen" },
+  { method: "DELETE", path: "/api/chat/history/{doc_id}",         desc: "Kosongkan sejarah sembang untuk dokumen" },
+  { method: "POST",   path: "/api/eval/run-test-suite-stream",    desc: "Jalankan suite penanda aras dengan keputusan penstriman langsung" },
+  { method: "GET",    path: "/api/eval/report",                   desc: "Dapatkan metrik ROUGE/BLEU/kependaman yang diagregat" },
+  { method: "GET",    path: "/api/eval/data-quality",             desc: "Statistik kualiti chunk setiap dokumen" },
+  { method: "POST",   path: "/api/voice/transcribe",              desc: "STT — audio WebM/Opus → teks melalui Groq Whisper" },
+  { method: "POST",   path: "/api/voice/tts",                     desc: "TTS — teks → audio MP3 melalui ElevenLabs" },
+  { method: "POST",   path: "/api/feedback",                      desc: "Hantar ibu jari naik/turun → disimpan dalam Supabase" },
+]
+
 export const METHOD_COLORS: Record<string, string> = {
   GET:    "bg-blue-500/10 text-blue-600 border-blue-500/20",
   POST:   "bg-green-500/10 text-green-600 border-green-500/20",
   DELETE: "bg-red-500/10 text-red-600 border-red-500/20",
 }
 
-// ── Eval Metrics ───────────────────────────────────────────────────────────
+// ── Eval Metrics — English ─────────────────────────────────────────────────
 
 export const EVAL_METRICS: MetricItem[] = [
   {
@@ -271,7 +395,47 @@ export const EVAL_METRICS: MetricItem[] = [
   },
 ]
 
-// ── Ingestion Pipeline Steps ───────────────────────────────────────────────
+// ── Eval Metrics — Malay ───────────────────────────────────────────────────
+
+export const EVAL_METRICS_MS: MetricItem[] = [
+  {
+    ...EVAL_METRICS[0],
+    what: "Penaksir Ringkasan Berorientasikan Ingatan. Mengukur pertindihan n-gram antara jawapan yang dijana dan jawapan rujukan.",
+    detail: "ROUGE-1 = unigram, ROUGE-2 = bigram, ROUGE-L = jujukan sepunya terpanjang. Skor F1 dilaporkan.",
+  },
+  {
+    ...EVAL_METRICS[1],
+    what: "Penaksir Penilaian Dua Bahasa. Metrik terjemahan mesin standard yang mengukur ketepatan padanan n-gram.",
+    detail: "Ketepatan n-gram yang diubah suai dengan penalti keringkasan. Asalnya dari MT, diadaptasi di sini untuk kualiti penjanaan.",
+  },
+  {
+    ...EVAL_METRICS[2],
+    what: "Sejauh mana jawapan yang dijana berpunca daripada chunk sumber yang diambil semula.",
+    detail: "Dikira dengan menghantar jawapan sebagai pertanyaan semula melalui pemeringkat semula Cohere berbanding chunk sumber. Max relevance_score = kesetiaan.",
+  },
+  {
+    ...EVAL_METRICS[3],
+    what: "Skor komposit daripada persamaan vektor + skor pemeringkatan semula Cohere untuk chunk teratas yang diambil.",
+    detail: "final = vector_score × 0.35 + rerank_score × 0.65. Ambang: ≥0.50 = kukuh, 0.12–0.49 = berhati-hati, <0.12 = tolak.",
+  },
+  {
+    ...EVAL_METRICS[4],
+    what: "Persamaan kosinus antara jawapan yang dijana dan kebenaran asas menggunakan pembenaman Cohere.",
+    detail: "Kedua-dua teks dibenamkan dengan embed-multilingual-v3.0 (mod pengelompokan). Hasil titik / (|a| × |b|).",
+  },
+  {
+    ...EVAL_METRICS[5],
+    what: "Skor kebolehbacaan yang menganggarkan tahap sekolah AS yang diperlukan untuk memahami jawapan.",
+    detail: "Lebih rendah = bahasa lebih mudah. Sasaran: ≤ gred 8 untuk komunikasi sivik yang boleh diakses.",
+  },
+  {
+    ...EVAL_METRICS[6],
+    what: "Masa respons hujung ke hujung dari penerimaan soalan hingga jawapan lengkap, dalam milisaat.",
+    detail: "Pecahan persentil: p50 = median, p95 = persentil ke-95, p99 = kependaman ekor. Dijejaki setiap soalan.",
+  },
+]
+
+// ── Ingestion Pipeline Steps — English ────────────────────────────────────
 
 export const INGESTION_STEPS: PipelineStepData[] = [
   {
@@ -326,7 +490,62 @@ export const INGESTION_STEPS: PipelineStepData[] = [
   },
 ]
 
-// ── Q&A Pipeline Steps ─────────────────────────────────────────────────────
+// ── Ingestion Pipeline Steps — Malay ──────────────────────────────────────
+
+export const INGESTION_STEPS_MS: PipelineStepData[] = [
+  {
+    n: "1",
+    title: "Pengesahan PDF",
+    icon: Shield,
+    items: [
+      "Memeriksa jenis fail, status enkripsi, dan bilangan halaman (1–500 halaman)",
+      "Mengekstrak teks dengan pypdf — halaman dengan < 50 aksara ditandakan untuk OCR",
+      "Menolak PDF di mana > 80% halaman tiada teks boleh diekstrak",
+    ],
+  },
+  {
+    n: "2",
+    title: "Pengekstrakan Teks + Sandaran OCR",
+    icon: FileSearch,
+    items: [
+      "pypdf mengekstrak teks halaman demi halaman untuk PDF berasaskan teks",
+      "PyMuPDF memaparkan halaman berteks rendah ke bitmap pada skala 2×",
+      "Tesseract OCR membaca bitmap — menyokong eng + msa + chi_sim",
+    ],
+  },
+  {
+    n: "3",
+    title: "Pemotongan Peka Bahagian",
+    icon: Layers,
+    items: [
+      "Regex mengesan pengepala bahagian: Bahagian, Seksyen, Section, bernombor (1.2.3), HURUF BESAR",
+      "Setiap bahagian menjadi chunk sendiri — memelihara struktur dokumen",
+      "Bahagian panjang dipotong pada sasaran 360 patah perkataan, 45 patah perkataan bertindih, min 20 patah perkataan/chunk",
+    ],
+  },
+  {
+    n: "4",
+    title: "Pembenaman Cohere",
+    icon: Brain,
+    items: [
+      "Semua chunk dibenamkan secara kumpulan melalui Cohere embed-multilingual-v3.0",
+      "Menghasilkan vektor 1024-dim setiap chunk — perwakilan bebas bahasa",
+      "input_type = search_document (dioptimumkan untuk carian, bukan pengelompokan)",
+    ],
+  },
+  {
+    n: "5",
+    title: "Penyimpanan",
+    icon: Database,
+    items: [
+      "Vektor + metadata → Pinecone di bawah ruang nama dokumen",
+      "Fail PDF mentah → baldi Supabase Storage",
+      "Rekod dokumen (nama, bilangan chunk, cap masa) → Supabase PostgreSQL",
+    ],
+  },
+]
+
+// ── Q&A Pipeline Steps — English ──────────────────────────────────────────
 
 export const QA_STEPS: PipelineStepData[] = [
   {
@@ -401,7 +620,82 @@ export const QA_STEPS: PipelineStepData[] = [
   },
 ]
 
-// ── Key Features ───────────────────────────────────────────────────────────
+// ── Q&A Pipeline Steps — Malay ─────────────────────────────────────────────
+
+export const QA_STEPS_MS: PipelineStepData[] = [
+  {
+    n: "1",
+    title: "Pengesanan Bahasa",
+    icon: Globe,
+    items: [
+      "Pemadanan kata kunci dahulu: perkataan Melayu (nak, boleh, saya, mohon) dengan regex sempadan kata",
+      "Nisbah aksara CJK: jika > 15% aksara adalah CJK, klasifikasikan sebagai zh-cn",
+      "Pustaka langdetect sebagai sandaran — memetakan 20+ dialek ke en / ms / zh-cn",
+    ],
+  },
+  {
+    n: "2",
+    title: "Pengembangan Pelbagai Pertanyaan",
+    icon: Languages,
+    items: [
+      "Mengembangkan 1 soalan kepada sehingga 4 varian: asal + parafrasa + terjemahan",
+      "Terjemahan dijana ke semua bahasa yang disokong yang lain",
+      "Meningkatkan recall carian — chunk yang sama dijumpai tanpa mengira bahasa pertanyaan",
+    ],
+  },
+  {
+    n: "3",
+    title: "Carian Semantik",
+    icon: Search,
+    items: [
+      "Semua varian dibenamkan dalam satu panggilan API Cohere (input_type = search_query)",
+      "Setiap varian menanya Pinecone — chunk teratas-k setiap varian",
+      "Keputusan digabungkan, dinyahduakan mengikut ID chunk, diisih mengikut skor komposit",
+    ],
+  },
+  {
+    n: "4",
+    title: "Pemeringkatan Semula Neural",
+    icon: Target,
+    items: [
+      "Cohere rerank-multilingual-v3.0 menilai semula calon dengan membaca pertanyaan + dokumen bersama",
+      "Skor akhir = vector_score × 0.35 + rerank_score × 0.65",
+      "Ketepatan lebih tinggi berbanding persamaan kosinus sahaja — seni bina penyulit silang",
+    ],
+  },
+  {
+    n: "5",
+    title: "Penjaga Bukti",
+    icon: Shield,
+    items: [
+      "Skor chunk teratas ≥ 0.50 → bukti kukuh → prompt QA standard",
+      "Skor 0.12–0.49 → mod berhati-hati → jawapan dengan amaran",
+      "Skor < 0.12 → penolakan keras → mesej tetap, tiada halusinasi",
+    ],
+  },
+  {
+    n: "6",
+    title: "Penjanaan Jawapan",
+    icon: Cpu,
+    items: [
+      "Prompt sedar konteks dibina dalam bahasa yang dikesan (en/ms/zh-cn)",
+      "3 giliran perbualan terakhir disuntik untuk kesedaran soalan susulan",
+      "Groq LLaMA 3.3 70B mengalirkan jawapan dalam 3–5 titik peluru token demi token",
+    ],
+  },
+  {
+    n: "7",
+    title: "Pasca-Penjanaan",
+    icon: Activity,
+    items: [
+      "Kesetiaan: jawapan dihantar semula melalui pemeringkat semula Cohere berbanding chunk sumber",
+      "LLaMA 3.1 8B menjana 3 cadangan soalan susulan (tidak menyekat)",
+      "Keputusan dicache (LRU, maksimum 200 entri) — cache dipintas apabila sejarah sembang hadir",
+    ],
+  },
+]
+
+// ── Key Features — English ─────────────────────────────────────────────────
 
 export const KEY_FEATURES: FeatureItem[] = [
   {
@@ -462,6 +756,61 @@ export const KEY_FEATURES: FeatureItem[] = [
       "Delete: removes vectors from Pinecone namespace + file from Supabase",
       "Rename: updates doc_name in all Pinecone vector metadata chunks",
       "LRU cache (200-entry) invalidated per-document on delete/rename",
+    ],
+  },
+]
+
+// ── Key Features — Malay ───────────────────────────────────────────────────
+
+export const KEY_FEATURES_MS: FeatureItem[] = [
+  {
+    ...KEY_FEATURES[0],
+    label: "RAG Pelbagai Bahasa",
+    points: [
+      "Cohere embed-multilingual-v3.0 mengendalikan 100+ bahasa dalam satu ruang vektor",
+      "Bahasa dikesan automatik setiap soalan — jawapan dalam bahasa yang sama",
+      "Pertanyaan diperluaskan kepada semua 3 bahasa yang disokong serentak",
+      "Tiada pengambilan semula diperlukan apabila bertukar bahasa",
+    ],
+  },
+  {
+    ...KEY_FEATURES[1],
+    label: "Penjaga Bukti — Anti-Halusinasi",
+    points: [
+      "Sistem keyakinan 3 peringkat: kukuh / berhati-hati / tolak",
+      "Tidak pernah menjana jawapan daripada luar dokumen yang dimuat naik",
+      "Skor kesetiaan mengukur sejauh mana jawapan berpunca",
+      "Setiap petikan menunjukkan nombor halaman, bahagian, dan skor",
+    ],
+  },
+  {
+    ...KEY_FEATURES[2],
+    label: "Suara I/O",
+    points: [
+      "STT: MediaRecorder → Groq Whisper → soalan yang ditranskripsi",
+      "TTS: jawapan → ElevenLabs multilingual v2 → MP3",
+      "Sandaran anggun kepada speechSynthesis pelayar asli",
+      "Parameter tempahan bahasa sedia untuk suara setiap bahasa",
+    ],
+  },
+  {
+    ...KEY_FEATURES[3],
+    label: "Papan Pemuka Penilaian",
+    points: [
+      "ROUGE-1/2/L, BLEU, gred FK — semua dikira secara dalaman",
+      "Persamaan semantik melalui pembenaman Cohere",
+      "Suite ujian penstriman — keputusan muncul soalan demi soalan",
+      "Penjejakan kependaman: p50/p95/p99 setiap bahasa",
+    ],
+  },
+  {
+    ...KEY_FEATURES[4],
+    label: "Pengurusan Dokumen",
+    points: [
+      "Muat naik: sahkan PDF → ingest → simpan dalam Pinecone + Supabase",
+      "Padam: alih keluar vektor daripada ruang nama Pinecone + fail daripada Supabase",
+      "Namakan semula: kemas kini doc_name dalam semua metadata vektor Pinecone",
+      "Cache LRU (200 entri) tidak sah setiap dokumen semasa padam/namakan semula",
     ],
   },
 ]

@@ -4,8 +4,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   FolderOpen,
-  FlaskConical,
-  BarChart3,
   Target,
   Command,
   MessageSquare,
@@ -51,17 +49,6 @@ const navItems: NavItem[] = [
     icon: FolderOpen,
   },
   {
-    href: "/eval",
-    label: "Evaluation",
-    icon: FlaskConical,
-    badge: "BETA",
-  },
-  {
-    href: "/benchmark",
-    label: "Benchmark",
-    icon: BarChart3,
-  },
-  {
     href: "/results",
     label: "Showcase",
     icon: Target,
@@ -93,6 +80,10 @@ export function AppSidebar() {
           shortcuts: "Ctrl/Cmd + B",
           followUs: "Ikuti kami",
           repository: "Repositori",
+          navWorkspace: "Ruang Kerja",
+          navDocuments: "Dokumen",
+          navShowcase: "Pameran",
+          navAbout: "Tentang",
         }
       : {
           appName: "Lingua Rakyat",
@@ -104,7 +95,18 @@ export function AppSidebar() {
           shortcuts: "Ctrl/Cmd + B",
           followUs: "Follow us",
           repository: "Repository",
+          navWorkspace: "Workspace",
+          navDocuments: "Documents",
+          navShowcase: "Showcase",
+          navAbout: "About",
         }
+
+  const navLabels: Record<string, string> = {
+    "/workspace": copy.navWorkspace,
+    "/manage": copy.navDocuments,
+    "/results": copy.navShowcase,
+    "/about": copy.navAbout,
+  }
 
   const handleNavigation = () => {
     setOpenMobile(false)
@@ -167,7 +169,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={active}
-                    tooltip={item.label}
+                    tooltip={navLabels[item.href] ?? item.label}
                     onClick={handleNavigation}
                     className={cn(
                       "transition-all duration-200",
@@ -186,7 +188,7 @@ export function AppSidebar() {
                           active ? "text-primary" : "text-muted-foreground"
                         )}
                       />
-                      <span className="font-medium">{item.label}</span>
+                      <span className="font-medium">{navLabels[item.href] ?? item.label}</span>
                       {item.badge && (
                         <Badge
                           variant="outline"

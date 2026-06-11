@@ -87,6 +87,7 @@ class ChatMessage(BaseModel):
     latency_ms: int = 0
     model_used: str = ""
     sufficient_evidence: bool = True
+    faithfulness: Optional[float] = None
 
 
 def _validate_ask_request(body: AskRequest) -> None:
@@ -115,6 +116,7 @@ def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, a
         "latency_ms": result.get("latency_ms", 0),
         "model_used": result.get("model_used", ""),
         "sufficient_evidence": result.get("sufficient_evidence", True),
+        "faithfulness": result.get("faithfulness"),
         "created_at": timestamp,
     }
 
@@ -263,6 +265,7 @@ async def get_chat_history(
             latency_ms=int(row.get("latency_ms", 0) or 0),
             model_used=row.get("model_used", ""),
             sufficient_evidence=bool(row.get("sufficient_evidence", True)),
+            faithfulness=row.get("faithfulness"),
         ))
     return messages
 

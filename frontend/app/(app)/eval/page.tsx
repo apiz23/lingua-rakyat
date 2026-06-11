@@ -47,9 +47,9 @@ import {
   Layers,
   FlaskConical,
   Clock,
-  ShieldAlert,
   ShieldCheck,
   X,
+  Info,
 } from "lucide-react"
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -136,8 +136,19 @@ function GradeBadge({ grade }: { grade: number }) {
           ? "border-primary/20 bg-primary/10 text-primary"
           : "border-warning/20 bg-warning/10 text-warning"
     )}>
-      G{grade.toFixed(1)}
+      Grade {grade.toFixed(1)}
     </span>
+  )
+}
+
+// ── InfoNote ── plain-language callout box ─────────────────────────────────
+
+function InfoNote({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 border border-border/40 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/60" />
+      <span>{children}</span>
+    </div>
   )
 }
 
@@ -162,10 +173,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 // ── Tab config ─────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "metrics" as const,   label: "Live Metrics",    icon: BarChart3 },
-  { id: "testsuite" as const, label: "Test Suite",      icon: Play },
-  { id: "simplify" as const,  label: "Simplification",  icon: BookOpen },
-  { id: "augment" as const,   label: "Augmentation",    icon: Languages },
+  { id: "metrics"   as const, label: "Live Stats",            icon: BarChart3  },
+  { id: "testsuite" as const, label: "Answer Accuracy Test",  icon: Play       },
+  { id: "simplify"  as const, label: "Language Simplification", icon: BookOpen },
+  { id: "augment"   as const, label: "Multilingual Expansion", icon: Languages },
 ]
 type TabId = typeof TABS[number]["id"]
 
@@ -257,12 +268,12 @@ export default function EvalPage() {
           setTestResult({ status: "ok", aggregate: event.aggregate, results: event.results, errors: event.errors })
           setStreamProgress(null)
           fetchReport()
-          toast.success(`Test suite complete — ROUGE-1: ${event.aggregate.avg_rouge1_f1.toFixed(3)}`)
+          toast.success(`Test complete — Keyword Match: ${event.aggregate.avg_rouge1_f1.toFixed(3)}`)
         }
       }, controller.signal)
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") return
-      toast.error("Test suite failed", { description: e instanceof Error ? e.message : "Unknown error" })
+      toast.error("Test failed", { description: e instanceof Error ? e.message : "Unknown error" })
       setStreamProgress(null)
     } finally { setLoadingTest(false) }
   }
@@ -271,7 +282,7 @@ export default function EvalPage() {
     abortRef.current?.abort()
     setLoadingTest(false)
     setStreamProgress(null)
-    toast.info("Test suite cancelled")
+    toast.info("Test cancelled")
   }
 
   async function handleAugment() {
@@ -279,12 +290,12 @@ export default function EvalPage() {
     setLoadingAugment(true)
     setAugmentResult(null)
     try { setAugmentResult((await augmentQuery(augmentInput.trim(), augmentLang)).variants) }
-    catch (e) { toast.error("Augmentation failed", { description: e instanceof Error ? e.message : "Unknown error" }) }
+    catch (e) { toast.error("Expansion failed", { description: e instanceof Error ? e.message : "Unknown error" }) }
     finally { setLoadingAugment(false) }
   }
 
   async function handleClear() {
-    try { await clearEvalRecords(); setReport(null); setTestResult(null); toast.success("Evaluation records cleared") }
+    try { await clearEvalRecords(); setReport(null); setTestResult(null); toast.success("Records cleared") }
     catch { toast.error("Failed to clear records") }
   }
 
@@ -305,12 +316,14 @@ export default function EvalPage() {
           <div className="flex items-center justify-between gap-4 py-3">
             <div className="flex items-center gap-2.5">
               <FlaskConical className="h-4 w-4 text-primary" />
-              <h1 className="font-heading text-base font-semibold text-foreground sm:text-lg">
-                Evaluation Dashboard
-              </h1>
+              <div>
+                <h1 className="font-heading text-base font-semibold text-foreground sm:text-lg">
+                  AI Quality Dashboard
+                </h1>
+              </div>
               {hasMetrics && (
                 <Badge variant="secondary" className="h-auto px-2 py-0.5 text-[10px]">
-                  {report!.total_queries} queries
+                  {report!.total_queries} questions tested
                 </Badge>
               )}
             </div>
@@ -359,14 +372,13 @@ export default function EvalPage() {
         </div>
       </div>
 
-      {/* ── Rate limit banner (dismissible) ── */}
+      {/* ── Info banner (dismissible) ── */}
       {!bannerDismissed && (
         <div className="border-b border-border bg-muted/30">
           <div className="mx-auto flex max-w-7xl items-start gap-3 px-4 py-2.5 sm:px-6">
-            <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <p className="flex-1 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Rate limits active</span> — all routes limited per IP.
-              For demo day set <span className="font-mono">BOOTH_MODE=true</span> on the backend.
+              <span className="font-medium text-foreground">For evaluators &amp; judges only</span> — this page is not linked publicly. It shows how accurately and reliably the AI answers questions.
             </p>
             <button onClick={() => setBannerDismissed(true)} className="shrink-0 text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
@@ -378,15 +390,15 @@ export default function EvalPage() {
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
 
         {/* ════════════════════════════════════
-            TAB 1 — LIVE METRICS
+            TAB 1 — LIVE STATS
         ════════════════════════════════════ */}
         <div className={cn(activeTab !== "metrics" && "hidden")}>
           {!hasMetrics ? (
             <div className="flex flex-col items-center justify-center border-2 border-dashed border-border py-24 text-center">
               <BarChart3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground/20" />
-              <p className="font-medium text-foreground">No metrics recorded yet</p>
+              <p className="font-medium text-foreground">No data recorded yet</p>
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                Ask questions in the workspace or run the test suite to generate data.
+                Ask questions in the workspace or run an accuracy test to generate data.
               </p>
               <Button
                 onClick={() => setActiveTab("testsuite")}
@@ -395,75 +407,78 @@ export default function EvalPage() {
                 className="mt-5 gap-1.5"
               >
                 <Play className="h-3.5 w-3.5" />
-                Go to Test Suite
+                Run Accuracy Test
               </Button>
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Latency row */}
+              {/* Response Speed */}
               <section>
                 <div className="mb-3 flex items-center gap-2">
                   <Zap className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Latency</h2>
+                  <h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Response Speed</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                  <StatCard label="p50" value={`${report!.latency.p50_ms}ms`} sub="Median" tone="success" icon={Zap} />
-                  <StatCard label="p95" value={`${report!.latency.p95_ms}ms`} sub="95th pct" tone="primary" icon={Zap} />
-                  <StatCard label="p99" value={`${report!.latency.p99_ms}ms`} sub="99th pct" icon={Zap} />
-                  <StatCard label="Average" value={`${report!.latency.avg_ms}ms`} sub="Mean" icon={Clock} />
+                <InfoNote>How fast the AI responds. Lower is better. Most users experience the &ldquo;Typical&rdquo; speed.</InfoNote>
+                <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <StatCard label="Typical Speed" value={`${report!.latency.p50_ms}ms`} sub="Half of answers arrive within this time" tone="success" icon={Zap} />
+                  <StatCard label="Fast Majority" value={`${report!.latency.p95_ms}ms`} sub="95% of answers arrive within this time" tone="primary" icon={Zap} />
+                  <StatCard label="Slowest 1%" value={`${report!.latency.p99_ms}ms`} sub="Worst-case response time" icon={Zap} />
+                  <StatCard label="Average Speed" value={`${report!.latency.avg_ms}ms`} sub="Mean response time across all queries" icon={Clock} />
                 </div>
               </section>
 
-              {/* Retrieval + readability */}
+              {/* Search Accuracy & Language Quality */}
               <section>
                 <div className="mb-3 flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Retrieval &amp; Readability</h2>
+                  <h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Search Accuracy &amp; Language Quality</h2>
                 </div>
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <InfoNote>How well the AI found the right information, and how easy the answers are to read.</InfoNote>
+                <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
                   <StatCard
-                    label="Avg Confidence"
+                    label="Search Accuracy"
                     value={pct(report!.retrieval.avg_confidence)}
-                    sub="Mean retrieval score"
+                    sub="How confident the AI is that it found the right section of the document"
                     tone={toneFor(report!.retrieval.avg_confidence)}
                     icon={Sparkles}
                   />
                   <StatCard
-                    label="Above Threshold"
+                    label="High-Confidence Answers"
                     value={`${report!.retrieval.pct_above_threshold}%`}
-                    sub="Conf ≥ 50%"
+                    sub="Percentage of answers where the AI found a strong match"
                     tone={report!.retrieval.pct_above_threshold >= 60 ? "success" : "warning"}
                     icon={CheckCircle}
                   />
                   <StatCard
-                    label="Avg Reading Grade"
+                    label="Reading Level"
                     value={report!.readability.avg_fk_grade.toFixed(1)}
-                    sub={`Target ≤ ${report!.readability.target_grade}`}
+                    sub={`School grade equivalent — target is grade ${report!.readability.target_grade} or below (easy to read)`}
                     tone={report!.readability.avg_fk_grade <= 6 ? "success" : "warning"}
                     icon={BookOpen}
                   />
                   <StatCard
-                    label="Simple Language"
+                    label="Easy-to-Read Answers"
                     value={`${report!.readability.pct_simple_language}%`}
-                    sub="Answers at grade ≤ 6"
+                    sub="Answers written at an everyday reading level (grade 6 or below)"
                     tone={report!.readability.pct_simple_language >= 60 ? "success" : "primary"}
                     icon={BookOpen}
                   />
                 </div>
               </section>
 
-              {/* Faithfulness */}
+              {/* Answer Truthfulness */}
               {(report!.faithfulness?.scored_queries ?? 0) > 0 && (
                 <section>
                   <div className="mb-3 flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Answer Faithfulness</h2>
+                    <h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Answer Truthfulness</h2>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <InfoNote>Measures whether the AI&apos;s answer is supported by the actual document — not made up.</InfoNote>
+                  <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <StatCard
-                      label="Faithfulness Score"
+                      label="Truthfulness Score"
                       value={fmt3(report!.faithfulness!.avg_faithfulness_score)}
-                      sub={`${report!.faithfulness!.scored_queries} queries scored`}
+                      sub={`${report!.faithfulness!.scored_queries} answers checked against source — closer to 1.0 = more accurate`}
                       tone={toneFor(report!.faithfulness!.avg_faithfulness_score)}
                       icon={ShieldCheck}
                     />
@@ -471,7 +486,7 @@ export default function EvalPage() {
                 </section>
               )}
 
-              {/* Readability note */}
+              {/* Readability status note */}
               <div className={cn(
                 "flex items-center gap-2 border px-4 py-3 text-sm",
                 report!.readability.avg_fk_grade <= 6
@@ -485,28 +500,32 @@ export default function EvalPage() {
                 <span className="text-xs">{report!.readability.note}</span>
               </div>
 
-              {/* ROUGE / BLEU quality */}
+              {/* Answer Quality (ROUGE / BLEU) */}
               {hasGenQuality && (
                 <section>
                   <div className="mb-3 flex items-center gap-2">
                     <Layers className="h-4 w-4 text-muted-foreground" />
                     <h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-                      Generation Quality
+                      Answer Quality
                     </h2>
                     <span className="text-[10px] text-muted-foreground">
-                      {report!.generation_quality!.samples_with_ground_truth} graded samples
+                      {report!.generation_quality!.samples_with_ground_truth} answers compared against expected answers
                     </span>
                   </div>
-                  <div className="border border-border bg-card p-5 space-y-3.5">
-                    <SegBar label="ROUGE-1 F1 — unigram overlap" value={report!.generation_quality!.avg_rouge1_f1} max={0.5} />
-                    <SegBar label="ROUGE-2 F1 — bigram overlap" value={report!.generation_quality!.avg_rouge2_f1} max={0.3} />
-                    <SegBar label="ROUGE-L F1 — longest common subsequence" value={report!.generation_quality!.avg_rougeL_f1} max={0.4} />
-                    <SegBar label="BLEU — n-gram precision" value={report!.generation_quality!.avg_bleu} max={0.3} />
+                  <InfoNote>
+                    The AI&apos;s answers are compared word-by-word against expert-written expected answers.
+                    Each bar shows how closely they match — higher is better.
+                  </InfoNote>
+                  <div className="mt-3 border border-border bg-card p-5 space-y-3.5">
+                    <SegBar label="Keyword Match — how many individual words the AI got right" value={report!.generation_quality!.avg_rouge1_f1} max={0.5} />
+                    <SegBar label="Phrase Match — how many two-word phrases the AI got right" value={report!.generation_quality!.avg_rouge2_f1} max={0.3} />
+                    <SegBar label="Answer Flow — how naturally the answer reads compared to the expected answer" value={report!.generation_quality!.avg_rougeL_f1} max={0.4} />
+                    <SegBar label="Overall Accuracy — combined answer quality score" value={report!.generation_quality!.avg_bleu} max={0.3} />
                     {(report!.faithfulness?.scored_queries ?? 0) > 0 && (
-                      <SegBar label="Faithfulness — answer grounded in sources" value={report!.faithfulness!.avg_faithfulness_score} />
+                      <SegBar label="Truthfulness — answer backed by the source document (not made up)" value={report!.faithfulness!.avg_faithfulness_score} />
                     )}
                     <div className="flex items-center justify-between border-t border-border pt-3">
-                      <span className="text-[11px] font-medium text-muted-foreground">Exact Match Rate</span>
+                      <span className="text-[11px] font-medium text-muted-foreground">Exact Word Match Rate</span>
                       <span className="font-mono text-xs tabular-nums text-foreground">
                         {report!.generation_quality!.exact_match_rate}%
                       </span>
@@ -521,15 +540,16 @@ export default function EvalPage() {
                   <div className="mb-3 flex items-center gap-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     <h2 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-                      Per-Language Breakdown
+                      Results by Language
                     </h2>
                   </div>
-                  <div className="border border-border">
+                  <InfoNote>How the AI performs when answering in each language.</InfoNote>
+                  <div className="mt-3 border border-border">
                     <ScrollArea className="w-full whitespace-nowrap">
                       <table className="w-full min-w-[560px] text-sm">
                         <thead>
                           <tr className="border-b border-border bg-muted/40">
-                            {["Language", "Queries", "Avg Confidence", "Avg Latency", "Readability"].map(h => (
+                            {["Language", "Questions", "Search Accuracy", "Avg Speed", "Reading Level"].map(h => (
                               <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase first:text-left last:text-right [&:not(:first-child)]:text-right">{h}</th>
                             ))}
                           </tr>
@@ -567,9 +587,14 @@ export default function EvalPage() {
         </div>
 
         {/* ════════════════════════════════════
-            TAB 2 — TEST SUITE
+            TAB 2 — ANSWER ACCURACY TEST
         ════════════════════════════════════ */}
         <div className={cn("space-y-6", activeTab !== "testsuite" && "hidden")}>
+          <InfoNote>
+            The system runs a set of pre-written questions against the document and compares the AI&apos;s answers
+            against expert-written expected answers. This shows how accurate and reliable the AI is.
+          </InfoNote>
+
           <div className="border border-border bg-card p-5 sm:p-6">
             {/* Controls row */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -591,11 +616,11 @@ export default function EvalPage() {
 
               <Select value={evalModel || "__auto__"} onValueChange={v => setEvalModel(v === "__auto__" ? "" : v)} disabled={loadingTest}>
                 <SelectTrigger className="w-full text-sm text-muted-foreground sm:w-60">
-                  <SelectValue placeholder="Auto (server fast model)" />
+                  <SelectValue placeholder="Auto (recommended)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="__auto__">Auto (server fast model)</SelectItem>
+                    <SelectItem value="__auto__">Auto (recommended)</SelectItem>
                     {GROQ_MODELS.map(m => <SelectItem key={m.id} value={m.id}>{m.label} — {m.tag}</SelectItem>)}
                   </SelectGroup>
                 </SelectContent>
@@ -609,23 +634,24 @@ export default function EvalPage() {
               ) : (
                 <Button onClick={handleRunTestSuite} disabled={!selectedDocId} className="shrink-0 gap-1.5">
                   <Play className="h-3.5 w-3.5" />
-                  Run Test Suite
+                  Run Accuracy Test
                 </Button>
               )}
             </div>
 
             {/* Category pills */}
             <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Built-in test questions:</span>
               {[
                 { key: "identity", label: "MyKad / Identity", count: 5 },
                 { key: "passport", label: "Passport", count: 6 },
               ].map(cat => (
                 <span key={cat.key} className="inline-flex items-center gap-1.5 border border-border bg-muted/30 px-2.5 py-1 text-muted-foreground">
                   <span className="font-medium text-foreground">{cat.label}</span>
-                  <span className="bg-muted px-1 py-0.5 font-mono text-[10px] tabular-nums">{cat.count}</span>
+                  <span className="bg-muted px-1 py-0.5 font-mono text-[10px] tabular-nums">{cat.count} questions</span>
                 </span>
               ))}
-              <span className="border border-border bg-muted/30 px-2.5 py-1 text-muted-foreground">EN · MS · ZH</span>
+              <span className="border border-border bg-muted/30 px-2.5 py-1 text-muted-foreground">English · Malay · Chinese</span>
             </div>
 
             {/* Category / unrelated status */}
@@ -635,8 +661,8 @@ export default function EvalPage() {
                 <div>
                   <p className="text-sm font-medium">Document not matched to any test category</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    The built-in suite covers the shipped MyKad FAQ and Malaysian passport guideline documents.
-                    Select one of those or update the annotated test cases.
+                    The built-in test questions are written for the MyKad FAQ and Malaysian passport guideline documents.
+                    Please select one of those documents, or add your own test questions.
                   </p>
                 </div>
               </div>
@@ -646,7 +672,7 @@ export default function EvalPage() {
                 <CheckCircle className="h-3.5 w-3.5 shrink-0 text-success" />
                 <span className="text-sm text-success">
                   Matched: <span className="font-medium capitalize">{detectedCategory.replace("_", " ")}</span>
-                  {streamProgress && <span className="ml-2 opacity-75">— running {streamProgress.total} cases</span>}
+                  {streamProgress && <span className="ml-2 opacity-75">— running {streamProgress.total} test questions</span>}
                 </span>
               </div>
             )}
@@ -657,9 +683,9 @@ export default function EvalPage() {
             <div className="border border-border bg-card p-5">
               <div className="mb-4 space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Running test suite…</span>
+                  <span className="font-medium">Running accuracy test…</span>
                   <span className="font-mono tabular-nums text-muted-foreground">
-                    {streamProgress.completed} / {streamProgress.total}
+                    {streamProgress.completed} / {streamProgress.total} questions
                   </span>
                 </div>
                 <div className="flex gap-[3px]" aria-hidden>
@@ -714,18 +740,22 @@ export default function EvalPage() {
                 <div className="mb-4 flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="font-semibold text-success">
-                    {testResult.aggregate.cases_run} cases complete
+                    {testResult.aggregate.cases_run} questions tested
                     {testResult.aggregate.cases_failed > 0 && (
                       <span className="ml-2 text-sm font-normal text-warning">({testResult.aggregate.cases_failed} failed)</span>
                     )}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <InfoNote>
+                  Scores range from 0 to 1. Higher = better match with the expected answer.
+                  A score of 0.3 or above on Keyword Match is considered good for a real-world AI system.
+                </InfoNote>
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
-                    { label: "ROUGE-1", value: testResult.aggregate.avg_rouge1_f1 },
-                    { label: "ROUGE-2", value: testResult.aggregate.avg_rouge2_f1 },
-                    { label: "ROUGE-L", value: testResult.aggregate.avg_rougeL_f1 },
-                    { label: "BLEU",    value: testResult.aggregate.avg_bleu },
+                    { label: "Keyword Match",  value: testResult.aggregate.avg_rouge1_f1 },
+                    { label: "Phrase Match",   value: testResult.aggregate.avg_rouge2_f1 },
+                    { label: "Answer Flow",    value: testResult.aggregate.avg_rougeL_f1 },
+                    { label: "Overall Score",  value: testResult.aggregate.avg_bleu },
                   ].map(({ label, value }) => (
                     <div key={label} className="border border-border/50 bg-card p-3 text-center">
                       <p className="text-[10px] text-muted-foreground">{label}</p>
@@ -734,11 +764,11 @@ export default function EvalPage() {
                   ))}
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                  <span>Grade: <GradeBadge grade={testResult.aggregate.avg_fk_grade} /></span>
-                  <span>Confidence: <strong className="text-foreground">{pct(testResult.aggregate.avg_confidence)}</strong></span>
-                  <span>Latency: <strong className="font-mono text-foreground">{testResult.aggregate.avg_latency_ms}ms</strong></span>
+                  <span>Reading Level: <GradeBadge grade={testResult.aggregate.avg_fk_grade} /></span>
+                  <span>Search Accuracy: <strong className="text-foreground">{pct(testResult.aggregate.avg_confidence)}</strong></span>
+                  <span>Avg Speed: <strong className="font-mono text-foreground">{testResult.aggregate.avg_latency_ms}ms</strong></span>
                   {testResult.aggregate.avg_semantic_similarity != null && (
-                    <span>Semantic Sim: <strong className="font-mono text-foreground">{testResult.aggregate.avg_semantic_similarity.toFixed(3)}</strong></span>
+                    <span>Meaning Match: <strong className="font-mono text-foreground">{testResult.aggregate.avg_semantic_similarity.toFixed(3)}</strong></span>
                   )}
                 </div>
                 <p className="mt-2 text-[11px] text-muted-foreground">{testResult.aggregate.readability_note}</p>
@@ -789,7 +819,7 @@ export default function EvalPage() {
                           <span className="hidden shrink-0 text-[10px] text-muted-foreground sm:block">{catLabel}</span>
                           <span className="flex-1 truncate font-medium">{r.question}</span>
                           <div className="flex shrink-0 items-center gap-3">
-                            <span className={cn("font-mono text-xs tabular-nums", r1Cls)}>R1 {r.scores.rouge1_f1.toFixed(3)}</span>
+                            <span className={cn("font-mono text-xs tabular-nums", r1Cls)}>Match {r.scores.rouge1_f1.toFixed(3)}</span>
                             <GradeBadge grade={r.scores.fk_grade} />
                             {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
                           </div>
@@ -798,10 +828,10 @@ export default function EvalPage() {
                           <div className="space-y-4 border-t border-border bg-muted/10 p-4">
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                               {[
-                                { label: "ROUGE-1", value: r.scores.rouge1_f1 },
-                                { label: "ROUGE-2", value: r.scores.rouge2_f1 },
-                                { label: "ROUGE-L", value: r.scores.rougeL_f1 },
-                                { label: "BLEU",    value: r.scores.bleu },
+                                { label: "Keyword Match",  value: r.scores.rouge1_f1 },
+                                { label: "Phrase Match",   value: r.scores.rouge2_f1 },
+                                { label: "Answer Flow",    value: r.scores.rougeL_f1 },
+                                { label: "Overall Score",  value: r.scores.bleu },
                               ].map(({ label, value }) => (
                                 <div key={label} className="border border-border/50 bg-card p-2.5 text-center">
                                   <p className="text-[10px] text-muted-foreground">{label}</p>
@@ -811,19 +841,19 @@ export default function EvalPage() {
                             </div>
                             <div className="grid gap-3 text-xs sm:grid-cols-2">
                               <div>
-                                <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">Answer</p>
+                                <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">AI&apos;s Answer</p>
                                 <p className="border border-border bg-card p-3 text-xs leading-relaxed text-foreground/80">{r.answer}</p>
                               </div>
                               <div>
-                                <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-success uppercase">Ground Truth</p>
+                                <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-success uppercase">Expected Answer</p>
                                 <p className="border border-success/20 bg-success/5 p-3 text-xs leading-relaxed text-foreground/80">{r.ground_truth}</p>
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                              <span>Confidence: <strong className="text-foreground">{pct(r.scores.confidence)}</strong></span>
-                              <span>Latency: <strong className="font-mono text-foreground">{r.scores.latency_ms}ms</strong></span>
+                              <span>Search Accuracy: <strong className="text-foreground">{pct(r.scores.confidence)}</strong></span>
+                              <span>Response Time: <strong className="font-mono text-foreground">{r.scores.latency_ms}ms</strong></span>
                               {r.scores.semantic_similarity != null && (
-                                <span>Semantic Sim: <strong className="font-mono text-foreground">{r.scores.semantic_similarity.toFixed(3)}</strong></span>
+                                <span>Meaning Match: <strong className="font-mono text-foreground">{r.scores.semantic_similarity.toFixed(3)}</strong></span>
                               )}
                             </div>
                           </div>
@@ -837,12 +867,15 @@ export default function EvalPage() {
         </div>
 
         {/* ════════════════════════════════════
-            TAB 3 — SIMPLIFICATION
+            TAB 3 — LANGUAGE SIMPLIFICATION
         ════════════════════════════════════ */}
         <div className={cn(activeTab !== "simplify" && "hidden")}>
-          <p className="mb-5 text-sm text-muted-foreground">
-            Bureaucratic language is simplified into plain language before answers are shown to users.
-          </p>
+          <InfoNote>
+            Government documents often use formal, complex language. This system automatically rewrites
+            those passages into simple, everyday language before showing answers to users.
+            Here are real before-and-after examples from this AI.
+          </InfoNote>
+          <div className="mt-5">
           {loadingDemo ? (
             <div className="flex items-center gap-2 py-12 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -860,11 +893,11 @@ export default function EvalPage() {
                     </div>
                     <div className="grid gap-0 sm:grid-cols-2">
                       <div className="border-b border-border p-4 sm:border-r sm:border-b-0">
-                        <p className="mb-2 text-[10px] font-semibold tracking-wider text-warning uppercase">Before — Official Language</p>
+                        <p className="mb-2 text-[10px] font-semibold tracking-wider text-warning uppercase">Before — Original Government Language</p>
                         <p className="text-sm leading-relaxed text-foreground/70">{ex.original}</p>
                       </div>
                       <div className="bg-success/5 p-4">
-                        <p className="mb-2 text-[10px] font-semibold tracking-wider text-success uppercase">After — Plain Language</p>
+                        <p className="mb-2 text-[10px] font-semibold tracking-wider text-success uppercase">After — Plain, Easy-to-Read Language</p>
                         <p className="text-sm leading-relaxed font-medium text-foreground">{ex.simplified}</p>
                       </div>
                     </div>
@@ -875,16 +908,19 @@ export default function EvalPage() {
           ) : (
             <p className="py-12 text-center text-sm text-muted-foreground">Failed to load examples.</p>
           )}
+          </div>
         </div>
 
         {/* ════════════════════════════════════
-            TAB 4 — AUGMENTATION
+            TAB 4 — MULTILINGUAL EXPANSION
         ════════════════════════════════════ */}
         <div className={cn(activeTab !== "augment" && "hidden")}>
-          <p className="mb-5 text-sm text-muted-foreground">
-            Enter a question to see it expanded into cross-lingual variants for multilingual retrieval.
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <InfoNote>
+            When you ask a question, the AI automatically rewrites it in multiple languages and phrasings
+            before searching the document. This helps it find the best match even when the question wording
+            differs from the document language. Enter any question below to see this in action.
+          </InfoNote>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <Select value={augmentLang} onValueChange={setAugmentLang}>
               <SelectTrigger className="w-full text-sm sm:w-44">
                 <SelectValue placeholder="Language" />
@@ -921,7 +957,7 @@ export default function EvalPage() {
                     <span className="shrink-0 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                        {isParaphrase ? `${info.name} — Simplified` : info.name}
+                        {isParaphrase ? `${info.name} — Simplified phrasing` : info.name}
                       </p>
                       <p className="mt-0.5 text-sm text-foreground">{text}</p>
                     </div>

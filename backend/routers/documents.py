@@ -632,6 +632,66 @@ def proxy_pdf(request: Request, document_id: str):
     )
 
 
+class ReindexResponse(BaseModel):
+    success: bool
+    chunk_count: int
+    message: str
+
+
+@router.post("/{document_id}/reindex", response_model=ReindexResponse)
+@limiter.limit(DOC_LIMIT)
+async def reindex_document(request: Request, document_id: str, upload_token: str = ""):
+    """Re-ingest an existing document to refresh Pinecone vectors (e.g. pick up page_start metadata)."""
+    _ = request
+    if not upload_token or not verify_upload_token(upload_token):
+        raise HTTPException(status_code=401, detail="Valid upload token required.")
+
+    sb = get_supabase()
+    rows = (
+        sb.table(get_documents_table())
+        .select("storage_path, name, status")
+        .eq("id", document_id)
+        .limit(1)
+        .execute()
+    )
+    if not rows.data:
+        raise HTTPException(status_code=404, detail="Document not found")
+    row = rows.data[0]
+    storage_path = row.get("storage_path")
+    if not storage_path:
+        raise HTTPException(status_code=400, detail="No storage path — cannot re-index.")
+
+    pdf_bytes: bytes = sb.storage.from_(get_bucket()).download(storage_path)
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(pdf_bytes)
+            tmp_path = tmp.name
+
+        chunk_count, ingest_quality = ingest_document(
+            pdf_path=tmp_path,
+            document_id=document_id,
+            document_name=row.get("name") or "",
+        )
+        sb.table(get_documents_table()).update(
+            {"chunk_count": chunk_count, "status": "ready", "error_message": None}
+        ).eq("id", document_id).execute()
+        from routers.eval import log_data_quality
+        log_data_quality({**ingest_quality, "document_id": document_id, "doc_name": row.get("name") or ""})
+        return ReindexResponse(
+            success=True,
+            chunk_count=chunk_count,
+            message=f"Re-indexed into {chunk_count} chunks.",
+        )
+    except Exception as exc:
+        logger.warning("[Reindex] Failed for %s: %s", document_id, exc)
+        raise HTTPException(status_code=500, detail=f"Re-index failed: {exc}") from exc
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
 _DEFAULT_PREWARM = [
     "Summarize this document",
     "Siapa yang layak memohon?",

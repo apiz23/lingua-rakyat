@@ -908,7 +908,8 @@ export default function ChatPanel({
   const chatStatus = loading ? "streaming" : "ready"
 
   const docPublicUrl = selectedDoc?.public_url ?? null
-  const pdfOpen = pdfViewerState !== null && !!docPublicUrl
+  // PdfViewer always uses the backend proxy; docPublicUrl is not required.
+  const pdfOpen = pdfViewerState !== null
 
   return (
     <div className="flex h-full min-h-0 bg-background">
