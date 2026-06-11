@@ -31,7 +31,7 @@ router = APIRouter()
 
 class AskRequest(BaseModel):
     user_id: str = Field(min_length=1)
-    document_id: str
+    document_id: str = ""
     document_name: str
     session_id: str = Field(min_length=1)
     question: str
@@ -40,6 +40,9 @@ class AskRequest(BaseModel):
     bypass_cache: bool = False
     # Last N Q&A turns for multi-turn context. Each: {"question": str, "answer": str}
     chat_history: list[dict] = Field(default_factory=list)
+    # Optional multi-document scope. When non-empty, retrieval spans every doc
+    # in this list (citizen asks across their whole library, no file picking).
+    document_ids: list[str] = Field(default_factory=list)
 
 
 class SourceChunk(BaseModel):
@@ -99,13 +102,15 @@ def _validate_ask_request(body: AskRequest) -> None:
         raise HTTPException(status_code=400, detail="user_id cannot be empty")
     if not body.session_id.strip():
         raise HTTPException(status_code=400, detail="session_id cannot be empty")
+    if not body.document_id.strip() and not [d for d in body.document_ids if d.strip()]:
+        raise HTTPException(status_code=400, detail="Provide a document_id or document_ids")
 
 
 def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, answer_text: str) -> dict[str, Any]:
     return {
         "user_id": body.user_id,
         "session_id": body.session_id,
-        "document_id": body.document_id,
+        "document_id": body.document_id or result.get("document_id", ""),
         "document_name": body.document_name,
         "question": body.question,
         "answer": answer_text,
@@ -158,11 +163,12 @@ async def ask_question(request: Request, body: AskRequest):
     try:
         result = answer_question(
             question=body.question,
-            document_id=body.document_id,
+            document_id=body.document_id or None,
             model_override=body.model_override or None,
             enable_query_augmentation=body.enable_query_augmentation,
             bypass_cache=body.bypass_cache,
             chat_history=body.chat_history or None,
+            document_ids=body.document_ids or None,
         )
     except Exception as exc:
         logger.error("[Chat] Q&A failed: %s", exc)
@@ -207,11 +213,12 @@ async def ask_question_stream(request: Request, body: AskRequest):
         try:
             for event in stream_answer_question(
                 question=body.question,
-                document_id=body.document_id,
+                document_id=body.document_id or None,
                 model_override=body.model_override or None,
                 enable_query_augmentation=body.enable_query_augmentation,
                 bypass_cache=body.bypass_cache,
                 chat_history=body.chat_history or None,
+                document_ids=body.document_ids or None,
             ):
                 if event["type"] == "token":
                     answer_pieces.append(event["text"])

@@ -10,6 +10,7 @@ import {
   askQuestionStream,
   clearChatHistory,
   getChatHistory,
+  listDocuments,
 } from "@/lib/api"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -42,6 +43,7 @@ import {
   FileText,
   History,
   Languages,
+  Library,
   MessageSquare,
   MoreVertical,
   Plus,
@@ -201,6 +203,10 @@ export default function ChatPanel({
   const [userId, setUserId] = useState("")
   const [sessionId, setSessionId] = useState("")
   const [enableQueryAugmentation, setEnableQueryAugmentation] = useState(true)
+  // Multi-document mode: query across every ready doc instead of just the
+  // selected one ("no file picking"). selectedDoc stays the session anchor.
+  const [askAllDocs, setAskAllDocs] = useState(false)
+  const [readyDocIds, setReadyDocIds] = useState<string[]>([])
   const settingsLoadedRef = useRef(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [documentHistory, setDocumentHistory] = useState<ChatHistoryMessage[]>(
@@ -245,6 +251,9 @@ export default function ChatPanel({
           newChat: "Sembang baharu",
           smartOn: "Carian Pintar On",
           smartOff: "Carian Pintar Off",
+          askAll: "Tanya semua dokumen",
+          askOne: "Tanya dokumen ini sahaja",
+          allDocsBadge: "Semua dokumen",
           clearThread: "Padam thread semasa",
           history: "Sejarah sembang",
           threadList: "Thread Sembang",
@@ -294,6 +303,9 @@ export default function ChatPanel({
           newChat: "New chat",
           smartOn: "Smart Retrieval On",
           smartOff: "Smart Retrieval Off",
+          askAll: "Ask all documents",
+          askOne: "Ask this document only",
+          allDocsBadge: "All documents",
           clearThread: "Clear current thread",
           history: "Chat history",
           threadList: "Chat Threads",
@@ -354,8 +366,33 @@ export default function ChatPanel({
     if (storedModel !== null) setSelectedPopoverModel(storedModel)
     const storedAug = window.localStorage.getItem("lr-augmentation")
     if (storedAug !== null) setEnableQueryAugmentation(storedAug === "true")
+    const storedAll = window.localStorage.getItem("lr-ask-all-docs")
+    if (storedAll !== null) setAskAllDocs(storedAll === "true")
     settingsLoadedRef.current = true
   }, [])
+
+  useEffect(() => {
+    if (!settingsLoadedRef.current) return
+    window.localStorage.setItem("lr-ask-all-docs", String(askAllDocs))
+  }, [askAllDocs])
+
+  // Keep the list of ready docs fresh so multi-doc mode spans the whole library.
+  useEffect(() => {
+    let active = true
+    listDocuments()
+      .then((docs) => {
+        if (!active) return
+        setReadyDocIds(
+          docs.filter((d) => d.status === "ready").map((d) => d.id)
+        )
+      })
+      .catch(() => {
+        /* offline / fetch failure — multi-doc simply stays single-doc */
+      })
+    return () => {
+      active = false
+    }
+  }, [selectedDoc])
 
   useEffect(() => {
     if (!settingsLoadedRef.current) return
@@ -574,6 +611,13 @@ export default function ChatPanel({
         .slice(-3)
         .map(m => ({ question: m.question, answer: m.answer.slice(0, 400) }))
 
+      // Multi-doc: span every ready doc (plus the selected one) when the user
+      // opts into "ask all". Empty list = single-doc behaviour on the backend.
+      const multiDocIds =
+        askAllDocs && readyDocIds.length > 1
+          ? Array.from(new Set([selectedDoc.id, ...readyDocIds]))
+          : []
+
       await askQuestionStream(
         userId,
         selectedDoc.id,
@@ -764,8 +808,9 @@ export default function ChatPanel({
             })
           }
         },
-        undefined,   // signal — not used here
-        chatHistory, // multi-turn context
+        undefined,    // signal — not used here
+        chatHistory,  // multi-turn context
+        multiDocIds,  // multi-document scope (empty = single doc)
       )
     } catch (error) {
       if (messageAdded) {
@@ -1171,6 +1216,15 @@ export default function ChatPanel({
                       <span>PDF</span>
                       <span className="h-1 w-1 rounded-full bg-primary" />
                       <span>{copy.ready}</span>
+                      {askAllDocs && readyDocIds.length > 1 ? (
+                        <>
+                          <span className="h-1 w-1 rounded-full bg-primary" />
+                          <span className="inline-flex items-center gap-1 font-medium text-primary">
+                            <Library className="h-3 w-3" />
+                            {copy.allDocsBadge} ({readyDocIds.length})
+                          </span>
+                        </>
+                      ) : null}
                     </>
                   ) : (
                     <span className="truncate">{copy.noDocDesc}</span>
@@ -1232,6 +1286,15 @@ export default function ChatPanel({
                     <Languages className="mr-2 h-4 w-4" />
                     {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
                   </DropdownMenuItem>
+
+                  {readyDocIds.length > 1 ? (
+                    <DropdownMenuItem
+                      onClick={() => setAskAllDocs((prev) => !prev)}
+                    >
+                      <Library className="mr-2 h-4 w-4" />
+                      {askAllDocs ? copy.askOne : copy.askAll}
+                    </DropdownMenuItem>
+                  ) : null}
 
                   {messages.length > 0 ? (
                     <DropdownMenuItem onClick={exportChatHistory}>

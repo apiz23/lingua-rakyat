@@ -211,3 +211,44 @@ Status legend: [DONE] = already built, [TODO] = not yet built
   - Measure response time from Malaysia vs Singapore vs US
   - Vercel edge functions vs single-region serverless
   - Relevant if pitching to MAMPU/NACSA for national deployment
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. AGENTIC RAG (post-RISE 2026 — Gold Award)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Note: Several items earlier in this doc are ALREADY BUILT in
+backend/utils/rag_pipeline.py — do not rebuild:
+  [DONE] Cohere reranking (rerank-multilingual-v3.0, _cohere_rerank)
+  [DONE] Multi-query / query expansion (QueryAugmenter: translations + paraphrase)
+  [DONE] Semantic similarity in eval (_compute_semantic_similarity)
+  [DONE] Faithfulness score per answer (_compute_faithfulness)
+The real remaining gaps are below.
+
+[TODO] History-Aware Query Rewrite (highest priority)
+  - Current: _inject_history() pastes last-3 Q&A into the PROMPT only.
+    Retrieval still embeds the RAW follow-up. So "what about for foreigners?"
+    retrieves poorly — no subject, no document context.
+  - Fix: before retrieval, condense (chat_history + follow-up) into a single
+    standalone query using the fast Groq model. Embed THAT.
+    e.g. "what about for foreigners?" -> "passport renewal fee for foreigners"
+  - Cheap (one 8b-instant call), big recall win on multi-turn.
+  - Gate behind a flag; skip rewrite when history empty or question already standalone.
+
+[TODO] Multi-Document Retrieval (no file picking)
+  - Current: _retrieve_matches() hardcodes namespace=document_id (single doc).
+  - Fix: accept a list of document_ids; query each namespace, merge, then let
+    the existing Cohere reranker pick top-N across docs. Group sources by doc
+    in the response so the UI shows which document each answer came from.
+  - Requires: AskRequest.document_ids (list), or special "all" sentinel;
+    UI affordance to query across the session's whole library.
+  - Watch cross-doc noise: keep per-doc score threshold, show doc name on every source.
+
+[TODO] Confidence Explanation Sentence
+  - Already have the score + faithfulness; add one human sentence when low
+    ("Only 1 weak match found in KWSP 2024 — verify with the official source").
+  - Pairs naturally with multi-doc (tell the user WHICH doc was weak).
+
+[TODO] True Agent Loop (later, not for production hot path)
+  - Let the LLM decide which docs to search and issue follow-up retrievals.
+  - Deferred: latency + flakiness. The deterministic pipeline above
+    (rewrite -> retrieve-all -> rerank -> answer) covers 95% of value first.

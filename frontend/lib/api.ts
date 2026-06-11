@@ -57,7 +57,8 @@ export type AskResponse = {
   confidence_label?: "high" | "medium" | "low"
   latency_ms: number
   model_used?: string
-  retrieval_mode?: "single_query" | "augmented"
+  // Backend may suffix tags, e.g. "augmented+condensed+multidoc".
+  retrieval_mode?: string
   query_variants_used?: string[]
   top_query_variant?: string
   sufficient_evidence?: boolean
@@ -315,7 +316,8 @@ export async function askQuestion(
   question: string,
   modelOverride: string = "",
   enableQueryAugmentation: boolean = true,
-  bypassCache: boolean = false
+  bypassCache: boolean = false,
+  documentIds: string[] = []
 ): Promise<AskResponse> {
   const res = await apiFetch(`${API_URL}/api/chat/ask`, {
     method: "POST",
@@ -329,6 +331,7 @@ export async function askQuestion(
       model_override: modelOverride,
       enable_query_augmentation: enableQueryAugmentation,
       bypass_cache: bypassCache,
+      document_ids: documentIds,
     }),
   })
   if (!res.ok) {
@@ -485,6 +488,7 @@ export async function askQuestionStream(
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
   chatHistory?: Array<{ question: string; answer: string }>,
+  documentIds?: string[],
 ): Promise<void> {
   const runOfflineFallback = () => {
     const startedAt = Date.now()
@@ -556,6 +560,7 @@ export async function askQuestionStream(
         enable_query_augmentation: enableQueryAugmentation,
         bypass_cache: bypassCache,
         chat_history: chatHistory ?? [],
+        document_ids: documentIds ?? [],
       }),
       signal,
     })

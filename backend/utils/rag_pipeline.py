@@ -72,6 +72,7 @@ MIN_USABLE_CONFIDENCE = 0.12
 OCR_MIN_CHARS = 50
 PROMPT_RETRY_CHAR_LIMITS = [2500, 1200]
 ENABLE_COHERE_RERANK = os.getenv("ENABLE_COHERE_RERANK", "true").lower() == "true"
+ENABLE_HISTORY_CONDENSE = os.getenv("ENABLE_HISTORY_CONDENSE", "true").lower() == "true"
 
 CONTEXT_CHAR_LIMIT_LARGE = 4000
 CONTEXT_CHAR_LIMIT_SMALL = 1800
@@ -888,8 +889,31 @@ def _compute_semantic_similarity(text_a: str, text_b: str) -> Optional[float]:
         return None
 
 
+def _resolve_namespaces(
+    document_id: str | None,
+    document_ids: list[str] | None,
+) -> list[str]:
+    """Resolve the set of Pinecone namespaces to query.
+
+    A document_ids list (multi-doc) takes precedence; otherwise fall back to
+    the single document_id. Blank ids are dropped and order-preserving dedupe
+    is applied.
+    """
+    ids = [d for d in (document_ids or []) if d and d.strip()]
+    if not ids and document_id and document_id.strip():
+        ids = [document_id]
+
+    seen: set[str] = set()
+    resolved: list[str] = []
+    for doc_id in ids:
+        if doc_id not in seen:
+            seen.add(doc_id)
+            resolved.append(doc_id)
+    return resolved
+
+
 def _retrieve_matches(
-    document_id: str,
+    namespaces: list[str],
     query_variants: list[dict[str, str]],
     top_k: int,
 ) -> list[dict[str, Any]]:
@@ -900,26 +924,30 @@ def _retrieve_matches(
     variant_texts = [v["text"] for v in query_variants]
     embeddings = get_embeddings_cohere(variant_texts, input_type="search_query")
 
-    for variant, embedding in zip(query_variants, embeddings):
-        results = index.query(
-            vector=embedding,
-            top_k=top_k,
-            namespace=document_id,
-            include_metadata=True,
-        )
+    for namespace in namespaces:
+        for variant, embedding in zip(query_variants, embeddings):
+            results = index.query(
+                vector=embedding,
+                top_k=top_k,
+                namespace=namespace,
+                include_metadata=True,
+            )
 
-        for match in results["matches"]:
-            metadata = match.get("metadata", {})
-            reranked_score = min(1.0, match.get("score", 0.0) + _query_variant_weight(variant["variant_type"]))
-            all_matches.append({
-                "id": match.get("id"),
-                "score": match.get("score", 0.0),
-                "reranked_score": reranked_score,
-                "metadata": metadata,
-                "variant_key": variant["key"],
-                "variant_text": variant["text"],
-                "variant_type": variant["variant_type"],
-            })
+            for match in results["matches"]:
+                metadata = match.get("metadata", {})
+                # Older vectors predate the doc_id field; fall back to namespace.
+                metadata.setdefault("doc_id", namespace)
+                reranked_score = min(1.0, match.get("score", 0.0) + _query_variant_weight(variant["variant_type"]))
+                all_matches.append({
+                    "id": match.get("id"),
+                    "score": match.get("score", 0.0),
+                    "reranked_score": reranked_score,
+                    "metadata": metadata,
+                    "namespace": namespace,
+                    "variant_key": variant["key"],
+                    "variant_text": variant["text"],
+                    "variant_type": variant["variant_type"],
+                })
 
     deduped_by_chunk: dict[str, dict[str, Any]] = {}
     for match in all_matches:
@@ -1120,6 +1148,109 @@ def _insufficient_evidence_answer(lang: str) -> str:
     return answers.get(lang, answers["en"])
 
 
+def _condense_prompt(history_block: str, question: str, lang: str) -> str:
+    instr = {
+        "ms": (
+            "Tulis semula soalan susulan pengguna menjadi satu soalan lengkap yang berdiri sendiri, "
+            "menggunakan perbualan di bawah untuk mengisi subjek yang ditinggalkan. "
+            "Kekalkan bahasa asal soalan. Output HANYA soalan tunggal itu, tiada penjelasan."
+        ),
+        "zh-cn": (
+            "请根据下面的对话，把用户的后续问题改写成一个独立完整的问题，补全省略的主语。"
+            "保持原问题的语言。只输出这一个问题，不要解释。"
+        ),
+    }.get(lang, (
+        "Rewrite the user's follow-up into a single standalone question, using the conversation "
+        "below to fill in the omitted subject. Keep the original language of the question. "
+        "Output ONLY the single question, no explanation."
+    ))
+    return f"{instr}\n\nConversation:\n{history_block}\n\nFollow-up: {question}\n\nStandalone question:"
+
+
+def _condense_llm_call(prompt: str) -> Optional[str]:
+    """One fast-model call to rewrite a follow-up into a standalone query.
+
+    Isolated as its own function so the condensation logic can be tested
+    without hitting Groq (monkeypatch this in tests).
+    """
+    try:
+        response = _get_client().chat.completions.create(
+            model=GROQ_MODEL_FAST,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            stream=False,
+            max_tokens=120,
+        )
+        return (response.choices[0].message.content or "").strip()
+    except Exception as exc:
+        logger.warning("[Condense] LLM call failed: %s", exc)
+        return None
+
+
+def _clean_condensed_query(text: str, fallback: str) -> str:
+    """Strip labels/quotes/markdown from the rewrite. Return '' to signal fallback."""
+    cleaned = text.strip()
+    if not cleaned:
+        return ""
+
+    lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
+    filtered: list[str] = []
+    for line in lines:
+        lowered = line.lower()
+        if lowered.startswith((
+            "standalone question:", "question:", "rewritten question:",
+            "soalan:", "soalan lengkap:", "问题:", "问题：",
+        )):
+            line = line.split(":", 1)[-1].strip() if ":" in line else ""
+            line = line.split("：", 1)[-1].strip() if "：" in line else line
+        if line:
+            filtered.append(line)
+    if filtered:
+        cleaned = " ".join(filtered).strip()
+
+    cleaned = cleaned.strip(" \t\"'“”‘’`")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    if not cleaned or len(cleaned) > 240:
+        return ""
+    if cleaned.lower() == fallback.strip().lower():
+        return ""
+    return cleaned
+
+
+def _condense_query(
+    question: str,
+    chat_history: list[dict] | None,
+    lang: str,
+) -> tuple[str, bool]:
+    """Rewrite a follow-up into a standalone query for retrieval.
+
+    Returns (query_to_embed, was_rewritten). Falls back to the original
+    question whenever there is no usable history or the rewrite is unusable.
+    """
+    if not chat_history:
+        return question, False
+    turns = [
+        t for t in chat_history[-3:]
+        if t.get("question", "").strip() and t.get("answer", "").strip()
+    ]
+    if not turns:
+        return question, False
+
+    history_lines: list[str] = []
+    for t in turns:
+        history_lines.append(f"Q: {t['question'].strip()[:200]}")
+        history_lines.append(f"A: {t['answer'].strip()[:300]}")
+    raw = _condense_llm_call(_condense_prompt("\n".join(history_lines), question, lang))
+    if not raw:
+        return question, False
+    cleaned = _clean_condensed_query(raw, question)
+    if not cleaned:
+        return question, False
+    logger.info("[Condense] Rewrote follow-up -> %s", cleaned[:80])
+    return cleaned, True
+
+
 def _inject_history(prompt: str, chat_history: list[dict] | None, lang: str) -> str:
     """Prepend last-3 Q&A turns before the Context block so the LLM handles follow-ups."""
     if not chat_history:
@@ -1187,10 +1318,11 @@ def _confidence_label(score: float, sufficient_evidence: bool) -> str:
 
 def _prepare_pipeline(
     question: str,
-    document_id: str,
+    document_id: str | None = None,
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
     chat_history: list[dict] | None = None,
+    document_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     t_start = time.time()
     lang = detect_language(question)
@@ -1198,12 +1330,32 @@ def _prepare_pipeline(
     small_model = _is_small_model(model_name)
     is_summary = is_summarize_intent(question)
 
-    query_variants = _build_query_variants(question, lang, enable_query_augmentation=enable_query_augmentation)
+    namespaces = _resolve_namespaces(document_id, document_ids)
+    if not namespaces:
+        raise RuntimeError("No document specified. Provide a document_id or document_ids.")
+    multi_doc = len(namespaces) > 1
+
+    # History-aware rewrite: a bare follow-up ("what about for foreigners?")
+    # has no subject, so embed a standalone version built from recent turns.
+    # The original question is kept for the answer prompt + history injection.
+    retrieval_question = question
+    history_rewritten = False
+    if ENABLE_HISTORY_CONDENSE and not is_summary:
+        retrieval_question, history_rewritten = _condense_query(question, chat_history, lang)
+
+    query_variants = _build_query_variants(retrieval_question, lang, enable_query_augmentation=enable_query_augmentation)
     retrieval_mode = "augmented" if len(query_variants) > 1 else "single_query"
+    if history_rewritten:
+        retrieval_mode = f"{retrieval_mode}+condensed"
+    if multi_doc:
+        retrieval_mode = f"{retrieval_mode}+multidoc"
     top_k = ((TOP_K_SMALL + 2) if small_model else (TOP_K_LARGE + 3)) if is_summary else (TOP_K_SMALL if small_model else TOP_K_LARGE)
+    # Spread a few more slots across docs so several can surface in one answer.
+    if multi_doc:
+        top_k += min(len(namespaces), 3)
 
     t_retrieve = time.time()
-    matches = _retrieve_matches(document_id=document_id, query_variants=query_variants, top_k=top_k)
+    matches = _retrieve_matches(namespaces=namespaces, query_variants=query_variants, top_k=top_k)
     retrieve_ms = round((time.time() - t_retrieve) * 1000)
     filtered_matches = _filter_matches(matches, is_summary=is_summary)
     if not filtered_matches:
@@ -1237,7 +1389,9 @@ def _prepare_pipeline(
 
     return {
         "question": question,
-        "document_id": document_id,
+        "document_id": namespaces[0],
+        "namespaces": namespaces,
+        "multi_doc": multi_doc,
         "language": lang,
         "model_name": model_name,
         "small_model": small_model,
@@ -1272,10 +1426,12 @@ def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -
         "answer": answer_text.strip(),
         "faithfulness": faithfulness,
         "language": prepared["language"],
+        "document_id": prepared["document_id"],
+        "namespaces": prepared.get("namespaces", [prepared["document_id"]]),
         "sources": [
             {
                 "text": match["metadata"]["text"][:360],
-                "document_id": prepared["document_id"],
+                "document_id": match["metadata"].get("doc_id") or prepared["document_id"],
                 "doc_name": match["metadata"].get("doc_name", ""),
                 "page_start": match["metadata"].get("page_start"),
                 "page_end": match["metadata"].get("page_end"),
@@ -1462,15 +1618,17 @@ def _read_stream(stream) -> Generator[str, None, None]:
 
 def answer_question(
     question: str,
-    document_id: str,
+    document_id: str | None = None,
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
     bypass_cache: bool = False,
     chat_history: list[dict] | None = None,
+    document_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     question = _sanitize_question(question)
-    # Skip cache when conversation history is present — same question has different context
-    skip_cache = bypass_cache or bool(chat_history)
+    # Skip cache when conversation history is present (same question, different
+    # context) or when querying multiple docs (cache is keyed on a single doc).
+    skip_cache = bypass_cache or bool(chat_history) or bool(document_ids)
     cached = None if skip_cache else cache_get(
         question,
         document_id,
@@ -1486,6 +1644,7 @@ def answer_question(
         model_override=model_override,
         enable_query_augmentation=enable_query_augmentation,
         chat_history=chat_history,
+        document_ids=document_ids,
     )
     if prepared["sufficient_evidence"] or prepared.get("usable_evidence", False):
         answer_text, model_used = _generate_completion(prepared["prompt_text"], prepared["model_name"])
@@ -1505,14 +1664,15 @@ def answer_question(
 
 def stream_answer_question(
     question: str,
-    document_id: str,
+    document_id: str | None = None,
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
     bypass_cache: bool = False,
     chat_history: list[dict] | None = None,
+    document_ids: list[str] | None = None,
 ) -> Generator[dict[str, Any], None, None]:
     question = _sanitize_question(question)
-    skip_cache = bypass_cache or bool(chat_history)
+    skip_cache = bypass_cache or bool(chat_history) or bool(document_ids)
     cached = None if skip_cache else cache_get(
         question,
         document_id,
@@ -1541,6 +1701,7 @@ def stream_answer_question(
         model_override=model_override,
         enable_query_augmentation=enable_query_augmentation,
         chat_history=chat_history,
+        document_ids=document_ids,
     )
     yield {
         "type": "retrieval",

@@ -20,7 +20,7 @@ def test_batch_embed_called_once_for_multiple_variants():
          patch.object(rag, "_get_index") as mock_index, \
          patch.object(rag, "_cohere_rerank", side_effect=lambda q, m, k: m[:k]):
         mock_index.return_value.query.return_value = fake_pinecone_result
-        rag._retrieve_matches("doc-123", variants, top_k=5)
+        rag._retrieve_matches(["doc-123"], variants, top_k=5)
 
     # Must be called exactly once with all 3 variant texts
     mock_embed.assert_called_once_with(
