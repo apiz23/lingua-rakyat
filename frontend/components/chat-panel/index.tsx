@@ -59,6 +59,7 @@ import {
   UserMessageBubble,
 } from "./message-cards"
 import { VoiceMicButton } from "./voice-mic-button"
+import { EmptyState } from "./empty-state"
 
 // react-pdf (pdf.js) touches browser-only DOMMatrix at module load — never SSR it
 const PdfPanel = dynamic(() => import("./pdf-panel"), { ssr: false })
@@ -1106,72 +1107,7 @@ export default function ChatPanel({
                 <TypingIndicator />
               </div>
             ) : messages.length === 0 ? (
-              <div className="flex min-h-[60vh] flex-col items-center justify-center">
-                <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
-                  <div className="text-center">
-                    <div className="relative mx-auto mb-5 h-20 w-20 sm:mb-6 sm:h-24 sm:w-24">
-                      <div className="relative hidden h-full w-full items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:flex">
-                        <AgentAvatar seed="Charlotte" size={44} />
-                      </div>
-                    </div>
-
-                    <h3 className="mb-2 text-xl font-semibold text-foreground sm:text-2xl">
-                      {language === "ms"
-                        ? "Sembang dengan dokumen anda"
-                        : "Chat with your document"}
-                    </h3>
-
-                    <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
-                      {copy.askAbout}{" "}
-                      <span className="font-medium text-foreground">
-                        {selectedDoc.name}
-                      </span>{" "}
-                      {copy.answerDesc}
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <p className="flex items-center justify-center gap-2 text-center text-sm font-medium text-muted-foreground">
-                      <Sparkles className="h-4 w-4" />
-                      {copy.suggestions}
-                    </p>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {SUGGESTIONS.map((suggestion, index) => {
-                        const Icon = suggestion.icon
-
-                        return (
-                          <motion.button
-                            key={index}
-                            type="button"
-                            onClick={() =>
-                              handleSuggestionClick(suggestion.text)
-                            }
-                            whileHover={
-                              shouldReduce ? {} : { y: -4, scale: 1.015 }
-                            }
-                            whileTap={shouldReduce ? {} : { scale: 0.97 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 300,
-                              damping: 22,
-                            }}
-                            className="border border-border/50 bg-card p-3.5 text-left hover:border-primary/30 hover:bg-card/60 sm:p-4"
-                          >
-                            <Icon className="mb-3 h-5 w-5 text-primary" />
-                            <p className="mb-1 text-sm font-medium">
-                              {suggestion.text}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {suggestion.description}
-                            </p>
-                          </motion.button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <EmptyState onChipClick={(q) => submitQuestion(q)} />
             ) : (
               <div className="space-y-4 sm:space-y-6">
                 {messages.map((message, index) => (
