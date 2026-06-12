@@ -74,6 +74,8 @@ function shortModelLabel(modelId: string): string {
 
 interface ChatPanelProps {
   selectedDoc: Document | null
+  sessionId?: string | null        // externally controlled session
+  userId?: string                  // passed from workspace
   onBack?: () => void
   composerTop?: React.ReactNode
   emptyState?: React.ReactNode
@@ -169,6 +171,8 @@ interface PdfViewerState {
 
 export default function ChatPanel({
   selectedDoc,
+  sessionId: externalSessionId,
+  userId: externalUserId,
   onBack,
   composerTop,
   emptyState,
@@ -200,7 +204,7 @@ export default function ChatPanel({
   const [selectedPopoverModel, setSelectedPopoverModel] = useState(
     DEFAULT_CHAT_MODEL_ID
   )
-  const [userId, setUserId] = useState("")
+  const [userId, setUserId] = useState(externalUserId ?? "")
   const [sessionId, setSessionId] = useState("")
   const [enableQueryAugmentation, setEnableQueryAugmentation] = useState(true)
   // Multi-document mode: query across every ready doc instead of just the
@@ -464,6 +468,18 @@ export default function ChatPanel({
   useEffect(() => {
     setPdfViewerState(null)   // Close PDF panel when document changes
 
+    if (externalSessionId !== undefined) {
+      setSessionId(externalSessionId ?? "")
+      if (!externalSessionId) {
+        setMessages([])
+        setExpandedSources(new Set())
+        setDocumentHistory([])
+        setShowHistory(false)
+      }
+      return
+    }
+
+    // existing doc-keyed session logic unchanged below:
     if (!selectedDoc) {
       setMessages([])
       setExpandedSources(new Set())
@@ -486,7 +502,7 @@ export default function ChatPanel({
     const nextSessionId = createSessionId(selectedDoc.id)
     window.localStorage.setItem(storageKey, nextSessionId)
     setSessionId(nextSessionId)
-  }, [selectedDoc])
+  }, [selectedDoc, externalSessionId])
 
   const initialQuestionFiredRef = useRef(false)
 

@@ -3,89 +3,25 @@
 import { useEffect, useMemo, useState } from "react"
 import { Document, listDocuments } from "@/lib/api"
 import ChatPanel from "@/components/chat-panel"
-import { cn } from "@/lib/utils"
+import { ConversationSidebar } from "@/components/chat-panel/conversation-sidebar"
 import UploadModal from "@/components/upload-modal"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  CheckCircle,
-  CircleAlert,
-  Clock,
-  Loader2,
-  RotateCcw,
-  Upload,
-  ChevronDown,
-  Database,
-} from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useLanguage } from "@/components/language-provider"
-
-const AGENCY_COLORS: Record<string, string> = {
-  JPN: "bg-purple-700",
-  IMIGRESEN: "bg-blue-700",
-}
-
-const FEATURED_DOC_NAMES = new Set([
-  "MyKad FAQ (JPN)",
-  "Malaysian Passport Guidelines",
-])
-
-const FEATURED_DOC_NAME_AGENCY: Record<string, string> = {
-  "MyKad FAQ (JPN)": "JPN",
-  "Malaysian Passport Guidelines": "IMIGRESEN",
-}
-
-function getAgency(doc: { name: string; agency?: string }): string | undefined {
-  return doc.agency ?? FEATURED_DOC_NAME_AGENCY[doc.name]
-}
 
 export default function WorkSpacePage() {
-  const { language } = useLanguage()
-
-  const copy = language === "ms"
-    ? {
-        selectDoc: "Pilih dokumen",
-        noDocument: "Tiada dokumen",
-        featured: "Dokumen Kerajaan Malaysia Pilihan",
-        yourUploads: "Muat Naik Anda",
-        noDocs: "Tiada dokumen lagi",
-        officialDoc: "Dokumen rasmi",
-        ready: "SEDIA",
-        refresh: "Muat Semula",
-        upload: "Muat Naik",
-        statusReady: "Sedia",
-        statusProcessing: "Sedang diproses",
-        statusError: "Ralat",
-        statusPending: "Menunggu",
-      }
-    : {
-        selectDoc: "Select document",
-        noDocument: "No document",
-        featured: "Featured — Malaysian Gov Docs",
-        yourUploads: "Your Uploads",
-        noDocs: "No documents yet",
-        officialDoc: "Official document",
-        ready: "READY",
-        refresh: "Refresh",
-        upload: "Upload",
-        statusReady: "Ready",
-        statusProcessing: "Processing",
-        statusError: "Error",
-        statusPending: "Pending",
-      }
-
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [docsLoading, setDocsLoading] = useState(false)
   const [isUploadOpen, setIsUploadOpen] = useState(false)
-  const [isDocPickerOpen, setIsDocPickerOpen] = useState(false)
   const [initialQuestion, setInitialQuestion] = useState<string | undefined>()
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [userId] = useState<string>(() => {
+    if (typeof window === "undefined") return ""
+    let id = localStorage.getItem("lr-user-id")
+    if (!id) {
+      id = crypto.randomUUID()
+      localStorage.setItem("lr-user-id", id)
+    }
+    return id
+  })
 
   const loadDocuments = async () => {
     setDocsLoading(true)
@@ -122,227 +58,31 @@ export default function WorkSpacePage() {
     )
   }, [documents])
 
-  const featuredDocs = useMemo(
-    () =>
-      sortedDocs.filter(
-        (d) =>
-          (d.is_featured || FEATURED_DOC_NAMES.has(d.name)) &&
-          d.status === "ready"
-      ),
-    [sortedDocs]
-  )
-
-  const userDocs = useMemo(
-    () =>
-      sortedDocs.filter(
-        (d) => !d.is_featured && !FEATURED_DOC_NAMES.has(d.name)
-      ),
-    [sortedDocs]
-  )
-
-  const statusConfig = (status: Document["status"]) => {
-    switch (status) {
-      case "ready":
-        return { icon: CheckCircle, color: "text-emerald-500", label: copy.statusReady }
-      case "processing":
-        return { icon: Loader2, color: "text-amber-500 animate-spin", label: copy.statusProcessing }
-      case "error":
-        return { icon: CircleAlert, color: "text-red-500", label: copy.statusError }
-      default:
-        return { icon: Clock, color: "text-muted-foreground", label: copy.statusPending }
-    }
-  }
-
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-background">
-      <ChatPanel
-        selectedDoc={selectedDoc}
-        initialQuestion={initialQuestion}
-        composerTop={
-          <div className="space-y-2 px-1">
-            <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-              {/* Document Selector */}
-              <Popover open={isDocPickerOpen} onOpenChange={setIsDocPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="group h-auto min-h-10 w-full min-w-0 justify-between rounded-md border-border bg-card px-3 py-2.5 text-sm shadow-none hover:border-primary/30 hover:bg-accent/50 sm:min-h-9 sm:max-w-[30rem] sm:rounded-none sm:py-2"
-                  >
-                    <div className="flex min-w-0 items-center gap-2 truncate">
-                      {selectedDoc ? (
-                        <>
-                          {(() => {
-                            const { icon: Icon, color } = statusConfig(selectedDoc.status)
-                            return <Icon className={cn("h-3.5 w-3.5 shrink-0", color)} />
-                          })()}
-                          <span className="truncate font-medium">{selectedDoc.name}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Database className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="text-muted-foreground">{copy.selectDoc}</span>
-                        </>
-                      )}
-                    </div>
-                    <ChevronDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  </Button>
-                </PopoverTrigger>
-
-                <PopoverContent
-                  align="start"
-                  collisionPadding={12}
-                  className="w-[calc(100vw-1.5rem)] p-0 sm:w-[30rem] sm:max-w-[30rem]"
-                  sideOffset={6}
-                >
-                  <div className="flex flex-col">
-                    <ScrollArea className="max-h-[45vh] sm:max-h-[28rem]">
-                      <div className="p-2 sm:p-1">
-                        {/* No document option */}
-                        <Button
-                          onClick={() => {
-                            setSelectedDoc(null)
-                            setIsDocPickerOpen(false)
-                          }}
-                          variant="ghost"
-                          className={cn(
-                            "h-auto min-h-12 w-full justify-start gap-2 rounded-none px-3 py-3 text-left text-sm sm:min-h-10 sm:py-2",
-                            !selectedDoc && "bg-primary/5 text-primary"
-                          )}
-                        >
-                          <Database className="h-4 w-4" />
-                          <span>{copy.noDocument}</span>
-                        </Button>
-
-                        {/* Featured gov docs section */}
-                        {featuredDocs.length > 0 && (
-                          <>
-                            <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                              {copy.featured}
-                            </div>
-                            {featuredDocs.map((doc) => (
-                              <Button
-                                key={doc.id}
-                                onClick={() => {
-                                  setSelectedDoc(doc)
-                                  setIsDocPickerOpen(false)
-                                }}
-                                variant="ghost"
-                                className={cn(
-                                  "h-auto min-h-12 w-full justify-start gap-2 rounded-none px-3 py-3 text-left text-sm sm:min-h-10 sm:py-2",
-                                  selectedDoc?.id === doc.id && "bg-primary/5"
-                                )}
-                              >
-                                {getAgency(doc) && (
-                                  <div
-                                    className={cn(
-                                      "flex h-7 w-7 shrink-0 items-center justify-center rounded text-[9px] font-bold text-white",
-                                      AGENCY_COLORS[getAgency(doc)!] ?? "bg-muted"
-                                    )}
-                                  >
-                                    {getAgency(doc)}
-                                  </div>
-                                )}
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-medium">{doc.name}</div>
-                                  <div className="text-[10px] text-muted-foreground">
-                                    {getAgency(doc)} · {copy.officialDoc}
-                                  </div>
-                                </div>
-                                <Badge className="ml-auto h-auto shrink-0 self-start bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
-                                  {copy.ready}
-                                </Badge>
-                              </Button>
-                            ))}
-                            {userDocs.length > 0 && (
-                              <div className="mt-1 border-t border-border px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                                {copy.yourUploads}
-                              </div>
-                            )}
-                          </>
-                        )}
-
-                        {/* User uploaded docs */}
-                        {docsLoading ? (
-                          Array.from({ length: 3 }).map((_, i) => (
-                            <Skeleton key={i} className="mx-1 my-0.5 h-9 animate-pulse bg-muted/40" />
-                          ))
-                        ) : userDocs.length === 0 && featuredDocs.length === 0 ? (
-                          <div className="py-8 text-center text-sm text-muted-foreground">
-                            {copy.noDocs}
-                          </div>
-                        ) : (
-                          userDocs.map((doc) => {
-                            const { icon: Icon, color, label } = statusConfig(doc.status)
-                            return (
-                              <Button
-                                key={doc.id}
-                                onClick={() => {
-                                  setSelectedDoc(doc)
-                                  setIsDocPickerOpen(false)
-                                }}
-                                variant="ghost"
-                                className={cn(
-                                  "h-auto min-h-12 w-full justify-start gap-2 rounded-none px-3 py-3 text-left text-sm sm:min-h-10 sm:py-2",
-                                  selectedDoc?.id === doc.id && "bg-primary/5"
-                                )}
-                              >
-                                <Icon className={cn("h-4 w-4 shrink-0", color)} />
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="truncate font-medium">{doc.name}</span>
-                                    <Badge
-                                      variant="outline"
-                                      className="h-auto border-border/50 bg-muted/30 px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                                    >
-                                      {label}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                {selectedDoc?.id === doc.id && (
-                                  <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
-                                )}
-                              </Button>
-                            )
-                          })
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {/* Action buttons */}
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  aria-label={copy.refresh}
-                  onClick={loadDocuments}
-                  disabled={docsLoading}
-                  className="min-h-10 w-full gap-2 rounded-md px-3 sm:min-h-9 sm:w-auto sm:rounded-none"
-                >
-                  {docsLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RotateCcw className="h-4 w-4" />
-                  )}
-                  <span className="sm:hidden">{copy.refresh}</span>
-                </Button>
-
-                <Button
-                  size="sm"
-                  aria-label={copy.upload}
-                  onClick={() => setIsUploadOpen(true)}
-                  className="min-h-10 w-full gap-2 rounded-md bg-primary shadow-sm hover:bg-primary/90 sm:min-h-9 sm:w-auto sm:rounded-none sm:px-3"
-                >
-                  <Upload className="h-4 w-4" />
-                  <span className="sm:hidden">{copy.upload}</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        }
+    <div className="flex h-full w-full overflow-hidden bg-background">
+      <ConversationSidebar
+        userId={userId}
+        activeSessionId={activeSessionId}
+        documents={sortedDocs}
+        docsLoading={docsLoading}
+        onNewChat={() => {
+          setActiveSessionId(null)
+          setInitialQuestion(undefined)
+        }}
+        onSelectConversation={(sid) => setActiveSessionId(sid)}
+        onUpload={() => setIsUploadOpen(true)}
+        className="hidden sm:flex"
       />
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <ChatPanel
+          selectedDoc={selectedDoc}
+          sessionId={activeSessionId}
+          userId={userId}
+          initialQuestion={initialQuestion}
+          composerTop={null}
+        />
+      </div>
 
       <UploadModal
         isOpen={isUploadOpen}
