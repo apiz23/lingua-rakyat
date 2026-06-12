@@ -20,6 +20,7 @@ from utils.chat_history import (
     delete_chat_messages_for_document,
     insert_chat_message,
     list_chat_messages,
+    list_conversations,
 )
 from rate_limits import CHAT_LIMIT
 from utils.rag_pipeline import answer_question, stream_answer_question
@@ -246,6 +247,20 @@ async def ask_question_stream(request: Request, body: AskRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+class ConversationSummary(BaseModel):
+    session_id: str
+    title: str
+    last_at: str
+    count: int
+
+
+@router.get("/conversations", response_model=list[ConversationSummary])
+async def get_conversations(user_id: str):
+    if not user_id or not user_id.strip():
+        raise HTTPException(status_code=400, detail="user_id is required")
+    return list_conversations(user_id)
 
 
 @router.get("/history", response_model=list[ChatMessage])
