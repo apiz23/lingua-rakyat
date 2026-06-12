@@ -44,7 +44,7 @@ def store_share(
     sources: list[dict],
     language: str,
 ) -> str:
-    slug = secrets.token_urlsafe(8)
+    slug = secrets.token_urlsafe(12)  # 72-bit entropy — negligible collision risk
     payload = {
         "slug": slug,
         "question": question,
@@ -52,7 +52,9 @@ def store_share(
         "sources": sources,
         "language": language,
     }
-    get_supabase().table(TABLE).insert(payload).execute()
+    res = get_supabase().table(TABLE).insert(payload).execute()
+    if not res.data:
+        raise RuntimeError(f"[Share] Insert returned no data for slug={slug}")
     logger.info("[Share] Stored slug=%s", slug)
     return slug
 
