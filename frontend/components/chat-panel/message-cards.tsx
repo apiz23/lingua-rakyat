@@ -133,6 +133,37 @@ function computeConfidenceReason(
 }
 
 // ---------------------------------------------------------------------------
+// Confidence sentence helper
+// ---------------------------------------------------------------------------
+
+const CONFIDENCE_MSG: Record<string, Record<string, string>> = {
+  ms: {
+    low: "Padanan lemah — sila sahkan maklumat ini di sumber rasmi.",
+    insufficient: "Tiada maklumat yang mencukupi dalam dokumen — sila rujuk sumber rasmi.",
+  },
+  en: {
+    low: "Weak match — please verify this information with the official source.",
+    insufficient: "Insufficient information found in the documents — please consult the official source.",
+  },
+  zh: {
+    low: "匹配度较低 — 请向官方来源核实此信息。",
+    insufficient: "文件中未找到足够信息 — 请参阅官方来源。",
+  },
+}
+
+function confidenceSentence(msg: Message): string | null {
+  const lang = msg.language?.startsWith("zh")
+    ? "zh"
+    : msg.language?.startsWith("ms") || msg.language?.startsWith("id")
+    ? "ms"
+    : "en"
+  const map = CONFIDENCE_MSG[lang] ?? CONFIDENCE_MSG.en
+  if (!msg.sufficient_evidence) return map.insufficient
+  if (msg.confidence_label === "low") return map.low
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // SourcePills — always-visible page citation badges below the answer
 // ---------------------------------------------------------------------------
 
@@ -445,6 +476,16 @@ export function AIMessageCard({
             ) : (
               <ChatMarkdown content={message.answer} />
             )}
+
+            {!message.isStreaming && (() => {
+              const sentence = confidenceSentence(message)
+              return sentence ? (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                  <span className="mt-0.5 shrink-0">⚠</span>
+                  <span>{sentence}</span>
+                </div>
+              ) : null
+            })()}
 
             {!message.isStreaming && (
               <AnswerMetrics
