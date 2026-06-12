@@ -546,8 +546,18 @@ export function AIMessageCard({
                   className="flex items-center gap-1.5 border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
-                  {message.sources.length}{" "}
-                  {language === "ms" ? "sumber" : "sources"}
+                  {isSourcesOpen ? (
+                    <>
+                      {message.sources.length}{" "}
+                      {language === "ms" ? "sumber" : "sources"}
+                    </>
+                  ) : (
+                    <>
+                      {message.sources.length > 0
+                        ? `Source: ${message.sources[0].doc_name || message.sources[0].document_id}${message.sources[0].page_start ? ` · p.${message.sources[0].page_start}` : ""}${message.sources.length > 1 ? ` +${message.sources.length - 1} more` : ""}`
+                        : "Sources"}
+                    </>
+                  )}
                   {isSourcesOpen ? (
                     <ChevronUp className="h-3.5 w-3.5" />
                   ) : (
