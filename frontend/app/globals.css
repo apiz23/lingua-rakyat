@@ -379,3 +379,7 @@
     outline: 2px solid transparent;
   }
 }
+
+html[data-text-size="large"] {
+  font-size: 112.5%;
+}

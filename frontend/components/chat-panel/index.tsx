@@ -187,6 +187,10 @@ export default function ChatPanel({
   // Default ON so citizens search their whole library without choosing a file;
   // the toggle below lets them narrow to the anchored doc when they want.
   const [askAllDocs, setAskAllDocs] = useState(true)
+  const [largeText, setLargeText] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem("lr-text-size") === "large"
+  })
   const [readyDocIds, setReadyDocIds] = useState<string[]>([])
   const settingsLoadedRef = useRef(false)
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -356,6 +360,14 @@ export default function ChatPanel({
     if (!settingsLoadedRef.current) return
     window.localStorage.setItem("lr-ask-all-docs", String(askAllDocs))
   }, [askAllDocs])
+
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-text-size",
+      largeText ? "large" : "normal"
+    )
+    localStorage.setItem("lr-text-size", largeText ? "large" : "normal")
+  }, [largeText])
 
   // Keep the list of ready docs fresh so multi-doc mode spans the whole library.
   useEffect(() => {
@@ -1165,6 +1177,16 @@ export default function ChatPanel({
             </div>
 
             <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setLargeText((p) => !p)}
+                aria-label={largeText ? "Switch to normal text size" : "Switch to large text size"}
+                aria-pressed={largeText}
+                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
+              >
+                {largeText ? "A" : "A⁺"}
+              </button>
+
               <button
                 type="button"
                 onClick={toggleLanguage}
