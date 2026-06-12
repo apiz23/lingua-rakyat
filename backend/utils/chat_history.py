@@ -128,7 +128,7 @@ def delete_chat_messages_for_document(document_id: str) -> int:
     return delete_chat_messages(document_id=document_id)
 
 
-def list_conversations(user_id: str) -> list[dict]:
+def list_conversations(user_id: str) -> list[dict[str, Any]]:
     """Group lr_chat_messages by session_id for the sidebar conversation list.
 
     Rows come back newest-first from list_chat_messages, so iterating and
