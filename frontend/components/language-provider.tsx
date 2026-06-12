@@ -8,7 +8,7 @@ import {
   useState,
 } from "react"
 
-type AppLanguage = "ms" | "en"
+type AppLanguage = "ms" | "en" | "zh"
 
 interface LanguageContextValue {
   language: AppLanguage
@@ -29,14 +29,14 @@ export function LanguageProvider({
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (saved === "ms" || saved === "en") {
+    if (saved === "ms" || saved === "en" || saved === "zh") {
       setLanguageState(saved)
     }
   }, [])
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, language)
-    document.documentElement.lang = language === "ms" ? "ms" : "en"
+    document.documentElement.lang = language === "ms" ? "ms" : language === "zh" ? "zh" : "en"
   }, [language])
 
   const value = useMemo<LanguageContextValue>(
@@ -44,7 +44,7 @@ export function LanguageProvider({
       language,
       setLanguage: setLanguageState,
       toggleLanguage: () =>
-        setLanguageState((prev) => (prev === "ms" ? "en" : "ms")),
+        setLanguageState((prev) => prev === "ms" ? "en" : prev === "en" ? "zh" : "ms"),
     }),
     [language]
   )

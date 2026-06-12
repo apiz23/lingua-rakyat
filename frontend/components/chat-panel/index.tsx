@@ -1171,7 +1171,7 @@ export default function ChatPanel({
                 className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
                 title={copy.language}
               >
-                {language === "ms" ? "EN" : "MS"}
+                {language === "ms" ? "EN" : language === "en" ? "中文" : "BM"}
               </button>
 
               <button
