@@ -37,17 +37,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   ArrowLeft,
-  BookOpen,
   Clock3,
   Download,
   FileText,
   History,
   Languages,
   Library,
-  MessageSquare,
   MoreVertical,
   Plus,
-  Sparkles,
   Volume2,
   X,
 } from "lucide-react"
@@ -91,29 +88,6 @@ interface ChatThread {
 }
 
 
-const SUGGESTIONS = [
-  {
-    icon: BookOpen,
-    text: "Summarize this document",
-    description:
-      "Ringkasan dalam 3-5 mata peluru / Summary in 3-5 bullet points",
-  },
-  {
-    icon: Sparkles,
-    text: "Siapa yang layak memohon?",
-    description: "Who is eligible to apply? - Malay",
-  },
-  {
-    icon: FileText,
-    text: "What documents do I need?",
-    description: "Dokumen apa yang diperlukan? / What documents are needed?",
-  },
-  {
-    icon: MessageSquare,
-    text: "Bagaimana cara memohon langkah demi langkah?",
-    description: "How do I apply step by step?",
-  },
-]
 
 function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
   return {
