@@ -442,6 +442,9 @@ export default function ChatPanel({
 
 
   useEffect(() => {
+    // Only self-manage userId when workspace doesn't provide one externally.
+    if (externalUserId) return
+
     const userStorageKey = "lr-user-id"
     const existingUser =
       typeof window !== "undefined"
@@ -463,7 +466,7 @@ export default function ChatPanel({
     }
 
     setUserId(nextUserId)
-  }, [])
+  }, [externalUserId])
 
   useEffect(() => {
     setPdfViewerState(null)   // Close PDF panel when document changes
