@@ -1,0 +1,62 @@
+"""routers/share.py — create and retrieve shared answer links."""
+import logging
+from typing import Any, Optional
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from utils.shared_answers import get_share, store_share
+
+logger = logging.getLogger("share_router")
+router = APIRouter()
+
+
+class ShareRequest(BaseModel):
+    question: str
+    answer: str
+    sources: list[dict] = []
+    language: str = "ms"
+
+
+class ShareResponse(BaseModel):
+    slug: str
+    url: str
+
+
+class SharedAnswerResponse(BaseModel):
+    slug: str
+    question: str
+    answer: str
+    sources: list[dict]
+    language: str
+    created_at: str
+
+
+@router.post("", response_model=ShareResponse)
+async def create_share(body: ShareRequest):
+    if not body.question.strip() or not body.answer.strip():
+        raise HTTPException(status_code=400, detail="question and answer are required")
+    try:
+        slug = store_share(
+            question=body.question,
+            answer=body.answer,
+            sources=body.sources,
+            language=body.language,
+        )
+    except Exception as exc:
+        logger.error("[Share] Failed to store: %s", exc)
+        raise HTTPException(status_code=500, detail="Failed to create share link") from exc
+    return ShareResponse(slug=slug, url=f"/share/{slug}")
+
+
+@router.get("/{slug}", response_model=SharedAnswerResponse)
+async def fetch_share(slug: str):
+    result = get_share(slug)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Share link not found")
+    return SharedAnswerResponse(
+        slug=result["slug"],
+        question=result["question"],
+        answer=result["answer"],
+        sources=result.get("sources", []),
+        language=result.get("language", "ms"),
+        created_at=result.get("created_at", ""),
+    )
