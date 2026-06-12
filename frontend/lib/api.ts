@@ -767,3 +767,69 @@ export const GROQ_MODELS = [
     recommended: false,
   },
 ]
+
+// ─── Conversations ───────────────────────────────────────────────────────────
+
+export interface ConversationSummary {
+  session_id: string
+  title: string
+  last_at: string
+  count: number
+}
+
+export async function listConversations(userId: string): Promise<ConversationSummary[]> {
+  try {
+    const res = await fetch(
+      `${API_URL}/api/chat/conversations?user_id=${encodeURIComponent(userId)}`
+    )
+    if (!res.ok) return []
+    return res.json()
+  } catch {
+    return []
+  }
+}
+
+// ─── Share links ─────────────────────────────────────────────────────────────
+
+export interface ShareResult {
+  slug: string
+  url: string
+}
+
+export interface SharedAnswer {
+  slug: string
+  question: string
+  answer: string
+  sources: SourceChunk[]
+  language: string
+  created_at: string
+}
+
+export async function createShare(payload: {
+  question: string
+  answer: string
+  sources: SourceChunk[]
+  language: string
+}): Promise<ShareResult | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/share`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+export async function getShare(slug: string): Promise<SharedAnswer | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/share/${encodeURIComponent(slug)}`)
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
