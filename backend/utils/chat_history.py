@@ -126,3 +126,25 @@ def delete_chat_messages(
 
 def delete_chat_messages_for_document(document_id: str) -> int:
     return delete_chat_messages(document_id=document_id)
+
+
+def list_conversations(user_id: str) -> list[dict]:
+    """Group lr_chat_messages by session_id for the sidebar conversation list.
+
+    Rows come back newest-first from list_chat_messages, so iterating and
+    always overwriting `title` with the current row's question yields the
+    oldest (first) question as the title when the loop finishes.
+    """
+    rows = list_chat_messages(user_id=user_id)
+    sessions: dict[str, dict] = {}
+    for row in rows:
+        sid = row.get("session_id", "")
+        if not sid:
+            continue
+        q = (row.get("question") or "")[:80]
+        ts = row.get("created_at", "")
+        if sid not in sessions:
+            sessions[sid] = {"session_id": sid, "title": q, "last_at": ts, "count": 0}
+        sessions[sid]["count"] += 1
+        sessions[sid]["title"] = q  # overwrite → last write = oldest row = first question
+    return sorted(sessions.values(), key=lambda x: x["last_at"], reverse=True)
