@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
@@ -23,8 +23,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   ExternalLink,
+  Share2,
 } from "lucide-react"
 import { AnswerMetrics } from "./answer-metrics"
+import { createShare } from "@/lib/api"
+import { toast } from "sonner"
 
 export interface Message {
   id: string
@@ -303,6 +306,7 @@ export function AIMessageCard({
   const [isStreamed, setIsStreamed] = React.useState(message.cached)
   const [feedback, setFeedback] = React.useState<"up" | "down" | null>(null)
   const [highlightedSourceIdx, setHighlightedSourceIdx] = React.useState<number | null>(null)
+  const [sharing, setSharing] = useState(false)
   const highlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handlePillClick = React.useCallback(
@@ -344,6 +348,30 @@ export function AIMessageCard({
       }
     },
     [feedback, sessionId, docId, message.question, message.sources],
+  )
+
+  const handleShare = React.useCallback(
+    async () => {
+      setSharing(true)
+      try {
+        const result = await createShare({
+          question: message.question,
+          answer: message.answer,
+          sources: message.sources,
+          language: message.language,
+        })
+        if (!result) {
+          toast.error("Couldn't create link — try again")
+          return
+        }
+        const url = `${window.location.origin}${result.url}`
+        await navigator.clipboard.writeText(url)
+        toast.success("Link copied! Share via WhatsApp or SMS.")
+      } finally {
+        setSharing(false)
+      }
+    },
+    [message.question, message.answer, message.sources, message.language],
   )
 
   React.useEffect(() => {
@@ -574,6 +602,16 @@ export function AIMessageCard({
                       title={language === "ms" ? "Jawapan tidak berguna" : "Not helpful"}
                     >
                       <ThumbsDown className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      disabled={sharing}
+                      aria-label="Share answer"
+                      className="p-1 transition-colors hover:text-foreground text-muted-foreground/40 disabled:opacity-50"
+                      title={language === "ms" ? "Kongsi jawapan" : "Share answer"}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ) : null}
