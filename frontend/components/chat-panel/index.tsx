@@ -205,7 +205,9 @@ export default function ChatPanel({
   const [enableQueryAugmentation, setEnableQueryAugmentation] = useState(true)
   // Multi-document mode: query across every ready doc instead of just the
   // selected one ("no file picking"). selectedDoc stays the session anchor.
-  const [askAllDocs, setAskAllDocs] = useState(false)
+  // Default ON so citizens search their whole library without choosing a file;
+  // the toggle below lets them narrow to the anchored doc when they want.
+  const [askAllDocs, setAskAllDocs] = useState(true)
   const [readyDocIds, setReadyDocIds] = useState<string[]>([])
   const settingsLoadedRef = useRef(false)
   const [historyLoading, setHistoryLoading] = useState(false)

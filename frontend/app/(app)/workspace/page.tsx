@@ -92,7 +92,16 @@ export default function WorkSpacePage() {
     try {
       const docs = await listDocuments()
       setDocuments(docs)
-      setSelectedDoc((prev) => docs.find((d) => d.id === prev?.id) ?? null)
+      // Keep the current doc if it still exists; otherwise auto-anchor on the
+      // first ready doc so the citizen lands in a working multi-doc chat with
+      // no file picking. selectedDoc is only the session/history anchor — every
+      // question still spans the whole ready library (ChatPanel askAllDocs).
+      setSelectedDoc(
+        (prev) =>
+          docs.find((d) => d.id === prev?.id) ??
+          docs.find((d) => d.status === "ready") ??
+          null
+      )
       return docs
     } finally {
       setDocsLoading(false)
