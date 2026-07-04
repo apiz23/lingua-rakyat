@@ -37,6 +37,10 @@ MAX_UPLOAD_PAGES = 200
 
 SAMPLE_DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "sample_docs")
 
+# Pre-loaded government document library. Entries with a source_url are
+# downloaded into sample_docs on first seed if the file is not shipped in the
+# repo, so the library can grow without committing every PDF. Official URLs
+# rot — when a download 404s the seed just skips that doc and logs it.
 FEATURED_DOCS = [
     {
         "doc_id": "jpn-mykad-faq",
@@ -49,6 +53,27 @@ FEATURED_DOCS = [
         "name": "Malaysian Passport Guidelines",
         "agency": "IMIGRESEN",
         "filename": "malaysian_passport_guidelines.pdf",
+    },
+    {
+        "doc_id": "imigresen-pasport-faq",
+        "name": "Soalan Lazim Pasport (Imigresen)",
+        "agency": "IMIGRESEN",
+        "filename": "Imigresen_Pasport_FAQ.pdf",
+        "source_url": "https://www.imi.gov.my/wp-content/uploads/2021/08/FAQ_H_19072021.pdf",
+    },
+    {
+        "doc_id": "kwsp-ecaruman-faq",
+        "name": "KWSP e-Caruman FAQ",
+        "agency": "KWSP",
+        "filename": "KWSP_eCaruman_FAQ.pdf",
+        "source_url": "https://secure.kwsp.gov.my/e-caruman/download/SOALAN_LAZIM_e-Caruman_EN_as_at_19052017.pdf",
+    },
+    {
+        "doc_id": "ptptn-mywaqaf-faq",
+        "name": "Soalan Lazim myWaqafPTPTN",
+        "agency": "PTPTN",
+        "filename": "PTPTN_myWaqaf_FAQ.pdf",
+        "source_url": "https://www.ptptn.gov.my/wp-content/uploads/2024/12/FINAL-SOALAN-LAZIM-FAQ-MYWAQAFPTPTN-_kemaskini-9-dis.pdf",
     },
 ]
 
@@ -234,7 +259,10 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
 
             if storage_match or storage_path in storage_paths:
                 if storage_match:
-                    doc["name"] = storage_match["name"]
+                    # Featured docs keep their curated display name ("MyKad FAQ
+                    # (JPN)") instead of the raw storage filename.
+                    if not doc.get("is_featured"):
+                        doc["name"] = storage_match["name"]
                     doc["size_bytes"] = storage_match["size_bytes"]
                     doc["storage_path"] = storage_match["storage_path"]
                     doc["public_url"] = storage_match["public_url"]
@@ -664,7 +692,14 @@ def proxy_pdf(request: Request, document_id: str):
     storage_path = row.get("storage_path")
     if not storage_path:
         raise HTTPException(status_code=404, detail="No storage path for this document")
-    data: bytes = sb.storage.from_(get_bucket()).download(storage_path)
+    try:
+        data: bytes = sb.storage.from_(get_bucket()).download(storage_path)
+    except Exception as exc:
+        # Raise HTTPException instead of letting the storage error bubble up:
+        # an unhandled exception bypasses CORSMiddleware, so the browser sees
+        # a CORS failure ("Failed to fetch") instead of a useful status.
+        logger.warning("[PDF] Storage download failed for %s (%s): %s", document_id, storage_path, exc)
+        raise HTTPException(status_code=404, detail="PDF file not found in storage") from exc
     safe_name = (row.get("name") or "document").replace('"', "").replace("\\", "")
     return Response(
         content=data,
@@ -747,6 +782,51 @@ PREWARM_QUESTIONS: dict[str, list[str]] = {
 }
 
 
+def _download_seed_pdf(featured: dict, dest_path: str) -> bool:
+    """Fetch a featured PDF from its official source_url into sample_docs."""
+    source_url = featured.get("source_url")
+    if not source_url:
+        return False
+    try:
+        import httpx
+
+        resp = httpx.get(source_url, timeout=30.0, follow_redirects=True)
+        resp.raise_for_status()
+        content = resp.content
+        if not content.startswith(PDF_MAGIC):
+            logger.warning("[Seed] Not a PDF: %s", source_url)
+            return False
+        if len(content) > MAX_UPLOAD_BYTES:
+            logger.warning("[Seed] Too large (%d bytes): %s", len(content), source_url)
+            return False
+        with open(dest_path, "wb") as fh:
+            fh.write(content)
+        logger.info("[Seed] Downloaded %s (%d bytes)", featured["doc_id"], len(content))
+        return True
+    except Exception as exc:
+        logger.warning("[Seed] Download failed for %s: %s", source_url, exc)
+        return False
+
+
+def _upload_seed_pdf_to_storage(supabase_id: str, filename: str, pdf_path: str) -> Optional[str]:
+    """Put the seeded PDF into the storage bucket so the /pdf proxy and viewer work."""
+    storage_path = f"{supabase_id}/{filename}"
+    try:
+        with open(pdf_path, "rb") as fh:
+            data = fh.read()
+        get_supabase().storage.from_(get_bucket()).upload(
+            storage_path,
+            data,
+            {"content-type": "application/pdf", "x-upsert": "true"},
+        )
+        return storage_path
+    except Exception as exc:
+        if "exist" in str(exc).lower() or "duplicate" in str(exc).lower():
+            return storage_path
+        logger.warning("[Seed] Storage upload failed for %s: %s", storage_path, exc)
+        return None
+
+
 async def _do_seed() -> dict:
     """
     Seed logic decoupled from FastAPI request — callable from startup and the HTTP route.
@@ -754,33 +834,51 @@ async def _do_seed() -> dict:
     chat API (which receives doc.id from the frontend) hits the correct namespace.
     """
     existing_docs = load_documents()
-    existing_names = {doc["name"] for doc in existing_docs}
+    existing_by_name = {doc["name"]: doc for doc in existing_docs}
 
     seeded = 0
     already_present = 0
+    repaired = 0
 
     for featured in FEATURED_DOCS:
         doc_id = featured["doc_id"]
         doc_name = featured["name"]
 
-        if doc_name in existing_names:
-            logger.info("[Seed] Already present: %s", doc_id)
-            already_present += 1
-            continue
-
         pdf_path = os.path.join(SAMPLE_DOCS_DIR, featured["filename"])
-        if not os.path.exists(pdf_path):
+        if not os.path.exists(pdf_path) and not _download_seed_pdf(featured, pdf_path):
             logger.warning("[Seed] PDF not found, skipping: %s", pdf_path)
             continue
 
         # Deterministic UUID — used for BOTH Supabase row id and Pinecone namespace
         supabase_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
 
+        existing = existing_by_name.get(doc_name)
+        if existing:
+            already_present += 1
+            # Older seeds never uploaded the file to storage, so the PDF viewer
+            # 404s on these docs. Backfill storage for them once.
+            if not existing.get("storage_path"):
+                storage_path = _upload_seed_pdf_to_storage(
+                    str(existing["id"]), featured["filename"], pdf_path
+                )
+                if storage_path:
+                    get_supabase().table(get_documents_table()).update({
+                        "storage_path": storage_path,
+                        "public_url": build_public_url(storage_path),
+                        "size_bytes": os.path.getsize(pdf_path),
+                    }).eq("id", existing["id"]).execute()
+                    repaired += 1
+                    logger.info("[Seed] Backfilled storage for %s", doc_id)
+            continue
+
         try:
             chunk_count, _ = ingest_document(
                 pdf_path=pdf_path,
                 document_id=supabase_id,
                 document_name=doc_name,
+            )
+            storage_path = _upload_seed_pdf_to_storage(
+                supabase_id, featured["filename"], pdf_path
             )
             base_payload = {
                 "id": supabase_id,
@@ -789,8 +887,8 @@ async def _do_seed() -> dict:
                 "chunk_count": chunk_count,
                 "status": "ready",
                 "uploaded_at": utc_now_iso(),
-                "storage_path": None,
-                "public_url": None,
+                "storage_path": storage_path,
+                "public_url": build_public_url(storage_path),
                 "error_message": None,
             }
             # Attempt with optional columns first; fall back to base if Supabase rejects
@@ -808,7 +906,7 @@ async def _do_seed() -> dict:
         except Exception as exc:
             logger.error("[Seed] Failed to ingest %s: %s", doc_id, exc)
 
-    return {"seeded": seeded, "already_present": already_present}
+    return {"seeded": seeded, "already_present": already_present, "repaired": repaired}
 
 
 @router.post("/seed")
