@@ -27,6 +27,8 @@ const nextConfig = {
     ],
   },
 
+  devIndicators: false,
+
   webpack: (config, { isServer }) => {
     // react-pdf / PDF.js: disable canvas (not needed for text rendering)
     config.resolve.alias.canvas = false

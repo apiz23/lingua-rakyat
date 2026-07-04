@@ -57,7 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider
-      defaultOpen={true}
+      defaultOpen={false}
       className="h-dvh"
       style={
         {
