@@ -150,6 +150,10 @@ function buildThreads(history: ChatHistoryMessage[]): ChatThread[] {
 interface PdfViewerState {
   page: number
   highlightText: string | null
+  // Which document the citation belongs to. In multi-doc mode this can be a
+  // different file from the anchored selectedDoc.
+  documentId?: string
+  docName?: string
 }
 
 export default function ChatPanel({
@@ -185,7 +189,12 @@ export default function ChatPanel({
   const [showHistory, setShowHistory] = useState(false)
   const [userId, setUserId] = useState(externalUserId ?? "")
   const [sessionId, setSessionId] = useState("")
-  const [readyDocIds, setReadyDocIds] = useState<string[]>([])
+  const [readyDocs, setReadyDocs] = useState<Document[]>([])
+  const readyDocIds = readyDocs.map((d) => d.id)
+  // "@" mention: pin retrieval to one document for upcoming questions.
+  const [mentionDoc, setMentionDoc] = useState<Document | null>(null)
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
+  const [mentionIndex, setMentionIndex] = useState(0)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [documentHistory, setDocumentHistory] = useState<ChatHistoryMessage[]>(
     []
@@ -226,8 +235,8 @@ export default function ChatPanel({
   const toggleAutoSpeak = () => setAutoSpeak((prev) => !prev)
 
   const handleOpenPdf = React.useCallback(
-    (page: number, text: string | null) => {
-      setPdfViewerState({ page, highlightText: text })
+    (page: number, text: string | null, documentId?: string, docName?: string) => {
+      setPdfViewerState({ page, highlightText: text, documentId, docName })
     },
     []
   )
@@ -263,9 +272,7 @@ export default function ChatPanel({
     listDocuments()
       .then((docs) => {
         if (!active) return
-        setReadyDocIds(
-          docs.filter((d) => d.status === "ready").map((d) => d.id)
-        )
+        setReadyDocs(docs.filter((d) => d.status === "ready"))
       })
       .catch(() => {
         /* offline / fetch failure — multi-doc simply stays single-doc */
@@ -451,6 +458,7 @@ export default function ChatPanel({
     }
 
     setInput("")
+    setMentionQuery(null)
     setLoading(true)
 
     if (inputRef.current) {
@@ -494,8 +502,10 @@ export default function ChatPanel({
 
       // Multi-doc: span every ready doc (plus the selected one) when the user
       // opts into "ask all". Empty list = single-doc behaviour on the backend.
-      const multiDocIds =
-        askAllDocs && readyDocIds.length > 1
+      // An "@" mention overrides both and pins retrieval to that one document.
+      const multiDocIds = mentionDoc
+        ? [mentionDoc.id]
+        : askAllDocs && readyDocIds.length > 1
           ? Array.from(new Set([selectedDoc.id, ...readyDocIds]))
           : []
 
@@ -595,6 +605,7 @@ export default function ChatPanel({
               cached: event.cached ?? false,
               model_used: event.model_used,
               sufficient_evidence: event.sufficient_evidence ?? true,
+              evidence_mode: event.evidence_mode,
               faithfulness: event.faithfulness ?? null,
               isStreaming: false,
             }
@@ -795,6 +806,51 @@ export default function ChatPanel({
     persistSessionId(selectedDoc.id, nextSessionId)
     setSessionId(nextSessionId)
     setShowHistory(false)
+  }
+
+  // "@" mention: typing "@…" at the end of the input opens a picker of ready
+  // documents; selecting one pins retrieval to that document until removed.
+  const mentionMatches = React.useMemo(() => {
+    if (mentionQuery === null) return []
+    const q = mentionQuery.toLowerCase()
+    return readyDocs.filter((d) => d.name.toLowerCase().includes(q)).slice(0, 6)
+  }, [mentionQuery, readyDocs])
+
+  const handleInputChange = (next: string) => {
+    setInput(next)
+    const match = next.match(/@([^\s@]*)$/)
+    setMentionQuery(match && readyDocs.length > 0 ? match[1] : null)
+    setMentionIndex(0)
+  }
+
+  const selectMention = (doc: Document) => {
+    setMentionDoc(doc)
+    setInput((prev) => prev.replace(/@([^\s@]*)$/, "").trimEnd())
+    setMentionQuery(null)
+    inputRef.current?.focus()
+  }
+
+  const handleMentionKeyDown = (e: React.KeyboardEvent) => {
+    if (mentionQuery === null) return
+    if (e.key === "Escape") {
+      e.stopPropagation()
+      setMentionQuery(null)
+      return
+    }
+    if (mentionMatches.length === 0) return
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      e.stopPropagation()
+      setMentionIndex((i) => (i + 1) % mentionMatches.length)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      e.stopPropagation()
+      setMentionIndex((i) => (i - 1 + mentionMatches.length) % mentionMatches.length)
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault()
+      e.stopPropagation()
+      selectMention(mentionMatches[mentionIndex])
+    }
   }
 
   const handleNewChat = () => {
@@ -1108,9 +1164,62 @@ export default function ChatPanel({
 
           {composerTop ? <div className="mb-1.5">{composerTop}</div> : null}
 
+          {mentionDoc ? (
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <span
+                title={copy.mentionOnlyTitle}
+                className="inline-flex max-w-full items-center gap-1.5 border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary"
+              >
+                <FileText className="h-3 w-3 shrink-0" />
+                <span className="truncate">@{mentionDoc.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setMentionDoc(null)}
+                  aria-label={copy.askAll}
+                  className="ml-0.5 transition-colors hover:text-primary/70"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            </div>
+          ) : null}
+
+          <div className="relative" onKeyDownCapture={handleMentionKeyDown}>
+            {mentionQuery !== null ? (
+              <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm border border-border bg-popover shadow-md">
+                <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                  {copy.mentionListTitle}
+                </div>
+                {mentionMatches.length === 0 ? (
+                  <div className="px-3 pb-2 text-xs text-muted-foreground">
+                    {copy.mentionNoMatch}
+                  </div>
+                ) : (
+                  mentionMatches.map((doc, i) => (
+                    <button
+                      key={doc.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        // preventDefault keeps focus in the textarea
+                        e.preventDefault()
+                        selectMention(doc)
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                        i === mentionIndex && "bg-muted"
+                      )}
+                    >
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="truncate">{doc.name}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
+
           <ChatInput
             value={input}
-            onChange={setInput}
+            onChange={handleInputChange}
             ref={inputRef}
             onSubmit={submitQuestion}
             loading={loading}
@@ -1194,6 +1303,7 @@ export default function ChatPanel({
               <span className="hidden sm:inline">{copy.autoSpeakShort}</span>
             </button>
           </ChatInput>
+          </div>
 
           <p className="mt-1.5 hidden px-1 text-[10px] text-muted-foreground sm:block">
             Enter → {copy.send} · Shift+Enter → {copy.newLine}
@@ -1202,14 +1312,16 @@ export default function ChatPanel({
       </AiChatFooter>
       </AiChat>
 
-      {/* PDF panel — Sheet on desktop, Drawer on mobile */}
+      {/* PDF panel — Sheet on desktop, Drawer on mobile. Opens the cited
+          source's own document, which in multi-doc mode may not be the
+          anchored selectedDoc. */}
       <PdfPanel
         open={pdfOpen}
         url={docPublicUrl ?? ""}
         targetPage={pdfViewerState?.page ?? 1}
         highlightText={pdfViewerState?.highlightText ?? null}
-        docName={selectedDoc?.name ?? ""}
-        documentId={selectedDoc?.id ?? ""}
+        docName={pdfViewerState?.docName || selectedDoc?.name || ""}
+        documentId={pdfViewerState?.documentId || selectedDoc?.id || ""}
         language={language}
         onClose={handleClosePdf}
       />

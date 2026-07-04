@@ -57,6 +57,9 @@ export type ChatCopy = {
   selectDocFirst: string
   userNotReady: string
   sessionNotReady: string
+  mentionListTitle: string
+  mentionNoMatch: string
+  mentionOnlyTitle: string
 }
 
 export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
@@ -118,6 +121,9 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     selectDocFirst: "Sila pilih dokumen dahulu",
     userNotReady: "Identiti pengguna belum sedia",
     sessionNotReady: "Sesi belum sedia",
+    mentionListTitle: "Tanya dokumen tertentu",
+    mentionNoMatch: "Tiada dokumen sepadan",
+    mentionOnlyTitle: "Soalan hanya akan guna dokumen ini",
   },
   en: {
     historyLoadError: "Failed to load chat history",
@@ -177,6 +183,9 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     selectDocFirst: "Please select a document first",
     userNotReady: "User identity not ready yet",
     sessionNotReady: "Session not ready yet",
+    mentionListTitle: "Ask a specific document",
+    mentionNoMatch: "No matching documents",
+    mentionOnlyTitle: "Questions will use only this document",
   },
   zh: {
     historyLoadError: "无法加载聊天记录",
@@ -234,5 +243,8 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     selectDocFirst: "请先选择文件",
     userNotReady: "用户身份尚未就绪",
     sessionNotReady: "会话尚未就绪",
+    mentionListTitle: "查询特定文件",
+    mentionNoMatch: "没有匹配的文件",
+    mentionOnlyTitle: "问题仅使用此文件",
   },
 }

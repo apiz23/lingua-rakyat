@@ -501,6 +501,7 @@ export type ChatStreamEvent =
       latency_ms: number
       model_used: string
       sufficient_evidence: boolean
+      evidence_mode?: string
       cached: boolean
       retrieval_mode?: string
       query_variants_used?: string[]

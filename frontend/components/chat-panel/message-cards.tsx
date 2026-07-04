@@ -50,6 +50,9 @@ export interface Message {
   cached: boolean
   model_used?: string
   sufficient_evidence: boolean
+  // "strong" | "cautious" | "insufficient" | "summary". Absent on rows saved
+  // before this field existed — fall back to sufficient_evidence then.
+  evidence_mode?: string
   faithfulness?: number | null
   isStreaming?: boolean
   suggestions?: string[]
@@ -172,6 +175,14 @@ function confidenceSentence(msg: Message): string | null {
     ? "ms"
     : "en"
   const map = CONFIDENCE_MSG[lang] ?? CONFIDENCE_MSG.en
+  // "insufficient" is the canned no-answer reply; a "cautious" answer is still
+  // grounded in a real chunk, so it only gets the softer "verify" note.
+  if (msg.evidence_mode) {
+    if (msg.evidence_mode === "insufficient") return map.insufficient
+    if (msg.evidence_mode === "cautious" || msg.confidence_label === "low")
+      return map.low
+    return null
+  }
   if (!msg.sufficient_evidence) return map.insufficient
   if (msg.confidence_label === "low") return map.low
   return null
@@ -300,7 +311,12 @@ export const AIMessageCard = React.memo(function AIMessageCard({
   copyToClipboard: (text: string, id: string) => void
   docPublicUrl?: string
   autoSpeak?: boolean
-  onOpenPdf?: (page: number, text: string | null) => void
+  onOpenPdf?: (
+    page: number,
+    text: string | null,
+    documentId?: string,
+    docName?: string
+  ) => void
   onSuggestionClick?: (question: string) => void
   sessionId?: string
   docId?: string
@@ -329,8 +345,14 @@ export const AIMessageCard = React.memo(function AIMessageCard({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (sourceIndex: number, _pageStart: number) => {
       const source = message.sources[sourceIndex]
-      // Open PDF panel with cited passage highlighted
-      onOpenPdf?.(source?.page_start ?? 1, source?.text ?? null)
+      // Open PDF panel with cited passage highlighted — in the source's own
+      // document, which in multi-doc mode may differ from the anchored one.
+      onOpenPdf?.(
+        source?.page_start ?? 1,
+        source?.text ?? null,
+        source?.document_id,
+        source?.doc_name
+      )
       // Open sources panel if closed + highlight the matching card
       if (!expandedSources.has(message.id)) toggleSources(message.id)
       if (highlightTimerRef.current !== null) clearTimeout(highlightTimerRef.current)
@@ -751,7 +773,14 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                                 {onOpenPdf ? (
                                   <button
                                     type="button"
-                                    onClick={() => onOpenPdf(pageStart ?? 1, source.text ?? null)}
+                                    onClick={() =>
+                                      onOpenPdf(
+                                        pageStart ?? 1,
+                                        source.text ?? null,
+                                        source.document_id,
+                                        source.doc_name
+                                      )
+                                    }
                                     className="ml-1 inline-flex items-center gap-1 border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:border-primary/80 hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                                     title={language === "ms" ? "Lihat halaman asal" : "View source page"}
                                   >

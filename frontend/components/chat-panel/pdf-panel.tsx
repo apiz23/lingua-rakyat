@@ -117,6 +117,9 @@ function PdfViewer({
   useEffect(() => {
     setResolvedUrl(`${API_URL}/api/documents/${documentId}/pdf`)
     setLoadError(false)
+    // Page count belongs to the previous PDF; keep it stale and a citation
+    // pointing past the new doc's last page crashes react-pdf.
+    setNumPages(null)
   }, [documentId])
 
   useEffect(() => {
@@ -186,12 +189,15 @@ function PdfViewer({
         ) : (
           <Document
             file={resolvedUrl}
-            onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+            onLoadSuccess={({ numPages: n }) => {
+              setNumPages(n)
+              setCurrentPage((p) => Math.min(Math.max(1, p), n))
+            }}
             onLoadError={() => setLoadError(true)}
             loading={<PdfLoadingSpinner />}
           >
             <Page
-              pageNumber={currentPage}
+              pageNumber={numPages ? Math.min(currentPage, numPages) : 1}
               width={panelWidth - 24}
               customTextRenderer={customTextRenderer}
               onGetTextSuccess={(textContent) =>
