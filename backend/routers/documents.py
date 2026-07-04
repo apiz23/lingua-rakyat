@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 from pypdf import PdfReader
@@ -334,9 +334,61 @@ async def verify_token(request: Request, token: str):
     return {"valid": True}
 
 
+def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filename: str) -> None:
+    """
+    Background ingestion: chunk + embed the PDF, then flip the Supabase row to
+    ready/error. Runs after the upload response has been sent, so large PDFs
+    no longer time out the upload request. Frontend polls /{id}/status.
+    """
+    from routers.eval import log_data_quality
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(file_content)
+            tmp_path = tmp.name
+
+        chunk_count, ingest_quality = ingest_document(
+            pdf_path=tmp_path,
+            document_id=document_id,
+            document_name=safe_filename,
+        )
+        get_supabase().table(get_documents_table()).update({
+            "chunk_count": chunk_count,
+            "status": "ready",
+            "error_message": None,
+        }).eq("id", document_id).execute()
+        # Feed the /api/eval/data-quality dashboard with this document's metrics.
+        log_data_quality({**ingest_quality, "document_id": document_id, "doc_name": safe_filename})
+        logger.info(
+            "[Upload] Ingestion complete for %s: %d chunks via %s",
+            document_id,
+            chunk_count,
+            str(ingest_quality.get("extraction_method", "text")),
+        )
+    except Exception as exc:
+        try:
+            get_supabase().table(get_documents_table()).update({
+                "status": "error",
+                "error_message": str(exc),
+            }).eq("id", document_id).execute()
+        except Exception as db_exc:
+            logger.error("[Upload] Failed to record error state for %s: %s", document_id, db_exc)
+        log_data_quality({"valid": False, "error": str(exc), "document_id": document_id, "doc_name": safe_filename})
+        logger.warning("[Upload] Ingestion failed for %s: %s", document_id, exc)
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
 @router.post("/upload", response_model=UploadResponse)
 @limiter.limit(DOC_LIMIT)
-async def upload_document(request: Request, file: UploadFile = File(...), upload_token: str = ""):
+async def upload_document(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    upload_token: str = "",
+):
     _ = request
 
     if not upload_token or not verify_upload_token(upload_token):
@@ -380,51 +432,43 @@ async def upload_document(request: Request, file: UploadFile = File(...), upload
         "public_url": build_public_url(storage_path),
         "error_message": None,
     }
-
-    tmp_path = None
-    extraction_method = "text"
-    try:
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-            tmp.write(file_content)
-            tmp_path = tmp.name
-
-        chunk_count, ingest_quality = ingest_document(
-            pdf_path=tmp_path,
-            document_id=document_id,
-            document_name=safe_filename,
-        )
-        extraction_method = str(ingest_quality.get("extraction_method", "text"))
-        doc_record["chunk_count"] = chunk_count
-        doc_record["status"] = "ready"
-        # Feed the /api/eval/data-quality dashboard with this document's metrics.
-        from routers.eval import log_data_quality
-        log_data_quality({**ingest_quality, "document_id": document_id, "doc_name": safe_filename})
-        logger.info(
-            "[Upload] Ingestion complete for %s: %d chunks via %s",
-            document_id,
-            chunk_count,
-            extraction_method,
-        )
-    except Exception as exc:
-        doc_record["status"] = "error"
-        doc_record["error_message"] = str(exc)
-        from routers.eval import log_data_quality
-        log_data_quality({"valid": False, "error": str(exc), "document_id": document_id, "doc_name": safe_filename})
-        logger.warning("[Upload] Ingestion failed for %s: %s", document_id, exc)
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
-
     upsert_documents([doc_record])
 
+    background_tasks.add_task(ingest_uploaded_document, document_id, file_content, safe_filename)
+
     return UploadResponse(
-        success=doc_record["status"] == "ready",
+        success=True,
         document=DocumentResponse(**normalize_document_row(doc_record)),
-        message=(
-            f"Document processed into {doc_record['chunk_count']} chunks via {extraction_method}"
-            if doc_record["status"] == "ready"
-            else f"Processing failed: {doc_record['error_message']}"
-        ),
+        message="Document uploaded — processing in background.",
+    )
+
+
+class DocumentStatusResponse(BaseModel):
+    id: str
+    status: str
+    chunk_count: int
+    error_message: Optional[str] = None
+
+
+@router.get("/{document_id}/status", response_model=DocumentStatusResponse)
+async def get_document_status(document_id: str):
+    """Lightweight status poll for the upload flow — no storage sync, one row read."""
+    rows = (
+        get_supabase()
+        .table(get_documents_table())
+        .select("id, status, chunk_count, error_message")
+        .eq("id", document_id)
+        .limit(1)
+        .execute()
+    )
+    if not rows.data:
+        raise HTTPException(status_code=404, detail="Document not found")
+    row = rows.data[0]
+    return DocumentStatusResponse(
+        id=str(row.get("id", document_id)),
+        status=row.get("status", "processing"),
+        chunk_count=int(row.get("chunk_count", 0) or 0),
+        error_message=row.get("error_message"),
     )
 
 
