@@ -39,6 +39,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://lingua-rakyat.my"),
   title: {
     template: "%s – Lingua Rakyat",
     default: "Lingua Rakyat – AI for Government Documents",
@@ -61,8 +62,15 @@ export const metadata: Metadata = {
       "Ask questions about government policies and programs using AI.",
     url: "https://lingua-rakyat.my",
     siteName: "LinguaRakyat",
-    locale: "en_US",
+    locale: "ms_MY",
+    alternateLocale: ["en_US", "zh_CN"],
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lingua Rakyat – AI for Government Documents",
+    description:
+      "Ask questions about Malaysian government documents in Malay, English, or Chinese.",
   },
   icons: {
     icon: "/icons/android-chrome-512x512.png",

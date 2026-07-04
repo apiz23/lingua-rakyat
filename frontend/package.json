@@ -21,6 +21,7 @@
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@react-three/drei": "^10.7.4",
     "@react-three/fiber": "^9.3.0",
+    "@shadcn/react": "^0.2.0",
     "@types/mdx": "^2.0.13",
     "@types/three": "^0.183.1",
     "@vercel/analytics": "^2.0.1",

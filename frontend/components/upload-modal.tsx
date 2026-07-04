@@ -1,7 +1,11 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { uploadDocument, verifyUploadToken } from "@/lib/api"
+import {
+  uploadDocument,
+  verifyUploadToken,
+  waitForDocumentReady,
+} from "@/lib/api"
 import { toast } from "sonner"
 import {
   X,
@@ -37,6 +41,7 @@ export default function UploadModal({
 
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [processing, setProcessing] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
@@ -99,24 +104,30 @@ export default function UploadModal({
     }, 200)
 
     try {
-      const promise = uploadDocument(file, verifiedToken)
+      // Upload returns as soon as the file is stored; ingestion continues in
+      // the background, so we poll the status endpoint until it settles.
+      const promise = (async () => {
+        const result = await uploadDocument(file, verifiedToken)
+        clearInterval(progressInterval)
+        setUploadProgress(100)
+        setProcessing(true)
+        const status = await waitForDocumentReady(result.document.id)
+        if (status.status === "error") {
+          throw new Error(status.error_message || "Processing failed")
+        }
+        return status
+      })()
 
       toast.promise(promise, {
-        loading: `Uploading ${file.name}...`,
-        success: (result) => {
-          clearInterval(progressInterval)
-          setUploadProgress(100)
+        loading: `Processing ${file.name}...`,
+        success: (status) => {
           setTimeout(() => {
             onUploadComplete()
             handleCancel()
           }, 500)
-          return result.message || `${file.name} uploaded successfully`
+          return `${file.name} ready — ${status.chunk_count} chunks indexed`
         },
-        error: (err) => {
-          clearInterval(progressInterval)
-          setUploadProgress(0)
-          return `Upload failed: ${err.message}`
-        },
+        error: (err) => `Upload failed: ${err.message}`,
       })
 
       await promise
@@ -126,6 +137,7 @@ export default function UploadModal({
       setError(err instanceof Error ? err.message : "Upload failed")
     } finally {
       setUploading(false)
+      setProcessing(false)
     }
   }
 
@@ -295,12 +307,14 @@ export default function UploadModal({
                       <div className="mt-2">
                         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                           <div
-                            className="h-full bg-primary transition-all duration-300"
+                            className={`h-full bg-primary transition-all duration-300 ${processing ? "animate-pulse" : ""}`}
                             style={{ width: `${uploadProgress}%` }}
                           />
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {uploadProgress}% uploaded
+                          {processing
+                            ? "Uploaded — indexing document…"
+                            : `${uploadProgress}% uploaded`}
                         </p>
                       </div>
                     )}
@@ -341,7 +355,7 @@ export default function UploadModal({
                   {uploading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Uploading...
+                      {processing ? "Processing..." : "Uploading..."}
                     </>
                   ) : (
                     <>

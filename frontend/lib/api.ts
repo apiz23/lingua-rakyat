@@ -231,6 +231,40 @@ export async function uploadDocument(
   return result
 }
 
+export type DocumentStatus = {
+  id: string
+  status: "processing" | "ready" | "error"
+  chunk_count: number
+  error_message?: string | null
+}
+
+export async function getDocumentStatus(
+  documentId: string
+): Promise<DocumentStatus> {
+  const res = await apiFetch(`${API_URL}/api/documents/${documentId}/status`)
+  if (!res.ok) throw new Error("Failed to fetch document status")
+  return res.json()
+}
+
+// Polls until the document leaves "processing". Resolves with the final
+// status; rejects only on network/HTTP failure or timeout.
+export async function waitForDocumentReady(
+  documentId: string,
+  opts: { intervalMs?: number; timeoutMs?: number } = {}
+): Promise<DocumentStatus> {
+  const intervalMs = opts.intervalMs ?? 2000
+  const timeoutMs = opts.timeoutMs ?? 180000
+  const startedAt = Date.now()
+  while (true) {
+    const status = await getDocumentStatus(documentId)
+    if (status.status !== "processing") return status
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error("Document is taking longer than expected — check the document list later.")
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs))
+  }
+}
+
 export async function listDocuments(): Promise<Document[]> {
   try {
     const res = await apiFetch(`${API_URL}/api/documents/`)

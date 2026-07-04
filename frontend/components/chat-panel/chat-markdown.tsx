@@ -42,14 +42,19 @@ const markdownComponents: Partial<Components> = {
       {props.children}
     </p>
   ),
-  ul: (props) => <ul className="my-4 space-y-2.5">{props.children}</ul>,
+  ul: (props) => (
+    <ul className="my-3 list-disc space-y-1.5 pl-5 marker:text-primary">
+      {props.children}
+    </ul>
+  ),
   ol: (props) => (
-    <ol className="my-4 list-decimal space-y-2.5 pl-4">{props.children}</ol>
+    <ol className="my-3 list-decimal space-y-1.5 pl-5 marker:text-primary">
+      {props.children}
+    </ol>
   ),
   li: (props) => (
-    <li className="flex items-start gap-3 border border-border/50 bg-muted/30 p-3 text-sm">
-      <span className="mt-0.5 shrink-0 text-primary">•</span>
-      <span className="text-foreground/80">{props.children}</span>
+    <li className="text-sm leading-relaxed text-foreground/80">
+      {props.children}
     </li>
   ),
   blockquote: (props) => (

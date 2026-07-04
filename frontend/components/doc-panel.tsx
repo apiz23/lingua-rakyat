@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import {
   BarChart3,
   FileText,
+  Landmark,
   Loader2,
   CheckCircle,
   XCircle,
@@ -64,6 +65,9 @@ export default function DocumentPanel({
           emptyUpload: "Muat naik PDF pertama untuk bermula",
           firstUpload: "Muat Naik Dokumen Pertama",
           uploadAria: "Muat naik dokumen",
+          officialSection: "Dokumen Rasmi Kerajaan",
+          officialHint: "Sedia untuk ditanya — tiada muat naik diperlukan",
+          yourSection: "Dokumen Anda",
         }
       : {
           loadError: "Failed to load documents",
@@ -88,6 +92,9 @@ export default function DocumentPanel({
           emptyUpload: "Upload your first PDF to get started",
           firstUpload: "Upload Your First Document",
           uploadAria: "Upload document",
+          officialSection: "Official Government Documents",
+          officialHint: "Ready to ask — no upload needed",
+          yourSection: "Your Documents",
         }
 
   const fetchDocuments = async () => {
@@ -192,6 +199,90 @@ export default function DocumentPanel({
 
   const filteredDocuments = documents.filter((doc) =>
     doc.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  const featuredDocuments = filteredDocuments.filter((doc) => doc.is_featured)
+  const userDocuments = filteredDocuments.filter((doc) => !doc.is_featured)
+
+  const renderDocCard = (doc: Document) => (
+    <div
+      key={doc.id}
+      onClick={() => onSelectDoc(doc)}
+      className={cn(
+        "group relative cursor-pointer rounded-lg border p-3 transition-all hover:shadow-md",
+        selectedDoc?.id === doc.id
+          ? "border-primary bg-primary/5 shadow-sm"
+          : "border-border bg-background hover:border-primary/50 hover:bg-accent/20"
+      )}
+    >
+      {/* Selection indicator */}
+      {selectedDoc?.id === doc.id && (
+        <div className="absolute top-0 left-0 h-full w-1 rounded-l-lg bg-primary" />
+      )}
+
+      <div className="flex items-start gap-3">
+        {/* Document icon with status indicator */}
+        <div className="relative shrink-0">
+          <div
+            className={cn(
+              "rounded-lg p-2",
+              doc.status === "ready" && "bg-primary/10",
+              doc.status === "processing" && "bg-accent/10",
+              doc.status === "error" && "bg-destructive/10"
+            )}
+          >
+            {doc.is_featured ? (
+              <Landmark className="h-5 w-5 text-primary" />
+            ) : (
+              <FileText className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+          <div className="absolute -top-1 -right-1">
+            {getStatusIcon(doc.status)}
+          </div>
+        </div>
+
+        {/* Document info */}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{doc.name}</p>
+
+          {/* Metadata row */}
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            {doc.is_featured && doc.agency ? (
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                {doc.agency}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {formatFileSize(doc.size_bytes)} • PDF
+              </span>
+            )}
+            <span
+              className={cn(
+                "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                getStatusBadge(doc.status)
+              )}
+            >
+              {getStatusLabel(doc.status)}
+            </span>
+          </div>
+
+          {/* Upload time (user docs only — featured docs are permanent) */}
+          {!doc.is_featured && (
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {formatDate(doc.uploaded_at)}
+            </p>
+          )}
+
+          {/* Error message if any */}
+          {doc.status === "error" && doc.error_message && (
+            <div className="mt-2 flex items-start gap-1.5 rounded bg-destructive/10 p-2">
+              <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />
+              <p className="text-xs text-destructive">{doc.error_message}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 
   return (
@@ -303,77 +394,35 @@ export default function DocumentPanel({
               </div>
             </div>
           ) : (
-            filteredDocuments.map((doc) => (
-              <div
-                key={doc.id}
-                onClick={() => onSelectDoc(doc)}
-                className={cn(
-                  "group relative cursor-pointer rounded-lg border p-3 transition-all hover:shadow-md",
-                  selectedDoc?.id === doc.id
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "border-border bg-background hover:border-primary/50 hover:bg-accent/20"
-                )}
-              >
-                {/* Selection indicator */}
-                {selectedDoc?.id === doc.id && (
-                  <div className="absolute top-0 left-0 h-full w-1 rounded-l-lg bg-primary" />
-                )}
-
-                <div className="flex items-start gap-3">
-                  {/* Document icon with status indicator */}
-                  <div className="relative shrink-0">
-                    <div
-                      className={cn(
-                        "rounded-lg p-2",
-                        doc.status === "ready" && "bg-primary/10",
-                        doc.status === "processing" && "bg-accent/10",
-                        doc.status === "error" && "bg-destructive/10"
-                      )}
-                    >
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div className="absolute -top-1 -right-1">
-                      {getStatusIcon(doc.status)}
+            <>
+              {featuredDocuments.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 px-1 pt-1">
+                    <Landmark className="h-3.5 w-3.5 text-primary" />
+                    <div>
+                      <p className="text-xs font-semibold tracking-wide text-foreground">
+                        {copy.officialSection}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {copy.officialHint}
+                      </p>
                     </div>
                   </div>
-
-                  {/* Document info */}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{doc.name}</p>
-
-                    {/* Metadata row */}
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {formatFileSize(doc.size_bytes)} • PDF
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-full border px-2 py-0.5 text-[10px] font-medium",
-                          getStatusBadge(doc.status)
-                        )}
-                      >
-                        {getStatusLabel(doc.status)}
-                      </span>
-                    </div>
-
-                    {/* Upload time */}
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      {formatDate(doc.uploaded_at)}
-                    </p>
-
-                    {/* Error message if any */}
-                    {doc.status === "error" && doc.error_message && (
-                      <div className="mt-2 flex items-start gap-1.5 rounded bg-destructive/10 p-2">
-                        <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />
-                        <p className="text-xs text-destructive">
-                          {doc.error_message}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  {featuredDocuments.map(renderDocCard)}
                 </div>
-              </div>
-            ))
+              )}
+
+              {userDocuments.length > 0 && (
+                <div className="space-y-2">
+                  {featuredDocuments.length > 0 && (
+                    <p className="px-1 pt-3 text-xs font-semibold tracking-wide text-foreground">
+                      {copy.yourSection}
+                    </p>
+                  )}
+                  {userDocuments.map(renderDocCard)}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { AnimatePresence } from "framer-motion"
 import {
   ChatHistoryMessage,
   DEFAULT_CHAT_MODEL_ID,
@@ -15,12 +15,28 @@ import {
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/components/language-provider"
-import AgentAvatar from "@/components/smoothui/agent-avatar"
+import { CHAT_COPY } from "@/lib/i18n/chat"
+import { useLocalStorageSetting } from "@/hooks/useLocalStorageSetting"
 import {
   AiChat,
   AiChatBody,
   AiChatFooter,
 } from "@/components/elements/ai-elements/chat/ai-chat"
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/components/ui/message-scroller"
+import {
+  Attachment,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment"
 import { ChatInput } from "@/components/elements/ai-elements/chat/chat-input"
 import {
   Popover,
@@ -37,7 +53,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   ArrowLeft,
-  Clock3,
   Download,
   FileText,
   History,
@@ -45,6 +60,7 @@ import {
   Library,
   MoreVertical,
   Plus,
+  SlidersHorizontal,
   Volume2,
   X,
 } from "lucide-react"
@@ -57,6 +73,7 @@ import {
 } from "./message-cards"
 import { VoiceMicButton } from "./voice-mic-button"
 import { EmptyState } from "./empty-state"
+import { ThreadHistoryPanel, type ChatThread } from "./thread-history-panel"
 
 // react-pdf (pdf.js) touches browser-only DOMMatrix at module load — never SSR it
 const PdfPanel = dynamic(() => import("./pdf-panel"), { ssr: false })
@@ -79,15 +96,6 @@ interface ChatPanelProps {
   emptyState?: React.ReactNode
   initialQuestion?: string
 }
-
-interface ChatThread {
-  sessionId: string
-  lastUpdated: string
-  previewQuestion: string
-  messageCount: number
-}
-
-
 
 function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
   return {
@@ -154,7 +162,6 @@ export default function ChatPanel({
   initialQuestion,
 }: ChatPanelProps) {
   const { language, toggleLanguage } = useLanguage()
-  const shouldReduce = useReducedMotion()
 
   const createSessionId = (documentId: string) =>
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -173,44 +180,50 @@ export default function ChatPanel({
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
-  const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set())
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [selectedPopoverModel, setSelectedPopoverModel] = useState(
-    DEFAULT_CHAT_MODEL_ID
-  )
   const [userId, setUserId] = useState(externalUserId ?? "")
   const [sessionId, setSessionId] = useState("")
-  const [enableQueryAugmentation, setEnableQueryAugmentation] = useState(true)
-  // Multi-document mode: query across every ready doc instead of just the
-  // selected one ("no file picking"). selectedDoc stays the session anchor.
-  // Default ON so citizens search their whole library without choosing a file;
-  // the toggle below lets them narrow to the anchored doc when they want.
-  const [askAllDocs, setAskAllDocs] = useState(true)
-  const [largeText, setLargeText] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false
-    return localStorage.getItem("lr-text-size") === "large"
-  })
   const [readyDocIds, setReadyDocIds] = useState<string[]>([])
-  const settingsLoadedRef = useRef(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [documentHistory, setDocumentHistory] = useState<ChatHistoryMessage[]>(
     []
   )
-  const [autoSpeak, setAutoSpeak] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false
-    return localStorage.getItem("lingua-autospeak") === "true"
-  })
+
+  // Persisted settings (localStorage-backed)
+  const [selectedPopoverModel, setSelectedPopoverModel] =
+    useLocalStorageSetting<string>("lr-chat-model", DEFAULT_CHAT_MODEL_ID)
+  const [enableQueryAugmentation, setEnableQueryAugmentation] =
+    useLocalStorageSetting<boolean>("lr-augmentation", true)
+  // Multi-document mode: query across every ready doc instead of just the
+  // selected one ("no file picking"). selectedDoc stays the session anchor.
+  // Default ON so citizens search their whole library without choosing a file;
+  // the toggle below lets them narrow to the anchored doc when they want.
+  const [askAllDocs, setAskAllDocs] = useLocalStorageSetting<boolean>(
+    "lr-ask-all-docs",
+    true
+  )
+  const [textSize, setTextSize] = useLocalStorageSetting<"normal" | "large">(
+    "lr-text-size",
+    "normal"
+  )
+  const largeText = textSize === "large"
+  const [autoSpeak, setAutoSpeak] = useLocalStorageSetting<boolean>(
+    "lingua-autospeak",
+    false
+  )
+  // Simple view (default ON): hides technical chrome — confidence bars,
+  // latency, model picker — so non-technical citizens see just the answer.
+  // Power users/judges flip it off via the options menu.
+  const [simpleMode, setSimpleMode] = useLocalStorageSetting<boolean>(
+    "lr-simple-mode",
+    true
+  )
 
   const [pdfViewerState, setPdfViewerState] = useState<PdfViewerState | null>(null)
 
-  const toggleAutoSpeak = () => {
-    setAutoSpeak((prev) => {
-      const next = !prev
-      localStorage.setItem("lingua-autospeak", String(next))
-      return next
-    })
-  }
+  const toggleAutoSpeak = () => setAutoSpeak((prev) => !prev)
 
   const handleOpenPdf = React.useCallback(
     (page: number, text: string | null) => {
@@ -223,117 +236,11 @@ export default function ChatPanel({
     setPdfViewerState(null)
   }, [])
 
-  const copy =
-    language === "ms"
-      ? {
-          historyLoadError: "Gagal memuatkan sejarah sembang",
-          retryLater: "Sila cuba lagi sebentar nanti.",
-          noDoc: "Tiada dokumen dipilih",
-          noDocDesc:
-            "Pilih dokumen dari panel kiri untuk mula bertanya dan dapatkan jawapan berasaskan AI.",
-          ready: "Sedia",
-          autoServer: "Auto (lalai pelayan)",
-          newChat: "Sembang baharu",
-          smartOn: "Carian Pintar On",
-          smartOff: "Carian Pintar Off",
-          askAll: "Tanya semua dokumen",
-          askOne: "Tanya dokumen ini sahaja",
-          allDocsBadge: "Semua dokumen",
-          clearThread: "Padam thread semasa",
-          history: "Sejarah sembang",
-          threadList: "Thread Sembang",
-          threadDesc: "Tukar antara thread yang disimpan untuk dokumen ini.",
-          noSavedThreads: "Belum ada thread disimpan untuk dokumen ini.",
-          messages: "mesej",
-          askAbout: "Tanya apa sahaja tentang",
-          answerDesc:
-            "dan dapatkan jawapan yang ringkas, jelas, serta bersumber.",
-          suggestions: "Cuba tanya tentang:",
-          askPlaceholder: "Tanya soalan...",
-          send: "Hantar",
-          newLine: "Baris baharu",
-          voiceStart: "Mulakan input suara",
-          voiceStop: "Hentikan input suara",
-          voiceUnsupported:
-            "Pelayar ini tidak menyokong input suara secara langsung.",
-          voiceBlocked:
-            "Akses mikrofon disekat. Sila benarkan mikrofon dan cuba semula.",
-          voiceUnavailable:
-            "Input suara tidak tersedia sekarang. Sila cuba lagi.",
-          thread: "Thread",
-          tooManyQuestions: "Terlalu banyak soalan dihantar",
-          waitAgain: "Sila tunggu",
-          seconds: "saat sebelum bertanya semula.",
-          copied: "Berjaya disalin",
-          newChatStarted: "Sembang baharu dimulakan",
-          cleared: "Thread semasa dipadam",
-          nothingToClear: "Tiada apa untuk dipadam",
-          clearError: "Gagal memadam thread semasa",
-          currentThread: "Thread semasa",
-          language: "Tukar bahasa",
-          options: "Pilihan",
-          back: "Kembali",
-          answerError: "Gagal mendapatkan jawapan",
-          autoSpeakTitle: "Auto-baca jawapan",
-          autoSpeakShort: "Auto-baca",
-        }
-      : {
-          historyLoadError: "Failed to load chat history",
-          retryLater: "Please try again later.",
-          noDoc: "No document selected",
-          noDocDesc:
-            "Select a document from the left panel to start asking questions and get AI-powered answers.",
-          ready: "Ready",
-          autoServer: "Auto (server default)",
-          newChat: "New chat",
-          smartOn: "Smart Retrieval On",
-          smartOff: "Smart Retrieval Off",
-          askAll: "Ask all documents",
-          askOne: "Ask this document only",
-          allDocsBadge: "All documents",
-          clearThread: "Clear current thread",
-          history: "Chat history",
-          threadList: "Chat Threads",
-          threadDesc: "Switch between saved chats for this document.",
-          noSavedThreads: "No saved chats for this document yet.",
-          messages: "messages",
-          askAbout: "Ask anything about",
-          answerDesc: "and get simple, clear answers with sources.",
-          suggestions: "Try asking about:",
-          askPlaceholder: "Ask a question...",
-          send: "Send",
-          newLine: "New line",
-          voiceStart: "Start voice input",
-          voiceStop: "Stop voice input",
-          voiceUnsupported:
-            "This browser does not support built-in voice input.",
-          voiceBlocked:
-            "Microphone access was blocked. Please allow it and try again.",
-          voiceUnavailable:
-            "Voice input is unavailable right now. Please try again.",
-          thread: "Thread",
-          tooManyQuestions: "Too many questions sent",
-          waitAgain: "Please wait",
-          seconds: "seconds before asking again.",
-          copied: "Copied to clipboard",
-          newChatStarted: "Started a new chat",
-          cleared: "Current chat cleared",
-          nothingToClear: "Nothing to clear",
-          clearError: "Failed to clear current chat",
-          currentThread: "Current chat",
-          language: "Toggle language",
-          options: "Options",
-          back: "Back",
-          answerError: "Failed to get answer",
-          autoSpeakTitle: "Auto-read answers",
-          autoSpeakShort: "Auto-read",
-        }
+  const copy = CHAT_COPY[language]
 
   const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null)
   const [rateLimitSecondsLeft, setRateLimitSecondsLeft] = useState(0)
 
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const isMountedRef = useRef(true)
   const historyAbortRef = useRef<AbortController | null>(null)
@@ -347,27 +254,8 @@ export default function ChatPanel({
   }, [])
 
   useEffect(() => {
-    const storedModel = window.localStorage.getItem("lr-chat-model")
-    if (storedModel !== null) setSelectedPopoverModel(storedModel)
-    const storedAug = window.localStorage.getItem("lr-augmentation")
-    if (storedAug !== null) setEnableQueryAugmentation(storedAug === "true")
-    const storedAll = window.localStorage.getItem("lr-ask-all-docs")
-    if (storedAll !== null) setAskAllDocs(storedAll === "true")
-    settingsLoadedRef.current = true
-  }, [])
-
-  useEffect(() => {
-    if (!settingsLoadedRef.current) return
-    window.localStorage.setItem("lr-ask-all-docs", String(askAllDocs))
-  }, [askAllDocs])
-
-  useEffect(() => {
-    document.documentElement.setAttribute(
-      "data-text-size",
-      largeText ? "large" : "normal"
-    )
-    localStorage.setItem("lr-text-size", largeText ? "large" : "normal")
-  }, [largeText])
+    document.documentElement.setAttribute("data-text-size", textSize)
+  }, [textSize])
 
   // Keep the list of ready docs fresh so multi-doc mode spans the whole library.
   useEffect(() => {
@@ -388,19 +276,6 @@ export default function ChatPanel({
   }, [selectedDoc])
 
   useEffect(() => {
-    if (!settingsLoadedRef.current) return
-    window.localStorage.setItem("lr-chat-model", selectedPopoverModel)
-  }, [selectedPopoverModel])
-
-  useEffect(() => {
-    if (!settingsLoadedRef.current) return
-    window.localStorage.setItem(
-      "lr-augmentation",
-      String(enableQueryAugmentation)
-    )
-  }, [enableQueryAugmentation])
-
-  useEffect(() => {
     if (!rateLimitedUntil) return
     const interval = setInterval(() => {
       const left = Math.ceil((rateLimitedUntil - Date.now()) / 1000)
@@ -413,12 +288,6 @@ export default function ChatPanel({
     }, 500)
     return () => clearInterval(interval)
   }, [rateLimitedUntil])
-
-  useEffect(() => {
-    const el = scrollContainerRef.current
-    if (!el) return
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
-  }, [messages, loading])
 
   useEffect(() => {
     if (inputRef.current) {
@@ -459,13 +328,17 @@ export default function ChatPanel({
     setPdfViewerState(null)   // Close PDF panel when document changes
 
     if (externalSessionId !== undefined) {
-      setSessionId(externalSessionId ?? "")
-      if (!externalSessionId) {
-        setMessages([])
-        setExpandedSources(new Set())
-        setDocumentHistory([])
-        setShowHistory(false)
+      if (externalSessionId) {
+        setSessionId(externalSessionId)
+        return
       }
+      // Externally-controlled "new chat" (null): mint a fresh session so the
+      // composer is enabled — an empty sessionId keeps the input disabled.
+      setMessages([])
+      setExpandedSources(new Set())
+      setDocumentHistory([])
+      setShowHistory(false)
+      setSessionId(selectedDoc ? createSessionId(selectedDoc.id) : "")
       return
     }
 
@@ -553,17 +426,17 @@ export default function ChatPanel({
 
   const submitQuestion = async (questionOverride?: string) => {
     if (!selectedDoc) {
-      toast.error("Please select a document first")
+      toast.error(copy.selectDocFirst)
       return
     }
 
     if (!userId) {
-      toast.error("User identity not ready yet")
+      toast.error(copy.userNotReady)
       return
     }
 
     if (!sessionId) {
-      toast.error("Session not ready yet")
+      toast.error(copy.sessionNotReady)
       return
     }
 
@@ -602,7 +475,7 @@ export default function ChatPanel({
         answer: "",
         sources: [],
         timestamp,
-        language: language === "ms" ? "ms" : "en",
+        language,
         confidence: 0,
         latency_ms: 0,
         cached: false,
@@ -844,23 +717,28 @@ export default function ChatPanel({
     }
   }
 
-  const handleSuggestionClick = (suggestion: string) => {
-    submitQuestion(suggestion)
-  }
+  // Stable identities so React.memo on the message cards actually skips
+  // re-renders during token streaming.
+  const submitQuestionRef = useRef(submitQuestion)
+  submitQuestionRef.current = submitQuestion
 
-  const toggleSources = (messageIndex: number) => {
+  const handleSuggestionClick = React.useCallback((suggestion: string) => {
+    submitQuestionRef.current(suggestion)
+  }, [])
+
+  const toggleSources = React.useCallback((messageId: string) => {
     setExpandedSources((prev) => {
       const next = new Set(prev)
 
-      if (next.has(messageIndex)) {
-        next.delete(messageIndex)
+      if (next.has(messageId)) {
+        next.delete(messageId)
       } else {
-        next.add(messageIndex)
+        next.add(messageId)
       }
 
       return next
     })
-  }
+  }, [])
 
 
   const exportChatHistory = () => {
@@ -898,12 +776,19 @@ export default function ChatPanel({
     URL.revokeObjectURL(url)
   }
 
-  const copyToClipboard = async (text: string, id: string) => {
-    await navigator.clipboard.writeText(text)
-    setCopiedId(id)
-    window.setTimeout(() => setCopiedId(null), 2000)
-    toast.success(copy.copied)
-  }
+  const copiedToastRef = useRef(copy.copied)
+  copiedToastRef.current = copy.copied
+
+  const copyToClipboard = React.useCallback(async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedId(id)
+      window.setTimeout(() => setCopiedId(null), 2000)
+      toast.success(copiedToastRef.current)
+    } catch {
+      // Clipboard denied (non-HTTPS / permissions) — nothing else to do
+    }
+  }, [])
 
   const handleSelectThread = (nextSessionId: string) => {
     if (!selectedDoc) return
@@ -972,166 +857,115 @@ export default function ChatPanel({
         className="h-full min-w-0 flex-1 font-sans"
       >
       <AiChatBody className="min-h-0">
-        <div ref={scrollContainerRef} className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
-          <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
-            <AnimatePresence>
-              {selectedDoc && showHistory ? (
-                <motion.div
-                  key="history-panel"
-                  initial={{
-                    opacity: 0,
-                    height: 0,
-                    filter: shouldReduce ? "blur(0px)" : "blur(8px)",
-                  }}
-                  animate={{ opacity: 1, height: "auto", filter: "blur(0px)" }}
-                  exit={{
-                    opacity: 0,
-                    height: 0,
-                    filter: shouldReduce ? "blur(0px)" : "blur(8px)",
-                  }}
-                  transition={{
-                    duration: shouldReduce ? 0.01 : 0.3,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  }}
-                  className="overflow-hidden"
+        {selectedDoc && !historyLoading && messages.length > 0 ? (
+          <MessageScrollerProvider
+            autoScroll
+            defaultScrollPosition="last-anchor"
+            scrollPreviousItemPeek={64}
+          >
+            <MessageScroller>
+              <MessageScrollerViewport className="scrollbar-thumb-muted scrollbar-track-transparent">
+                <MessageScrollerContent
+                  aria-busy={loading}
+                  className="mx-auto w-full max-w-5xl gap-3 px-4 py-4 sm:gap-4 sm:px-6 sm:py-6"
                 >
-                  <div className="mb-4 border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold">
-                          {copy.threadList}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {copy.threadDesc}
-                        </p>
-                      </div>
+                  {showHistory ? (
+                    <MessageScrollerItem messageId="thread-history">
+                      <AnimatePresence>
+                        <ThreadHistoryPanel
+                          threads={threads}
+                          activeSessionId={sessionId}
+                          copy={copy}
+                          onSelectThread={handleSelectThread}
+                          onNewChat={handleNewChat}
+                        />
+                      </AnimatePresence>
+                    </MessageScrollerItem>
+                  ) : null}
 
-                      <button
-                        type="button"
-                        onClick={handleNewChat}
-                        className="inline-flex items-center gap-2 border border-border/50 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
+                  {messages.map((message, index) => (
+                    <React.Fragment key={message.id}>
+                      <MessageScrollerItem
+                        messageId={`${message.id}-q`}
+                        scrollAnchor
                       >
-                        <Plus className="h-3.5 w-3.5" />
-                        {copy.newChat}
-                      </button>
-                    </div>
+                        <UserMessageBubble
+                          message={message}
+                          copiedId={copiedId}
+                          copyToClipboard={copyToClipboard}
+                        />
+                      </MessageScrollerItem>
+                      <MessageScrollerItem messageId={message.id}>
+                        <AIMessageCard
+                          message={message}
+                          isLatest={index === messages.length - 1}
+                          expandedSources={expandedSources}
+                          toggleSources={toggleSources}
+                          copiedId={copiedId}
+                          copyToClipboard={copyToClipboard}
+                          docPublicUrl={selectedDoc?.public_url ?? undefined}
+                          autoSpeak={autoSpeak}
+                          onOpenPdf={handleOpenPdf}
+                          onSuggestionClick={handleSuggestionClick}
+                          sessionId={sessionId}
+                          docId={selectedDoc?.id}
+                          simpleMode={simpleMode}
+                        />
+                      </MessageScrollerItem>
+                    </React.Fragment>
+                  ))}
 
-                    {threads.length === 0 ? (
-                      <div className="border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-                        {copy.noSavedThreads}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {threads.map((thread) => {
-                          const isActive = thread.sessionId === sessionId
-
-                          return (
-                            <button
-                              key={thread.sessionId}
-                              type="button"
-                              onClick={() =>
-                                handleSelectThread(thread.sessionId)
-                              }
-                              className={[
-                                "w-full border p-3 text-left transition-colors",
-                                isActive
-                                  ? "border-primary/40 bg-primary/5"
-                                  : "border-border/50 bg-background hover:bg-muted/40",
-                              ].join(" ")}
-                            >
-                              <div className="mb-1 flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                  <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
-                                  <span className="text-xs font-medium text-foreground">
-                                    {new Date(
-                                      thread.lastUpdated
-                                    ).toLocaleString([], {
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </span>
-                                </div>
-
-                                <span className="text-[11px] text-muted-foreground">
-                                  {thread.messageCount} {copy.messages}
-                                </span>
-                              </div>
-
-                              <p className="line-clamp-1 text-sm font-medium text-foreground">
-                                {thread.previewQuestion}
-                              </p>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-
-            {!selectedDoc ? (
-              (emptyState ?? (
-                <div className="flex min-h-[60vh] flex-col items-center justify-center">
-                  <div className="max-w-md p-8 text-center">
-                    <div className="mx-auto mb-6 inline-flex">
-                      <div className="border border-border/50 bg-muted/20 p-8">
-                        <FileText className="mx-auto h-16 w-16 text-primary/60" />
-                      </div>
-                    </div>
-                    <h3 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
-                      {copy.noDoc}
-                    </h3>
-                    <p className="text-muted-foreground">{copy.noDocDesc}</p>
-                  </div>
-                </div>
-              ))
-            ) : historyLoading ? (
-              <div className="flex min-h-[40vh] items-center justify-center">
-                <TypingIndicator />
-              </div>
-            ) : messages.length === 0 ? (
-              <EmptyState onChipClick={(q) => submitQuestion(q)} />
-            ) : (
-              <div className="space-y-4 sm:space-y-6">
-                {messages.map((message, index) => (
-                  <div
-                    key={message.id}
-                    className="animate-in fade-in slide-in-from-bottom-2 space-y-3 duration-200 sm:space-y-4"
-                  >
-                    <UserMessageBubble
-                      message={message}
-                      copiedId={copiedId}
-                      copyToClipboard={copyToClipboard}
-                    />
-                    <AIMessageCard
-                      message={message}
-                      index={index}
-                      isLatest={index === messages.length - 1}
-                      expandedSources={expandedSources}
-                      toggleSources={toggleSources}
-                      copiedId={copiedId}
-                      copyToClipboard={copyToClipboard}
-                      docPublicUrl={selectedDoc?.public_url ?? undefined}
-                      autoSpeak={autoSpeak}
-                      onOpenPdf={handleOpenPdf}
-                      onSuggestionClick={handleSuggestionClick}
-                      sessionId={sessionId}
-                      docId={selectedDoc?.id}
-                    />
-                  </div>
-                ))}
-
-                {loading && !messages.some((message) => message.isStreaming) ? (
-                  <TypingIndicator />
+                  {loading && !messages.some((message) => message.isStreaming) ? (
+                    <MessageScrollerItem messageId="typing-indicator">
+                      <TypingIndicator />
+                    </MessageScrollerItem>
+                  ) : null}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              <MessageScrollerButton />
+            </MessageScroller>
+          </MessageScrollerProvider>
+        ) : (
+          <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
+            <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 sm:py-6">
+              <AnimatePresence>
+                {selectedDoc && showHistory ? (
+                  <ThreadHistoryPanel
+                    threads={threads}
+                    activeSessionId={sessionId}
+                    copy={copy}
+                    onSelectThread={handleSelectThread}
+                    onNewChat={handleNewChat}
+                  />
                 ) : null}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
+              </AnimatePresence>
+
+              {!selectedDoc ? (
+                (emptyState ?? (
+                  <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                    <div className="max-w-md p-8 text-center">
+                      <div className="mx-auto mb-6 inline-flex">
+                        <div className="border border-border/50 bg-muted/20 p-8">
+                          <FileText className="mx-auto h-16 w-16 text-primary/60" />
+                        </div>
+                      </div>
+                      <h3 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
+                        {copy.noDoc}
+                      </h3>
+                      <p className="text-muted-foreground">{copy.noDocDesc}</p>
+                    </div>
+                  </div>
+                ))
+              ) : historyLoading ? (
+                <div className="flex min-h-[40vh] items-center justify-center">
+                  <TypingIndicator />
+                </div>
+              ) : (
+                <EmptyState onChipClick={(q) => submitQuestion(q)} />
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </AiChatBody>
 
       <AiChatFooter className="bg-background/95 backdrop-blur-sm">
@@ -1149,38 +983,40 @@ export default function ChatPanel({
                 </button>
               ) : null}
 
-              <div className="min-w-0">
-                <p className="truncate text-xs font-medium">
-                  {selectedDoc?.name ?? copy.noDoc}
-                </p>
-                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                  {selectedDoc ? (
-                    <>
-                      <span>PDF</span>
-                      <span className="h-1 w-1 rounded-full bg-primary" />
-                      <span>{copy.ready}</span>
-                      {askAllDocs && readyDocIds.length > 1 ? (
-                        <>
-                          <span className="h-1 w-1 rounded-full bg-primary" />
-                          <span className="inline-flex items-center gap-1 font-medium text-primary">
-                            <Library className="h-3 w-3" />
-                            {copy.allDocsBadge} ({readyDocIds.length})
-                          </span>
-                        </>
-                      ) : null}
-                    </>
+              <Attachment
+                size="xs"
+                state={selectedDoc ? "done" : "idle"}
+                className="min-w-0"
+              >
+                <AttachmentMedia>
+                  {askAllDocs && readyDocIds.length > 1 && selectedDoc ? (
+                    <Library className="text-primary" />
                   ) : (
-                    <span className="truncate">{copy.noDocDesc}</span>
+                    <FileText className="text-primary" />
                   )}
-                </div>
-              </div>
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle className="max-w-[180px] sm:max-w-[280px]">
+                    {selectedDoc?.name ?? copy.noDoc}
+                  </AttachmentTitle>
+                  <AttachmentDescription className="text-[11px]">
+                    {selectedDoc
+                      ? askAllDocs && readyDocIds.length > 1
+                        ? `PDF · ${copy.ready} · ${copy.allDocsBadge} (${readyDocIds.length})`
+                        : `PDF · ${copy.ready}`
+                      : copy.noDocDesc}
+                  </AttachmentDescription>
+                </AttachmentContent>
+              </Attachment>
             </div>
 
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                onClick={() => setLargeText((p) => !p)}
-                aria-label={largeText ? "Switch to normal text size" : "Switch to large text size"}
+                onClick={() =>
+                  setTextSize((p) => (p === "large" ? "normal" : "large"))
+                }
+                aria-label={largeText ? copy.textSizeNormal : copy.textSizeLarge}
                 aria-pressed={largeText}
                 className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
               >
@@ -1224,14 +1060,17 @@ export default function ChatPanel({
                     onClick={() => setShowHistory((prev) => !prev)}
                   >
                     <History className="mr-2 h-4 w-4" />
-                    {showHistory
-                      ? language === "ms"
-                        ? "Sembunyikan sejarah"
-                        : "Hide history"
-                      : copy.history}
+                    {showHistory ? copy.hideHistory : copy.history}
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    onClick={() => setSimpleMode((prev) => !prev)}
+                  >
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    {simpleMode ? copy.simpleViewOff : copy.simpleViewOn}
+                  </DropdownMenuItem>
 
                   <DropdownMenuItem
                     onClick={() => setEnableQueryAugmentation((prev) => !prev)}
@@ -1252,7 +1091,7 @@ export default function ChatPanel({
                   {messages.length > 0 ? (
                     <DropdownMenuItem onClick={exportChatHistory}>
                       <Download className="mr-2 h-4 w-4" />
-                      {language === "ms" ? "Eksport sejarah" : "Export history"}
+                      {copy.exportHistory}
                     </DropdownMenuItem>
                   ) : null}
 
@@ -1283,10 +1122,11 @@ export default function ChatPanel({
                 ? `${copy.waitAgain} ${rateLimitSecondsLeft}s...`
                 : selectedDoc
                   ? copy.askPlaceholder
-                  : "Select a document to start..."
+                  : copy.selectDocPlaceholder
             }
             className="bg-card"
           >
+            {!simpleMode ? (
             <Popover>
               <PopoverTrigger asChild>
                 <button
@@ -1326,6 +1166,7 @@ export default function ChatPanel({
                 </div>
               </PopoverContent>
             </Popover>
+            ) : null}
 
             <VoiceMicButton
               disabled={loading}

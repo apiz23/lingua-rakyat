@@ -28,6 +28,14 @@ import {
 import { AnswerMetrics } from "./answer-metrics"
 import { createShare } from "@/lib/api"
 import { toast } from "sonner"
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+  MessageFooter,
+} from "@/components/ui/message"
+import { Marker, MarkerContent, MarkerIcon } from "@/components/ui/marker"
+import { Loader2 } from "lucide-react"
 
 export interface Message {
   id: string
@@ -78,12 +86,15 @@ function highlightSourceText(text: string, question: string) {
     token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   )
   const regex = new RegExp(`(${escaped.join("|")})`, "gi")
+  // split with one capture group alternates: even indices = plain text,
+  // odd indices = keyword matches. (Never re-test with a /g regex — its
+  // lastIndex is stateful and skips alternate matches.)
   const parts = text.split(regex)
 
   return (
     <>
       {parts.map((part, index) =>
-        regex.test(part) ? (
+        index % 2 === 1 ? (
           <mark
             key={`${index}-${part}`}
             className="bg-warning/30 px-0.5 text-foreground dark:bg-warning/20"
@@ -266,9 +277,8 @@ const SourcePills = React.memo(function SourcePills({
   )
 })
 
-export function AIMessageCard({
+export const AIMessageCard = React.memo(function AIMessageCard({
   message,
-  index,
   isLatest,
   expandedSources,
   toggleSources,
@@ -280,12 +290,12 @@ export function AIMessageCard({
   onSuggestionClick,
   sessionId,
   docId,
+  simpleMode,
 }: {
   message: Message
-  index: number
   isLatest: boolean
-  expandedSources: Set<number>
-  toggleSources: (index: number) => void
+  expandedSources: Set<string>
+  toggleSources: (messageId: string) => void
   copiedId: string | null
   copyToClipboard: (text: string, id: string) => void
   docPublicUrl?: string
@@ -294,17 +304,23 @@ export function AIMessageCard({
   onSuggestionClick?: (question: string) => void
   sessionId?: string
   docId?: string
+  simpleMode?: boolean
 }) {
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
-  const isSourcesOpen = expandedSources.has(index)
+  const isSourcesOpen = expandedSources.has(message.id)
   const langInfo = LANGUAGE_LABELS[message.language] ?? {
     name: message.language,
     code: message.language.toUpperCase(),
   }
 
   const [isStreamed, setIsStreamed] = React.useState(message.cached)
-  const [feedback, setFeedback] = React.useState<"up" | "down" | null>(null)
+  // Feedback survives thread switches/reloads so users can't double-vote.
+  const [feedback, setFeedback] = React.useState<"up" | "down" | null>(() => {
+    if (typeof window === "undefined") return null
+    const stored = window.localStorage.getItem(`lr-feedback:${message.id}`)
+    return stored === "up" || stored === "down" ? stored : null
+  })
   const [highlightedSourceIdx, setHighlightedSourceIdx] = React.useState<number | null>(null)
   const [sharing, setSharing] = useState(false)
   const highlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -316,7 +332,7 @@ export function AIMessageCard({
       // Open PDF panel with cited passage highlighted
       onOpenPdf?.(source?.page_start ?? 1, source?.text ?? null)
       // Open sources panel if closed + highlight the matching card
-      if (!expandedSources.has(index)) toggleSources(index)
+      if (!expandedSources.has(message.id)) toggleSources(message.id)
       if (highlightTimerRef.current !== null) clearTimeout(highlightTimerRef.current)
       setHighlightedSourceIdx(sourceIndex)
       highlightTimerRef.current = setTimeout(() => {
@@ -324,13 +340,18 @@ export function AIMessageCard({
         setHighlightedSourceIdx(null)
       }, 1500)
     },
-    [expandedSources, toggleSources, index, message.sources, onOpenPdf]
+    [expandedSources, toggleSources, message.id, message.sources, onOpenPdf]
   )
 
   const handleFeedback = React.useCallback(
     async (value: "up" | "down") => {
       const next = feedback === value ? null : value
       setFeedback(next)
+      if (next) {
+        window.localStorage.setItem(`lr-feedback:${message.id}`, next)
+      } else {
+        window.localStorage.removeItem(`lr-feedback:${message.id}`)
+      }
       if (!next || !sessionId) return
       try {
         await fetch(`${API_URL}/api/feedback`, {
@@ -347,7 +368,7 @@ export function AIMessageCard({
         // silent — don't interrupt demo on network failure
       }
     },
-    [feedback, sessionId, docId, message.question, message.sources],
+    [feedback, sessionId, docId, message.id, message.question, message.sources],
   )
 
   const handleShare = React.useCallback(
@@ -365,8 +386,15 @@ export function AIMessageCard({
           return
         }
         const url = `${window.location.origin}${result.url}`
-        await navigator.clipboard.writeText(url)
-        toast.success("Link copied! Share via WhatsApp or SMS.")
+        try {
+          await navigator.clipboard.writeText(url)
+          toast.success("Link copied! Share via WhatsApp or SMS.")
+        } catch {
+          // Clipboard denied (non-HTTPS, permissions) — show the link instead
+          toast.info(url, { duration: 12000 })
+        }
+      } catch {
+        toast.error("Couldn't create link — try again")
       } finally {
         setSharing(false)
       }
@@ -412,14 +440,12 @@ export function AIMessageCard({
       }
 
   return (
-    <div className="group flex items-start gap-2 sm:gap-3">
-      <div className="relative mt-1 hidden shrink-0 sm:block">
-        <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:h-10 sm:w-10">
-          <AgentAvatar seed="Charlotte" size={26} />
-        </div>
-      </div>
+    <Message className="group items-start gap-2 sm:gap-3">
+      <MessageAvatar className="mt-1 hidden h-9 w-9 self-start bg-primary/10 ring-1 ring-primary/20 sm:flex sm:h-10 sm:w-10">
+        <AgentAvatar seed="Charlotte" size={26} />
+      </MessageAvatar>
 
-      <div className="min-w-0 max-w-[95%] flex-1 sm:max-w-[85%]">
+      <MessageContent className="min-w-0 max-w-[95%] flex-1 gap-0 sm:max-w-[85%]">
         <div className="relative border border-border/50 bg-card shadow-sm transition-all hover:shadow-md">
           <div className="h-1 w-full bg-linear-to-r from-primary via-primary/60 to-transparent" />
           <div className="p-3.5 sm:p-5">
@@ -441,7 +467,7 @@ export function AIMessageCard({
                 onClick={() =>
                   copyToClipboard(message.answer, `a-${message.timestamp}`)
                 }
-                className="p-1.5 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
+                className="p-1.5 opacity-100 transition-opacity hover:bg-muted sm:opacity-50 sm:group-hover:opacity-100"
                 title="Copy answer"
               >
                 {copiedId === `a-${message.timestamp}` ? (
@@ -456,13 +482,13 @@ export function AIMessageCard({
             <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
               <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", evidenceState.dotColor)} />
               <span>{evidenceState.label}</span>
-              {message.cached ? (
+              {!simpleMode && message.cached ? (
                 <>
                   <span aria-hidden="true">·</span>
                   <span>{language === "ms" ? "cache" : "cached"}</span>
                 </>
               ) : null}
-              {message.latency_ms > 0 ? (
+              {!simpleMode && message.latency_ms > 0 ? (
                 <>
                   <span aria-hidden="true">·</span>
                   <span>
@@ -515,7 +541,7 @@ export function AIMessageCard({
               ) : null
             })()}
 
-            {!message.isStreaming && (
+            {!message.isStreaming && !simpleMode && (
               <AnswerMetrics
                 confidence={message.confidence}
                 faithfulness={message.faithfulness}
@@ -580,38 +606,42 @@ export function AIMessageCard({
                     <button
                       type="button"
                       onClick={() => handleFeedback("up")}
+                      aria-pressed={feedback === "up"}
                       className={[
-                        "p-1 transition-colors hover:text-success",
+                        "p-2 transition-colors hover:text-success",
                         feedback === "up"
                           ? "text-success"
                           : "text-muted-foreground/40",
                       ].join(" ")}
-                      title={language === "ms" ? "Jawapan berguna" : "Helpful"}
+                      title={language === "ms" ? "Jawapan berguna" : language === "zh" ? "有帮助" : "Helpful"}
+                      aria-label={language === "ms" ? "Jawapan berguna" : language === "zh" ? "有帮助" : "Helpful"}
                     >
-                      <ThumbsUp className="h-3.5 w-3.5" />
+                      <ThumbsUp className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleFeedback("down")}
+                      aria-pressed={feedback === "down"}
                       className={[
-                        "p-1 transition-colors hover:text-destructive",
+                        "p-2 transition-colors hover:text-destructive",
                         feedback === "down"
                           ? "text-destructive"
                           : "text-muted-foreground/40",
                       ].join(" ")}
-                      title={language === "ms" ? "Jawapan tidak berguna" : "Not helpful"}
+                      title={language === "ms" ? "Jawapan tidak berguna" : language === "zh" ? "没帮助" : "Not helpful"}
+                      aria-label={language === "ms" ? "Jawapan tidak berguna" : language === "zh" ? "没帮助" : "Not helpful"}
                     >
-                      <ThumbsDown className="h-3.5 w-3.5" />
+                      <ThumbsDown className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={handleShare}
                       disabled={sharing}
-                      aria-label="Share answer"
-                      className="p-1 transition-colors hover:text-foreground text-muted-foreground/40 disabled:opacity-50"
-                      title={language === "ms" ? "Kongsi jawapan" : "Share answer"}
+                      aria-label={language === "ms" ? "Kongsi jawapan" : language === "zh" ? "分享回答" : "Share answer"}
+                      className="p-2 transition-colors hover:text-foreground text-muted-foreground/40 disabled:opacity-50"
+                      title={language === "ms" ? "Kongsi jawapan" : language === "zh" ? "分享回答" : "Share answer"}
                     >
-                      <Share2 className="h-3.5 w-3.5" />
+                      <Share2 className="h-4 w-4" />
                     </button>
                   </div>
                 ) : null}
@@ -620,7 +650,7 @@ export function AIMessageCard({
               {message.sources.length > 0 ? (
                 <button
                   type="button"
-                  onClick={() => toggleSources(index)}
+                  onClick={() => toggleSources(message.id)}
                   aria-expanded={isSourcesOpen}
                   className="flex items-center gap-1.5 border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                 >
@@ -768,13 +798,12 @@ export function AIMessageCard({
             </AnimatePresence>
           </div>
         </div>
-      </div>
-
-    </div>
+      </MessageContent>
+    </Message>
   )
-}
+})
 
-export function UserMessageBubble({
+export const UserMessageBubble = React.memo(function UserMessageBubble({
   message,
   copiedId,
   copyToClipboard,
@@ -784,61 +813,66 @@ export function UserMessageBubble({
   copyToClipboard: (text: string, id: string) => void
 }) {
   return (
-    <div className="group flex items-start justify-end gap-2 sm:gap-3">
-      <div className="min-w-0 max-w-[95%] sm:max-w-[80%]">
-        <div className="relative">
-          <div className="inline-block bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
-            <p className="text-sm leading-relaxed">{message.question}</p>
-          </div>
+    <Message align="end" className="group items-start gap-2 sm:gap-3">
+      <MessageAvatar className="mt-1 hidden h-9 w-9 self-start bg-primary/10 ring-1 ring-primary/30 group-has-data-[slot=message-footer]/message:translate-y-0 sm:flex sm:h-10 sm:w-10">
+        <User className="h-4.5 w-4.5 text-primary sm:h-5 sm:w-5" />
+      </MessageAvatar>
 
-          <div className="mt-1.5 flex items-center justify-end gap-2">
-            <span className="text-xs text-muted-foreground">
-              {new Date(message.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-
-            <button
-              type="button"
-              onClick={() =>
-                copyToClipboard(message.question, `q-${message.timestamp}`)
-              }
-              className="p-1 opacity-100 transition-colors group-hover:opacity-100 hover:bg-muted sm:opacity-0"
-              title="Copy question"
-            >
-              {copiedId === `q-${message.timestamp}` ? (
-                <Check className="h-3.5 w-3.5 text-primary" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-            </button>
-          </div>
+      <MessageContent className="w-auto min-w-0 max-w-[95%] items-end gap-1.5 sm:max-w-[80%]">
+        <div className="inline-block bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
+          <p className="text-sm leading-relaxed">{message.question}</p>
         </div>
-      </div>
 
-      <div className="mt-1 hidden shrink-0 sm:block">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/30 sm:h-10 sm:w-10">
-          <User className="h-4.5 w-4.5 text-primary sm:h-5 sm:w-5" />
-        </div>
-      </div>
-    </div>
+        <MessageFooter className="gap-2 px-0 font-normal">
+          <span className="text-xs text-muted-foreground">
+            {new Date(message.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              copyToClipboard(message.question, `q-${message.timestamp}`)
+            }
+            className="p-1 opacity-100 transition-opacity hover:bg-muted sm:opacity-50 sm:group-hover:opacity-100"
+            title="Copy question"
+          >
+            {copiedId === `q-${message.timestamp}` ? (
+              <Check className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
+          </button>
+        </MessageFooter>
+      </MessageContent>
+    </Message>
   )
-}
+})
 
 export function TypingIndicator() {
+  const { language } = useLanguage()
+  const label =
+    language === "ms"
+      ? "Sedang mencari dalam dokumen..."
+      : language === "zh"
+        ? "正在查找文件..."
+        : "Searching the documents..."
+
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 flex items-start gap-2 duration-150 sm:gap-3">
+    <div className="animate-in fade-in flex items-start gap-2 duration-150 sm:gap-3">
       <div className="relative hidden shrink-0 sm:block">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 sm:h-10 sm:w-10">
           <AgentAvatar seed="Charlotte" size={26} />
         </div>
       </div>
-      <div className="flex items-center gap-2 border border-border/50 bg-card px-4 py-3 shadow-sm sm:px-5 sm:py-4">
-        <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:0ms]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:150ms]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-primary/60 [animation-delay:300ms]" />
-      </div>
+      <Marker role="status" className="w-auto py-2.5">
+        <MarkerIcon>
+          <Loader2 className="animate-spin text-primary" />
+        </MarkerIcon>
+        <MarkerContent>{label}</MarkerContent>
+      </Marker>
     </div>
   )
 }
