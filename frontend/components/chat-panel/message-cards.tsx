@@ -241,13 +241,13 @@ const SourcePills = React.memo(function SourcePills({
         <button
           type="button"
           onClick={() => onPillClick(0, 1)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="group/pill inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label={label}
           title={label}
         >
           <FileText className="h-3 w-3 shrink-0" />
           <span>{label}</span>
-          <ExternalLink className="h-3 w-3 shrink-0 text-primary/60" />
+          <ExternalLink className="h-3 w-3 shrink-0 text-primary/60 group-hover/pill:text-primary-foreground/80" />
         </button>
       </div>
     )
@@ -270,18 +270,18 @@ const SourcePills = React.memo(function SourcePills({
           key={pill.pageStart}
           type="button"
           onClick={() => onPillClick(pill.sourceIndex, pill.pageStart)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="group/pill inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label={`${pageLabel(pill)}${pill.sectionTitle ? ` — ${pill.sectionTitle}` : ""}`}
           title={pill.sectionTitle || pageLabel(pill)}
         >
           <FileText className="h-3 w-3 shrink-0" />
           <span>{pageLabel(pill)}</span>
           {pill.sectionTitle ? (
-            <span className="max-w-[90px] overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground">
+            <span className="max-w-[90px] overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground group-hover/pill:text-primary-foreground/80">
               · {pill.sectionTitle}
             </span>
           ) : null}
-          <ExternalLink className="h-3 w-3 shrink-0 text-primary/60" />
+          <ExternalLink className="h-3 w-3 shrink-0 text-primary/60 group-hover/pill:text-primary-foreground/80" />
         </button>
       ))}
     </div>
