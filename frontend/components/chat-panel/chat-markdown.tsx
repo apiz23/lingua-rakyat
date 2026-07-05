@@ -68,14 +68,14 @@ const markdownComponents: Partial<Components> = {
 
     if (isInline) {
       return (
-        <code className="border border-border/50 bg-muted px-1.5 py-0.5 font-mono text-xs text-primary">
+        <code className="rounded-md border border-border/50 bg-muted px-1.5 py-0.5 font-mono text-xs text-primary">
           {children}
         </code>
       )
     }
 
     return (
-      <pre className="my-4 overflow-x-auto border border-border/50 bg-muted p-4 font-mono text-xs text-foreground/80">
+      <pre className="my-4 overflow-x-auto rounded-xl border border-border/50 bg-muted p-4 font-mono text-xs text-foreground/80">
         <code className={className} {...rest}>
           {children}
         </code>
@@ -93,7 +93,7 @@ const markdownComponents: Partial<Components> = {
     </a>
   ),
   table: (props) => (
-    <div className="my-4 overflow-x-auto border border-border">
+    <div className="my-4 overflow-x-auto rounded-xl border border-border">
       <table className="w-full text-sm">{props.children}</table>
     </div>
   ),
@@ -163,13 +163,13 @@ function WritingBlockCard({ block }: { block: WritingBlock }) {
 
   return (
     <div
-      className="my-4 overflow-hidden border border-primary/20 bg-primary/[0.04]"
+      className="my-4 overflow-hidden rounded-xl border border-primary/20 bg-primary/[0.04]"
       data-writing-variant={variant}
       data-writing-id={id}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/15 bg-primary/[0.06] px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="border border-primary/20 bg-background/70 px-2 py-1 font-mono text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
+          <span className="rounded-full border border-primary/20 bg-background/70 px-2 py-1 font-mono text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
             {variant}
           </span>
           {id ? (

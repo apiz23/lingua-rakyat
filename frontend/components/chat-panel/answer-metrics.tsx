@@ -84,7 +84,7 @@ function Breakdown({ confidence, faithfulness, sources, language }: BreakdownPro
   const hasFaithfulness = typeof faithfulness === "number" && faithfulness > 0
 
   return (
-    <div className="mt-2 space-y-3 border border-border/60 bg-muted/30 px-3 py-3 text-[10px] leading-relaxed text-muted-foreground">
+    <div className="mt-2 space-y-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-[10px] leading-relaxed text-muted-foreground">
 
       {/* Confidence section */}
       <div className="space-y-1.5">

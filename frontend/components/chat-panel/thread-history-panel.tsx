@@ -49,7 +49,7 @@ export function ThreadHistoryPanel({
       }}
       className="overflow-hidden"
     >
-      <div className="mb-4 border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
+      <div className="mb-4 rounded-2xl border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold">{copy.threadList}</h3>
@@ -59,7 +59,7 @@ export function ThreadHistoryPanel({
           <button
             type="button"
             onClick={onNewChat}
-            className="inline-flex items-center gap-2 border border-border/50 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
+            className="inline-flex items-center gap-2 rounded-full border border-border/50 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
           >
             <Plus className="h-3.5 w-3.5" />
             {copy.newChat}
@@ -67,7 +67,7 @@ export function ThreadHistoryPanel({
         </div>
 
         {threads.length === 0 ? (
-          <div className="border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+          <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
             {copy.noSavedThreads}
           </div>
         ) : (
@@ -81,9 +81,9 @@ export function ThreadHistoryPanel({
                   type="button"
                   onClick={() => onSelectThread(thread.sessionId)}
                   className={[
-                    "w-full border p-3 text-left transition-colors",
+                    "w-full rounded-xl border p-3 text-left transition-colors",
                     isActive
-                      ? "border-primary/40 bg-primary/5"
+                      ? "border-primary/40 bg-secondary/60"
                       : "border-border/50 bg-background hover:bg-muted/40",
                   ].join(" ")}
                 >

@@ -177,7 +177,7 @@ function PdfViewer({
         </div>
       )}
 
-      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto bg-[#525659]">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto bg-muted">
         {loadError ? (
           <PdfErrorState
             language={language}

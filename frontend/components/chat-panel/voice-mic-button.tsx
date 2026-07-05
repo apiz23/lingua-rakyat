@@ -75,7 +75,7 @@ export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, tit
           "border-amber-400/40 bg-amber-50 text-amber-600 dark:bg-amber-950/30 cursor-wait",
         // done — green
         isDone &&
-          "border-green-500/30 bg-green-500/10 text-green-600",
+          "border-success/30 bg-success/10 text-success",
         disabled && "cursor-not-allowed opacity-50",
       )}
     >

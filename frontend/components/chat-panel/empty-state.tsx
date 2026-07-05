@@ -80,9 +80,9 @@ export function EmptyState({ onChipClick }: EmptyStateProps) {
           <button
             key={question}
             onClick={() => onChipClick(question)}
-            className="flex items-center gap-3 border border-border bg-card px-4 py-3.5 text-left shadow-sm transition hover:border-primary/40 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left shadow-sm transition hover:border-primary/40 hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-primary/10 text-primary">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
               <Icon className="h-4.5 w-4.5" />
             </span>
             <span className="text-sm leading-snug text-foreground">

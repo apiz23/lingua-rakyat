@@ -39,9 +39,9 @@ function relativeTime(iso: string): string {
 
 function docStatusIcon(status: Document["status"]) {
   switch (status) {
-    case "ready": return <CheckCircle className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-    case "processing": return <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-amber-500" />
-    case "error": return <CircleAlert className="h-3.5 w-3.5 shrink-0 text-red-500" />
+    case "ready": return <CheckCircle className="h-3.5 w-3.5 shrink-0 text-success" />
+    case "processing": return <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-warning" />
+    case "error": return <CircleAlert className="h-3.5 w-3.5 shrink-0 text-destructive" />
     default: return <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
   }
 }
@@ -70,7 +70,7 @@ export function ConversationSidebar({
   return (
     <aside
       className={cn(
-        "flex h-full w-64 shrink-0 flex-col border-r border-border bg-card",
+        "flex h-full w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
         className
       )}
     >
@@ -105,8 +105,9 @@ export function ConversationSidebar({
               key={conv.session_id}
               onClick={() => onSelectConversation(conv.session_id)}
               className={cn(
-                "flex w-full flex-col gap-0.5 rounded-md px-2 py-2 text-left text-sm hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                activeSessionId === conv.session_id && "bg-primary/10 font-medium"
+                "flex w-full flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors hover:bg-sidebar-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                activeSessionId === conv.session_id &&
+                  "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
               )}
             >
               <span className="flex items-center gap-1.5 truncate">
@@ -137,7 +138,7 @@ export function ConversationSidebar({
           documents.map((doc) => (
             <div
               key={doc.id}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs"
+              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs"
             >
               {docStatusIcon(doc.status)}
               <span className="truncate text-foreground">{doc.name}</span>
@@ -145,15 +146,14 @@ export function ConversationSidebar({
           ))
         )}
 
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={onUpload}
-          className="mt-1 w-full justify-start gap-2 text-xs text-muted-foreground hover:text-foreground"
+          className="mt-2 mb-3 flex w-full items-center gap-2 rounded-lg border-[1.5px] border-dashed border-border px-2.5 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <Upload className="h-3.5 w-3.5" />
           Upload PDF
-        </Button>
+        </button>
       </ScrollArea>
     </aside>
   )

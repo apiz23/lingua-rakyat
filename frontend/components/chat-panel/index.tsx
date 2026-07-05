@@ -1001,7 +1001,7 @@ export default function ChatPanel({
                   <div className="flex min-h-[60vh] flex-col items-center justify-center">
                     <div className="max-w-md p-8 text-center">
                       <div className="mx-auto mb-6 inline-flex">
-                        <div className="border border-border/50 bg-muted/20 p-8">
+                        <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-sm">
                           <FileText className="mx-auto h-16 w-16 text-primary/60" />
                         </div>
                       </div>
@@ -1032,7 +1032,7 @@ export default function ChatPanel({
                 <button
                   type="button"
                   onClick={onBack}
-                  className="shrink-0 p-2 hover:bg-muted"
+                  className="shrink-0 rounded-lg p-2 transition-colors hover:bg-muted"
                   title={copy.back}
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -1074,7 +1074,7 @@ export default function ChatPanel({
                 }
                 aria-label={largeText ? copy.textSizeNormal : copy.textSizeLarge}
                 aria-pressed={largeText}
-                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
+                className="rounded-full border border-border/60 bg-card px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
               >
                 {largeText ? "A" : "A⁺"}
               </button>
@@ -1082,7 +1082,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={toggleLanguage}
-                className="border border-border/50 px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
+                className="rounded-full border border-border/60 bg-card px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
                 title={copy.language}
               >
                 {language === "ms" ? "EN" : language === "en" ? "中文" : "BM"}
@@ -1091,7 +1091,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
                 title={copy.newChat}
               >
                 <Plus className="h-4 w-4" />
@@ -1101,7 +1101,7 @@ export default function ChatPanel({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
                     title={copy.options}
                   >
                     <MoreVertical className="h-4 w-4" />
