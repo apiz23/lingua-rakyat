@@ -53,6 +53,8 @@ import logo from "@/public/icons/android-chrome-512x512.png"
 import { HyperText } from "@/components/ui/hyper-text"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Backlight } from "@/components/ui/backlight"
+import bgNew from "@/public/assets/background-new3.png"
+import bgMobile from "@/public/assets/bg-mobile.png"
 import mykadImg from "@/public/assets/MyKad.png"
 import passportImg from "@/public/assets/passport.png"
 import personImg from "@/public/assets/person.png"
@@ -555,6 +557,17 @@ export default function Home() {
 
   return (
     <div className="relative min-h-dvh bg-background">
+      {/* Background Image */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url(${isMobile ? bgMobile.src : bgNew.src})`,
+        }}
+      />
+
+      {/* Overlay for text readability */}
+      <div className="absolute inset-0 z-[1] bg-background/40 backdrop-blur-[1px] dark:bg-background/72 dark:backdrop-blur-[2px]" />
+
       <main className="relative z-10 mx-auto w-full max-w-[1152px] px-4 sm:px-6 lg:px-10 xl:px-12">
         <motion.section
           style={{ opacity: heroOpacity, scale: heroScale }}
