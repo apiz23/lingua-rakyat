@@ -241,7 +241,7 @@ const SourcePills = React.memo(function SourcePills({
         <button
           type="button"
           onClick={() => onPillClick(0, 1)}
-          className="inline-flex items-center gap-1.5 border border-primary/70 bg-primary/15 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary hover:bg-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label={label}
           title={label}
         >
@@ -270,7 +270,7 @@ const SourcePills = React.memo(function SourcePills({
           key={pill.pageStart}
           type="button"
           onClick={() => onPillClick(pill.sourceIndex, pill.pageStart)}
-          className="inline-flex items-center gap-1.5 border border-primary/70 bg-primary/15 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:border-primary hover:bg-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           aria-label={`${pageLabel(pill)}${pill.sectionTitle ? ` — ${pill.sectionTitle}` : ""}`}
           title={pill.sectionTitle || pageLabel(pill)}
         >
@@ -468,17 +468,16 @@ export const AIMessageCard = React.memo(function AIMessageCard({
       </MessageAvatar>
 
       <MessageContent className="min-w-0 max-w-[95%] flex-1 gap-0 sm:max-w-[85%]">
-        <div className="relative border border-border/50 bg-card shadow-sm transition-all hover:shadow-md">
-          <div className="h-1 w-full bg-linear-to-r from-primary via-primary/60 to-transparent" />
+        <div className="relative overflow-hidden rounded-2xl rounded-tl-md border border-border/60 bg-card shadow-sm transition-all hover:shadow-md">
           <div className="p-3.5 sm:p-5">
             {/* Primary row: language badge + copy button */}
             <div className="mb-1.5 flex items-center justify-between gap-3">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <div className="flex items-center gap-1.5 border border-primary/20 bg-primary/10 px-2 py-1">
-                  <span className="bg-primary/20 px-1 font-mono text-[10px] text-primary">
+                <div className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1">
+                  <span className="font-mono text-[10px] font-bold text-secondary-foreground">
                     {langInfo.code}
                   </span>
-                  <span className="truncate text-xs font-medium text-primary">
+                  <span className="truncate text-xs font-bold text-secondary-foreground">
                     {langInfo.name}
                   </span>
                 </div>
@@ -593,7 +592,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                       key={i}
                       type="button"
                       onClick={() => onSuggestionClick?.(q)}
-                      className="w-fit max-w-full truncate border border-primary/20 bg-primary/5 px-3 py-1.5 text-left text-xs font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      className="w-fit max-w-full truncate rounded-full bg-secondary px-3 py-1.5 text-left text-xs font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       {q}
                     </button>
@@ -674,7 +673,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                   type="button"
                   onClick={() => toggleSources(message.id)}
                   aria-expanded={isSourcesOpen}
-                  className="flex items-center gap-1.5 border border-border/50 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                  className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
                   {isSourcesOpen ? (
@@ -742,7 +741,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                         <div
                           key={sourceIndex}
                           className={cn(
-                            "animate-in fade-in slide-in-from-top-1 relative border p-3 transition-all duration-300 sm:p-4",
+                            "animate-in fade-in slide-in-from-top-1 relative rounded-xl border p-3 transition-all duration-300 sm:p-4",
                             highlightedSourceIdx === sourceIndex
                               ? "border-primary/60 bg-primary/5 ring-1 ring-primary/30"
                               : "border-border/50 bg-muted/20 hover:bg-muted/40"
@@ -781,7 +780,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                                         source.doc_name
                                       )
                                     }
-                                    className="ml-1 inline-flex items-center gap-1 border border-primary/60 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:border-primary/80 hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                                    className="ml-1 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                                     title={language === "ms" ? "Lihat halaman asal" : "View source page"}
                                   >
                                     <ExternalLink className="h-3 w-3" />
@@ -848,7 +847,7 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
       </MessageAvatar>
 
       <MessageContent className="w-auto min-w-0 max-w-[95%] items-end gap-1.5 sm:max-w-[80%]">
-        <div className="inline-block bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
+        <div className="inline-block rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
           <p className="text-sm leading-relaxed">{message.question}</p>
         </div>
 

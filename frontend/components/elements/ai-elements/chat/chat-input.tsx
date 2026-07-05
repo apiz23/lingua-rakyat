@@ -161,7 +161,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           type="button"
           onClick={() => void doSubmit()}
           disabled={disabled || loading || !inputValue.trim()}
-          className="shrink-0 rounded-xl"
+          className="shrink-0 rounded-full"
           size="icon-sm"
           title="Send"
         >

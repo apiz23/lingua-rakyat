@@ -13,7 +13,7 @@ import { TopoPattern } from "@/components/ui/topo-pattern"
 
 import {
   Atkinson_Hyperlegible,
-  Bricolage_Grotesque,
+  Space_Grotesk,
   JetBrains_Mono,
 } from "next/font/google"
 
@@ -24,10 +24,10 @@ const atkinson = Atkinson_Hyperlegible({
   display: "swap",
 })
 
-const bricolage = Bricolage_Grotesque({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-heading",
-  weight: ["500", "600", "700", "800"],
+  weight: ["500", "600", "700"],
   display: "swap",
 })
 
@@ -91,7 +91,7 @@ export default function RootLayout({
       className={cn(
         "antialiased",
         atkinson.variable,
-        bricolage.variable,
+        spaceGrotesk.variable,
         jetbrainsMono.variable
       )}
     >

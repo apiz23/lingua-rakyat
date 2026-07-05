@@ -1168,7 +1168,7 @@ export default function ChatPanel({
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
                 title={copy.mentionOnlyTitle}
-                className="inline-flex max-w-full items-center gap-1.5 border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary"
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-secondary-foreground"
               >
                 <FileText className="h-3 w-3 shrink-0" />
                 <span className="truncate">@{mentionDoc.name}</span>
@@ -1186,7 +1186,7 @@ export default function ChatPanel({
 
           <div className="relative" onKeyDownCapture={handleMentionKeyDown}>
             {mentionQuery !== null ? (
-              <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm border border-border bg-popover shadow-md">
+              <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-popover shadow-md">
                 <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                   {copy.mentionListTitle}
                 </div>
@@ -1240,7 +1240,7 @@ export default function ChatPanel({
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="h-8 w-fit border border-border/50 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+                  className="h-8 w-fit rounded-full border border-border/60 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
                 >
                   {shortModelLabel(selectedPopoverModel)}
                 </button>
@@ -1290,7 +1290,7 @@ export default function ChatPanel({
               type="button"
               onClick={toggleAutoSpeak}
               className={cn(
-                "flex items-center gap-1 rounded border px-2 py-1 text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
+                "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
                 autoSpeak
                   ? "border-primary/30 bg-primary/10 text-primary"
                   : "border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground"

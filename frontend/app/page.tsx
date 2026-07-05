@@ -33,7 +33,6 @@ import Footer from "@/components/footer"
 import LogoCarousel from "@/components/ui/logo-carousel"
 import { useMobile } from "@/hooks/use-mobile"
 import { useLanguage } from "@/components/language-provider"
-import { useTheme } from "next-themes"
 import { LinkPreview } from "@/components/ui/link-preview"
 import {
   MediaPlayer,
@@ -54,8 +53,6 @@ import logo from "@/public/icons/android-chrome-512x512.png"
 import { HyperText } from "@/components/ui/hyper-text"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Backlight } from "@/components/ui/backlight"
-import bgNew from "@/public/assets/background-new3.png"
-import bgMobile from "@/public/assets/bg-mobile.png"
 import mykadImg from "@/public/assets/MyKad.png"
 import passportImg from "@/public/assets/passport.png"
 import personImg from "@/public/assets/person.png"
@@ -235,18 +232,14 @@ function ScaleIn({
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const { language, toggleLanguage } = useLanguage()
-  const { theme } = useTheme()
   const isMobile = useMobile()
-  const isDark = theme === "dark"
   const shouldReduce = useReducedMotion()
   const { scrollYProgress } = useScroll()
   const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.8])
   const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.98])
-  const surfaceClass = isDark
-    ? "border-white/10 bg-background/72 shadow-[0_18px_45px_-28px_rgba(0,0,0,0.65)]"
-    : "border-border bg-card/40 shadow-sm"
-  const mutedTextClass = isDark ? "text-foreground/78" : "text-muted-foreground"
-  const faintTextClass = isDark ? "text-foreground/60" : "text-muted-foreground"
+  const surfaceClass = "border-border bg-card shadow-sm"
+  const mutedTextClass = "text-muted-foreground"
+  const faintTextClass = "text-muted-foreground"
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -561,20 +554,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-dvh">
-      {/* Background Image */}
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url(${isMobile ? bgMobile.src : bgNew.src})`,
-        }}
-      />
-
-      {/* Optional overlay for better text readability */}
-      <div
-        className={`absolute inset-0 z-[1] ${isDark ? "bg-background/72 backdrop-blur-[2px]" : "bg-background/40 backdrop-blur-[1px]"}`}
-      />
-
+    <div className="relative min-h-dvh bg-background">
       <main className="relative z-10 mx-auto w-full max-w-[1152px] px-4 sm:px-6 lg:px-10 xl:px-12">
         <motion.section
           style={{ opacity: heroOpacity, scale: heroScale }}
@@ -610,7 +590,7 @@ export default function Home() {
                       ? "Switch to English"
                       : "Tukar ke Bahasa Melayu"
                   }
-                  className={`border px-3 py-1.5 text-xs font-semibold tracking-[0.18em] uppercase backdrop-blur-sm transition-colors hover:border-primary/30 hover:text-primary ${isDark ? "border-white/12 bg-background/75 text-foreground/78" : "border-border/50 bg-background/40 text-muted-foreground"}`}
+                  className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary"
                 >
                   {language === "ms" ? "EN" : "MS"}
                 </button>
@@ -708,7 +688,7 @@ export default function Home() {
               >
                 <motion.div
                   variants={itemVariants}
-                  className="relative z-10 mb-4 inline-flex items-center gap-1.5 border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium text-primary backdrop-blur-sm transition-all hover:border-primary/40 hover:bg-primary/15 sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
+                  className="relative z-10 mb-4 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground transition-all hover:bg-secondary/80 sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
                 >
                   <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-4 lg:w-4" />
                   <span className="tracking-wide">{copy.kicker}</span>
@@ -796,7 +776,7 @@ export default function Home() {
                   {copy.strip.map((item, i) => (
                     <div
                       key={item.label}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 sm:gap-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 ${isDark ? "border border-white/10 bg-background/55" : "border border-border/40 bg-muted/20"}`}
+                      className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-2.5 py-1 sm:gap-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
                     >
                       <item.icon className="h-3 w-3 shrink-0 text-primary/70 sm:h-3.5 sm:w-3.5" />
                       <span className="font-medium">{item.label}</span>
@@ -815,15 +795,9 @@ export default function Home() {
 
         <FadeInUp>
           <section className="pb-16 sm:pb-24 lg:pb-32">
-            <div
-              className={`group relative overflow-hidden border p-4 backdrop-blur-sm transition-all hover:shadow-md sm:p-6 lg:p-8 ${surfaceClass}`}
-            >
-              <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-
+            <div className="group relative overflow-hidden rounded-2xl bg-[oklch(0.2_0.03_152)] p-4 text-[oklch(0.85_0.02_152)] shadow-lg transition-all hover:shadow-xl sm:p-6 lg:p-8">
               <div className="relative">
-                <div
-                  className={`mb-3 flex items-center gap-2 text-xs sm:mb-4 ${faintTextClass}`}
-                >
+                <div className="mb-3 flex items-center gap-2 text-xs text-[oklch(0.65_0.05_152)] sm:mb-4">
                   <FileText className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
                   <span className="font-mono text-xs tracking-[0.12em] uppercase">
                     BANTUAN_RAKYAT_1MALAYSIA_2024.PDF
@@ -832,24 +806,22 @@ export default function Home() {
 
                 <div className="space-y-4 font-mono text-xs sm:space-y-5 sm:text-sm">
                   <div>
-                    <span className="font-bold text-primary">{">"} </span>
-                    <span className="text-foreground">{copy.previewQ}</span>
+                    <span className="font-bold text-[oklch(0.7_0.15_152)]">
+                      {">"}{" "}
+                    </span>
+                    <span>{copy.previewQ}</span>
                   </div>
 
-                  <div
-                    className={`px-3 py-2 sm:px-4 ${isDark ? "bg-background/58 text-foreground/78" : "bg-muted/20 text-muted-foreground"}`}
-                  >
+                  <div className="rounded-lg bg-[oklch(0.25_0.03_152)] px-3 py-2 text-[oklch(0.82_0.02_152)] sm:px-4 sm:py-3">
                     <p className="leading-relaxed">{copy.previewA}</p>
-                    <div
-                      className={`mt-2 flex items-center gap-1.5 text-xs sm:mt-3 ${faintTextClass}`}
-                    >
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-[oklch(0.6_0.03_152)] sm:mt-3">
                       <BookOpen className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
                       <span>&mdash; {copy.previewSrc}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground/30">{">"}</span>
+                    <span className="text-[oklch(0.5_0.03_152)]">{">"}</span>
                     <motion.span
                       animate={{ opacity: [1, 1, 0, 0] }}
                       transition={{
@@ -857,7 +829,7 @@ export default function Home() {
                         repeat: Infinity,
                         times: [0, 0.45, 0.5, 1],
                       }}
-                      className="ml-1 inline-block h-[1em] w-1.5 bg-primary align-middle sm:w-2"
+                      className="ml-1 inline-block h-[1em] w-1.5 bg-[oklch(0.7_0.15_152)] align-middle sm:w-2"
                     />
                   </div>
                 </div>
@@ -891,27 +863,21 @@ export default function Home() {
           </FadeInLeft>
 
           <FadeInUp>
-            <div
-              className={`mt-8 overflow-x-auto border backdrop-blur-sm ${isDark ? "border-white/10 bg-background/74" : "border-border bg-background/40"}`}
-            >
+            <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-card">
               <table className="w-full min-w-[640px] border-collapse text-sm sm:min-w-[860px]">
-                <thead className={isDark ? "bg-background/90" : "bg-muted/30"}>
+                <thead className="bg-muted/50">
                   <tr>
-                    <th
-                      className={`w-[320px] border-b px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase ${isDark ? "border-white/10 text-foreground/72" : "border-border text-muted-foreground"}`}
-                    >
+                    <th className="w-[320px] border-b border-border px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                       Feature
                     </th>
                     {comparison.columns.map((col, colIdx) => (
                       <th
                         key={col}
                         className={[
-                          `border-b px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase ${isDark ? "border-white/10" : "border-border"}`,
+                          "border-b border-border px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase",
                           colIdx === 0
-                            ? "bg-primary/[0.08] text-primary"
-                            : isDark
-                              ? "text-foreground/72"
-                              : "text-muted-foreground",
+                            ? "bg-secondary text-secondary-foreground"
+                            : "text-muted-foreground",
                           colIdx >= 3 ? "hidden sm:table-cell" : "",
                         ].join(" ")}
                       >
@@ -922,12 +888,7 @@ export default function Home() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {comparison.rows.map((row) => (
-                    <tr
-                      key={row.label}
-                      className={
-                        isDark ? "hover:bg-background/80" : "hover:bg-muted/20"
-                      }
-                    >
+                    <tr key={row.label} className="hover:bg-muted/30">
                       <td className="px-4 py-3 font-medium text-foreground/80">
                         {row.label}
                       </td>
@@ -936,23 +897,17 @@ export default function Home() {
                           key={idx}
                           className={[
                             "px-4 py-3",
-                            idx === 0 ? "bg-primary/[0.08]" : "",
+                            idx === 0 ? "bg-secondary/50" : "",
                             idx >= 3 ? "hidden sm:table-cell" : "",
                           ].join(" ")}
                         >
                           {value ? (
-                            <span className="inline-flex items-center text-primary">
+                            <span className="inline-flex items-center font-bold text-primary">
                               <Check className="h-4 w-4" />
                               <span className="sr-only">yes</span>
                             </span>
                           ) : (
-                            <span
-                              className={
-                                isDark
-                                  ? "text-foreground/55"
-                                  : "text-muted-foreground"
-                              }
-                            >
+                            <span className="text-muted-foreground/60">
                               &mdash;
                             </span>
                           )}
@@ -980,7 +935,7 @@ export default function Home() {
             {copy.steps.map((step, i) => (
               <FadeInUp key={step.n} delay={i * 0.1}>
                 <motion.div
-                  className={`group relative min-h-60 overflow-hidden border p-5 backdrop-blur-sm hover:border-primary/30 hover:shadow-lg sm:p-6 ${surfaceClass} ${isDark ? "hover:bg-background/80" : "hover:bg-card/60"}`}
+                  className={`group relative min-h-60 overflow-hidden rounded-2xl border p-5 hover:border-primary/30 hover:shadow-lg sm:p-6 ${surfaceClass}`}
                   whileHover={shouldReduce ? {} : { y: -4, scale: 1.012 }}
                   whileTap={shouldReduce ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 280, damping: 22 }}
@@ -1020,7 +975,7 @@ export default function Home() {
             {copy.features.map((f, i) => (
               <FadeInUp key={f.label} delay={i * 0.07}>
                 <div
-                  className={`group flex h-full flex-col border p-5 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-md sm:p-6 ${isDark ? "border-white/10 bg-background/72 hover:bg-background/80" : "border-border bg-background/40 hover:bg-primary/[0.03]"}`}
+                  className="group flex h-full flex-col rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-md sm:p-6"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/15">
@@ -1055,7 +1010,7 @@ export default function Home() {
           </FadeInLeft>
 
           <ScaleIn>
-            <div className="mt-6 overflow-hidden border border-border shadow-sm transition-all hover:shadow-md sm:mt-8">
+            <div className="mt-6 overflow-hidden rounded-2xl border border-border shadow-sm transition-all hover:shadow-md sm:mt-8">
               <div
                 className="relative w-full"
                 style={{ paddingBottom: "56.25%" }}
@@ -1112,7 +1067,7 @@ export default function Home() {
               ].map((tech) => (
                 <LinkPreview key={tech.name} url={tech.url}>
                   <span
-                    className={`inline-block cursor-pointer border px-3 py-1.5 text-xs font-medium text-foreground backdrop-blur-sm transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary hover:shadow-sm sm:px-5 sm:py-2 sm:text-sm ${isDark ? "border-white/10 bg-background/72" : "border-border bg-background/40"}`}
+                    className="inline-block cursor-pointer rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-secondary hover:text-primary hover:shadow-sm sm:px-5 sm:py-2 sm:text-sm"
                   >
                     {tech.name}
                   </span>
