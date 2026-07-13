@@ -131,7 +131,13 @@ def _format_answer(result: dict) -> str:
         score = top.get("score", 0)
         source_line = f"\n\n{source_label}: {doc}, pg {page} (score: {score:.2f})"
 
-    return f"{answer}{source_line}\n{confidence_emoji}".strip()
+    note = ""
+    if result.get("evidence_mode") in ("cautious", "insufficient"):
+        sentence = result.get("confidence_explanation")
+        if sentence:
+            note = f"\n⚠ {sentence}"
+
+    return f"{answer}{source_line}\n{confidence_emoji}{note}".strip()
 
 
 def _get_documents() -> list:

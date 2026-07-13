@@ -110,7 +110,13 @@ def _format_answer(result: dict) -> str:
             f"pg {top.get('page_start', '?')} (score: {top.get('score', 0):.2f})"
         )
 
-    return f"{answer}{source_line}\n{confidence_emoji}".strip()
+    note = ""
+    if result.get("evidence_mode") in ("cautious", "insufficient"):
+        sentence = result.get("confidence_explanation")
+        if sentence:
+            note = f"\n⚠ {sentence}"
+
+    return f"{answer}{source_line}\n{confidence_emoji}{note}".strip()
 
 
 # ── Update handlers ───────────────────────────────────────────────────────────
