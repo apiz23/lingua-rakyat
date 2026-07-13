@@ -9,6 +9,7 @@ import {
   getCachedHistory,
   offlineSearchAnswer,
 } from "@/lib/offline-cache"
+import { authHeader } from "@/lib/auth-token"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 
@@ -188,7 +189,16 @@ async function apiFetch(
   input: RequestInfo,
   init?: RequestInit
 ): Promise<Response> {
-  const res = await fetch(input, init)
+  const auth = await authHeader()
+  const withAuth = (extra: Record<string, string>): RequestInit => ({
+    ...init,
+    headers: { ...(init?.headers as Record<string, string> | undefined), ...extra },
+  })
+  let res = await fetch(input, withAuth(auth))
+  if (res.status === 401 && auth.Authorization) {
+    // Clerk session tokens are short-lived; retry once with a fresh token.
+    res = await fetch(input, withAuth(await authHeader()))
+  }
   if (res.status === 429) {
     const retryAfter = res.headers.get("Retry-After") ?? "60"
     throw new Error(
@@ -588,7 +598,7 @@ export async function askQuestionStream(
   try {
     res = await fetch(`${API_URL}/api/chat/ask-stream`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
       body: JSON.stringify({
         user_id: userId,
         document_id: documentId,
@@ -815,6 +825,19 @@ export interface ConversationSummary {
   title: string
   last_at: string
   count: number
+}
+
+export async function mergeAnonHistory(anonUserId: string): Promise<boolean> {
+  try {
+    const res = await apiFetch(`${API_URL}/api/user/merge-anon`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anon_user_id: anonUserId }),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 export async function listConversations(userId: string): Promise<ConversationSummary[]> {
