@@ -54,6 +54,9 @@ export interface Message {
   // before this field existed — fall back to sufficient_evidence then.
   evidence_mode?: string
   faithfulness?: number | null
+  // Localized backend sentence explaining confidence. Absent on rows saved
+  // before this field existed — computeConfidenceReason is the fallback.
+  confidence_explanation?: string | null
   isStreaming?: boolean
   suggestions?: string[]
 }
@@ -147,45 +150,6 @@ function computeConfidenceReason(
   if (zh) return `找到 ${n} 个来源，匹配强度 ${pct}%`
   if (ms) return `${n} sumber ditemui, kekuatan padanan ${pct}%`
   return `${n} sources found, ${pct}% match strength`
-}
-
-// ---------------------------------------------------------------------------
-// Confidence sentence helper
-// ---------------------------------------------------------------------------
-
-const CONFIDENCE_MSG: Record<string, Record<string, string>> = {
-  ms: {
-    low: "Padanan lemah — sila sahkan maklumat ini di sumber rasmi.",
-    insufficient: "Tiada maklumat yang mencukupi dalam dokumen — sila rujuk sumber rasmi.",
-  },
-  en: {
-    low: "Weak match — please verify this information with the official source.",
-    insufficient: "Insufficient information found in the documents — please consult the official source.",
-  },
-  zh: {
-    low: "匹配度较低 — 请向官方来源核实此信息。",
-    insufficient: "文件中未找到足够信息 — 请参阅官方来源。",
-  },
-}
-
-function confidenceSentence(msg: Message): string | null {
-  const lang = msg.language?.startsWith("zh")
-    ? "zh"
-    : msg.language?.startsWith("ms") || msg.language?.startsWith("id")
-    ? "ms"
-    : "en"
-  const map = CONFIDENCE_MSG[lang] ?? CONFIDENCE_MSG.en
-  // "insufficient" is the canned no-answer reply; a "cautious" answer is still
-  // grounded in a real chunk, so it only gets the softer "verify" note.
-  if (msg.evidence_mode) {
-    if (msg.evidence_mode === "insufficient") return map.insufficient
-    if (msg.evidence_mode === "cautious" || msg.confidence_label === "low")
-      return map.low
-    return null
-  }
-  if (!msg.sufficient_evidence) return map.insufficient
-  if (msg.confidence_label === "low") return map.low
-  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -552,31 +516,23 @@ export const AIMessageCard = React.memo(function AIMessageCard({
               <ChatMarkdown content={message.answer} />
             )}
 
-            {!message.isStreaming && (() => {
-              const sentence = confidenceSentence(message)
-              return sentence ? (
-                <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                  <span className="mt-0.5 shrink-0">⚠</span>
-                  <span>{sentence}</span>
-                </div>
-              ) : null
-            })()}
-
             {!message.isStreaming && !simpleMode && (
               <AnswerMetrics
                 confidence={message.confidence}
                 faithfulness={message.faithfulness}
                 language={message.language}
                 sources={message.sources}
-                confidenceReason={
-                  message.sources.length > 0
+                evidenceMode={message.evidence_mode}
+                explanation={
+                  message.confidence_explanation ??
+                  (message.sources.length > 0
                     ? computeConfidenceReason(
                         message.confidence,
                         message.sources,
                         message.sufficient_evidence,
                         message.language,
                       )
-                    : undefined
+                    : undefined)
                 }
               />
             )}

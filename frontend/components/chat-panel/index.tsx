@@ -112,6 +112,7 @@ function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
     model_used: row.model_used,
     sufficient_evidence: row.sufficient_evidence ?? true,
     faithfulness: row.faithfulness ?? null,
+    confidence_explanation: row.confidence_explanation ?? null,
   }
 }
 
@@ -607,6 +608,7 @@ export default function ChatPanel({
               sufficient_evidence: event.sufficient_evidence ?? true,
               evidence_mode: event.evidence_mode,
               faithfulness: event.faithfulness ?? null,
+              confidence_explanation: event.confidence_explanation ?? null,
               isStreaming: false,
             }
 
@@ -647,6 +649,7 @@ export default function ChatPanel({
                 model_used: event.model_used,
                 sufficient_evidence: event.sufficient_evidence ?? true,
                 faithfulness: event.faithfulness ?? null,
+                confidence_explanation: event.confidence_explanation ?? null,
               },
               ...prev,
             ])

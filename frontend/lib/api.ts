@@ -63,6 +63,8 @@ export type AskResponse = {
   top_query_variant?: string
   sufficient_evidence?: boolean
   faithfulness?: number | null
+  evidence_mode?: string
+  confidence_explanation?: string | null
 }
 
 export type ChatHistoryMessage = {
@@ -81,6 +83,7 @@ export type ChatHistoryMessage = {
   model_used?: string
   sufficient_evidence?: boolean
   faithfulness?: number | null
+  confidence_explanation?: string | null
 }
 
 // ── Evaluation Types ───────────────────────────────────────────────────────
@@ -507,6 +510,7 @@ export type ChatStreamEvent =
       query_variants_used?: string[]
       top_query_variant?: string
       faithfulness?: number | null
+      confidence_explanation?: string | null
     }
   | { type: "suggestions"; questions: string[] }
   | { type: "error"; detail: string }
@@ -658,6 +662,7 @@ export async function askQuestionStream(
               model_used: event.model_used,
               sufficient_evidence: event.sufficient_evidence,
               faithfulness: event.faithfulness,
+              confidence_explanation: event.confidence_explanation,
             },
           ])
         }

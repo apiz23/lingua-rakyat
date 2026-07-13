@@ -152,23 +152,47 @@ export function AnswerMetrics({
   confidence,
   faithfulness,
   language,
-  confidenceReason,
+  explanation,
+  evidenceMode,
   sources = [],
 }: {
   confidence: number
   faithfulness?: number | null
   language: string
-  confidenceReason?: string
+  explanation?: string | null
+  evidenceMode?: string
   sources?: SourceChunk[]
 }) {
   const ms = language === "ms"
   const hasFaithfulness = typeof faithfulness === "number" && faithfulness > 0
   const [open, setOpen] = useState(false)
+  const warn = evidenceMode === "cautious" || evidenceMode === "insufficient"
 
   if (confidence <= 0 && !hasFaithfulness) return null
 
+  const top = sources[0]
+  const docName = top?.doc_name ? top.doc_name.replace(/\.pdf$/i, "") : null
+  const page = top?.page_start
+
   return (
-    <div className="mt-3 max-w-sm space-y-2.5">
+    <div
+      className={cn(
+        "mt-3 max-w-sm space-y-2.5 rounded-xl border px-3 py-2.5",
+        warn ? "border-warning/50 bg-warning/5" : "border-border/60 bg-muted/20"
+      )}
+    >
+      {docName && (
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {docName}
+          </span>
+          {page ? (
+            <span className="shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground/70">
+              p.{page}
+            </span>
+          ) : null}
+        </div>
+      )}
       {confidence > 0 && (
         <MetricBar
           label={ms ? "Keyakinan" : "Confidence"}
@@ -191,9 +215,15 @@ export function AnswerMetrics({
           }
         />
       )}
-      {confidenceReason && (
-        <p className="text-[10px] leading-relaxed text-muted-foreground/70">
-          {confidenceReason}
+      {explanation && (
+        <p
+          className={cn(
+            "text-[10px] leading-relaxed",
+            warn ? "font-medium text-foreground/75" : "text-muted-foreground/70"
+          )}
+        >
+          {warn ? "⚠ " : ""}
+          {explanation}
         </p>
       )}
 
