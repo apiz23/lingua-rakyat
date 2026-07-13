@@ -1325,6 +1325,81 @@ def _confidence_label(score: float, sufficient_evidence: bool) -> str:
     return "high"
 
 
+_EXPLANATION_TEMPLATES: dict[str, dict[str, str]] = {
+    "en": {
+        "strong_moderate": "{n} source{s} found, best {pct}% match",
+        "cautious": (
+            "Based on {n} moderate match{es}, top score {pct}% — "
+            "answer may be incomplete, verify with the official source"
+        ),
+        "insufficient": (
+            "No strong match found in {doc} — showing the closest passage, "
+            "verify with the official source"
+        ),
+        "doc_fallback": "the document",
+    },
+    "ms": {
+        "strong_moderate": "{n} sumber ditemui, padanan terbaik {pct}%",
+        "cautious": (
+            "Berdasarkan {n} padanan sederhana, skor tertinggi {pct}% — "
+            "jawapan mungkin tidak lengkap, sahkan dengan sumber rasmi"
+        ),
+        "insufficient": (
+            "Tiada padanan kukuh ditemui dalam {doc} — menunjukkan petikan "
+            "terdekat, sahkan dengan sumber rasmi"
+        ),
+        "doc_fallback": "dokumen",
+    },
+    "zh": {
+        "strong_moderate": "找到 {n} 个来源，最佳匹配 {pct}%",
+        "cautious": "基于 {n} 个中等匹配，最高分 {pct}% — 答案可能不完整，请以官方来源核实",
+        "insufficient": "在 {doc} 中未找到强匹配 — 显示最接近的段落，请以官方来源核实",
+        "doc_fallback": "文件",
+    },
+}
+
+
+def _confidence_explanation(
+    evidence_mode: str,
+    match_count: int,
+    top_score: float,
+    lang: str,
+    doc_name: str = "",
+) -> Optional[str]:
+    """One localized sentence explaining answer confidence. None = no note needed.
+
+    Pure and total: unknown languages fall back to English, missing doc names
+    to a generic word. Never raises.
+    """
+    if evidence_mode == "summary":
+        return None
+    if evidence_mode == "strong" and top_score >= 0.75:
+        return None
+
+    lang = (lang or "").lower()
+    key = "zh" if lang.startswith("zh") else "ms" if lang in ("ms", "id") else "en"
+    templates = _EXPLANATION_TEMPLATES[key]
+
+    doc = re.sub(r"\.pdf$", "", (doc_name or "").strip(), flags=re.IGNORECASE)
+    if not doc:
+        doc = templates["doc_fallback"]
+
+    if evidence_mode == "insufficient":
+        template = templates["insufficient"]
+    elif evidence_mode == "cautious":
+        template = templates["cautious"]
+    else:  # strong, score below 0.75
+        template = templates["strong_moderate"]
+
+    return template.format(
+        n=match_count,
+        pct=round(top_score * 100),
+        doc=doc,
+        s="" if match_count == 1 else "s",
+        es="" if match_count == 1 else "es",
+    )
+
+
 def _prepare_pipeline(
     question: str,
     document_id: str | None = None,
@@ -1465,6 +1540,17 @@ def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -
         "top_query_variant": prepared["top_query_variant"],
         "sufficient_evidence": prepared["sufficient_evidence"],
         "evidence_mode": prepared.get("evidence_mode", "strong"),
+        "confidence_explanation": _confidence_explanation(
+            evidence_mode=prepared.get("evidence_mode", "strong"),
+            match_count=len(prepared["filtered_matches"]),
+            top_score=top_score,
+            lang=prepared["language"],
+            doc_name=(
+                prepared["filtered_matches"][0]["metadata"].get("doc_name", "")
+                if prepared["filtered_matches"]
+                else ""
+            ),
+        ),
     }
     return result
 
