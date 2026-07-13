@@ -57,6 +57,7 @@ from routers.whatsapp import router as whatsapp_router
 from routers.telegram import router as telegram_router
 from routers.feedback import router as feedback_router
 from routers.share import router as share_router
+from routers.user import router as user_router
 
 # ─── App instance ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -158,6 +159,7 @@ app.include_router(whatsapp_router,  prefix="/api/whatsapp",  tags=["WhatsApp"])
 app.include_router(telegram_router,  prefix="/api/telegram",  tags=["Telegram"])
 app.include_router(feedback_router,  prefix="/api/feedback",  tags=["Feedback"])
 app.include_router(share_router,     prefix="/api/share",     tags=["Share"])
+app.include_router(user_router,      prefix="/api/user",      tags=["User"])
 
 # ─── Startup: Seed + Prewarm ──────────────────────────────────────────────────
 # ─── Health Check ─────────────────────────────────────────────────────────────

@@ -8,13 +8,14 @@ import uuid
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from routers.eval import _evaluator as evaluator
+from utils.auth import get_verified_user
 from utils.chat_history import (
     delete_chat_messages,
     delete_chat_messages_for_document,
@@ -159,8 +160,14 @@ def clear_chat_history(
 
 @router.post("/ask", response_model=AskResponse)
 @limiter.limit(CHAT_LIMIT)
-async def ask_question(request: Request, body: AskRequest):
+async def ask_question(
+    request: Request,
+    body: AskRequest,
+    verified: Optional[str] = Depends(get_verified_user),
+):
     _ = request
+    if verified:
+        body.user_id = verified
     _validate_ask_request(body)
 
     try:
@@ -204,8 +211,14 @@ async def ask_question(request: Request, body: AskRequest):
 
 @router.post("/ask-stream")
 @limiter.limit(CHAT_LIMIT)
-async def ask_question_stream(request: Request, body: AskRequest):
+async def ask_question_stream(
+    request: Request,
+    body: AskRequest,
+    verified: Optional[str] = Depends(get_verified_user),
+):
     _ = request
+    if verified:
+        body.user_id = verified
     _validate_ask_request(body)
 
     async def event_stream():
@@ -261,7 +274,12 @@ class ConversationSummary(BaseModel):
 
 
 @router.get("/conversations", response_model=list[ConversationSummary])
-async def get_conversations(user_id: str):
+async def get_conversations(
+    user_id: str = "",
+    verified: Optional[str] = Depends(get_verified_user),
+):
+    if verified:
+        user_id = verified
     if not user_id or not user_id.strip():
         raise HTTPException(status_code=400, detail="user_id is required")
     return list_conversations(user_id)
@@ -272,7 +290,10 @@ async def get_chat_history(
     document_id: Optional[str] = None,
     session_id: Optional[str] = None,
     user_id: Optional[str] = None,
+    verified: Optional[str] = Depends(get_verified_user),
 ):
+    if verified:
+        user_id = verified
     rows = list_chat_messages(document_id=document_id, session_id=session_id, user_id=user_id)
     messages = []
     for row in rows:
@@ -301,7 +322,10 @@ async def clear_document_chat_history(
     document_id: str,
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
+    verified: Optional[str] = Depends(get_verified_user),
 ):
+    if verified:
+        user_id = verified
     deleted = clear_chat_history(document_id, user_id=user_id, session_id=session_id)
     return {
         "success": True,
