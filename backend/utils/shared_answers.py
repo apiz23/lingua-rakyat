@@ -12,6 +12,13 @@ create table lr_shared_answers (
   language text not null default 'ms',
   created_at timestamptz not null default now()
 );
+
+Migration for the receipt card fields (run once in Supabase SQL editor):
+
+alter table lr_shared_answers
+  add column if not exists confidence numeric not null default 0,
+  add column if not exists confidence_label text not null default '',
+  add column if not exists agency text not null default '';
 """
 
 import logging
@@ -43,6 +50,9 @@ def store_share(
     answer: str,
     sources: list[dict],
     language: str,
+    confidence: float = 0.0,
+    confidence_label: str = "",
+    agency: str = "",
 ) -> str:
     slug = secrets.token_urlsafe(12)  # 72-bit entropy — negligible collision risk
     payload = {
@@ -51,6 +61,9 @@ def store_share(
         "answer": answer,
         "sources": sources,
         "language": language,
+        "confidence": confidence,
+        "confidence_label": confidence_label,
+        "agency": agency,
     }
     res = get_supabase().table(TABLE).insert(payload).execute()
     if not res.data:

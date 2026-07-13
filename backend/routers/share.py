@@ -14,6 +14,9 @@ class ShareRequest(BaseModel):
     answer: str
     sources: list[dict] = []
     language: str = "ms"
+    confidence: float = 0.0
+    confidence_label: str = ""
+    agency: str = ""
 
 
 class ShareResponse(BaseModel):
@@ -28,6 +31,9 @@ class SharedAnswerResponse(BaseModel):
     sources: list[dict]
     language: str
     created_at: str
+    confidence: float = 0.0
+    confidence_label: str = ""
+    agency: str = ""
 
 
 @router.post("", response_model=ShareResponse)
@@ -40,6 +46,9 @@ async def create_share(body: ShareRequest):
             answer=body.answer,
             sources=body.sources,
             language=body.language,
+            confidence=body.confidence,
+            confidence_label=body.confidence_label,
+            agency=body.agency,
         )
     except Exception as exc:
         logger.error("[Share] Failed to store: %s", exc)
@@ -59,4 +68,7 @@ async def fetch_share(slug: str):
         sources=result.get("sources", []),
         language=result.get("language", "ms"),
         created_at=result.get("created_at", ""),
+        confidence=float(result.get("confidence", 0.0) or 0.0),
+        confidence_label=result.get("confidence_label", "") or "",
+        agency=result.get("agency", "") or "",
     )
