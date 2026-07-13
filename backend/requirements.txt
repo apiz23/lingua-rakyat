@@ -42,3 +42,7 @@ elevenlabs>=1.0.0
 
 # Telegram Bot
 python-telegram-bot[webhooks]==21.6
+
+# Clerk JWT verification
+PyJWT>=2.8
+cryptography>=42.0
