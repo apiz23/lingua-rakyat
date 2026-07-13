@@ -3,17 +3,9 @@ import { ChatMarkdown } from "@/components/chat-panel/chat-markdown"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import type { Metadata } from "next"
+import { plainExcerpt } from "./share-text"
 
 type SharePageProps = { params: Promise<{ slug: string }> }
-
-// Strip markdown syntax so OG descriptions read as plain text.
-function plainExcerpt(markdown: string, maxLength: number): string {
-  const text = markdown
-    .replace(/[#*_`>[\]()]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text
-}
 
 export async function generateMetadata({
   params,
@@ -24,19 +16,27 @@ export async function generateMetadata({
 
   const title = plainExcerpt(data.question, 70)
   const description = plainExcerpt(data.answer, 160)
+  const docName = data.sources?.[0]?.doc_name?.replace(/\.pdf$/i, "") ?? ""
+  const fullDescription = docName ? `${description} — ${docName}` : description
+  const locale = data.language?.startsWith("ms")
+    ? "ms_MY"
+    : data.language?.startsWith("zh")
+      ? "zh_CN"
+      : "en_US"
   return {
     title,
-    description,
+    description: fullDescription,
     openGraph: {
       title: `${title} – Lingua Rakyat`,
-      description,
+      description: fullDescription,
       type: "article",
       url: `/share/${slug}`,
+      locale,
     },
     twitter: {
       card: "summary_large_image",
       title: `${title} – Lingua Rakyat`,
-      description,
+      description: fullDescription,
     },
   }
 }
