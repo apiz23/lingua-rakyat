@@ -902,3 +902,32 @@ export async function getShare(slug: string): Promise<SharedAnswer | null> {
     return null
   }
 }
+
+export interface MyShare {
+  slug: string
+  question: string
+  confidence_label: string
+  agency: string
+  created_at: string
+}
+
+export async function listMyShares(): Promise<MyShare[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/api/share/mine`)
+    if (!res.ok) return []
+    return await res.json()
+  } catch {
+    return []
+  }
+}
+
+export async function revokeShare(slug: string): Promise<boolean> {
+  try {
+    const res = await apiFetch(`${API_URL}/api/share/${slug}`, {
+      method: "DELETE",
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
