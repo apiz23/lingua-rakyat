@@ -47,19 +47,6 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
   )
 }
 
-export function AuthFieldLabel({ children, htmlFor }: { children: React.ReactNode; htmlFor: string }) {
-  return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-foreground">
-      {children}
-    </label>
-  )
-}
-
-export function AuthFieldError({ message }: { message?: string }) {
-  if (!message) return null
-  return <p className="mt-1.5 text-xs text-destructive">{message}</p>
-}
-
 export function AuthGlobalError({ message }: { message?: string }) {
   if (!message) return null
   return (
