@@ -1018,9 +1018,12 @@ export const config = {
     // Skip Next.js internals and all static files
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
     "/(api|trpc)(.*)",
+    "/__clerk/:path*",
   ],
 }
 ```
+
+(`/__clerk/:path*` must follow `/(api|trpc)(.*)` — required by Clerk's Next.js proxy for the middleware to resolve sessions correctly.)
 
 - [ ] **Step 3: Create `frontend/lib/auth-token.ts`**
 
@@ -1094,24 +1097,27 @@ import { ClerkProvider } from "@clerk/nextjs"
 import AuthSync from "@/components/auth-sync"
 ```
 
-Wrap the existing `<html>` element (outermost) and mount AuthSync next to OfflineProvider:
+**Critical:** `ClerkProvider` must go INSIDE `<body>`, not wrapping `<html>` (Clerk CLI rule — wrapping `<html>` breaks hydration). Keep `<html>` untouched and wrap the `<body>` contents instead, mounting AuthSync next to OfflineProvider:
 
 ```tsx
   return (
-    <ClerkProvider afterSignOutUrl="/workspace">
-      <html
-        lang="en"
-        ...  // existing attributes unchanged
-      >
-        ...
-              <Toaster richColors expand={true} position="top-center" />
-              {children}
-              <AuthSync />
-              <OfflineProvider />
-              <CommandPaletteTopRight />
-        ...
-      </html>
-    </ClerkProvider>
+    <html
+      lang="en"
+      ...  // existing attributes unchanged
+    >
+      <body className="min-h-screen bg-background text-foreground">
+        <ClerkProvider afterSignOutUrl="/workspace">
+          ...  // existing ThemeProvider/LanguageProvider/TooltipProvider nesting unchanged
+                <Toaster richColors expand={true} position="top-center" />
+                {children}
+                <AuthSync />
+                <OfflineProvider />
+                <CommandPaletteTopRight />
+          ...
+        </ClerkProvider>
+        <Analytics />
+      </body>
+    </html>
   )
 ```
 
