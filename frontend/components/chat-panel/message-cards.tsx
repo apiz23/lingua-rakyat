@@ -268,6 +268,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
   sessionId,
   docId,
   simpleMode,
+  agency,
 }: {
   message: Message
   isLatest: boolean
@@ -287,6 +288,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
   sessionId?: string
   docId?: string
   simpleMode?: boolean
+  agency?: string
 }) {
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
@@ -368,6 +370,9 @@ export const AIMessageCard = React.memo(function AIMessageCard({
           answer: message.answer,
           sources: message.sources,
           language: message.language,
+          confidence: message.confidence,
+          confidence_label: message.confidence_label ?? "",
+          agency: agency ?? "",
         })
         if (!result) {
           toast.error("Couldn't create link — try again")
@@ -387,7 +392,15 @@ export const AIMessageCard = React.memo(function AIMessageCard({
         setSharing(false)
       }
     },
-    [message.question, message.answer, message.sources, message.language],
+    [
+      message.question,
+      message.answer,
+      message.sources,
+      message.language,
+      message.confidence,
+      message.confidence_label,
+      agency,
+    ],
   )
 
   React.useEffect(() => {

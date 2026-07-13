@@ -969,6 +969,7 @@ export default function ChatPanel({
                           sessionId={sessionId}
                           docId={selectedDoc?.id}
                           simpleMode={simpleMode}
+                          agency={selectedDoc?.agency ?? ""}
                         />
                       </MessageScrollerItem>
                     </React.Fragment>

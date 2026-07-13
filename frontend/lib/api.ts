@@ -843,6 +843,9 @@ export interface SharedAnswer {
   sources: SourceChunk[]
   language: string
   created_at: string
+  confidence: number
+  confidence_label: string
+  agency: string
 }
 
 export async function createShare(payload: {
@@ -850,6 +853,9 @@ export async function createShare(payload: {
   answer: string
   sources: SourceChunk[]
   language: string
+  confidence?: number
+  confidence_label?: string
+  agency?: string
 }): Promise<ShareResult | null> {
   try {
     const res = await fetch(`${API_URL}/api/share`, {
