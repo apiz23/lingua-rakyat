@@ -38,7 +38,8 @@ async function loadFont(): Promise<ArrayBuffer | null> {
   try {
     const data = await readFile(join(process.cwd(), "assets/bricolage-700.woff"))
     return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
-  } catch {
+  } catch (err) {
+    console.warn("[og] Bricolage font unavailable, using system sans:", err)
     return null // fall back to system sans — never fail the image
   }
 }
@@ -136,8 +137,7 @@ export default async function Image({
                   color: PAPER,
                 }}
               >
-                {docName}
-                {page ? ` · p.${page}` : ""}
+                {page ? `${docName} · p.${page}` : docName}
               </div>
             ) : null}
             {chip ? (
