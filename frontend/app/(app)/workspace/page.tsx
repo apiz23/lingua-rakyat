@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useUser } from "@clerk/nextjs"
 import { Document, listDocuments } from "@/lib/api"
 import ChatPanel from "@/components/chat-panel"
 import { ConversationSidebar } from "@/components/chat-panel/conversation-sidebar"
@@ -13,7 +14,8 @@ export default function WorkSpacePage() {
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [initialQuestion, setInitialQuestion] = useState<string | undefined>()
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
-  const [userId] = useState<string>(() => {
+  const { user } = useUser()
+  const [anonId] = useState<string>(() => {
     if (typeof window === "undefined") return ""
     let id = localStorage.getItem("lr-user-id")
     if (!id) {
@@ -22,6 +24,9 @@ export default function WorkSpacePage() {
     }
     return id
   })
+  // Signed in → Clerk identity (backend verifies the token anyway);
+  // signed out → the device's anonymous ID, exactly as before.
+  const userId = user?.id ?? anonId
 
   const loadDocuments = async () => {
     setDocsLoading(true)
