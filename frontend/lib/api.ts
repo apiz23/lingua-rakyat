@@ -195,8 +195,9 @@ async function apiFetch(
     headers: { ...(init?.headers as Record<string, string> | undefined), ...extra },
   })
   let res = await fetch(input, withAuth(auth))
-  if (res.status === 401 && auth.Authorization) {
-    // Clerk session tokens are short-lived; retry once with a fresh token.
+  if (res.status === 401) {
+    // Retry once with a fresh token — covers both short-lived Clerk tokens
+    // and the token getter not being registered yet on first paint.
     res = await fetch(input, withAuth(await authHeader()))
   }
   if (res.status === 429) {
@@ -842,7 +843,7 @@ export async function mergeAnonHistory(anonUserId: string): Promise<boolean> {
 
 export async function listConversations(userId: string): Promise<ConversationSummary[]> {
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `${API_URL}/api/chat/conversations?user_id=${encodeURIComponent(userId)}`
     )
     if (!res.ok) return []
@@ -881,7 +882,7 @@ export async function createShare(payload: {
   agency?: string
 }): Promise<ShareResult | null> {
   try {
-    const res = await fetch(`${API_URL}/api/share`, {
+    const res = await apiFetch(`${API_URL}/api/share`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

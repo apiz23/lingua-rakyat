@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Show, SignInButton, UserButton } from "@clerk/nextjs"
+import { Show, UserButton } from "@clerk/nextjs"
 import { Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -16,11 +16,9 @@ export function AuthControls() {
   return (
     <div className="border-t border-sidebar-border p-3">
       <Show when="signed-out">
-        <SignInButton mode="modal">
-          <Button variant="outline" size="sm" className="w-full">
-            Sign in to sync history
-          </Button>
-        </SignInButton>
+        <Button variant="outline" size="sm" className="w-full" asChild>
+          <Link href="/sign-in">Sign in to sync history</Link>
+        </Button>
       </Show>
       <Show when="signed-in">
         <div className="flex items-center justify-between gap-2">

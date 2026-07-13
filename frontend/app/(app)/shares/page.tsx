@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Show, SignInButton, useUser } from "@clerk/nextjs"
+import { Show, useUser } from "@clerk/nextjs"
 import { Copy, Share2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -62,11 +62,9 @@ export default function MySharesPage() {
           <p className="mt-3 text-sm text-muted-foreground">
             Sign in to see and manage the answers you have shared.
           </p>
-          <SignInButton mode="modal">
-            <Button className="mt-4" size="sm">
-              Sign in
-            </Button>
-          </SignInButton>
+          <Button className="mt-4" size="sm" asChild>
+            <Link href="/sign-in">Sign in</Link>
+          </Button>
         </div>
       </Show>
 

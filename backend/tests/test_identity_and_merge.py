@@ -138,6 +138,14 @@ def test_conversations_token_overrides_query_user(monkeypatch):
     assert captured["uid"] == "user_abc"
 
 
+def test_conversations_rejects_spoofed_clerk_id_without_token():
+    import routers.chat as chat
+    import asyncio
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(chat.get_conversations(user_id="user_victim", verified=None))
+    assert exc.value.status_code == 401
+
+
 def test_history_payload_uses_verified_user():
     from routers.chat import AskRequest, _history_payload
     body = AskRequest(

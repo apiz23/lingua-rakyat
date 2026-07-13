@@ -97,6 +97,14 @@ class ChatMessage(BaseModel):
     faithfulness: Optional[float] = None
 
 
+def _reject_spoofed_user_id(user_id: Optional[str], verified: Optional[str]) -> None:
+    """A caller with no valid token cannot claim a Clerk user id (prefix `user_`) —
+    Clerk ids aren't secret, so trusting them client-side would let anyone read or
+    delete a signed-in account's merged history."""
+    if not verified and user_id and user_id.startswith("user_"):
+        raise HTTPException(status_code=401, detail="Sign in required for this account")
+
+
 def _validate_ask_request(body: AskRequest) -> None:
     if not body.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
@@ -166,6 +174,7 @@ async def ask_question(
     verified: Optional[str] = Depends(get_verified_user),
 ):
     _ = request
+    _reject_spoofed_user_id(body.user_id, verified)
     if verified:
         body.user_id = verified
     _validate_ask_request(body)
@@ -217,6 +226,7 @@ async def ask_question_stream(
     verified: Optional[str] = Depends(get_verified_user),
 ):
     _ = request
+    _reject_spoofed_user_id(body.user_id, verified)
     if verified:
         body.user_id = verified
     _validate_ask_request(body)
@@ -278,6 +288,7 @@ async def get_conversations(
     user_id: str = "",
     verified: Optional[str] = Depends(get_verified_user),
 ):
+    _reject_spoofed_user_id(user_id, verified)
     if verified:
         user_id = verified
     if not user_id or not user_id.strip():
@@ -292,6 +303,7 @@ async def get_chat_history(
     user_id: Optional[str] = None,
     verified: Optional[str] = Depends(get_verified_user),
 ):
+    _reject_spoofed_user_id(user_id, verified)
     if verified:
         user_id = verified
     rows = list_chat_messages(document_id=document_id, session_id=session_id, user_id=user_id)
@@ -324,6 +336,7 @@ async def clear_document_chat_history(
     session_id: Optional[str] = None,
     verified: Optional[str] = Depends(get_verified_user),
 ):
+    _reject_spoofed_user_id(user_id, verified)
     if verified:
         user_id = verified
     deleted = clear_chat_history(document_id, user_id=user_id, session_id=session_id)
