@@ -1,6 +1,6 @@
 LINGUA RAKYAT — FUTURE IMPROVEMENTS
 =====================================
-Generated: 2026-06-08
+Generated: 2026-06-08 · Statuses refreshed: 2026-07-13
 Status legend: [DONE] = already built, [TODO] = not yet built
 
 
@@ -77,7 +77,7 @@ Status legend: [DONE] = already built, [TODO] = not yet built
   - Ask: "What changed between these two versions?"
   - Implementation: two-namespace Pinecone query + diff prompt
 
-[TODO] Answer Confidence Explanation
+[DONE] Answer Confidence Explanation
   - Current: high/medium/low badge
   - Improvement: one-sentence reason why confidence is low ("Only 1 matching chunk found, score 0.42")
   - Helps users know when to verify with official source
@@ -98,7 +98,7 @@ Status legend: [DONE] = already built, [TODO] = not yet built
 4. MORE DOCUMENT TYPES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[TODO] Pre-loaded Government Document Library
+[DONE] Pre-loaded Government Document Library
   - Seed more official PDFs automatically (LHDN, KWSP, MySejahtera, PTPTN, SSM)
   - Users browse and select without uploading
   - Keeps documents always up-to-date via scheduled re-ingest
@@ -118,7 +118,7 @@ Status legend: [DONE] = already built, [TODO] = not yet built
 5. VOICE IMPROVEMENTS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[TODO] Text-to-Speech (TTS) Answers
+[DONE] Text-to-Speech (TTS) Answers
   - Read answers aloud — useful for elderly / low-literacy users
   - API: ElevenLabs, Google TTS, or browser Web Speech API (free)
   - Add speaker icon next to answer
@@ -136,7 +136,7 @@ Status legend: [DONE] = already built, [TODO] = not yet built
 6. USER EXPERIENCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[TODO] Shareable Answer Links
+[DONE] Shareable Answer Links
   - Generate a short URL for any answer
   - Citizens can share "what I found out" with family
   - Implementation: store answer in Supabase, generate slug, /share/<slug> page
@@ -159,10 +159,11 @@ Status legend: [DONE] = already built, [TODO] = not yet built
 7. BACKEND / INFRASTRUCTURE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[TODO] Async Ingestion Queue
+[DONE] Async Ingestion Queue
   - Current: PDF ingestion blocks the upload response (can timeout on large PDFs)
   - Fix: push ingest job to a queue (Supabase Edge Function / Redis / Celery)
   - Frontend polls status until "ready"
+  - Built as FastAPI BackgroundTasks + frontend status polling (commit 09c767c)
 
 [TODO] Analytics Dashboard
   - Track: most asked questions, most used documents, language breakdown
@@ -224,7 +225,7 @@ backend/utils/rag_pipeline.py — do not rebuild:
   [DONE] Faithfulness score per answer (_compute_faithfulness)
 The real remaining gaps are below.
 
-[TODO] History-Aware Query Rewrite (highest priority)
+[DONE] History-Aware Query Rewrite
   - Current: _inject_history() pastes last-3 Q&A into the PROMPT only.
     Retrieval still embeds the RAW follow-up. So "what about for foreigners?"
     retrieves poorly — no subject, no document context.
@@ -234,7 +235,7 @@ The real remaining gaps are below.
   - Cheap (one 8b-instant call), big recall win on multi-turn.
   - Gate behind a flag; skip rewrite when history empty or question already standalone.
 
-[TODO] Multi-Document Retrieval (no file picking)
+[DONE] Multi-Document Retrieval
   - Current: _retrieve_matches() hardcodes namespace=document_id (single doc).
   - Fix: accept a list of document_ids; query each namespace, merge, then let
     the existing Cohere reranker pick top-N across docs. Group sources by doc
@@ -243,10 +244,11 @@ The real remaining gaps are below.
     UI affordance to query across the session's whole library.
   - Watch cross-doc noise: keep per-doc score threshold, show doc name on every source.
 
-[TODO] Confidence Explanation Sentence
+[DONE] Confidence Explanation Sentence
   - Already have the score + faithfulness; add one human sentence when low
     ("Only 1 weak match found in KWSP 2024 — verify with the official source").
   - Pairs naturally with multi-doc (tell the user WHICH doc was weak).
+  - Built 2026-07-13: _confidence_explanation() in rag_pipeline.py, shown on web receipt + bots
 
 [TODO] True Agent Loop (later, not for production hot path)
   - Let the LLM decide which docs to search and issue follow-up retrievals.
