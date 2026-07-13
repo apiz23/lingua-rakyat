@@ -988,23 +988,22 @@ git commit -m "feat(share): owner stamping, my-shares list, and revoke"
 
 **PRECONDITION:** `frontend/.env.local` must contain `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` (user creates the Clerk app). Check first: `grep CLERK frontend/.env.local`. If absent, report BLOCKED — `pnpm build` fails without them once `ClerkProvider` wraps the app.
 
+**Already done (via `clerk init --app app_3GRn8SVeltP7h0Xfj6jCBR8p7Ns`, run ahead of this task):** `@clerk/nextjs` installed; `frontend/proxy.ts` created (Next.js 16 renamed `middleware.ts` → `proxy.ts`) then hand-corrected to remove default route protection (see Step 2 — `clerk init`'s template calls `auth.protect()` on every non-sign-in route, which breaks the anonymous-by-default requirement); `frontend/app/layout.tsx` already has `ClerkProvider` wrapping the body contents (correctly inside `<body>`, not `<html>`); `frontend/app/sign-in/[[...sign-in]]/page.tsx` and `frontend/app/sign-up/[[...sign-up]]/page.tsx` created; `.env.local` has Clerk sign-in/sign-up route vars. Steps 1, 2, and half of Step 5 below are therefore verification, not fresh creation — implementer should read current file state first and only make the deltas still needed (AuthSync wiring, auth-token.ts, api.ts changes).
+
 **Files:**
-- Modify: `frontend/package.json` (via `pnpm add @clerk/nextjs`)
-- Create: `frontend/middleware.ts`
+- Verify (already done by `clerk init`): `frontend/package.json` (`@clerk/nextjs` dep), `frontend/proxy.ts`, `frontend/app/layout.tsx` (ClerkProvider placement)
 - Create: `frontend/lib/auth-token.ts`
 - Create: `frontend/components/auth-sync.tsx`
-- Modify: `frontend/app/layout.tsx` (ClerkProvider + AuthSync)
+- Modify: `frontend/app/layout.tsx` (mount `<AuthSync />`)
 - Modify: `frontend/lib/api.ts` (`apiFetch` ~line 187, stream fetch ~line 589, new `mergeAnonHistory`)
 
 **Interfaces:**
 - Consumes: `POST /api/user/merge-anon` (Task 2).
 - Produces: `setAuthTokenGetter(fn)` + `authHeader()` in `lib/auth-token.ts`; `mergeAnonHistory(anonUserId: string): Promise<boolean>` in `lib/api.ts`; `<AuthSync />` mounted globally. Tasks 5–6 rely on signed-in `apiFetch` carrying the token automatically.
 
-- [ ] **Step 1: Install Clerk**
+- [x] **Step 1: Install Clerk** — done via `clerk init`. Verify: `grep '@clerk/nextjs' frontend/package.json`.
 
-Run (from `frontend/`): `pnpm add @clerk/nextjs`
-
-- [ ] **Step 2: Create `frontend/middleware.ts`**
+- [x] **Step 2: `frontend/proxy.ts`** — done via `clerk init`, then hand-corrected to remove `auth.protect()` (was blocking all anonymous routes). Verify current content matches:
 
 ```ts
 import { clerkMiddleware } from "@clerk/nextjs/server"
@@ -1088,40 +1087,24 @@ export default function AuthSync() {
 }
 ```
 
-- [ ] **Step 5: Wire provider into `frontend/app/layout.tsx`**
+- [x] **Step 5 (partial, done via `clerk init`): `ClerkProvider` already wraps `<body>` contents in `frontend/app/layout.tsx`** — correctly placed inside `<body>`, not wrapping `<html>` (verified). Remaining work for this task:
 
-Add imports:
+1. Add `afterSignOutUrl="/workspace"` prop to the existing `<ClerkProvider>` tag (forces a navigation on sign-out so `workspace/page.tsx` remounts and picks up the fresh anonymous ID).
+2. Import and mount `<AuthSync />` next to `<OfflineProvider />`:
 
 ```tsx
-import { ClerkProvider } from "@clerk/nextjs"
 import AuthSync from "@/components/auth-sync"
 ```
 
-**Critical:** `ClerkProvider` must go INSIDE `<body>`, not wrapping `<html>` (Clerk CLI rule — wrapping `<html>` breaks hydration). Keep `<html>` untouched and wrap the `<body>` contents instead, mounting AuthSync next to OfflineProvider:
-
 ```tsx
-  return (
-    <html
-      lang="en"
-      ...  // existing attributes unchanged
-    >
-      <body className="min-h-screen bg-background text-foreground">
-        <ClerkProvider afterSignOutUrl="/workspace">
-          ...  // existing ThemeProvider/LanguageProvider/TooltipProvider nesting unchanged
                 <Toaster richColors expand={true} position="top-center" />
                 {children}
                 <AuthSync />
                 <OfflineProvider />
                 <CommandPaletteTopRight />
-          ...
-        </ClerkProvider>
-        <Analytics />
-      </body>
-    </html>
-  )
 ```
 
-(`afterSignOutUrl` forces a navigation on sign-out so `workspace/page.tsx` remounts and picks up the fresh anonymous ID.)
+Current actual nesting in `layout.tsx` has `<Analytics />` inside `<ClerkProvider>` (clerk init's placement, not the plan's original draft) — leave as-is, it's harmless and not worth an extra diff.
 
 - [ ] **Step 6: Token on `apiFetch` (`frontend/lib/api.ts` ~line 187)**
 
