@@ -67,12 +67,12 @@ export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, tit
         // idle
         !isRecording && !isTranscribing && !isDone &&
           "border-border/50 bg-background text-muted-foreground hover:border-primary/40 hover:text-primary",
-        // recording — red pulse
+        // recording — destructive pulse
         isRecording &&
-          "border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/15",
-        // transcribing — amber
+          "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15",
+        // transcribing — warning
         isTranscribing &&
-          "border-amber-400/40 bg-amber-50 text-amber-600 dark:bg-amber-950/30 cursor-wait",
+          "border-warning/40 bg-warning/10 text-warning cursor-wait",
         // done — green
         isDone &&
           "border-success/30 bg-success/10 text-success",
@@ -81,7 +81,7 @@ export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, tit
     >
       {/* Pulsing ring while recording */}
       {isRecording && (
-        <span className="absolute inset-0 animate-ping rounded-full bg-red-400/30" />
+        <span className="absolute inset-0 animate-ping rounded-full bg-destructive/30" />
       )}
 
       {isDone && <Check className="h-3.5 w-3.5" />}

@@ -167,7 +167,7 @@ function PdfViewer({
   return (
     <div ref={containerRef} className="flex h-full flex-col">
       {hasTextLayer === false && highlightText && (
-        <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+        <div className="flex items-center gap-2 border-b border-warning/40 bg-warning/10 px-3 py-2 text-[11px] text-warning">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>
             {language === "ms"
