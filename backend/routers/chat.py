@@ -74,6 +74,8 @@ class AskResponse(BaseModel):
     top_query_variant: str = ""
     sufficient_evidence: bool = True
     faithfulness: Optional[float] = None
+    evidence_mode: str = "strong"
+    confidence_explanation: Optional[str] = None
 
 
 class ChatMessage(BaseModel):
@@ -195,6 +197,8 @@ async def ask_question(request: Request, body: AskRequest):
         top_query_variant=result.get("top_query_variant", ""),
         sufficient_evidence=result.get("sufficient_evidence", True),
         faithfulness=result.get("faithfulness"),
+        evidence_mode=result.get("evidence_mode", "strong"),
+        confidence_explanation=result.get("confidence_explanation"),
     )
 
 

@@ -154,6 +154,8 @@ export function AnswerMetrics({
   language,
   explanation,
   evidenceMode,
+  sufficientEvidence,
+  confidenceLabel,
   sources = [],
 }: {
   confidence: number
@@ -161,12 +163,16 @@ export function AnswerMetrics({
   language: string
   explanation?: string | null
   evidenceMode?: string
+  sufficientEvidence?: boolean
+  confidenceLabel?: string
   sources?: SourceChunk[]
 }) {
   const ms = language === "ms"
   const hasFaithfulness = typeof faithfulness === "number" && faithfulness > 0
   const [open, setOpen] = useState(false)
-  const warn = evidenceMode === "cautious" || evidenceMode === "insufficient"
+  const warn = evidenceMode
+    ? evidenceMode === "cautious" || evidenceMode === "insufficient"
+    : sufficientEvidence === false || confidenceLabel === "low"
 
   if (confidence <= 0 && !hasFaithfulness) return null
 

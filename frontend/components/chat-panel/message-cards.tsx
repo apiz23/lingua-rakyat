@@ -54,8 +54,10 @@ export interface Message {
   // before this field existed — fall back to sufficient_evidence then.
   evidence_mode?: string
   faithfulness?: number | null
-  // Localized backend sentence explaining confidence. Absent on rows saved
-  // before this field existed — computeConfidenceReason is the fallback.
+  // Localized backend sentence explaining confidence. Absent (undefined) on
+  // ALL persisted history rows — the backend history endpoint doesn't carry
+  // this field yet — so computeConfidenceReason is the fallback whenever it
+  // is undefined. A backend value of null is deliberate: no sentence to show.
   confidence_explanation?: string | null
   isStreaming?: boolean
   suggestions?: string[]
@@ -523,19 +525,46 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                 language={message.language}
                 sources={message.sources}
                 evidenceMode={message.evidence_mode}
+                sufficientEvidence={message.sufficient_evidence}
+                confidenceLabel={message.confidence_label}
                 explanation={
-                  message.confidence_explanation ??
-                  (message.sources.length > 0
+                  message.confidence_explanation !== undefined
+                    ? message.confidence_explanation
+                    : message.sources.length > 0
+                      ? computeConfidenceReason(
+                          message.confidence,
+                          message.sources,
+                          message.sufficient_evidence,
+                          message.language,
+                        )
+                      : undefined
+                }
+              />
+            )}
+
+            {!message.isStreaming && simpleMode && (() => {
+              const warn =
+                message.evidence_mode
+                  ? message.evidence_mode === "cautious" || message.evidence_mode === "insufficient"
+                  : !message.sufficient_evidence || message.confidence_label === "low"
+              if (!warn) return null
+              const sentence =
+                message.confidence_explanation !== undefined
+                  ? message.confidence_explanation
+                  : message.sources.length > 0
                     ? computeConfidenceReason(
                         message.confidence,
                         message.sources,
                         message.sufficient_evidence,
                         message.language,
                       )
-                    : undefined)
-                }
-              />
-            )}
+                    : null
+              return sentence ? (
+                <p className="mt-3 rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-xs font-medium text-foreground/80">
+                  ⚠ {sentence}
+                </p>
+              ) : null
+            })()}
 
             {!message.isStreaming && message.suggestions && message.suggestions.length > 0 && (
               <div className="mt-3 space-y-1.5">
