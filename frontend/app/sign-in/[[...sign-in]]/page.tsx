@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useSignIn } from "@clerk/nextjs"
+import { useSignIn } from "@clerk/nextjs/legacy"
 import { Github, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -12,23 +12,23 @@ import { AuthShell, AuthGlobalError } from "@/components/auth-shell"
 type Provider = "oauth_google" | "oauth_github"
 
 export default function SignInPage() {
-  const { signIn, errors } = useSignIn()
+  const { isLoaded, signIn } = useSignIn()
   const [pending, setPending] = useState<Provider | null>(null)
+  const [globalError, setGlobalError] = useState<string>()
 
   const continueWith = async (strategy: Provider) => {
+    if (!isLoaded) return
     setPending(strategy)
+    setGlobalError(undefined)
     try {
-      const { error } = await signIn.sso({
+      await signIn.authenticateWithRedirect({
         strategy,
-        redirectUrl: "/workspace",
-        redirectCallbackUrl: `${window.location.origin}/sso-callback`,
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/workspace",
       })
-      if (error) {
-        console.error("[SignIn] SSO error:", error)
-        setPending(null)
-      }
     } catch (err) {
-      console.error("[SignIn] SSO threw:", err)
+      console.error("[SignIn] OAuth redirect threw:", err)
+      setGlobalError("Couldn't start sign-in. Please try again.")
       setPending(null)
     }
   }
@@ -46,14 +46,14 @@ export default function SignInPage() {
         </>
       }
     >
-      <AuthGlobalError message={errors?.global?.[0]?.message} />
+      <AuthGlobalError message={globalError} />
 
       <div className="space-y-3">
         <Button
           type="button"
           variant="outline"
           className="w-full justify-center gap-2"
-          disabled={pending !== null}
+          disabled={!isLoaded || pending !== null}
           onClick={() => continueWith("oauth_google")}
         >
           {pending === "oauth_google" ? (
@@ -68,7 +68,7 @@ export default function SignInPage() {
           type="button"
           variant="outline"
           className="w-full justify-center gap-2"
-          disabled={pending !== null}
+          disabled={!isLoaded || pending !== null}
           onClick={() => continueWith("oauth_github")}
         >
           {pending === "oauth_github" ? (

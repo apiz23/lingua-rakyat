@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useSignUp } from "@clerk/nextjs"
+import { useSignUp } from "@clerk/nextjs/legacy"
 import { Github, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -12,23 +12,23 @@ import { AuthShell, AuthGlobalError } from "@/components/auth-shell"
 type Provider = "oauth_google" | "oauth_github"
 
 export default function SignUpPage() {
-  const { signUp, errors } = useSignUp()
+  const { isLoaded, signUp } = useSignUp()
   const [pending, setPending] = useState<Provider | null>(null)
+  const [globalError, setGlobalError] = useState<string>()
 
   const continueWith = async (strategy: Provider) => {
+    if (!isLoaded) return
     setPending(strategy)
+    setGlobalError(undefined)
     try {
-      const { error } = await signUp.sso({
+      await signUp.authenticateWithRedirect({
         strategy,
-        redirectUrl: "/workspace",
-        redirectCallbackUrl: `${window.location.origin}/sso-callback`,
+        redirectUrl: "/sso-callback",
+        redirectUrlComplete: "/workspace",
       })
-      if (error) {
-        console.error("[SignUp] SSO error:", error)
-        setPending(null)
-      }
     } catch (err) {
-      console.error("[SignUp] SSO threw:", err)
+      console.error("[SignUp] OAuth redirect threw:", err)
+      setGlobalError("Couldn't start sign-up. Please try again.")
       setPending(null)
     }
   }
@@ -46,14 +46,14 @@ export default function SignUpPage() {
         </>
       }
     >
-      <AuthGlobalError message={errors?.global?.[0]?.message} />
+      <AuthGlobalError message={globalError} />
 
       <div className="space-y-3">
         <Button
           type="button"
           variant="outline"
           className="w-full justify-center gap-2"
-          disabled={pending !== null}
+          disabled={!isLoaded || pending !== null}
           onClick={() => continueWith("oauth_google")}
         >
           {pending === "oauth_google" ? (
@@ -68,7 +68,7 @@ export default function SignUpPage() {
           type="button"
           variant="outline"
           className="w-full justify-center gap-2"
-          disabled={pending !== null}
+          disabled={!isLoaded || pending !== null}
           onClick={() => continueWith("oauth_github")}
         >
           {pending === "oauth_github" ? (
