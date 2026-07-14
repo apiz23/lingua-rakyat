@@ -29,6 +29,29 @@ const nextConfig = {
 
   devIndicators: false,
 
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          // Closes clickjacking: app has authenticated single-click actions
+          // (revoke share, sign out) that must never be reachable from a
+          // hostile iframe overlay.
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none';" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Voice input is a real feature (VoiceMicButton) — scope
+          // microphone to same-origin instead of blocking it outright.
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(self), geolocation=()",
+          },
+        ],
+      },
+    ]
+  },
+
   webpack: (config, { isServer }) => {
     // react-pdf / PDF.js: disable canvas (not needed for text rendering)
     config.resolve.alias.canvas = false
