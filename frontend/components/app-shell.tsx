@@ -13,6 +13,7 @@ import {
 import { GithubIcon } from "./ui/github"
 import Link from "next/link"
 import { LinkPreview } from "./ui/link-preview"
+import { WorkspaceSessionProvider } from "@/components/workspace-session-context"
 
 const OPEN_COMMAND_EVENT = "lingua-rakyat:open-command-palette"
 
@@ -56,8 +57,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const GITHUB_URL = "https://github.com/apiz23/lingua-rakyat"
 
   return (
+    <WorkspaceSessionProvider>
     <SidebarProvider
-      defaultOpen={false}
+      defaultOpen={true}
       className="h-dvh"
       style={
         {
@@ -129,5 +131,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </SidebarInset>
     </SidebarProvider>
+    </WorkspaceSessionProvider>
   )
 }

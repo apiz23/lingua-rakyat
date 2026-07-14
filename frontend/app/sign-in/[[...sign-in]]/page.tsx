@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useSignIn } from "@clerk/nextjs/legacy"
 import { Github, Loader2 } from "lucide-react"
 
@@ -35,24 +34,17 @@ export default function SignInPage() {
 
   return (
     <AuthShell
-      title="Welcome back"
-      subtitle="Sign in to sync your chat history and shares"
-      footer={
-        <>
-          Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="font-medium text-primary hover:underline">
-            Sign up
-          </Link>
-        </>
-      }
+      eyebrow="Sign in"
+      title="Continue to your workspace"
+      subtitle="Sync your chat history and shared answers across devices."
     >
       <AuthGlobalError message={globalError} />
 
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         <Button
           type="button"
           variant="outline"
-          className="w-full justify-center gap-2"
+          className="h-11 w-full justify-center gap-2.5 text-[0.925rem] hover:border-primary/40"
           disabled={!isLoaded || pending !== null}
           onClick={() => continueWith("oauth_google")}
         >
@@ -67,7 +59,7 @@ export default function SignInPage() {
         <Button
           type="button"
           variant="outline"
-          className="w-full justify-center gap-2"
+          className="h-11 w-full justify-center gap-2.5 text-[0.925rem] hover:border-primary/40"
           disabled={!isLoaded || pending !== null}
           onClick={() => continueWith("oauth_github")}
         >
@@ -79,6 +71,10 @@ export default function SignInPage() {
           Continue with GitHub
         </Button>
       </div>
+
+      <p className="mt-4 text-center text-xs text-muted-foreground">
+        Signing in creates your account automatically — no separate sign-up.
+      </p>
     </AuthShell>
   )
 }

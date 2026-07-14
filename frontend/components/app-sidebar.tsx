@@ -1,7 +1,10 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Image from "next/image"
+import { usePathname, useRouter } from "next/navigation"
+import { useClerk, useUser } from "@clerk/nextjs"
 import {
   FolderOpen,
   Target,
@@ -9,6 +12,10 @@ import {
   MessageSquare,
   Languages,
   BookOpen,
+  Plus,
+  User,
+  LogOut,
+  Share2,
 } from "lucide-react"
 
 import {
@@ -21,20 +28,26 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar, // Import useSidebar hook
+  sidebarMenuButtonVariants,
+  useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { useLanguage } from "@/components/language-provider"
-import Image from "next/image"
-import { Badge } from "@/components/ui/badge"
+import { useWorkspaceSession } from "@/components/workspace-session-context"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { GithubIcon } from "./ui/github"
 import { LinkedinIcon } from "./ui/linkedin"
+import { listConversations, type ConversationSummary } from "@/lib/api"
 
 type NavItem = {
   readonly href: string
   readonly label: string
   readonly icon: React.ComponentType<{ className?: string }>
-  readonly badge?: string
 }
 
 const navItems: NavItem[] = [
@@ -60,12 +73,36 @@ const navItems: NavItem[] = [
   },
 ] as const
 
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return "now"
+  if (mins < 60) return `${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h`
+  return `${Math.floor(hrs / 24)}d`
+}
+
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { language, toggleLanguage } = useLanguage()
-  const { setOpenMobile } = useSidebar() // Get setOpenMobile from sidebar context
+  const { setOpenMobile } = useSidebar()
+  const { userId, activeSessionId, setActiveSessionId } = useWorkspaceSession()
+  const { user, isSignedIn } = useUser()
+  const { signOut } = useClerk()
 
-  // Fixed repository URL - replace with your actual repo URL
+  const [conversations, setConversations] = useState<ConversationSummary[]>([])
+  const [loadingConversations, setLoadingConversations] = useState(false)
+
+  useEffect(() => {
+    if (!userId) return
+    setLoadingConversations(true)
+    listConversations(userId)
+      .then(setConversations)
+      .finally(() => setLoadingConversations(false))
+  }, [userId, activeSessionId])
+
   const REPO_URL = "https://github.com/apiz23/lingua-rakyat"
 
   const copy =
@@ -73,32 +110,38 @@ export function AppSidebar() {
       ? {
           appName: "Lingua Rakyat",
           appTagline: "AI untuk dokumen awam",
-          navigation: "Navigasi",
-          actions: "Tindakan",
-          home: "Halaman Utama",
+          pages: "Halaman",
+          recent: "Perbualan Terkini",
+          recentEmpty: "Belum ada perbualan",
+          newChat: "Perbualan baharu",
           language: "Tukar bahasa",
           shortcuts: "Ctrl/Cmd + B",
-          followUs: "Ikuti kami",
-          repository: "Repositori",
           navWorkspace: "Ruang Kerja",
           navDocuments: "Dokumen",
           navShowcase: "Pameran",
           navAbout: "Tentang",
+          account: "Akaun",
+          signIn: "Log masuk",
+          signOut: "Log keluar",
+          myShares: "Perkongsian saya",
         }
       : {
           appName: "Lingua Rakyat",
           appTagline: "AI for public documents",
-          navigation: "Navigation",
-          actions: "Actions",
-          home: "Home",
+          pages: "Pages",
+          recent: "Recent chats",
+          recentEmpty: "No chats yet",
+          newChat: "New chat",
           language: "Toggle language",
           shortcuts: "Ctrl/Cmd + B",
-          followUs: "Follow us",
-          repository: "Repository",
           navWorkspace: "Workspace",
           navDocuments: "Documents",
           navShowcase: "Showcase",
           navAbout: "About",
+          account: "Account",
+          signIn: "Sign in",
+          signOut: "Sign out",
+          myShares: "My shares",
         }
 
   const navLabels: Record<string, string> = {
@@ -110,6 +153,12 @@ export function AppSidebar() {
 
   const handleNavigation = () => {
     setOpenMobile(false)
+  }
+
+  const goToWorkspace = (sessionId: string | null) => {
+    setActiveSessionId(sessionId)
+    handleNavigation()
+    if (pathname !== "/workspace") router.push("/workspace")
   }
 
   return (
@@ -153,26 +202,43 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="bg-background py-4">
-        <SidebarGroup>
+      <SidebarContent className="bg-background py-3">
+        <SidebarGroup className="pb-1">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => goToWorkspace(null)}
+                tooltip={copy.newChat}
+                className="min-h-9 justify-center gap-2 font-medium text-primary hover:bg-primary/10 hover:text-primary"
+              >
+                <Plus className="h-4 w-4 shrink-0" />
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {copy.newChat}
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup className="pb-1">
           <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            {copy.navigation}
+            {copy.pages}
           </SidebarGroupLabel>
-          <SidebarMenu className="space-y-1.5">
+          <SidebarMenu className="space-y-1">
             {navItems.map((item) => {
               const active =
                 pathname === item.href || pathname?.startsWith(item.href + "/")
               const Icon = item.icon
 
               return (
-                <SidebarMenuItem key={item.href} className="mb-2">
+                <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
                     isActive={active}
                     tooltip={navLabels[item.href] ?? item.label}
                     onClick={handleNavigation}
                     className={cn(
-                      "transition-all duration-200",
+                      "transition-colors duration-150",
                       active
                         ? "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                         : "hover:bg-primary/5 hover:text-primary"
@@ -180,23 +246,17 @@ export function AppSidebar() {
                   >
                     <Link
                       href={item.href}
-                      className="group flex min-h-10 items-center gap-2 px-2 py-1"
+                      className="flex min-h-9 items-center gap-2 px-2 py-1"
                     >
                       <Icon
                         className={cn(
-                          "h-4 w-4 transition-transform group-hover:scale-105",
+                          "h-4 w-4",
                           active ? "text-primary" : "text-muted-foreground"
                         )}
                       />
-                      <span className="font-medium">{navLabels[item.href] ?? item.label}</span>
-                      {item.badge && (
-                        <Badge
-                          variant="outline"
-                          className="ml-auto border-primary/30 bg-primary/5 text-[10px] text-primary"
-                        >
-                          {item.badge}
-                        </Badge>
-                      )}
+                      <span className="font-medium">
+                        {navLabels[item.href] ?? item.label}
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -205,68 +265,173 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup>
+        <SidebarGroup className="min-h-0 flex-1 group-data-[collapsible=icon]:hidden">
           <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            {copy.actions}
+            {copy.recent}
           </SidebarGroupLabel>
-          <SidebarMenu className="space-y-1.5">
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => {
-                  toggleLanguage()
-                  handleNavigation()
-                }}
-                tooltip={copy.language}
-                className="flex min-h-10 items-center gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary"
-              >
-                <Languages className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                <span>{copy.language}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+          <SidebarMenu className="gap-0.5">
+            {loadingConversations ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="mx-2 my-0.5 h-9 bg-muted/40" />
+              ))
+            ) : conversations.length === 0 ? (
+              <p className="px-2 py-3 text-xs text-muted-foreground">
+                {copy.recentEmpty}
+              </p>
+            ) : (
+              conversations.map((conv) => {
+                const active = conv.session_id === activeSessionId
+                return (
+                  <SidebarMenuItem key={conv.session_id}>
+                    <SidebarMenuButton
+                      onClick={() => goToWorkspace(conv.session_id)}
+                      isActive={active}
+                      tooltip={conv.title}
+                      className={cn(
+                        "min-h-9 flex-col items-start gap-0 px-2.5 py-1.5 leading-tight",
+                        active
+                          ? "bg-primary/10 text-primary hover:bg-primary/15"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <span className="w-full truncate text-sm font-medium">
+                        {conv.title}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {relativeTime(conv.last_at)} &middot; {conv.count}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })
+            )}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/50 bg-background pt-4">
-        <div className="px-2 pb-3 group-data-[collapsible=icon]:hidden">
-          <div className="flex items-center gap-2">
-            <Link
-              href={REPO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub repository"
-              onClick={handleNavigation}
-              className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
-            >
-              <GithubIcon size={20} />
-            </Link>
-
-            <Link
-              href="https://www.linkedin.com/in/muh-hafizuddin/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="LinkedIn profile"
-              onClick={handleNavigation}
-              className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
-            >
-              <LinkedinIcon size={20} />
-            </Link>
-          </div>
-        </div>
-
+      <SidebarFooter className="border-t border-border/50 bg-background pt-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={copy.shortcuts}
-              className="hover:bg-primary/5 hover:text-primary"
-            >
-              <Command className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">
-                {copy.shortcuts}
-              </span>
-            </SidebarMenuButton>
+            <Popover>
+              <PopoverTrigger
+                data-slot="sidebar-menu-button"
+                data-sidebar="menu-button"
+                onClick={handleNavigation}
+                className={cn(
+                  sidebarMenuButtonVariants(),
+                  "min-h-9 gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary group-data-[collapsible=icon]:p-0!"
+                )}
+              >
+                {isSignedIn && user?.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.imageUrl}
+                    alt=""
+                    className="h-5 w-5 shrink-0 rounded-full group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
+                  />
+                ) : (
+                  <User className="h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5" />
+                )}
+                <span className="truncate group-data-[collapsible=icon]:hidden">
+                  {isSignedIn
+                    ? (user?.fullName ??
+                      user?.primaryEmailAddress?.emailAddress ??
+                      copy.account)
+                    : copy.signIn}
+                </span>
+              </PopoverTrigger>
+              <PopoverContent side="right" align="end" className="w-60 gap-1 p-1.5">
+                {isSignedIn ? (
+                  <>
+                    <div className="px-2 py-1.5">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {user?.fullName ?? copy.account}
+                      </p>
+                      {user?.primaryEmailAddress?.emailAddress && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {user.primaryEmailAddress.emailAddress}
+                        </p>
+                      )}
+                    </div>
+                    <div className="my-1 h-px bg-border" />
+                    <Link
+                      href="/shares"
+                      onClick={handleNavigation}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-muted"
+                    >
+                      <Share2 className="h-4 w-4 text-muted-foreground" />
+                      {copy.myShares}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={toggleLanguage}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-muted"
+                    >
+                      <Languages className="h-4 w-4 text-muted-foreground" />
+                      {copy.language}
+                    </button>
+                    <div className="my-1 h-px bg-border" />
+                    <button
+                      type="button"
+                      onClick={() => signOut()}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {copy.signOut}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/sign-in"
+                      onClick={handleNavigation}
+                      className="flex items-center justify-center rounded-md bg-primary px-2 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                    >
+                      {copy.signIn}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={toggleLanguage}
+                      className="mt-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-muted"
+                    >
+                      <Languages className="h-4 w-4 text-muted-foreground" />
+                      {copy.language}
+                    </button>
+                  </>
+                )}
+              </PopoverContent>
+            </Popover>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:hidden">
+          <Link
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="GitHub repository"
+            onClick={handleNavigation}
+            className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+          >
+            <GithubIcon size={20} />
+          </Link>
+
+          <Link
+            href="https://www.linkedin.com/in/muh-hafizuddin/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="LinkedIn profile"
+            onClick={handleNavigation}
+            className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+          >
+            <LinkedinIcon size={20} />
+          </Link>
+
+          <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+            <Command className="h-3.5 w-3.5" />
+            {copy.shortcuts}
+          </span>
+        </div>
       </SidebarFooter>
     </Sidebar>
   )

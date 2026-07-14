@@ -35,6 +35,7 @@ export default function SignUpPage() {
 
   return (
     <AuthShell
+      eyebrow="Create account"
       title="Create your account"
       subtitle="Save your chat history and manage your shares"
       footer={
