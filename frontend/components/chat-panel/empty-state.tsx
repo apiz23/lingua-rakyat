@@ -135,6 +135,7 @@ export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStatePr
         {chips.map(({ icon: Icon, question }) => (
           <button
             key={question}
+            type="button"
             onClick={() => onChipClick(question)}
             className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left shadow-sm transition hover:border-primary/40 hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >

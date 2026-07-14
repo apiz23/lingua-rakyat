@@ -140,6 +140,7 @@ export default function WorkspaceDocRail({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={copy.search}
+            aria-label={copy.search}
             className="w-full rounded-md border border-border bg-card py-1.5 pr-2 pl-8 text-xs focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
           />
         </div>

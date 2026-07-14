@@ -1012,33 +1012,42 @@ export default function ChatPanel({
                 ) : null}
               </AnimatePresence>
 
-              {!selectedDoc ? (
-                (emptyState ?? (
-                  <div className="flex min-h-[60vh] flex-col items-center justify-center">
-                    <div className="max-w-md p-8 text-center">
-                      <div className="mx-auto mb-6 inline-flex">
-                        <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-sm">
-                          <FileText className="mx-auto h-16 w-16 text-primary/60" />
+              {(() => {
+                const docsLoadingState = externalDocsLoading ?? false
+                if (docsLoadingState || readyDocs.length === 0 || (selectedDoc && !historyLoading)) {
+                  return (
+                    <EmptyState
+                      onChipClick={(q) => submitQuestion(q)}
+                      readyDocs={readyDocs}
+                      docsLoading={docsLoadingState}
+                    />
+                  )
+                }
+                if (!selectedDoc) {
+                  return (
+                    emptyState ?? (
+                      <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                        <div className="max-w-md p-8 text-center">
+                          <div className="mx-auto mb-6 inline-flex">
+                            <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-sm">
+                              <FileText className="mx-auto h-16 w-16 text-primary/60" />
+                            </div>
+                          </div>
+                          <h3 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
+                            {copy.noDoc}
+                          </h3>
+                          <p className="text-muted-foreground">{copy.noDocDesc}</p>
                         </div>
                       </div>
-                      <h3 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
-                        {copy.noDoc}
-                      </h3>
-                      <p className="text-muted-foreground">{copy.noDocDesc}</p>
-                    </div>
+                    )
+                  )
+                }
+                return (
+                  <div className="flex min-h-[40vh] items-center justify-center">
+                    <TypingIndicator />
                   </div>
-                ))
-              ) : historyLoading ? (
-                <div className="flex min-h-[40vh] items-center justify-center">
-                  <TypingIndicator />
-                </div>
-              ) : (
-                <EmptyState
-                  onChipClick={(q) => submitQuestion(q)}
-                  readyDocs={readyDocs}
-                  docsLoading={externalDocsLoading ?? false}
-                />
-              )}
+                )
+              })()}
             </div>
           </div>
         )}
