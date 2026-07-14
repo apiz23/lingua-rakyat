@@ -25,30 +25,36 @@ self.addEventListener("activate", (event) => {
   )
 })
 
+function safeCachePut(request, response) {
+  // Cache API only supports http(s) requests — chrome-extension:, data:, etc.
+  // throw synchronously and would otherwise become an unhandled rejection.
+  if (!request.url.startsWith("http")) return
+  caches.open(CACHE_NAME).then((cache) => cache.put(request, response))
+}
+
 self.addEventListener("fetch", (event) => {
   const request = event.request
   if (request.method !== "GET") return
 
   const url = new URL(request.url)
-  const isApiRequest = url.pathname.startsWith("/api/")
-  if (isApiRequest) return
+  // Only this app's own pages/assets are ours to cache — never intercept
+  // third-party requests (analytics beacons, extensions, OAuth providers).
+  if (url.origin !== self.location.origin) return
+  if (url.pathname.startsWith("/api/")) return
 
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          safeCachePut(request, response.clone())
           return response
         })
-        .catch(() =>
-          caches
-            .match(request)
-            .then(
-              (cached) =>
-                cached || caches.match("/workspace") || caches.match("/")
-            )
-        )
+        .catch(async () => {
+          const cached = await caches.match(request)
+          if (cached) return cached
+          const fallback = await caches.match("/workspace")
+          return fallback || (await caches.match("/")) || Response.error()
+        })
     )
     return
   }
@@ -59,11 +65,10 @@ self.addEventListener("fetch", (event) => {
       return fetch(request)
         .then((response) => {
           if (!response || response.status !== 200) return response
-          const copy = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          safeCachePut(request, response.clone())
           return response
         })
-        .catch(() => cached)
+        .catch(() => cached || Response.error())
     })
   )
 })
