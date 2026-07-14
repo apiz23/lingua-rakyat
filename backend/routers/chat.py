@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from slowapi import Limiter
@@ -286,8 +286,13 @@ class ConversationSummary(BaseModel):
 @router.get("/conversations", response_model=list[ConversationSummary])
 async def get_conversations(
     user_id: str = "",
+    x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     verified: Optional[str] = Depends(get_verified_user),
 ):
+    # Anonymous IDs travel via header, not the query string — a query param
+    # ends up in browser history, proxy/access logs, and Referer headers;
+    # a header does not. Query param kept only as a deprecated fallback.
+    user_id = x_user_id or user_id
     _reject_spoofed_user_id(user_id, verified)
     if verified:
         user_id = verified
@@ -301,8 +306,11 @@ async def get_chat_history(
     document_id: Optional[str] = None,
     session_id: Optional[str] = None,
     user_id: Optional[str] = None,
+    x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     verified: Optional[str] = Depends(get_verified_user),
 ):
+    # See get_conversations above — header preferred over query string.
+    user_id = x_user_id or user_id
     _reject_spoofed_user_id(user_id, verified)
     if verified:
         user_id = verified

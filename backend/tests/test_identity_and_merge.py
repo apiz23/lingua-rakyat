@@ -134,7 +134,7 @@ def test_conversations_token_overrides_query_user(monkeypatch):
 
     monkeypatch.setattr(chat, "list_conversations", fake_list)
     import asyncio
-    asyncio.run(chat.get_conversations(user_id="spoofed-id", verified="user_abc"))
+    asyncio.run(chat.get_conversations(user_id="spoofed-id", x_user_id=None, verified="user_abc"))
     assert captured["uid"] == "user_abc"
 
 
@@ -142,7 +142,30 @@ def test_conversations_rejects_spoofed_clerk_id_without_token():
     import routers.chat as chat
     import asyncio
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(chat.get_conversations(user_id="user_victim", verified=None))
+        asyncio.run(chat.get_conversations(user_id="user_victim", x_user_id=None, verified=None))
+    assert exc.value.status_code == 401
+
+
+def test_conversations_reads_anon_id_from_header_not_query(monkeypatch):
+    # The X-User-Id header — not the query string — is now the source of the
+    # anonymous id, so it never lands in a URL that gets logged/kept in history.
+    import routers.chat as chat
+    captured = {}
+    def fake_list(uid):
+        captured["uid"] = uid
+        return []
+
+    monkeypatch.setattr(chat, "list_conversations", fake_list)
+    import asyncio
+    asyncio.run(chat.get_conversations(user_id="", x_user_id="anon-header-id", verified=None))
+    assert captured["uid"] == "anon-header-id"
+
+
+def test_conversations_rejects_spoofed_clerk_id_via_header():
+    import routers.chat as chat
+    import asyncio
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(chat.get_conversations(user_id="", x_user_id="user_victim", verified=None))
     assert exc.value.status_code == 401
 
 

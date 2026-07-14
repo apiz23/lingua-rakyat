@@ -396,15 +396,16 @@ export async function getChatHistory(params: {
   signal?: AbortSignal
 }): Promise<ChatHistoryMessage[]> {
   const search = new URLSearchParams()
-  search.set("user_id", params.userId)
   if (params.documentId) search.set("document_id", params.documentId)
   if (params.sessionId) search.set("session_id", params.sessionId)
 
   try {
-    const res = await apiFetch(
-      `${API_URL}/api/chat/history?${search.toString()}`,
-      params.signal ? { signal: params.signal } : undefined
-    )
+    // user_id goes in a header, not the query string — a query param ends
+    // up in browser history and server access logs, a header does not.
+    const res = await apiFetch(`${API_URL}/api/chat/history?${search.toString()}`, {
+      headers: { "X-User-Id": params.userId },
+      ...(params.signal ? { signal: params.signal } : {}),
+    })
     if (!res.ok) throw new Error("Failed to fetch chat history")
     const messages = await res.json()
     cacheHistory(messages)
@@ -843,9 +844,10 @@ export async function mergeAnonHistory(anonUserId: string): Promise<boolean> {
 
 export async function listConversations(userId: string): Promise<ConversationSummary[]> {
   try {
-    const res = await apiFetch(
-      `${API_URL}/api/chat/conversations?user_id=${encodeURIComponent(userId)}`
-    )
+    // user_id goes in a header, not the query string — see getChatHistory.
+    const res = await apiFetch(`${API_URL}/api/chat/conversations`, {
+      headers: { "X-User-Id": userId },
+    })
     if (!res.ok) return []
     return res.json()
   } catch {
