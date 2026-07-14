@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/components/language-provider"
 import { cn } from "@/lib/utils"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import CommandPaletteTopRight from "@/components/navbar"
 import AuthSync from "@/components/auth-sync"
 import OfflineProvider from "@/components/offline-provider"
@@ -124,6 +125,7 @@ export default function RootLayout({
             </LanguageProvider>
           </ThemeProvider>
           <Analytics />
+          <SpeedInsights />
         </ClerkProvider>
       </body>
     </html>
