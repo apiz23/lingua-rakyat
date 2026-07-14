@@ -1,49 +1,28 @@
 "use client"
 
 import type { LucideIcon } from "lucide-react"
-import {
-  CalendarClock,
-  CreditCard,
-  KeyRound,
-  Plane,
-  Users,
-} from "lucide-react"
+import { FileQuestion, Landmark, Sparkles, Upload } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
+import { Document } from "@/lib/api"
+import {
+  AGENCY_QUESTION_MAP,
+  GENERIC_ASK_CHIP,
+  GENERIC_DOC_QUESTION,
+  Lang,
+} from "@/lib/agency-questions"
 
 interface EmptyStateProps {
   onChipClick: (question: string) => void
+  readyDocs: Document[]
+  docsLoading: boolean
 }
 
-interface TaskChip {
+interface Chip {
   icon: LucideIcon
   question: string
 }
 
-const CHIPS: Record<string, TaskChip[]> = {
-  ms: [
-    { icon: Plane, question: "Berapa yuran tukar pasport?" },
-    { icon: KeyRound, question: "Cara reset kata laluan i-Akaun KWSP" },
-    { icon: Users, question: "Apakah pelepasan cukai untuk ibu bapa?" },
-    { icon: CreditCard, question: "Dokumen perlu untuk renew MyKad" },
-    { icon: CalendarClock, question: "Bila tarikh akhir e-Filing LHDN?" },
-  ],
-  en: [
-    { icon: Plane, question: "How much does passport renewal cost?" },
-    { icon: KeyRound, question: "How to reset KWSP i-Akaun password?" },
-    { icon: Users, question: "What tax relief applies to parents?" },
-    { icon: CreditCard, question: "Documents needed to renew MyKad" },
-    { icon: CalendarClock, question: "What is the LHDN e-Filing deadline?" },
-  ],
-  zh: [
-    { icon: Plane, question: "护照续期费用是多少？" },
-    { icon: KeyRound, question: "如何重置公积金 i-Akaun 密码？" },
-    { icon: Users, question: "父母相关的税务减免有哪些？" },
-    { icon: CreditCard, question: "更新身份证需要哪些文件？" },
-    { icon: CalendarClock, question: "LHDN 报税截止日期是什么时候？" },
-  ],
-}
-
-const GREETING: Record<string, { title: string; sub: string; hint: string }> = {
+const GREETING: Record<Lang, { title: string; sub: string; hint: string }> = {
   ms: {
     title: "Selamat datang",
     sub: "Tanya tentang dokumen kerajaan anda",
@@ -61,11 +40,88 @@ const GREETING: Record<string, { title: string; sub: string; hint: string }> = {
   },
 }
 
-export function EmptyState({ onChipClick }: EmptyStateProps) {
+const EMPTY_LIBRARY: Record<Lang, { title: string; sub: string }> = {
+  ms: {
+    title: "Belum ada dokumen sedia",
+    sub: "Muat naik PDF pertama anda untuk mula bertanya",
+  },
+  en: {
+    title: "No documents ready yet",
+    sub: "Upload your first PDF to start asking questions",
+  },
+  zh: {
+    title: "尚无可用文件",
+    sub: "上传您的第一份PDF即可开始提问",
+  },
+}
+
+function buildChips(readyDocs: Document[], lang: Lang): Chip[] {
+  const chips: Chip[] = []
+  const seenAgencies = new Set<string>()
+
+  for (const doc of readyDocs) {
+    if (chips.length >= 4) break
+    if (!doc.agency || seenAgencies.has(doc.agency)) continue
+    const questions = AGENCY_QUESTION_MAP[doc.agency]?.[lang]
+    if (!questions || questions.length === 0) continue
+    seenAgencies.add(doc.agency)
+    chips.push({ icon: Landmark, question: questions[0] })
+  }
+
+  const nonFeatured = readyDocs.filter((d) => !d.is_featured)
+  if (chips.length < 4 && nonFeatured.length > 0 && nonFeatured.length <= 2) {
+    for (const doc of nonFeatured) {
+      if (chips.length >= 4) break
+      chips.push({
+        icon: FileQuestion,
+        question: GENERIC_DOC_QUESTION[lang](doc.name),
+      })
+    }
+  }
+
+  if (chips.length < 4) {
+    chips.push({ icon: Sparkles, question: GENERIC_ASK_CHIP[lang] })
+  }
+
+  return chips
+}
+
+export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStateProps) {
   const { language } = useLanguage()
-  const lang = (language as string) === "zh" ? "zh" : language
-  const chips = CHIPS[lang] ?? CHIPS.ms
-  const greeting = GREETING[lang] ?? GREETING.ms
+  const lang: Lang = language === "zh" ? "zh" : language === "en" ? "en" : "ms"
+  const greeting = GREETING[lang]
+
+  if (docsLoading) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
+        <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[62px] animate-pulse rounded-xl border border-border bg-card"
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (readyDocs.length === 0) {
+    const empty = EMPTY_LIBRARY[lang]
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
+        <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+          <Upload className="h-5 w-5" />
+        </span>
+        <h1 className="mb-1 font-display text-2xl font-bold tracking-tight text-foreground">
+          {empty.title}
+        </h1>
+        <p className="text-sm text-muted-foreground">{empty.sub}</p>
+      </div>
+    )
+  }
+
+  const chips = buildChips(readyDocs, lang)
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
