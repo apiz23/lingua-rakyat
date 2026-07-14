@@ -95,6 +95,8 @@ interface ChatPanelProps {
   composerTop?: React.ReactNode
   emptyState?: React.ReactNode
   initialQuestion?: string
+  documents?: Document[]           // shared list from parent's useDocuments — skips internal fetch when provided
+  docsLoading?: boolean
 }
 
 function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
@@ -165,6 +167,8 @@ export default function ChatPanel({
   composerTop,
   emptyState,
   initialQuestion,
+  documents: externalDocuments,
+  docsLoading: externalDocsLoading,
 }: ChatPanelProps) {
   const { language, toggleLanguage } = useLanguage()
 
@@ -267,8 +271,16 @@ export default function ChatPanel({
     document.documentElement.setAttribute("data-text-size", textSize)
   }, [textSize])
 
-  // Keep the list of ready docs fresh so multi-doc mode spans the whole library.
+  // Keep the list of ready docs fresh so multi-doc mode spans the whole
+  // library. When a parent provides `documents` (workspace page's shared
+  // useDocuments), skip the internal fetch entirely — avoids a duplicate
+  // listDocuments() call.
   useEffect(() => {
+    if (externalDocuments) {
+      setReadyDocs(externalDocuments.filter((d) => d.status === "ready"))
+      return
+    }
+
     let active = true
     listDocuments()
       .then((docs) => {
@@ -281,7 +293,7 @@ export default function ChatPanel({
     return () => {
       active = false
     }
-  }, [selectedDoc])
+  }, [selectedDoc, externalDocuments])
 
   useEffect(() => {
     if (!rateLimitedUntil) return
@@ -1021,7 +1033,11 @@ export default function ChatPanel({
                   <TypingIndicator />
                 </div>
               ) : (
-                <EmptyState onChipClick={(q) => submitQuestion(q)} />
+                <EmptyState
+                  onChipClick={(q) => submitQuestion(q)}
+                  readyDocs={readyDocs}
+                  docsLoading={externalDocsLoading ?? false}
+                />
               )}
             </div>
           </div>
