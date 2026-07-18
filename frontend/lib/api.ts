@@ -759,53 +759,41 @@ export async function runTestSuiteStream(
 
 // ── Available Groq models ──────────────────────────────────────────────────
 // rpm = requests/min, rpd = requests/day, tpm = tokens/min, tpd = tokens/day
-export const DEFAULT_CHAT_MODEL_ID = "llama-3.3-70b-versatile"
+// Groq deprecations (free/dev tier): llama-4-scout + qwen3-32b decommissioned
+// 2026-07-17; llama-3.3-70b-versatile decommissioned 2026-08-16. Recommended
+// replacement per Groq: openai/gpt-oss-120b (or qwen/qwen3.6-27b, preview).
+export const DEFAULT_CHAT_MODEL_ID = "openai/gpt-oss-120b"
 
 export const GROQ_MODELS = [
   {
-    id: "llama-3.3-70b-versatile",
-    label: "Llama 3.3 70B",
-    tag: "⭐ Recommended · 12K TPM · 100K/day",
+    id: "openai/gpt-oss-120b",
+    label: "GPT-OSS 120B",
+    tag: "⭐ Recommended · reasoning · 8K TPM · 200K/day",
     rpm: 30,
     rpd: "1K",
-    tpm: "12K",
-    tpd: "100K",
+    tpm: "8K",
+    tpd: "200K",
     recommended: true,
     tier: 1,
   },
   {
-    id: "meta-llama/llama-4-scout-17b-16e-instruct",
-    label: "Llama 4 Scout 17B",
-    tag: "30K TPM · 500K/day",
+    id: "qwen/qwen3.6-27b",
+    label: "Qwen3.6 27B",
+    tag: "Preview · strong 中文 · 8K TPM · 200K/day",
     rpm: 30,
     rpd: "1K",
-    tpm: "30K",
-    tpd: "500K",
+    tpm: "8K",
+    tpd: "200K",
     recommended: false,
   },
   {
-    id: "groq/compound",
-    label: "Groq Compound",
-    tag: "May 413 on long context",
-    recommended: false,
-  },
-  {
-    id: "groq/compound-mini",
-    label: "Groq Compound Mini",
-    tag: "Low TPM — may rate limit",
+    id: "openai/gpt-oss-20b",
+    label: "GPT-OSS 20B",
+    tag: "Fast reasoning · 8K TPM · 200K/day",
     rpm: 30,
-    rpd: "250",
-    recommended: false,
-    tier: 2,
-  },
-  {
-    id: "qwen/qwen3-32b",
-    label: "Qwen3 32B",
-    tag: "Eval default · 6K TPM · 500K/day",
-    rpm: 60,
     rpd: "1K",
-    tpm: "6K",
-    tpd: "500K",
+    tpm: "8K",
+    tpd: "200K",
     recommended: false,
   },
   {
@@ -816,6 +804,16 @@ export const GROQ_MODELS = [
     rpd: "14.4K",
     tpm: "6K",
     tpd: "500K",
+    recommended: false,
+  },
+  {
+    id: "llama-3.3-70b-versatile",
+    label: "Llama 3.3 70B",
+    tag: "Deprecated — shuts down 16 Aug 2026",
+    rpm: 30,
+    rpd: "1K",
+    tpm: "12K",
+    tpd: "100K",
     recommended: false,
   },
 ]

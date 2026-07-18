@@ -22,7 +22,7 @@ services:
       - key: SUPABASE_BUCKET
         value: documents
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: openai/gpt-oss-120b
       - key: LLM_PROVIDER
         value: groq
       - key: COHERE_API_KEY

@@ -40,6 +40,10 @@ def verify_clerk_token(token: str) -> str:
         signing_key.key,
         algorithms=["RS256"],
         issuer=CLERK_ISSUER,
+        # Clerk session tokens live 60s; allow clock skew between the
+        # device that minted the request and this server (Clerk's own
+        # SDKs tolerate the same drift).
+        leeway=60,
         # Clerk session tokens carry `azp`, not `aud`.
         options={"verify_aud": False},
     )

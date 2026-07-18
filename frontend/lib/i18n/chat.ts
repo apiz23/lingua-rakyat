@@ -60,6 +60,9 @@ export type ChatCopy = {
   mentionListTitle: string
   mentionNoMatch: string
   mentionOnlyTitle: string
+  modelTitle: string
+  scopeTitle: string
+  scopeOneShort: string
 }
 
 export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
@@ -124,6 +127,9 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     mentionListTitle: "Tanya dokumen tertentu",
     mentionNoMatch: "Tiada dokumen sepadan",
     mentionOnlyTitle: "Soalan hanya akan guna dokumen ini",
+    modelTitle: "Model AI",
+    scopeTitle: "Skop carian",
+    scopeOneShort: "Dokumen ini",
   },
   en: {
     historyLoadError: "Failed to load chat history",
@@ -186,6 +192,9 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     mentionListTitle: "Ask a specific document",
     mentionNoMatch: "No matching documents",
     mentionOnlyTitle: "Questions will use only this document",
+    modelTitle: "AI model",
+    scopeTitle: "Search scope",
+    scopeOneShort: "This document",
   },
   zh: {
     historyLoadError: "无法加载聊天记录",
@@ -246,5 +255,8 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     mentionListTitle: "查询特定文件",
     mentionNoMatch: "没有匹配的文件",
     mentionOnlyTitle: "问题仅使用此文件",
+    modelTitle: "AI 模型",
+    scopeTitle: "搜索范围",
+    scopeOneShort: "此文件",
   },
 }

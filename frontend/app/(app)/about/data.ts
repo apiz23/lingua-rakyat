@@ -51,91 +51,91 @@ export const BACKEND_STACK: StackItem[] = [
   {
     name: "FastAPI",
     role: "API Framework",
-    color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Python async web framework. Auto-generates Swagger docs at /docs. High throughput via async I/O.",
     why: "Serves all endpoints — chat, documents, eval, voice — with automatic OpenAPI documentation for judges.",
   },
   {
     name: "Groq LLaMA 3.3 70B",
     role: "Answer Generation",
-    color: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Meta's open-source LLM (70B params) running on Groq's custom LPU inference hardware. Extremely fast token generation.",
     why: "Generates grounded, source-cited answers in Malay, English, or Chinese from retrieved document context.",
   },
   {
     name: "LLaMA 3.1 8B (Groq)",
     role: "Fast Model",
-    color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Smaller, faster variant of LLaMA for low-latency tasks where full 70B is overkill.",
     why: "Generates follow-up question suggestions after each answer without blocking the main response stream.",
   },
   {
     name: "Cohere embed-multilingual-v3.0",
     role: "Embeddings",
-    color: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Embedding model supporting 100+ languages. Converts text into 1024-dim vectors capturing semantic meaning.",
     why: "Embeds both document chunks (at ingestion) and queries (at retrieval) enabling cross-lingual semantic search.",
   },
   {
     name: "Cohere rerank-multilingual-v3.0",
     role: "Neural Reranking",
-    color: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Cross-encoder model that re-scores retrieved candidates by reading query + document together.",
     why: "Re-ranks vector search results in context — higher precision than pure cosine similarity. Also computes faithfulness.",
   },
   {
     name: "Pinecone",
     role: "Vector Database",
-    color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Managed cloud vector database. Stores and searches high-dimensional embeddings at scale.",
     why: "Stores all document chunk vectors. Each document gets its own namespace for isolated retrieval.",
   },
   {
     name: "Supabase",
     role: "Storage & DB",
-    color: "bg-green-500/10 text-green-600 border-green-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Open-source Firebase alternative — PostgreSQL + file storage + real-time subscriptions.",
     why: "Stores raw PDFs (Storage bucket), document metadata, chat history per user/document, feedback thumbs.",
   },
   {
     name: "pypdf + PyMuPDF",
     role: "PDF Processing",
-    color: "bg-red-500/10 text-red-600 border-red-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "pypdf: pure-Python text extraction. PyMuPDF (fitz): C-based PDF renderer for rasterising pages to images.",
     why: "pypdf handles text-based PDFs. PyMuPDF renders scanned pages for Tesseract OCR fallback.",
   },
   {
     name: "Tesseract OCR",
     role: "OCR Fallback",
-    color: "bg-slate-500/10 text-slate-600 border-slate-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Open-source OCR engine by Google. Reads text from images. Supports eng+msa+chi_sim.",
     why: "Handles scanned/image-based PDF pages that pypdf cannot extract text from.",
   },
   {
     name: "langdetect",
     role: "Language Detection",
-    color: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Python port of Google's language ID library. Probabilistic detection from short text samples.",
     why: "Fallback language detection when Malay/CJK keyword matching is inconclusive.",
   },
   {
     name: "ElevenLabs",
     role: "Text-to-Speech",
-    color: "bg-pink-500/10 text-pink-600 border-pink-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Commercial TTS API with multilingual v2 model. High-quality, natural-sounding speech.",
     why: "Reads answers back to users in Voice I/O mode. Falls back to browser speechSynthesis on quota exceed.",
   },
   {
     name: "Groq Whisper",
     role: "Speech-to-Text",
-    color: "bg-teal-500/10 text-teal-600 border-teal-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "OpenAI Whisper model hosted on Groq. Transcribes audio to text at high speed.",
     why: "Converts browser MediaRecorder WebM/Opus audio into question text for the voice input feature.",
   },
   {
     name: "SlowAPI",
     role: "Rate Limiting",
-    color: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Per-IP rate limiting middleware for FastAPI, built on limits + Redis-compatible backends.",
     why: "Prevents API abuse. BOOTH_MODE=true loosens limits for demo events where all visitors share one IP.",
   },
@@ -152,14 +152,14 @@ export const FRONTEND_STACK: StackItem[] = [
   {
     name: "TypeScript",
     role: "Type Safety",
-    color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Typed JavaScript superset. Catches errors at compile time rather than runtime.",
     why: "Type safety across all components and API response shapes.",
   },
   {
     name: "Tailwind CSS",
     role: "Styling",
-    color: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Utility-first CSS framework. Style via class names, no separate CSS files.",
     why: "All styling. oklch(0.38 0.13 145) civic green as primary color.",
   },
@@ -173,7 +173,7 @@ export const FRONTEND_STACK: StackItem[] = [
   {
     name: "Framer Motion",
     role: "Animations",
-    color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "React animation library with declarative motion primitives and gesture support.",
     why: "Scroll-triggered fade-ins, hero parallax, card hover effects on landing page.",
   },
@@ -187,7 +187,7 @@ export const FRONTEND_STACK: StackItem[] = [
   {
     name: "Render",
     role: "Backend Deploy",
-    color: "bg-green-500/10 text-green-600 border-green-500/20",
+    color: "bg-secondary text-secondary-foreground border-primary/15",
     what: "Cloud PaaS for containerised apps. Free tier with 512MB RAM.",
     why: "Hosts the FastAPI backend. requirements.txt strips torch/transformers to fit RAM limits.",
   },
@@ -336,9 +336,9 @@ export const API_ENDPOINTS_MS: ApiEndpoint[] = [
 ]
 
 export const METHOD_COLORS: Record<string, string> = {
-  GET:    "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  POST:   "bg-green-500/10 text-green-600 border-green-500/20",
-  DELETE: "bg-red-500/10 text-red-600 border-red-500/20",
+  GET:    "bg-secondary text-secondary-foreground border-primary/20",
+  POST:   "bg-success/10 text-success border-success/20",
+  DELETE: "bg-destructive/10 text-destructive border-destructive/20",
 }
 
 // ── Eval Metrics — English ─────────────────────────────────────────────────
@@ -701,8 +701,8 @@ export const KEY_FEATURES: FeatureItem[] = [
   {
     icon: Globe,
     label: "Multilingual RAG",
-    color: "text-blue-500",
-    bg: "bg-blue-500/10",
+    color: "text-primary",
+    bg: "bg-primary/10",
     points: [
       "Cohere embed-multilingual-v3.0 handles 100+ languages in one vector space",
       "Language auto-detected per question — answer in same language",
@@ -713,8 +713,8 @@ export const KEY_FEATURES: FeatureItem[] = [
   {
     icon: Shield,
     label: "Evidence Guard — Anti-Hallucination",
-    color: "text-green-500",
-    bg: "bg-green-500/10",
+    color: "text-primary",
+    bg: "bg-primary/10",
     points: [
       "3-tier confidence system: strong / cautious / refuse",
       "Never generates answers from outside the uploaded document",
@@ -725,8 +725,8 @@ export const KEY_FEATURES: FeatureItem[] = [
   {
     icon: Mic,
     label: "Voice I/O",
-    color: "text-purple-500",
-    bg: "bg-purple-500/10",
+    color: "text-primary",
+    bg: "bg-primary/10",
     points: [
       "STT: MediaRecorder → Groq Whisper → transcribed question",
       "TTS: answer → ElevenLabs multilingual v2 → MP3",
@@ -737,8 +737,8 @@ export const KEY_FEATURES: FeatureItem[] = [
   {
     icon: BarChart3,
     label: "Evaluation Dashboard",
-    color: "text-orange-500",
-    bg: "bg-orange-500/10",
+    color: "text-primary",
+    bg: "bg-primary/10",
     points: [
       "ROUGE-1/2/L, BLEU, FK grade — all computed in-house",
       "Semantic similarity via Cohere embeddings",
@@ -749,8 +749,8 @@ export const KEY_FEATURES: FeatureItem[] = [
   {
     icon: Database,
     label: "Document Management",
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10",
+    color: "text-primary",
+    bg: "bg-primary/10",
     points: [
       "Upload: validates PDF → ingests → stores in Pinecone + Supabase",
       "Delete: removes vectors from Pinecone namespace + file from Supabase",

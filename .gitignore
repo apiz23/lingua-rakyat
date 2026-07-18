@@ -25,3 +25,7 @@ node_modules/
 .vscode
 .codex-plugins/
 .pytest_cache/
+
+mobile/node_modules/
+mobile/expo/
+mobile/.env

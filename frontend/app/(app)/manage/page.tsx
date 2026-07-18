@@ -141,10 +141,10 @@ function ConfirmDialog({
           <button
             onClick={onConfirm}
             className={cn(
-              "px-4 py-2 text-sm font-medium text-white transition-colors active:scale-[0.97]",
+              "px-4 py-2 text-sm font-medium transition-colors active:scale-[0.97]",
               danger
-                ? "bg-destructive hover:bg-destructive/90"
-                : "bg-primary hover:bg-primary/90"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
             )}
           >
             {confirmLabel}
@@ -699,7 +699,7 @@ export default function ManagePage() {
               {selected.size > 0 && (
                 <button
                   onClick={confirmBulkDelete}
-                  className="flex items-center gap-2 bg-destructive px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-destructive/90"
+                  className="flex items-center gap-2 bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
                 >
                   <Trash2 className="h-4 w-4" />
                   {language === "ms" ? `Padam ${selected.size}` : `Delete ${selected.size}`}

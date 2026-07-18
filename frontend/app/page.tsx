@@ -34,6 +34,8 @@ import LogoCarousel from "@/components/ui/logo-carousel"
 import { useMobile } from "@/hooks/use-mobile"
 import { useLanguage } from "@/components/language-provider"
 import { LinkPreview } from "@/components/ui/link-preview"
+import { Safari } from "@/components/ui/safari"
+import { Iphone } from "@/components/ui/iphone"
 import {
   MediaPlayer,
   MediaPlayerVideo,
@@ -60,6 +62,9 @@ import passportImg from "@/public/assets/passport.png"
 import personImg from "@/public/assets/person.png"
 
 const ease = [0.16, 1, 0.3, 1] as const
+
+const DEMO_VIDEO_SRC =
+  "https://otmlfmgyscrohtbpqqoi.supabase.co/storage/v1/object/public/videos/lv_0_20260609134554.mp4"
 
 function SkeletonCard() {
   return (
@@ -645,7 +650,7 @@ export default function Home() {
                     transition={{ duration: 0.5, delay: 0.7, ease }}
                     className="absolute top-[18%] right-[4%] z-20 w-[108px] sm:w-[132px] lg:w-[150px]"
                   >
-                    <div className="rounded-[1.15rem] border border-white/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
+                    <div className="rounded-[1.15rem] border border-foreground/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
                       <div className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
                         MyKad
                       </div>
@@ -668,7 +673,7 @@ export default function Home() {
                     transition={{ duration: 0.5, delay: 0.92, ease }}
                     className="absolute bottom-[10%] left-[8%] z-20 w-[84px] sm:w-[102px] lg:w-[112px]"
                   >
-                    <div className="rounded-[1.15rem] border border-white/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
+                    <div className="rounded-[1.15rem] border border-foreground/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
                       <div className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
                         Passport
                       </div>
@@ -1023,18 +1028,24 @@ export default function Home() {
           </FadeInLeft>
 
           <ScaleIn>
-            <div className="mt-6 overflow-hidden rounded-2xl border border-border shadow-sm transition-all hover:shadow-md sm:mt-8">
-              <div
-                className="relative w-full"
-                style={{ paddingBottom: "56.25%" }}
-              >
-                <div className="absolute top-0 right-0 bottom-0 left-0">
-                  <MediaPlayer>
-                    <MediaPlayerVideo className="h-full w-full">
-                      <source
-                        src="https://otmlfmgyscrohtbpqqoi.supabase.co/storage/v1/object/public/videos/lv_0_20260609134554.mp4"
-                        type="video/mp4"
-                      />
+            <div className="relative mt-6 sm:mt-8 lg:pr-16">
+              <div className="relative">
+                <Safari
+                  url="lingua-rakyat.my"
+                  className="w-full drop-shadow-xl"
+                />
+                <div
+                  className="absolute z-20 overflow-hidden"
+                  style={{
+                    left: "0.0831%",
+                    top: "6.9058%",
+                    width: "99.7506%",
+                    height: "92.9615%",
+                  }}
+                >
+                  <MediaPlayer className="h-full w-full rounded-none">
+                    <MediaPlayerVideo className="h-full w-full object-cover">
+                      <source src={DEMO_VIDEO_SRC} type="video/mp4" />
                     </MediaPlayerVideo>
                     <MediaPlayerControls className="flex-col items-start gap-2.5">
                       <MediaPlayerControlsOverlay />
@@ -1056,6 +1067,12 @@ export default function Home() {
                     </MediaPlayerControls>
                   </MediaPlayer>
                 </div>
+              </div>
+              <div className="pointer-events-none absolute -bottom-6 right-0 z-30 hidden w-[17%] max-w-[180px] md:block lg:-right-2">
+                <Iphone
+                  videoSrc={DEMO_VIDEO_SRC}
+                  className="drop-shadow-2xl"
+                />
               </div>
             </div>
           </ScaleIn>

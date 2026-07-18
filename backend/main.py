@@ -175,7 +175,7 @@ async def health_check():
         "message": "Lingua Rakyat AI backend is running",
         "docs": "/docs",
         "config": {
-            "llm_model":  os.getenv("GROQ_MODEL", "groq/compound"),
+            "llm_model":  os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             "embeddings": "cohere/embed-multilingual-v3.0",
             "vector_db":  "pinecone/" + os.getenv("PINECONE_INDEX", "docuquery"),
             "booth_mode": BOOTH_MODE,

@@ -53,6 +53,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   ArrowLeft,
+  Check,
+  ChevronDown,
+  Cpu,
   Download,
   FileText,
   History,
@@ -208,6 +211,25 @@ export default function ChatPanel({
   // Persisted settings (localStorage-backed)
   const [selectedPopoverModel, setSelectedPopoverModel] =
     useLocalStorageSetting<string>("lr-chat-model", DEFAULT_CHAT_MODEL_ID)
+
+  // One-time migration off Groq-deprecated models: llama-4-scout and
+  // qwen3-32b were decommissioned 2026-07-17, llama-3.3-70b (the old stored
+  // default) shuts down 2026-08-16. Runs after the hook's load effect; the
+  // flag lets a user deliberately re-pick llama-3.3 until it dies.
+  useEffect(() => {
+    if (window.localStorage.getItem("lr-chat-model-migrated-v2")) return
+    window.localStorage.setItem("lr-chat-model-migrated-v2", "true")
+    const dead = [
+      "llama-3.3-70b-versatile",
+      "meta-llama/llama-4-scout-17b-16e-instruct",
+      "qwen/qwen3-32b",
+      "groq/compound",
+      "groq/compound-mini",
+    ]
+    setSelectedPopoverModel((prev) =>
+      dead.includes(prev) ? DEFAULT_CHAT_MODEL_ID : prev
+    )
+  }, [setSelectedPopoverModel])
   const [enableQueryAugmentation, setEnableQueryAugmentation] =
     useLocalStorageSetting<boolean>("lr-augmentation", true)
   // Multi-document mode: query across every ready doc instead of just the
@@ -228,7 +250,7 @@ export default function ChatPanel({
     false
   )
   // Simple view (default ON): hides technical chrome — confidence bars,
-  // latency, model picker — so non-technical citizens see just the answer.
+  // latency — so non-technical citizens see just the answer.
   // Power users/judges flip it off via the options menu.
   const [simpleMode, setSimpleMode] = useLocalStorageSetting<boolean>(
     "lr-simple-mode",
@@ -1096,6 +1118,108 @@ export default function ChatPanel({
             </div>
 
             <div className="flex shrink-0 items-center gap-1">
+              {selectedDoc && readyDocIds.length > 1 ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      title={copy.scopeTitle}
+                      aria-label={copy.scopeTitle}
+                      className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+                    >
+                      {mentionDoc ? (
+                        <FileText className="h-3 w-3 shrink-0" />
+                      ) : askAllDocs ? (
+                        <Library className="h-3 w-3 shrink-0" />
+                      ) : (
+                        <FileText className="h-3 w-3 shrink-0" />
+                      )}
+                      <span className="hidden max-w-[140px] truncate sm:inline">
+                        {mentionDoc
+                          ? `@${mentionDoc.name}`
+                          : askAllDocs
+                            ? `${copy.allDocsBadge} · ${readyDocIds.length}`
+                            : copy.scopeOneShort}
+                      </span>
+                      <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+
+                  <PopoverContent align="end" className="w-72 p-1">
+                    <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                      {copy.scopeTitle}
+                    </div>
+                    <div className="space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMentionDoc(null)
+                          setAskAllDocs(true)
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                          !mentionDoc && askAllDocs && "bg-muted"
+                        )}
+                      >
+                        <Library className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span className="flex-1">
+                          {copy.askAll} ({readyDocIds.length})
+                        </span>
+                        {!mentionDoc && askAllDocs ? (
+                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        ) : null}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMentionDoc(null)
+                          setAskAllDocs(false)
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                          !mentionDoc && !askAllDocs && "bg-muted"
+                        )}
+                      >
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate">{copy.askOne}</span>
+                          <span className="block truncate text-[11px] text-muted-foreground">
+                            {selectedDoc.name}
+                          </span>
+                        </span>
+                        {!mentionDoc && !askAllDocs ? (
+                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        ) : null}
+                      </button>
+                    </div>
+
+                    <div className="mt-1 border-t border-border/60 pt-1">
+                      <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                        {copy.mentionListTitle}
+                      </div>
+                      {readyDocs.slice(0, 6).map((doc) => (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          onClick={() => setMentionDoc(doc)}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                            mentionDoc?.id === doc.id && "bg-muted"
+                          )}
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span className="flex-1 truncate">{doc.name}</span>
+                          {mentionDoc?.id === doc.id ? (
+                            <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : null}
+
               <button
                 type="button"
                 onClick={() =>
@@ -1163,15 +1287,6 @@ export default function ChatPanel({
                     <Languages className="mr-2 h-4 w-4" />
                     {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
                   </DropdownMenuItem>
-
-                  {readyDocIds.length > 1 ? (
-                    <DropdownMenuItem
-                      onClick={() => setAskAllDocs((prev) => !prev)}
-                    >
-                      <Library className="mr-2 h-4 w-4" />
-                      {askAllDocs ? copy.askOne : copy.askAll}
-                    </DropdownMenuItem>
-                  ) : null}
 
                   {messages.length > 0 ? (
                     <DropdownMenuItem onClick={exportChatHistory}>
@@ -1264,28 +1379,39 @@ export default function ChatPanel({
             }
             className="bg-card"
           >
-            {!simpleMode ? (
             <Popover>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="h-8 w-fit rounded-full border border-border/60 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+                  title={copy.modelTitle}
+                  aria-label={copy.modelTitle}
+                  className="flex h-8 w-fit items-center gap-1 rounded-full border border-border/60 bg-background/80 px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
                 >
-                  {shortModelLabel(selectedPopoverModel)}
+                  <Cpu className="h-3 w-3 shrink-0" />
+                  <span className="max-w-[110px] truncate sm:max-w-[160px]">
+                    {shortModelLabel(selectedPopoverModel)}
+                  </span>
+                  <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
                 </button>
               </PopoverTrigger>
 
-              <PopoverContent align="start" className="w-56 p-1">
-                <div className="space-y-1">
+              <PopoverContent align="start" className="w-72 p-1">
+                <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                  {copy.modelTitle}
+                </div>
+                <div className="space-y-0.5">
                   <button
                     type="button"
                     onClick={() => setSelectedPopoverModel("")}
                     className={cn(
-                      "flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                      "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
                       !selectedPopoverModel && "bg-muted"
                     )}
                   >
-                    {copy.autoServer}
+                    <span className="flex-1">{copy.autoServer}</span>
+                    {!selectedPopoverModel ? (
+                      <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    ) : null}
                   </button>
 
                   {GROQ_MODELS.map((model) => (
@@ -1294,17 +1420,28 @@ export default function ChatPanel({
                       type="button"
                       onClick={() => setSelectedPopoverModel(model.id)}
                       className={cn(
-                        "flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted",
                         selectedPopoverModel === model.id && "bg-muted"
                       )}
                     >
-                      {model.label}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm">
+                          {model.label}
+                        </span>
+                        {model.tag ? (
+                          <span className="block truncate text-[11px] text-muted-foreground">
+                            {model.tag}
+                          </span>
+                        ) : null}
+                      </span>
+                      {selectedPopoverModel === model.id ? (
+                        <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      ) : null}
                     </button>
                   ))}
                 </div>
               </PopoverContent>
             </Popover>
-            ) : null}
 
             <VoiceMicButton
               disabled={loading}

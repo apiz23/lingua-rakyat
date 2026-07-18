@@ -327,15 +327,15 @@ export default function AboutPage() {
                     <Card className="border-border/60 bg-card/40">
                       <CardContent className="pb-4 pt-4">
                         <div className="mb-2 flex items-center gap-2">
-                          <div className="flex h-6 w-6 items-center justify-center bg-red-500/10">
-                            <FileText className="h-3.5 w-3.5 text-red-500" />
+                          <div className="flex h-6 w-6 items-center justify-center bg-destructive/10">
+                            <FileText className="h-3.5 w-3.5 text-destructive" />
                           </div>
                           <span className="text-sm font-semibold text-foreground">{copy.problemTitle}</span>
                         </div>
                         <ul className="mt-2 space-y-1.5">
                           {copy.problemItems.map((item, i) => (
                             <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+                              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive/70" />
                               {item}
                             </li>
                           ))}

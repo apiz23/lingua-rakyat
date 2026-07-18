@@ -44,7 +44,9 @@ logging.basicConfig(
 logger = logging.getLogger("rag_pipeline")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+# llama-3.3-70b-versatile is deprecated (decommissioned 2026-08-16); Groq's
+# recommended replacement is openai/gpt-oss-120b.
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -1568,7 +1570,7 @@ def _get_client() -> Groq:
 
 
 def _fallback_model(current_model: str) -> str:
-    return GROQ_MODEL_FAST if current_model != GROQ_MODEL_FAST else "gemma2-9b-it"
+    return GROQ_MODEL_FAST if current_model != GROQ_MODEL_FAST else "openai/gpt-oss-20b"
 
 
 def _is_retryable_llm_error(exc: Exception) -> bool:
@@ -1623,12 +1625,29 @@ def _compact_prompt(prompt_text: str, limit: int) -> str:
     return _truncate_middle(prompt_text, limit)
 
 
+def _reasoning_kwargs(model_name: str) -> dict[str, Any]:
+    """Reasoning-model params so chain-of-thought never reaches the answer.
+
+    GPT-OSS returns reasoning in a separate field already; low effort +
+    include_reasoning=False just cuts latency and token burn. Qwen/MiniMax
+    default to reasoning_format="raw", which embeds <think> tags in content —
+    "hidden" strips them (and cannot be combined with reasoning_effort).
+    """
+    name = model_name.lower()
+    if "gpt-oss" in name:
+        return {"reasoning_effort": "low", "include_reasoning": False}
+    if "qwen" in name or "minimax" in name:
+        return {"reasoning_format": "hidden"}
+    return {}
+
+
 def _create_completion(prompt_text: str, model_name: str, stream: bool):
     return _get_client().chat.completions.create(
         model=model_name,
         messages=[{"role": "user", "content": prompt_text}],
         temperature=0.3,
         stream=stream,
+        **_reasoning_kwargs(model_name),
     )
 
 
