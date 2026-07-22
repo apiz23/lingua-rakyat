@@ -593,9 +593,7 @@ export default function Home() {
                   height={32}
                   className="rounded-full object-cover"
                 />
-                <span
-                  className={`font-heading text-xs font-semibold tracking-[0.35em] uppercase ${faintTextClass}`}
-                >
+                <span className="font-heading text-xs font-semibold tracking-[0.35em] text-foreground uppercase">
                   Lingua Rakyat
                 </span>
               </div>
@@ -722,7 +720,7 @@ export default function Home() {
                     animateOnHover={!shouldReduce}
                     duration={shouldReduce ? 1 : 900}
                     delay={shouldReduce ? 0 : 100}
-                    className="block py-0 font-heading text-3xl text-foreground sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl"
+                    className="block py-0 font-heading text-[1.65rem] leading-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl"
                   >
                     {copy.headline1}
                   </HyperText>
@@ -732,7 +730,7 @@ export default function Home() {
                     animateOnHover={!shouldReduce}
                     duration={shouldReduce ? 1 : 900}
                     delay={shouldReduce ? 0 : 240}
-                    className="mt-1 block py-0 font-heading text-3xl text-primary sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl"
+                    className="mt-1 block py-0 font-heading text-[1.65rem] leading-tight text-primary sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl"
                   >
                     {copy.headline2}
                   </HyperText>
@@ -882,21 +880,21 @@ export default function Home() {
 
           <FadeInUp>
             <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-card">
-              <table className="w-full min-w-[640px] border-collapse text-sm sm:min-w-[860px]">
+              <table className="w-full border-collapse text-sm sm:min-w-[860px]">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="w-[320px] border-b border-border px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                    <th className="border-b border-border px-3 py-3 text-left text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase sm:w-[320px] sm:px-4">
                       Feature
                     </th>
                     {comparison.columns.map((col, colIdx) => (
                       <th
                         key={col}
                         className={[
-                          "border-b border-border px-4 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase",
+                          "border-b border-border px-3 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase sm:px-4",
                           colIdx === 0
                             ? "bg-secondary text-secondary-foreground"
                             : "text-muted-foreground",
-                          colIdx >= 3 ? "hidden sm:table-cell" : "",
+                          colIdx >= 2 ? "hidden sm:table-cell" : "",
                         ].join(" ")}
                       >
                         {col}
@@ -907,16 +905,16 @@ export default function Home() {
                 <tbody className="divide-y divide-border">
                   {comparison.rows.map((row) => (
                     <tr key={row.label} className="hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium text-foreground/80">
+                      <td className="px-3 py-3 font-medium text-foreground/80 sm:px-4">
                         {row.label}
                       </td>
                       {row.values.map((value: boolean, idx: number) => (
                         <td
                           key={idx}
                           className={[
-                            "px-4 py-3",
+                            "px-3 py-3 sm:px-4",
                             idx === 0 ? "bg-secondary/50" : "",
-                            idx >= 3 ? "hidden sm:table-cell" : "",
+                            idx >= 2 ? "hidden sm:table-cell" : "",
                           ].join(" ")}
                         >
                           {value ? (
@@ -1029,7 +1027,28 @@ export default function Home() {
 
           <ScaleIn>
             <div className="relative mt-6 sm:mt-8 lg:pr-16">
-              <div className="relative">
+              {/* Phones: the Safari chrome shrinks the video to ~340px and the
+                  full control bar wraps over it — a plain player is usable. */}
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-lg sm:hidden">
+                <MediaPlayer className="aspect-video w-full rounded-none">
+                  <MediaPlayerVideo className="h-full w-full object-cover">
+                    <source src={DEMO_VIDEO_SRC} type="video/mp4" />
+                  </MediaPlayerVideo>
+                  <MediaPlayerControls className="flex-col items-start gap-2">
+                    <MediaPlayerControlsOverlay />
+                    <MediaPlayerSeek />
+                    <div className="flex w-full items-center gap-1.5 px-1">
+                      <MediaPlayerPlay />
+                      <MediaPlayerTime />
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <MediaPlayerFullscreen />
+                      </div>
+                    </div>
+                  </MediaPlayerControls>
+                </MediaPlayer>
+              </div>
+
+              <div className="relative hidden sm:block">
                 <Safari
                   url="lingua-rakyat.my"
                   className="w-full drop-shadow-xl"

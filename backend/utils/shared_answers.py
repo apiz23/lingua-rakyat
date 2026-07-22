@@ -32,23 +32,10 @@ import os
 import secrets
 from typing import Any, Optional
 
-from supabase import Client, create_client
+from utils.auth import get_supabase
 
 logger = logging.getLogger("shared_answers")
 TABLE = "lr_shared_answers"
-
-_supabase: Optional[Client] = None
-
-
-def get_supabase() -> Client:
-    global _supabase
-    if _supabase is None:
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_KEY")
-        if not url or not key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set.")
-        _supabase = create_client(url, key)
-    return _supabase
 
 
 def store_share(
@@ -116,5 +103,5 @@ def list_shares_for_user(user_id: str) -> list[dict[str, Any]]:
 
 
 def delete_share(slug: str) -> bool:
-    res = get_supabase().table(TABLE).delete().eq("slug", slug).execute()
+    res = get_supabase(admin=True).table(TABLE).delete().eq("slug", slug).execute()
     return bool(res.data)

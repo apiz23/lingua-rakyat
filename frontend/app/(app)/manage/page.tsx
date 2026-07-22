@@ -93,7 +93,7 @@ interface ConfirmDialogProps {
   description: string
   confirmLabel?: string
   cancelLabel?: string
-  onConfirm: () => void
+  onConfirm: (token: string) => void
   onCancel: () => void
   danger?: boolean
 }
@@ -108,6 +108,9 @@ function ConfirmDialog({
   onCancel,
   danger = false,
 }: ConfirmDialogProps) {
+  const [token, setToken] = useState("")
+  const { language } = useLanguage()
+
   if (!open) return null
   return (
     <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm duration-150">
@@ -129,19 +132,32 @@ function ConfirmDialog({
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-foreground">{title}</h3>
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            {danger && (
+              <div className="mt-3">
+                <input
+                  type="password"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder={language === "ms" ? "Token pentadbir" : "Admin token"}
+                  className="w-full border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <button
-            onClick={onCancel}
+            onClick={() => { setToken(""); onCancel() }}
             className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary active:scale-[0.97]"
           >
             {cancelLabel}
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => { onConfirm(token); setToken("") }}
+            disabled={danger && !token.trim()}
             className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors active:scale-[0.97]",
+              "px-4 py-2 text-sm font-medium transition-colors active:scale-[0.97] disabled:opacity-50",
               danger
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -221,7 +237,7 @@ export default function ManagePage() {
     open: boolean
     title: string
     description: string
-    onConfirm: () => void
+    onConfirm: (token: string) => void
   }>({ open: false, title: "", description: "", onConfirm: () => {} })
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null)
 
@@ -395,9 +411,9 @@ export default function ManagePage() {
         language === "ms"
           ? `"${doc.name}" akan dipadam secara kekal daripada storan dan pangkalan data vektor.`
           : `"${doc.name}" will be permanently deleted from storage and the vector database.`,
-      onConfirm: () => {
+      onConfirm: (token: string) => {
         setConfirmDialog((prev) => ({ ...prev, open: false }))
-        doDelete([doc.id])
+        doDelete([doc.id], token)
       },
     })
   }
@@ -415,14 +431,14 @@ export default function ManagePage() {
         language === "ms"
           ? `Tindakan ini akan memadam ${count} dokumen secara kekal daripada storan dan pangkalan data vektor. Tindakan ini tidak boleh dibatalkan.`
           : `This will permanently delete ${count} documents from storage and the vector database. This action cannot be undone.`,
-      onConfirm: () => {
+      onConfirm: (token: string) => {
         setConfirmDialog((prev) => ({ ...prev, open: false }))
-        doDelete(Array.from(selected))
+        doDelete(Array.from(selected), token)
       },
     })
   }
 
-  const doDelete = async (ids: string[]) => {
+  const doDelete = async (ids: string[], uploadToken: string) => {
     setDeletingIds(new Set(ids))
 
     await toast.promise(
@@ -432,7 +448,7 @@ export default function ManagePage() {
 
         for (const id of ids) {
           try {
-            await deleteDocument(id)
+            await deleteDocument(id, uploadToken)
             successCount++
           } catch (err) {
             const doc = documents.find((d) => d.id === id)

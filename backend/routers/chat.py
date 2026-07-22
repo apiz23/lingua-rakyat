@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from routers.eval import _evaluator as evaluator
 from utils.auth import get_verified_user
@@ -23,11 +22,11 @@ from utils.chat_history import (
     list_chat_messages,
     list_conversations,
 )
-from rate_limits import CHAT_LIMIT
+from rate_limits import CHAT_LIMIT, get_proxy_aware_remote_address
 from utils.rag_pipeline import answer_question, stream_answer_question
 
 logger = logging.getLogger("chat_router")
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_proxy_aware_remote_address)
 router = APIRouter()
 
 
@@ -191,7 +190,7 @@ async def ask_question(
         )
     except Exception as exc:
         logger.error("[Chat] Q&A failed: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Failed to generate answer: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Failed to generate answer. Please try again later.") from exc
 
     timestamp = datetime.utcnow().isoformat() + "Z"
     answer_text = result["answer"]
@@ -264,7 +263,7 @@ async def ask_question_stream(
 
         except Exception as exc:
             logger.error("[Chat] Streaming failed: %s", exc)
-            yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'detail': 'An error occurred during generation.'})}\n\n"
 
     return StreamingResponse(
         event_stream(),

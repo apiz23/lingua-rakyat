@@ -4,7 +4,7 @@ from typing import Literal
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from routers.documents import get_supabase
+from utils.auth import get_supabase
 
 logger = logging.getLogger("feedback_router")
 router = APIRouter()

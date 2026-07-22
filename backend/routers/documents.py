@@ -15,11 +15,10 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from pypdf import PdfReader
 from slowapi import Limiter
-from slowapi.util import get_remote_address
-from supabase import Client, create_client
 from pinecone import Pinecone
 
-from rate_limits import DOC_LIMIT, PDF_URL_LIMIT, SEED_LIMIT
+from rate_limits import DOC_LIMIT, PDF_URL_LIMIT, SEED_LIMIT, get_proxy_aware_remote_address
+from utils.auth import get_supabase
 from utils.chat_history import delete_chat_messages_for_document
 from utils.rag_pipeline import (
     delete_document_from_vectorstore,
@@ -27,7 +26,7 @@ from utils.rag_pipeline import (
     rename_document_in_vectorstore,
 )
 
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_proxy_aware_remote_address)
 logger = logging.getLogger("documents_router")
 router = APIRouter()
 
@@ -77,19 +76,6 @@ FEATURED_DOCS = [
     },
 ]
 
-_supabase: Optional[Client] = None
-
-
-def get_supabase() -> Client:
-    global _supabase
-    if _supabase is None:
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_KEY")
-        if not url or not key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in your .env file.")
-        _supabase = create_client(url, key)
-    return _supabase
-
 
 def get_bucket() -> str:
     return os.getenv("SUPABASE_BUCKET", "documents")
@@ -110,7 +96,7 @@ def validate_uploaded_pdf_bytes(file_content: bytes) -> None:
     try:
         reader = PdfReader(io.BytesIO(file_content))
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Unreadable PDF file: {exc}") from exc
+        raise HTTPException(status_code=400, detail="Unreadable PDF file. The file may be corrupted.") from exc
 
     if reader.is_encrypted:
         raise HTTPException(status_code=400, detail="Encrypted PDF files are not supported.")
@@ -183,12 +169,12 @@ def upsert_documents(documents: list[dict[str, Any]]) -> None:
     if not documents:
         return
     payload = [normalize_document_row(doc) for doc in documents]
-    get_supabase().table(get_documents_table()).upsert(payload).execute()
+    get_supabase(admin=True).table(get_documents_table()).upsert(payload).execute()
     logger.info("[Documents] Upserted %d rows into %s", len(payload), get_documents_table())
 
 
 def delete_document_record(document_id: str) -> None:
-    get_supabase().table(get_documents_table()).delete().eq("id", document_id).execute()
+    get_supabase(admin=True).table(get_documents_table()).delete().eq("id", document_id).execute()
 
 
 def list_storage_documents() -> list[dict[str, Any]]:
@@ -294,7 +280,7 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
             logger.info("[Sync] Auto-registered %s", storage_doc["storage_path"])
 
         if removed_ids:
-            get_supabase().table(get_documents_table()).delete().in_("id", removed_ids).execute()
+            get_supabase(admin=True).table(get_documents_table()).delete().in_("id", removed_ids).execute()
 
         merged = valid_documents + new_entries
         if new_entries or removed_ids:
@@ -306,11 +292,16 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
         return documents
 
 
+def _validate_upload_token(token: str) -> None:
+    if not token or not verify_upload_token(token):
+        raise HTTPException(status_code=401, detail="Valid upload token required.")
+
+
 def verify_upload_token(token: str) -> bool:
     try:
         now = utc_now_iso()
         result = (
-            get_supabase()
+            get_supabase(admin=True)
             .table("token")
             .select("id")
             .eq("value", token)
@@ -381,7 +372,7 @@ def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filenam
             document_id=document_id,
             document_name=safe_filename,
         )
-        get_supabase().table(get_documents_table()).update({
+        get_supabase(admin=True).table(get_documents_table()).update({
             "chunk_count": chunk_count,
             "status": "ready",
             "error_message": None,
@@ -396,7 +387,7 @@ def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filenam
         )
     except Exception as exc:
         try:
-            get_supabase().table(get_documents_table()).update({
+            get_supabase(admin=True).table(get_documents_table()).update({
                 "status": "error",
                 "error_message": str(exc),
             }).eq("id", document_id).execute()
@@ -440,14 +431,14 @@ async def upload_document(
     storage_path = f"{document_id}/{safe_filename}"
 
     try:
-        get_supabase().storage.from_(get_bucket()).upload(
+        get_supabase(admin=True).storage.from_(get_bucket()).upload(
             storage_path,
             file_content,
             {"content-type": "application/pdf"},
         )
         logger.info("[Upload] Uploaded %s", storage_path)
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to upload to Supabase: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Failed to upload document to storage. Please try again.") from exc
 
     doc_record = {
         "id": document_id,
@@ -535,7 +526,7 @@ async def rename_document(request: Request, document_id: str, body: RenameDocume
     if storage_path:
         new_storage_path = f"{document_id}/{new_name}"
         try:
-            get_supabase().storage.from_(get_bucket()).move(storage_path, new_storage_path)
+            get_supabase(admin=True).storage.from_(get_bucket()).move(storage_path, new_storage_path)
             doc_to_rename["storage_path"] = new_storage_path
             doc_to_rename["public_url"] = build_public_url(new_storage_path)
             logger.info("[Rename] Moved storage object %s -> %s", storage_path, new_storage_path)
@@ -543,7 +534,7 @@ async def rename_document(request: Request, document_id: str, body: RenameDocume
             logger.warning("[Rename] Storage move failed for %s: %s", storage_path, exc)
 
     doc_to_rename["name"] = new_name
-    get_supabase().table(get_documents_table()).update({
+    get_supabase(admin=True).table(get_documents_table()).update({
         "name": new_name,
         "storage_path": doc_to_rename.get("storage_path"),
         "public_url": doc_to_rename.get("public_url"),
@@ -565,7 +556,9 @@ async def register_document(
     chunk_count: int = 0,
     storage_path: Optional[str] = None,
     public_url: Optional[str] = None,
+    upload_token: str = "",
 ):
+    _validate_upload_token(upload_token)
     documents = load_documents()
     if any(doc["id"] == id for doc in documents):
         raise HTTPException(status_code=409, detail=f"Document '{id}' is already registered.")
@@ -626,11 +619,12 @@ async def refresh_chunk_counts():
         }
     except Exception as exc:
         logger.error("[Refresh] Error: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Failed to refresh chunk counts: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Failed to refresh chunk counts.") from exc
 
 
 @router.delete("/{document_id}")
-async def delete_document(document_id: str):
+async def delete_document(document_id: str, upload_token: str = ""):
+    _validate_upload_token(upload_token)
     documents = load_documents()
     doc_to_delete = next((doc for doc in documents if doc["id"] == document_id), None)
     if not doc_to_delete:
@@ -639,7 +633,7 @@ async def delete_document(document_id: str):
     storage_path = doc_to_delete.get("storage_path")
     if storage_path:
         try:
-            get_supabase().storage.from_(get_bucket()).remove([storage_path])
+            get_supabase(admin=True).storage.from_(get_bucket()).remove([storage_path])
             logger.info("[Delete] Removed %s from storage", storage_path)
         except Exception as exc:
             logger.warning("[Delete] Could not remove %s from storage: %s", storage_path, exc)
@@ -725,7 +719,7 @@ async def reindex_document(request: Request, document_id: str, upload_token: str
     if not upload_token or not verify_upload_token(upload_token):
         raise HTTPException(status_code=401, detail="Valid upload token required.")
 
-    sb = get_supabase()
+    sb = get_supabase(admin=True)
     rows = (
         sb.table(get_documents_table())
         .select("storage_path, name, status")
@@ -765,7 +759,7 @@ async def reindex_document(request: Request, document_id: str, upload_token: str
         )
     except Exception as exc:
         logger.warning("[Reindex] Failed for %s: %s", document_id, exc)
-        raise HTTPException(status_code=500, detail=f"Re-index failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail="Re-index failed. Please try again.") from exc
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -814,7 +808,7 @@ def _upload_seed_pdf_to_storage(supabase_id: str, filename: str, pdf_path: str) 
     try:
         with open(pdf_path, "rb") as fh:
             data = fh.read()
-        get_supabase().storage.from_(get_bucket()).upload(
+        get_supabase(admin=True).storage.from_(get_bucket()).upload(
             storage_path,
             data,
             {"content-type": "application/pdf", "x-upsert": "true"},
@@ -862,7 +856,7 @@ async def _do_seed() -> dict:
                     str(existing["id"]), featured["filename"], pdf_path
                 )
                 if storage_path:
-                    get_supabase().table(get_documents_table()).update({
+                    get_supabase(admin=True).table(get_documents_table()).update({
                         "storage_path": storage_path,
                         "public_url": build_public_url(storage_path),
                         "size_bytes": os.path.getsize(pdf_path),
@@ -896,7 +890,7 @@ async def _do_seed() -> dict:
                 {**base_payload, "is_featured": True, "agency": featured["agency"]},
                 base_payload,
             ]:
-                resp = get_supabase().table(get_documents_table()).upsert(payload).execute()
+                resp = get_supabase(admin=True).table(get_documents_table()).upsert(payload).execute()
                 if getattr(resp, "data", None) is not None:
                     logger.info("[Seed] Upserted %s (payload keys: %s)", doc_id, list(payload.keys()))
                     break
@@ -911,8 +905,9 @@ async def _do_seed() -> dict:
 
 @router.post("/seed")
 @limiter.limit(SEED_LIMIT)
-async def seed_featured_documents(request: Request):
+async def seed_featured_documents(request: Request, upload_token: str = ""):
     _ = request
+    _validate_upload_token(upload_token)
     return await _do_seed()
 
 

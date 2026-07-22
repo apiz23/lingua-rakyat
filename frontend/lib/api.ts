@@ -293,11 +293,15 @@ export async function listDocuments(): Promise<Document[]> {
   }
 }
 
-export async function deleteDocument(documentId: string): Promise<void> {
-  const res = await apiFetch(`${API_URL}/api/documents/${documentId}`, {
+export async function deleteDocument(documentId: string, uploadToken?: string): Promise<void> {
+  const params = uploadToken ? `?upload_token=${encodeURIComponent(uploadToken)}` : ""
+  const res = await apiFetch(`${API_URL}/api/documents/${documentId}${params}`, {
     method: "DELETE",
   })
-  if (!res.ok) throw new Error("Failed to delete document")
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to delete document" }))
+    throw new Error(err.detail || "Failed to delete document")
+  }
 }
 
 export async function renameDocument(
@@ -487,9 +491,13 @@ export async function augmentQuery(
   return res.json()
 }
 
-export async function clearEvalRecords(): Promise<void> {
-  const res = await apiFetch(`${API_URL}/api/eval/clear`, { method: "DELETE" })
-  if (!res.ok) throw new Error("Failed to clear eval records")
+export async function clearEvalRecords(uploadToken?: string): Promise<void> {
+  const params = uploadToken ? `?upload_token=${encodeURIComponent(uploadToken)}` : ""
+  const res = await apiFetch(`${API_URL}/api/eval/clear${params}`, { method: "DELETE" })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Failed to clear eval records" }))
+    throw new Error(err.detail || "Failed to clear eval records")
+  }
 }
 
 // ── Streaming chat ─────────────────────────────────────────────────────────
@@ -804,16 +812,6 @@ export const GROQ_MODELS = [
     rpd: "14.4K",
     tpm: "6K",
     tpd: "500K",
-    recommended: false,
-  },
-  {
-    id: "llama-3.3-70b-versatile",
-    label: "Llama 3.3 70B",
-    tag: "Deprecated — shuts down 16 Aug 2026",
-    rpm: 30,
-    rpd: "1K",
-    tpm: "12K",
-    tpd: "100K",
     recommended: false,
   },
 ]

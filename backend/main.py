@@ -22,7 +22,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -32,9 +31,9 @@ load_dotenv()
 # Per-IP limits prevent abuse and show production-readiness to judges.
 # Values are env-gated (see rate_limits.py): set BOOTH_MODE=true at a demo booth
 # where all visitors share one public IP, otherwise buckets fill and judges 429.
-from rate_limits import BOOTH_MODE, GLOBAL_DEFAULT
+from rate_limits import BOOTH_MODE, GLOBAL_DEFAULT, get_proxy_aware_remote_address
 
-limiter = Limiter(key_func=get_remote_address, default_limits=[GLOBAL_DEFAULT])
+limiter = Limiter(key_func=get_proxy_aware_remote_address, default_limits=[GLOBAL_DEFAULT])
 
 # ─── Logging Setup ───────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -53,7 +52,6 @@ from routers.documents import router as documents_router
 from routers.chat import router as chat_router
 from routers.eval import router as eval_router
 from routers.voice import router as voice_router
-from routers.whatsapp import router as whatsapp_router
 from routers.telegram import router as telegram_router
 from routers.feedback import router as feedback_router
 from routers.share import router as share_router
@@ -155,7 +153,6 @@ app.include_router(documents_router, prefix="/api/documents", tags=["Documents"]
 app.include_router(chat_router,      prefix="/api/chat",      tags=["Chat"])
 app.include_router(eval_router,      prefix="/api/eval",      tags=["Evaluation"])
 app.include_router(voice_router,     prefix="/api/voice",     tags=["Voice"])
-app.include_router(whatsapp_router,  prefix="/api/whatsapp",  tags=["WhatsApp"])
 app.include_router(telegram_router,  prefix="/api/telegram",  tags=["Telegram"])
 app.include_router(feedback_router,  prefix="/api/feedback",  tags=["Feedback"])
 app.include_router(share_router,     prefix="/api/share",     tags=["Share"])

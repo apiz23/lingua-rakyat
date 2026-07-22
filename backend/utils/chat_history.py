@@ -2,24 +2,11 @@ import logging
 import os
 from typing import Any, Optional
 
-from supabase import Client, create_client
+from utils.auth import get_supabase
 
 logger = logging.getLogger("chat_history")
 
 CHAT_HISTORY_TABLE = os.getenv("CHAT_HISTORY_TABLE", "lr_chat_messages")
-
-_supabase: Optional[Client] = None
-
-
-def get_supabase() -> Client:
-    global _supabase
-    if _supabase is None:
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_KEY")
-        if not url or not key:
-            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in your .env file.")
-        _supabase = create_client(url, key)
-    return _supabase
 
 
 def list_chat_messages(
@@ -95,7 +82,7 @@ def delete_chat_messages(
     user_id: Optional[str] = None,
 ) -> int:
     try:
-        query = get_supabase().table(CHAT_HISTORY_TABLE).delete()
+        query = get_supabase(admin=True).table(CHAT_HISTORY_TABLE).delete()
         if user_id:
             query = query.eq("user_id", user_id)
         if document_id:

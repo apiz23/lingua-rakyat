@@ -319,7 +319,7 @@ export function AppSidebar() {
                 onClick={handleNavigation}
                 className={cn(
                   sidebarMenuButtonVariants(),
-                  "min-h-9 gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary group-data-[collapsible=icon]:p-0!"
+                  "min-h-9 gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!"
                 )}
               >
                 {isSignedIn && user?.imageUrl ? (

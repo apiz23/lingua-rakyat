@@ -35,13 +35,13 @@ logger = logging.getLogger("eval_router")
 
 
 def _persist_eval_record(record: dict) -> None:
-    from routers.documents import get_supabase
+    from utils.auth import get_supabase
     table = os.getenv("EVAL_TABLE", "lr_eval_records")
     get_supabase().table(table).insert(record).execute()
 
 
 def _load_eval_records() -> list[dict]:
-    from routers.documents import get_supabase
+    from utils.auth import get_supabase
     table = os.getenv("EVAL_TABLE", "lr_eval_records")
     response = (
         get_supabase()
@@ -275,10 +275,22 @@ async def run_test_suite(req: TestSuiteRequest):
 
 
 @router.delete("/clear")
-async def clear_eval_records():
+async def clear_eval_records(upload_token: str = ""):
     """Clear all evaluation records (useful for resetting between demo runs)."""
+    if not upload_token or not _verify_eval_token(upload_token):
+        raise HTTPException(status_code=401, detail="Valid upload token required.")
     _evaluator.clear()
     return {"cleared": True, "message": "All evaluation records removed."}
+
+
+def _verify_eval_token(token: str) -> bool:
+    """Validate an upload token for eval endpoints."""
+    try:
+        from routers.documents import verify_upload_token
+        return verify_upload_token(token)
+    except Exception as exc:
+        logger.warning("[Eval] Token verification error: %s", exc)
+        return False
 
 
 @router.get("/health")

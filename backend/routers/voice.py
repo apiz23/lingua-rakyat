@@ -7,13 +7,12 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 
-from rate_limits import VOICE_LIMIT
+from rate_limits import VOICE_LIMIT, get_proxy_aware_remote_address
 from utils.voice_helpers import TranscriptionError, MAX_TTS_CHARS, text_to_speech, transcribe_audio
 
 logger = logging.getLogger("voice_router")
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_proxy_aware_remote_address)
 router = APIRouter()
 
 MIN_AUDIO_BYTES = 1  # rejects zero-byte uploads; real duration check is Groq's response

@@ -2,7 +2,6 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from routers.telegram import _format_answer as tg_format
-from routers.whatsapp import _format_answer as wa_format
 
 
 def _result(**overrides):
@@ -21,11 +20,6 @@ def _result(**overrides):
 def test_telegram_appends_warning_when_cautious():
     out = tg_format(_result())
     assert "⚠ Based on 1 moderate match" in out
-
-
-def test_whatsapp_appends_warning_when_insufficient():
-    out = wa_format(_result(evidence_mode="insufficient"))
-    assert "⚠" in out
 
 
 def test_no_warning_when_strong():

@@ -6,8 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from utils.auth import get_verified_user
-from utils.shared_answers import get_supabase
+from utils.auth import get_supabase, get_verified_user
 
 logger = logging.getLogger("user_router")
 router = APIRouter()
@@ -33,7 +32,7 @@ def merge_anon(body: MergeRequest, verified: Optional[str] = Depends(get_verifie
     if not anon or anon.startswith("user_"):
         raise HTTPException(status_code=400, detail="anon_user_id must be an anonymous ID")
 
-    client = get_supabase()
+    client = get_supabase(admin=True)
     res = client.table(CHAT_TABLE).update({"user_id": verified}).eq("user_id", anon).execute()
     chat_rows = len(res.data or [])
 

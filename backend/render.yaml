@@ -5,7 +5,8 @@ services:
     pythonVersion: 3.12.0
     buildCommand: apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-msa tesseract-ocr-chi-sim libgl1 && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    plan: free
+    plan: starter  # Upgrade from free: 512MB RAM is insufficient for PDF processing
+    healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
@@ -13,19 +14,29 @@ services:
         value: 8000
       - key: GROQ_API_KEY
         sync: false
+      - key: COHERE_API_KEY
+        sync: false
       - key: PINECONE_API_KEY
         sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
         sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
       - key: SUPABASE_BUCKET
         value: documents
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
+      - key: GROQ_MODEL_FAST
+        value: llama-3.1-8b-instant
       - key: LLM_PROVIDER
         value: groq
-      - key: COHERE_API_KEY
+      - key: CLERK_ISSUER
         sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: BOOTH_MODE
+        value: false
       - key: TESSERACT_LANGS
         value: eng+msa+chi_sim

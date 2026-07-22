@@ -13,12 +13,47 @@ from typing import Optional
 
 import jwt
 from fastapi import HTTPException, Request
+from supabase import Client, create_client
 
 logger = logging.getLogger("auth")
 
 CLERK_ISSUER = os.getenv("CLERK_ISSUER", "")
 
 _jwk_client: Optional[jwt.PyJWKClient] = None
+
+# ─── Supabase Clients (Least Privilege) ─────────────────────────────────────
+# Public client uses SUPABASE_ANON_KEY (RLS-gated when policies are in place).
+# Admin client uses SUPABASE_KEY (service_role — bypasses RLS).
+# If only SUPABASE_KEY is configured, both fall back to the same key for
+# backwards compatibility.
+_supabase: Optional[Client] = None
+_supabase_admin: Optional[Client] = None
+
+
+def get_supabase(admin: bool = False) -> Client:
+    """
+    Return a Supabase client.
+    admin=True  → service_role key (destructive/privileged ops).
+    admin=False → anon key, or service_role if no anon key is configured.
+    """
+    global _supabase, _supabase_admin
+
+    if admin:
+        if _supabase_admin is None:
+            url = os.getenv("SUPABASE_URL")
+            key = os.getenv("SUPABASE_KEY")
+            if not url or not key:
+                raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in your .env file.")
+            _supabase_admin = create_client(url, key)
+        return _supabase_admin
+
+    if _supabase is None:
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
+        if not url or not key:
+            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_KEY) must be set.")
+        _supabase = create_client(url, key)
+    return _supabase
 
 
 def _get_jwk_client() -> jwt.PyJWKClient:

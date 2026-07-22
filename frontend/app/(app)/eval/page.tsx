@@ -295,7 +295,9 @@ export default function EvalPage() {
   }
 
   async function handleClear() {
-    try { await clearEvalRecords(); setReport(null); setTestResult(null); toast.success("Records cleared") }
+    const token = window.prompt("Enter admin token to clear evaluation records:")
+    if (!token) return
+    try { await clearEvalRecords(token); setReport(null); setTestResult(null); toast.success("Records cleared") }
     catch { toast.error("Failed to clear records") }
   }
 

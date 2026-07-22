@@ -10,9 +10,45 @@ Normal-mode values match the limits that were previously hard-coded on each
 route, so behavior is unchanged unless BOOTH_MODE (or a per-limit override) is
 set. Each value can be overridden directly with its own env var
 (e.g. CHAT_RATE_LIMIT="500/minute"), which takes precedence over BOOTH_MODE.
+
+When deployed behind a reverse proxy (Vercel, Render, Cloudflare, nginx), the
+raw client IP is the proxy's IP, not the end user's. This module provides
+get_proxy_aware_remote_address() which checks X-Forwarded-For and X-Real-IP
+before falling back to the direct connection IP, so rate limits are enforced
+on real users, not on proxy IPs.
 """
 
 import os
+from typing import Optional
+
+from fastapi import Request
+
+
+def get_proxy_aware_remote_address(request: Request) -> str:
+    """
+    Resolve the original client IP from proxy-forwarded headers.
+
+    Priority:
+      1. X-Forwarded-For (first, most trusted IP in the chain)
+      2. X-Real-IP (single IP header, set by some proxies like nginx)
+      3. request.client.host (direct connection — fallback)
+    """
+    forwarded = request.headers.get("x-forwarded-for", "").strip()
+    if forwarded:
+        candidates = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if candidates:
+            return candidates[0]
+
+    real_ip = request.headers.get("x-real-ip", "").strip()
+    if real_ip:
+        return real_ip
+
+    client = request.client
+    if client is not None:
+        return client.host
+
+    return "unknown"
+
 
 BOOTH_MODE = os.getenv("BOOTH_MODE", "false").lower() == "true"
 

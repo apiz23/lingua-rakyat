@@ -12,12 +12,13 @@ Commands:
   /clear  — reset session
 """
 
+import hashlib
 import logging
 import os
 import tempfile
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from routers.documents import load_documents, sync_documents_with_storage, upsert_documents
@@ -29,6 +30,19 @@ router = APIRouter()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
+# Deterministic webhook secret derived from the bot token so Telegram can
+# authenticate that incoming updates came from Telegram, not an attacker.
+# The same secret is passed to Telegram's setWebhook() at setup time and
+# verified on every incoming webhook request via the X-Telegram-Bot-Api-Secret-Token header.
+_TELEGRAM_WEBHOOK_SECRET: str = ""
+
+
+def _get_webhook_secret() -> str:
+    global _TELEGRAM_WEBHOOK_SECRET
+    if not _TELEGRAM_WEBHOOK_SECRET and BOT_TOKEN:
+        _TELEGRAM_WEBHOOK_SECRET = hashlib.sha256(BOT_TOKEN.encode()).hexdigest()[:32]
+    return _TELEGRAM_WEBHOOK_SECRET
+
 
 def _bot():
     from telegram import Bot
@@ -36,8 +50,8 @@ def _bot():
 
 
 def _supabase():
-    from routers.documents import get_supabase
-    return get_supabase()
+    from utils.auth import get_supabase
+    return get_supabase(admin=True)
 
 
 # ── Supabase sessions ─────────────────────────────────────────────────────────
@@ -213,7 +227,7 @@ async def _handle_message(bot, update) -> None:
             )
         except Exception as exc:
             logger.error("PDF upload failed: %s", exc)
-            await bot.send_message(chat_id=chat_id, text=f"❌ Upload failed: {exc}")
+            await bot.send_message(chat_id=chat_id, text="❌ Upload failed. Please try again later.")
         return
 
     # ── Voice ─────────────────────────────────────────────────────────────────
@@ -230,7 +244,7 @@ async def _handle_message(bot, update) -> None:
             await bot.send_message(chat_id=chat_id, text=f"🎤 *Heard:* {text}", parse_mode="Markdown")
         except Exception as exc:
             logger.error("Transcription failed: %s", exc)
-            await bot.send_message(chat_id=chat_id, text=f"❌ Transcription failed: {exc}")
+            await bot.send_message(chat_id=chat_id, text="❌ Transcription failed. Please try again.")
             return
 
     # ── Text Q&A ──────────────────────────────────────────────────────────────
@@ -251,7 +265,7 @@ async def _handle_message(bot, update) -> None:
         )
     except Exception as exc:
         logger.error("Q&A failed: %s", exc)
-        await bot.send_message(chat_id=chat_id, text=f"❌ Error: {exc}")
+        await bot.send_message(chat_id=chat_id, text="❌ Error processing your question. Please try again.")
         return
 
     session["history"].append({"question": text, "answer": result.get("answer", "")})
@@ -292,6 +306,13 @@ async def telegram_webhook(request: Request):
     if not BOT_TOKEN:
         return JSONResponse({"error": "BOT_TOKEN not set"}, status_code=500)
 
+    secret = _get_webhook_secret()
+    if secret:
+        header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if not header_secret or header_secret != secret:
+            logger.warning("[Telegram] Webhook called with invalid or missing secret token")
+            raise HTTPException(status_code=401, detail="Invalid webhook secret token")
+
     try:
         from telegram import Update
         data = await request.json()
@@ -320,6 +341,10 @@ async def setup_webhook(request: Request):
     webhook_url = f"{base_url}/api/telegram/webhook"
 
     bot = _bot()
-    await bot.set_webhook(url=webhook_url)
+    secret = _get_webhook_secret()
+    kwargs = {"url": webhook_url}
+    if secret:
+        kwargs["secret_token"] = secret
+    await bot.set_webhook(**kwargs)
 
     return JSONResponse({"ok": True, "webhook_url": webhook_url})
