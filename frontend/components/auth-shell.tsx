@@ -31,8 +31,7 @@ export function AuthShell({
             width={32}
             height={32}
             className="rounded-full"
-            unoptimized
-          />
+            />
           Lingua Rakyat
         </Link>
 

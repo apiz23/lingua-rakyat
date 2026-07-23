@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import { useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import {
   motion,
   useScroll,
@@ -30,36 +31,25 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import Image from "next/image"
 import Footer from "@/components/footer"
-import LogoCarousel from "@/components/ui/logo-carousel"
 import { useMobile } from "@/hooks/use-mobile"
 import { useLanguage } from "@/components/language-provider"
-import { LinkPreview } from "@/components/ui/link-preview"
-import { Safari } from "@/components/ui/safari"
-import { Iphone } from "@/components/ui/iphone"
-import {
-  MediaPlayer,
-  MediaPlayerVideo,
-  MediaPlayerControls,
-  MediaPlayerControlsOverlay,
-  MediaPlayerPlay,
-  MediaPlayerSeekBackward,
-  MediaPlayerSeekForward,
-  MediaPlayerVolume,
-  MediaPlayerSeek,
-  MediaPlayerTime,
-  MediaPlayerPlaybackSpeed,
-  MediaPlayerFullscreen,
-  MediaPlayerPiP,
-} from "@/components/ui/media-player"
 import logo from "@/public/icons/android-chrome-512x512.png"
 import { HyperText } from "@/components/ui/hyper-text"
 import { ModeToggle } from "@/components/mode-toggle"
-import { Backlight } from "@/components/ui/backlight"
-import bgNew from "@/public/assets/background-new3.png"
-import bgMobile from "@/public/assets/bg-mobile.png"
-import mykadImg from "@/public/assets/MyKad.png"
-import passportImg from "@/public/assets/passport.png"
-import personImg from "@/public/assets/person.png"
+
+const DemoVideo = dynamic(
+  () => import("@/components/demo-video").then((m) => m.DemoVideo),
+  { ssr: false }
+)
+const TechStackLogos = dynamic(
+  () => import("@/components/tech-stack-logos").then((m) => m.TechStackLogos),
+  { ssr: false }
+)
+import bgNew from "@/public/assets/background-new3.webp"
+import bgMobile from "@/public/assets/bg-mobile.webp"
+import mykadImg from "@/public/assets/MyKad.webp"
+import passportImg from "@/public/assets/passport.webp"
+import personImg from "@/public/assets/person.webp"
 
 const ease = [0.16, 1, 0.3, 1] as const
 
@@ -1027,72 +1017,7 @@ export default function Home() {
 
           <ScaleIn>
             <div className="relative mt-6 sm:mt-8 lg:pr-16">
-              {/* Phones: the Safari chrome shrinks the video to ~340px and the
-                  full control bar wraps over it — a plain player is usable. */}
-              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-lg sm:hidden">
-                <MediaPlayer className="aspect-video w-full rounded-none">
-                  <MediaPlayerVideo className="h-full w-full object-cover">
-                    <source src={DEMO_VIDEO_SRC} type="video/mp4" />
-                  </MediaPlayerVideo>
-                  <MediaPlayerControls className="flex-col items-start gap-2">
-                    <MediaPlayerControlsOverlay />
-                    <MediaPlayerSeek />
-                    <div className="flex w-full items-center gap-1.5 px-1">
-                      <MediaPlayerPlay />
-                      <MediaPlayerTime />
-                      <div className="ml-auto flex items-center gap-1.5">
-                        <MediaPlayerFullscreen />
-                      </div>
-                    </div>
-                  </MediaPlayerControls>
-                </MediaPlayer>
-              </div>
-
-              <div className="relative hidden sm:block">
-                <Safari
-                  url="lingua-rakyat.my"
-                  className="w-full drop-shadow-xl"
-                />
-                <div
-                  className="absolute z-20 overflow-hidden"
-                  style={{
-                    left: "0.0831%",
-                    top: "6.9058%",
-                    width: "99.7506%",
-                    height: "92.9615%",
-                  }}
-                >
-                  <MediaPlayer className="h-full w-full rounded-none">
-                    <MediaPlayerVideo className="h-full w-full object-cover">
-                      <source src={DEMO_VIDEO_SRC} type="video/mp4" />
-                    </MediaPlayerVideo>
-                    <MediaPlayerControls className="flex-col items-start gap-2.5">
-                      <MediaPlayerControlsOverlay />
-                      <MediaPlayerSeek />
-                      <div className="flex w-full flex-wrap items-center gap-2 px-2 sm:px-0">
-                        <div className="flex flex-1 flex-wrap items-center gap-1 sm:gap-2">
-                          <MediaPlayerPlay />
-                          <MediaPlayerSeekBackward />
-                          <MediaPlayerSeekForward />
-                          <MediaPlayerVolume expandable />
-                          <MediaPlayerTime />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                          <MediaPlayerPlaybackSpeed />
-                          <MediaPlayerPiP />
-                          <MediaPlayerFullscreen />
-                        </div>
-                      </div>
-                    </MediaPlayerControls>
-                  </MediaPlayer>
-                </div>
-              </div>
-              <div className="pointer-events-none absolute -bottom-6 right-0 z-30 hidden w-[17%] max-w-[180px] md:block lg:-right-2">
-                <Iphone
-                  videoSrc={DEMO_VIDEO_SRC}
-                  className="drop-shadow-2xl"
-                />
-              </div>
+              <DemoVideo src={DEMO_VIDEO_SRC} />
             </div>
           </ScaleIn>
         </section>
@@ -1105,39 +1030,17 @@ export default function Home() {
             </p>
           </FadeInLeft>
           <FadeInLeft delay={0.05}>
-            <div className="mt-6 mb-8 flex flex-wrap justify-center gap-2 sm:mt-8 sm:mb-12 sm:gap-3">
-              {[
+            <TechStackLogos
+              techs={[
                 { name: "Next.js", url: "https://nextjs.org" },
                 { name: "FastAPI", url: "https://fastapi.tiangolo.com" },
                 { name: "Pinecone", url: "https://pinecone.io" },
                 { name: "Cohere", url: "https://cohere.com" },
                 { name: "Groq", url: "https://groq.com" },
                 { name: "Supabase", url: "https://supabase.com" },
-              ].map((tech) => (
-                <LinkPreview key={tech.name} url={tech.url}>
-                  <span
-                    className="inline-block cursor-pointer rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-secondary hover:text-primary hover:shadow-sm sm:px-5 sm:py-2 sm:text-sm"
-                  >
-                    {tech.name}
-                  </span>
-                </LinkPreview>
-              ))}
-            </div>
+              ]}
+            />
           </FadeInLeft>
-
-          <ScaleIn>
-            <div className="mt-6 w-full overflow-x-hidden sm:mt-8">
-              <div className="relative w-full">
-                <Backlight blur={6}>
-                  <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted-foreground/20 flex justify-center overflow-x-auto overflow-y-visible pb-4">
-                    <div className="min-w-[300px]">
-                      <LogoCarousel columnCount={isMobile ? 3 : 4} />
-                    </div>
-                  </div>
-                </Backlight>
-              </div>
-            </div>
-          </ScaleIn>
         </section>
       </main>
       <div className="relative z-50 bg-background/30">

@@ -216,8 +216,7 @@ export function AppSidebar() {
                     width={64}
                     height={64}
                     className="rounded-full"
-                    unoptimized
-                  />
+                    />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold text-foreground">
