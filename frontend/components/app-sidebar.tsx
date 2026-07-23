@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
@@ -16,6 +16,8 @@ import {
   User,
   LogOut,
   Share2,
+  Check,
+  X,
 } from "lucide-react"
 
 import {
@@ -42,7 +44,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { GithubIcon } from "./ui/github"
 import { LinkedinIcon } from "./ui/linkedin"
-import { listConversations, type ConversationSummary } from "@/lib/api"
+import { listConversations, renameConversation, type ConversationSummary } from "@/lib/api"
 
 type NavItem = {
   readonly href: string
@@ -87,13 +89,15 @@ export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { language, toggleLanguage } = useLanguage()
-  const { setOpenMobile } = useSidebar()
+  const { setOpenMobile, isMobile } = useSidebar()
   const { userId, activeSessionId, setActiveSessionId } = useWorkspaceSession()
   const { user, isSignedIn } = useUser()
   const { signOut } = useClerk()
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [loadingConversations, setLoadingConversations] = useState(false)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameInput, setRenameInput] = useState("")
 
   useEffect(() => {
     if (!userId) return
@@ -102,6 +106,33 @@ export function AppSidebar() {
       .then(setConversations)
       .finally(() => setLoadingConversations(false))
   }, [userId, activeSessionId])
+
+  const handleStartRename = (conv: ConversationSummary) => {
+    setRenamingId(conv.session_id)
+    setRenameInput(conv.custom_title || conv.title)
+  }
+
+  const handleCancelRename = () => {
+    setRenamingId(null)
+    setRenameInput("")
+  }
+
+  const handleConfirmRename = async (sessionId: string) => {
+    const trimmed = renameInput.trim()
+    if (!trimmed || !userId) {
+      handleCancelRename()
+      return
+    }
+    const ok = await renameConversation(userId, sessionId, trimmed)
+    if (ok) {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.session_id === sessionId ? { ...c, custom_title: trimmed } : c
+        )
+      )
+    }
+    handleCancelRename()
+  }
 
   const REPO_URL = "https://github.com/apiz23/lingua-rakyat"
 
@@ -281,26 +312,62 @@ export function AppSidebar() {
             ) : (
               conversations.map((conv) => {
                 const active = conv.session_id === activeSessionId
+                const isRenaming = renamingId === conv.session_id
+                const displayTitle = conv.custom_title || conv.title
                 return (
                   <SidebarMenuItem key={conv.session_id}>
-                    <SidebarMenuButton
-                      onClick={() => goToWorkspace(conv.session_id)}
-                      isActive={active}
-                      tooltip={conv.title}
-                      className={cn(
-                        "min-h-9 flex-col items-start gap-0 px-2.5 py-1.5 leading-tight",
-                        active
-                          ? "bg-primary/10 text-primary hover:bg-primary/15"
-                          : "hover:bg-muted"
-                      )}
-                    >
-                      <span className="w-full truncate text-sm font-medium">
-                        {conv.title}
-                      </span>
-                      <span className="font-mono text-[10px] text-muted-foreground">
-                        {relativeTime(conv.last_at)} &middot; {conv.count}
-                      </span>
-                    </SidebarMenuButton>
+                    {isRenaming ? (
+                      <div className="flex w-full items-center gap-1 px-2.5 py-1.5">
+                        <input
+                          type="text"
+                          value={renameInput}
+                          onChange={(e) => setRenameInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleConfirmRename(conv.session_id)
+                            if (e.key === "Escape") handleCancelRename()
+                          }}
+                          onBlur={() => handleConfirmRename(conv.session_id)}
+                          autoFocus
+                          className="min-h-0 flex-1 rounded-md border border-primary bg-background px-2 py-1 text-sm outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmRename(conv.session_id)}
+                          className="shrink-0 rounded p-1 text-success transition-colors hover:bg-success/10"
+                          aria-label="Confirm"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelRename}
+                          className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted"
+                          aria-label="Cancel"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <SidebarMenuButton
+                        onClick={() => goToWorkspace(conv.session_id)}
+                        onDoubleClick={() => handleStartRename(conv)}
+                        isActive={active}
+                        tooltip={displayTitle}
+                        className={cn(
+                          "min-h-9 flex-col items-start gap-0 px-2.5 py-1.5 leading-tight",
+                          active
+                            ? "bg-primary/10 text-primary hover:bg-primary/15"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        <span className="w-full truncate text-sm font-medium">
+                          {displayTitle}
+                        </span>
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {relativeTime(conv.last_at)} &middot; {conv.count}
+                        </span>
+                      </SidebarMenuButton>
+                    )}
                   </SidebarMenuItem>
                 )
               })
@@ -339,7 +406,7 @@ export function AppSidebar() {
                     : copy.signIn}
                 </span>
               </PopoverTrigger>
-              <PopoverContent side="right" align="end" className="w-60 gap-1 p-1.5">
+              <PopoverContent side={isMobile ? "top" : "right"} align={isMobile ? "start" : "end"} className="w-60 gap-1 p-1.5">
                 {isSignedIn ? (
                   <>
                     <div className="px-2 py-1.5">

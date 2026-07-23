@@ -5,6 +5,13 @@ import { useAuth } from "@clerk/nextjs"
 import { setAuthTokenGetter } from "@/lib/auth-token"
 import { mergeAnonHistory } from "@/lib/api"
 
+function uuidFallback(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  return `lr-anon-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 // Registers the Clerk token getter for API calls, adopts anonymous history
 // into the account on first sign-in, and mints a fresh anonymous ID after
 // sign-out.
@@ -27,7 +34,7 @@ export default function AuthSync() {
       }
     } else if (!localStorage.getItem("lr-user-id")) {
       // Signed out: device starts a clean anonymous identity.
-      localStorage.setItem("lr-user-id", crypto.randomUUID())
+      localStorage.setItem("lr-user-id", uuidFallback())
     }
   }, [isLoaded, isSignedIn])
 

@@ -31,7 +31,7 @@ function AiChat({ status = "ready", children, className }: AiChatProps) {
     <AiChatContext.Provider value={contextValue}>
       <div
         data-slot="ai-chat"
-        className={cn("flex h-dvh flex-col bg-background font-mono", className)}
+        className={cn("flex flex-1 flex-col bg-background font-mono", className)}
       >
         {children}
       </div>

@@ -823,6 +823,7 @@ export interface ConversationSummary {
   title: string
   last_at: string
   count: number
+  custom_title?: string
 }
 
 export async function mergeAnonHistory(anonUserId: string): Promise<boolean> {
@@ -848,6 +849,23 @@ export async function listConversations(userId: string): Promise<ConversationSum
     return res.json()
   } catch {
     return []
+  }
+}
+
+export async function renameConversation(
+  userId: string,
+  sessionId: string,
+  title: string,
+): Promise<boolean> {
+  try {
+    const res = await apiFetch(`${API_URL}/api/chat/conversations/${sessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "X-User-Id": userId },
+      body: JSON.stringify({ title }),
+    })
+    return res.ok
+  } catch {
+    return false
   }
 }
 

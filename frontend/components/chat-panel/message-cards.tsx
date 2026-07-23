@@ -585,9 +585,9 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                   {message.language === "ms" ? "Soalan susulan:" : message.language === "zh-cn" ? "后续问题：" : "Follow-up questions:"}
                 </p>
                 <div className="flex flex-col gap-1.5">
-                  {message.suggestions.map((q, i) => (
+                  {message.suggestions.map((q) => (
                     <button
-                      key={i}
+                      key={q}
                       type="button"
                       onClick={() => onSuggestionClick?.(q)}
                       className="w-fit max-w-full truncate rounded-full bg-secondary px-3 py-1.5 text-left text-xs font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -611,8 +611,8 @@ export const AIMessageCard = React.memo(function AIMessageCard({
               <VoiceSpeaker text={message.answer} language={message.language} />
             )}
 
-            <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
-              <div className="flex items-center gap-3">
+            <div className="mt-4 flex flex-col gap-2 border-t border-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-3">
                 <span className="text-xs text-muted-foreground">
                   {new Date(message.timestamp).toLocaleTimeString([], {
                     hour: "2-digit",

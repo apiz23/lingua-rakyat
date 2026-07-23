@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import {
   uploadDocument,
   verifyUploadToken,
@@ -157,6 +157,44 @@ export default function UploadModal({
     return (bytes / (1024 * 1024)).toFixed(1) + " MB"
   }
 
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const prev = document.activeElement as HTMLElement | null
+    const timer = setTimeout(() => {
+      dialogRef.current?.focus()
+    }, 0)
+    return () => {
+      clearTimeout(timer)
+      prev?.focus()
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = dialog.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener("keydown", handler)
+    return () => document.removeEventListener("keydown", handler)
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
@@ -171,7 +209,14 @@ export default function UploadModal({
         onClick={handleCancel}
       />
 
-      <div className="animate-in fade-in zoom-in-95 relative w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upload-modal-title"
+        tabIndex={-1}
+        className="animate-in fade-in zoom-in-95 relative w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl outline-none duration-200"
+      >
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -180,7 +225,7 @@ export default function UploadModal({
             ) : (
               <Upload className="h-5 w-5 text-primary" />
             )}
-            <h2 className="text-xl font-semibold">
+            <h2 id="upload-modal-title" className="text-xl font-semibold">
               {step === "token" ? "Enter Access Token" : "Upload Document"}
             </h2>
           </div>

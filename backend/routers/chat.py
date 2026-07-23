@@ -21,6 +21,7 @@ from utils.chat_history import (
     insert_chat_message,
     list_chat_messages,
     list_conversations,
+    update_conversation_title,
 )
 from rate_limits import CHAT_LIMIT, get_proxy_aware_remote_address
 from utils.rag_pipeline import answer_question, stream_answer_question
@@ -280,6 +281,11 @@ class ConversationSummary(BaseModel):
     title: str
     last_at: str
     count: int
+    custom_title: Optional[str] = None
+
+
+class RenameRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=80)
 
 
 @router.get("/conversations", response_model=list[ConversationSummary])
@@ -298,6 +304,25 @@ async def get_conversations(
     if not user_id or not user_id.strip():
         raise HTTPException(status_code=400, detail="user_id is required")
     return list_conversations(user_id)
+
+
+@router.patch("/conversations/{session_id}")
+async def rename_conversation(
+    session_id: str,
+    body: RenameRequest,
+    x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
+    verified: Optional[str] = Depends(get_verified_user),
+):
+    user_id = x_user_id or ""
+    _reject_spoofed_user_id(user_id, verified)
+    if verified:
+        user_id = verified
+    if not user_id or not user_id.strip():
+        raise HTTPException(status_code=400, detail="user_id is required")
+    ok = update_conversation_title(user_id, session_id, body.title.strip())
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to rename conversation")
+    return {"success": True, "session_id": session_id, "title": body.title.strip()}
 
 
 @router.get("/history", response_model=list[ChatMessage])

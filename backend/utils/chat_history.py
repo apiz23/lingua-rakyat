@@ -115,12 +115,36 @@ def delete_chat_messages_for_document(document_id: str) -> int:
     return delete_chat_messages(document_id=document_id)
 
 
+def update_conversation_title(
+    user_id: str, session_id: str, title: str
+) -> bool:
+    """Set a custom title for a conversation session."""
+    try:
+        payload = {"custom_title": title[:80]}
+        supabase = get_supabase(admin=True)
+        supabase.table(CHAT_HISTORY_TABLE).update(payload).eq(
+            "session_id", session_id
+        ).eq("user_id", user_id).execute()
+        logger.info(
+            "[ChatHistory] Renamed session_id=%s to %r", session_id, title
+        )
+        return True
+    except Exception as exc:
+        logger.warning(
+            "[ChatHistory] Failed to rename session_id=%s: %s",
+            session_id, exc,
+        )
+        return False
+
+
 def list_conversations(user_id: str) -> list[dict[str, Any]]:
     """Group lr_chat_messages by session_id for the sidebar conversation list.
 
     Rows come back newest-first from list_chat_messages, so iterating and
     always overwriting `title` with the current row's question yields the
     oldest (first) question as the title when the loop finishes.
+
+    If any message in the session has a `custom_title`, that is used instead.
     """
     rows = list_chat_messages(user_id=user_id)
     sessions: dict[str, dict] = {}
@@ -130,8 +154,17 @@ def list_conversations(user_id: str) -> list[dict[str, Any]]:
             continue
         q = (row.get("question") or "")[:80]
         ts = row.get("created_at", "")
+        ct = row.get("custom_title")
         if sid not in sessions:
-            sessions[sid] = {"session_id": sid, "title": q, "last_at": ts, "count": 0}
+            sessions[sid] = {
+                "session_id": sid,
+                "title": q,
+                "last_at": ts,
+                "count": 0,
+                "custom_title": ct,
+            }
         sessions[sid]["count"] += 1
-        sessions[sid]["title"] = q  # overwrite → last write = oldest row = first question
+        sessions[sid]["title"] = q
+        if ct and not sessions[sid].get("custom_title"):
+            sessions[sid]["custom_title"] = ct
     return sorted(sessions.values(), key=lambda x: x["last_at"], reverse=True)

@@ -12,11 +12,18 @@ interface WorkspaceSessionContextValue {
 const WorkspaceSessionContext =
   createContext<WorkspaceSessionContextValue | null>(null)
 
+function uuidFallback(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  return `lr-anon-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 function readAnonId(): string {
   if (typeof window === "undefined") return ""
   let id = localStorage.getItem("lr-user-id")
   if (!id) {
-    id = crypto.randomUUID()
+    id = uuidFallback()
     localStorage.setItem("lr-user-id", id)
   }
   return id

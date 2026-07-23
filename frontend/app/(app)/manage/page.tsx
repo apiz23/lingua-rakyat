@@ -658,21 +658,21 @@ export default function ManagePage() {
 
         {/* ── Upload Button ── */}
         <section>
-          <div className="flex items-center justify-between">
-            <div className="relative">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1">
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder={copy.search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 border border-border bg-background py-2 pr-4 pl-9 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                className="w-full border border-border bg-background py-2 pr-4 pl-9 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none sm:w-64"
               />
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex shrink-0 justify-between gap-4">
               <button
                 onClick={() => setUploadModalOpen(true)}
-                className="flex items-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                className="flex w-full items-center justify-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto"
               >
                 <Plus className="h-4 w-4" />
                 {copy.uploadPdf}
@@ -753,7 +753,7 @@ export default function ManagePage() {
               )}
             </div>
           ) : (
-            <div className="overflow-hidden border border-border bg-card/40 backdrop-blur-sm">
+            <div className="overflow-x-auto border border-border bg-card/40 backdrop-blur-sm">
               {/* Modern Table Design */}
               <table className="w-full">
                 <thead>
