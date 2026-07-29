@@ -26,6 +26,9 @@ node_modules/
 .codex-plugins/
 .pytest_cache/
 
+# Google Search Console exports
+page_index/
+
 mobile/node_modules/
 mobile/expo/
 mobile/.env

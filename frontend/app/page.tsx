@@ -1,6 +1,5 @@
 ﻿"use client"
 
-import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import {
   motion,
@@ -26,8 +25,7 @@ import {
   Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+
 import Link from "next/link"
 import Image from "next/image"
 import Footer from "@/components/footer"
@@ -46,7 +44,7 @@ const TechStackLogos = dynamic(
   { ssr: false }
 )
 import bgNew from "@/public/assets/background-new3.webp"
-import bgMobile from "@/public/assets/bg-mobile.webp"
+import bgMobile from "@/assets/mobile-wallpaper.png"
 import mykadImg from "@/public/assets/MyKad.webp"
 import passportImg from "@/public/assets/passport.webp"
 import personImg from "@/public/assets/person.webp"
@@ -55,83 +53,6 @@ const ease = [0.16, 1, 0.3, 1] as const
 
 const DEMO_VIDEO_SRC =
   "https://otmlfmgyscrohtbpqqoi.supabase.co/storage/v1/object/public/videos/lv_0_20260609134554.mp4"
-
-function SkeletonCard() {
-  return (
-    <Card className="w-full border border-border/60 bg-card/40 shadow-sm backdrop-blur-sm">
-      <CardHeader>
-        <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-4 w-1/2" />
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="aspect-video w-full" />
-      </CardContent>
-    </Card>
-  )
-}
-
-function SkeletonAvatar() {
-  return (
-    <div className="flex w-fit items-center gap-4">
-      <Skeleton className="size-10 shrink-0 rounded-full" />
-      <div className="grid gap-2">
-        <Skeleton className="h-4 w-[150px]" />
-        <Skeleton className="h-4 w-[100px]" />
-      </div>
-    </div>
-  )
-}
-
-function HomeSkeleton() {
-  return (
-    <div className="min-h-dvh bg-accent/5">
-      <main className="relative mx-auto w-full max-w-[1152px] px-4 sm:px-6 lg:px-10 xl:px-12">
-        <section className="relative flex items-center pt-10 pb-12 sm:pt-24 sm:pb-16 lg:pt-20 lg:pb-14">
-          <div className="relative z-10 w-full">
-            <div className="mb-12 flex items-center justify-between gap-3 sm:mb-16">
-              <SkeletonAvatar />
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-9 w-9 rounded-full" />
-                <Skeleton className="h-9 w-14" />
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-8 lg:flex-row-reverse lg:justify-between lg:gap-12">
-              <div className="relative h-[240px] w-full overflow-hidden sm:h-[280px] lg:h-[400px] lg:w-5/12 xl:h-[500px]">
-                <Skeleton className="h-full w-full rounded-[2rem]" />
-              </div>
-
-              <div className="w-full text-center lg:w-7/12 lg:text-left">
-                <Skeleton className="mb-4 inline-flex h-8 w-64 sm:mb-6 lg:mb-8" />
-                <Skeleton className="mb-3 h-12 w-full max-w-xl sm:h-14 lg:h-16" />
-                <Skeleton className="mb-6 h-12 w-full max-w-md sm:mb-8 sm:h-14 lg:mb-8 lg:h-16" />
-                <Skeleton className="mx-auto mb-3 h-4 w-full max-w-2xl lg:mx-0" />
-                <Skeleton className="mx-auto mb-6 h-4 w-full max-w-xl sm:mb-8 lg:mx-0" />
-
-                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center sm:gap-4 lg:justify-start">
-                  <Skeleton className="h-11 w-full sm:w-56" />
-                  <Skeleton className="h-11 w-full sm:w-44" />
-                </div>
-
-                <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3 border-t border-border/30 pt-6 sm:mt-10 sm:gap-5 sm:pt-8 lg:mt-12 lg:justify-start lg:gap-6 lg:border-0 lg:pt-0">
-                  <Skeleton className="h-7 w-32 rounded-full" />
-                  <Skeleton className="h-7 w-28 rounded-full" />
-                  <Skeleton className="h-7 w-30 rounded-full" />
-                  <Skeleton className="h-7 w-36 rounded-full" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="pb-16 sm:pb-24 lg:pb-32">
-          <SkeletonCard />
-        </section>
-      </main>
-      <Footer />
-    </div>
-  )
-}
 
 function FadeInUp({
   children,
@@ -227,7 +148,6 @@ function ScaleIn({
 }
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true)
   const { language, toggleLanguage } = useLanguage()
   const isMobile = useMobile()
   const shouldReduce = useReducedMotion()
@@ -237,16 +157,6 @@ export default function Home() {
   const surfaceClass = "border-border bg-card shadow-sm"
   const mutedTextClass = "text-muted-foreground"
   const faintTextClass = "text-muted-foreground"
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setIsLoading(false)
-    }, 0)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
-  }, [])
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -439,50 +349,49 @@ export default function Home() {
           columns: [
             "Lingua Rakyat",
             "ChatGPT + PDF upload",
-            "Generic RAG",
-            "Portal Agensi",
-            "Google Search",
+            "NotebookLM",
+            "Claude Projects",
           ],
           rows: [
             {
               label: "Bahasa Melayu natural",
-              values: [true, false, false, true, false],
+              values: [true, true, true, true],
             },
             {
               label: "Fokus dokumen kerajaan Malaysia",
-              values: [true, false, false, true, false],
+              values: [true, false, false, false],
             },
             {
               label: "Sumber + halaman PDF",
-              values: [true, false, true, true, false],
+              values: [true, true, true, true],
             },
             {
               label: "Badge keyakinan",
-              values: [true, true, true, false, false],
+              values: [true, false, false, false],
             },
             {
               label: "Mod luar talian (cache)",
-              values: [true, false, false, false, false],
+              values: [true, false, false, false],
             },
             {
               label: "Carian semantik multilingual",
-              values: [true, false, true, false, false],
+              values: [true, true, true, true],
             },
             {
               label: "Urus dokumen (upload/rename/delete)",
-              values: [true, false, false, true, false],
+              values: [true, false, true, true],
             },
             {
               label: "Metrik penilaian (ROUGE/BLEU)",
-              values: [true, false, false, false, false],
+              values: [true, false, false, false],
             },
             {
               label: "Skor ketepatan sumber (faithfulness)",
-              values: [true, false, false, false, false],
+              values: [true, false, false, false],
             },
             {
               label: "Suara I/O (STT + TTS)",
-              values: [true, false, false, false, false],
+              values: [true, true, true, false],
             },
           ],
           footnote:
@@ -496,59 +405,54 @@ export default function Home() {
           columns: [
             "Lingua Rakyat",
             "ChatGPT + PDF upload",
-            "Generic RAG",
-            "Agency Portal",
-            "Google Search",
+            "NotebookLM",
+            "Claude Projects",
           ],
           rows: [
             {
               label: "Natural Malay support",
-              values: [true, false, false, true, false],
+              values: [true, true, true, true],
             },
             {
               label: "Malaysia government-first",
-              values: [true, false, false, true, false],
+              values: [true, false, false, false],
             },
             {
               label: "PDF citations + pages",
-              values: [true, false, true, true, false],
+              values: [true, true, true, true],
             },
             {
               label: "Confidence badge",
-              values: [true, true, true, false, false],
+              values: [true, false, false, false],
             },
             {
               label: "Offline mode (cache)",
-              values: [true, false, false, false, false],
+              values: [true, false, false, false],
             },
             {
               label: "Multilingual semantic retrieval",
-              values: [true, false, true, false, false],
+              values: [true, true, true, true],
             },
             {
               label: "Document management",
-              values: [true, false, false, true, false],
+              values: [true, false, true, true],
             },
             {
               label: "Built-in eval metrics (ROUGE/BLEU)",
-              values: [true, false, false, false, false],
+              values: [true, false, false, false],
             },
             {
               label: "Faithfulness scoring (answer vs sources)",
-              values: [true, false, false, false, false],
+              values: [true, false, false, false],
             },
             {
               label: "Voice I/O (STT + TTS)",
-              values: [true, false, false, false, false],
+              values: [true, true, true, false],
             },
           ],
           footnote:
             "Note: Offline mode depends on documents and excerpts cached earlier while online.",
         }
-
-  if (isLoading) {
-    return <HomeSkeleton />
-  }
 
   return (
     <div className="relative min-h-dvh bg-background">
@@ -869,7 +773,7 @@ export default function Home() {
           </FadeInLeft>
 
           <FadeInUp>
-            <div className="mt-8 overflow-x-auto rounded-2xl border border-border bg-card">
+            <div className="mt-8 max-h-[360px] overflow-auto rounded-2xl border border-border bg-card sm:max-h-none">
               <table className="w-full border-collapse text-sm sm:min-w-[860px]">
                 <thead className="bg-muted/50">
                   <tr>

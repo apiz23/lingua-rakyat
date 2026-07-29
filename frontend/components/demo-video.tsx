@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/media-player"
 import { Safari } from "@/components/ui/safari"
 import { Iphone } from "@/components/ui/iphone"
+import mobileWallpaper from "@/assets/mobile-wallpaper.png"
 
 interface DemoVideoProps {
   src: string
@@ -85,7 +86,7 @@ export function DemoVideo({ src }: DemoVideoProps) {
       </div>
       <div className="pointer-events-none absolute -bottom-6 right-0 z-30 hidden w-[17%] max-w-[180px] md:block lg:-right-2">
         <Iphone
-          videoSrc={src}
+          src={mobileWallpaper.src}
           className="drop-shadow-2xl"
         />
       </div>
