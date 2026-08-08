@@ -59,12 +59,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceSessionProvider>
     <SidebarProvider
-      defaultOpen={false}
+      defaultOpen={true}
       className="h-dvh"
       style={
         {
-          "--sidebar-width": "20rem",
-          "--sidebar-width-mobile": "20rem",
+          "--sidebar-width": "16rem",
+          "--sidebar-width-mobile": "16rem",
         } as React.CSSProperties
       }
     >

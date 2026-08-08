@@ -51,7 +51,7 @@ export default function NotFound() {
           </div>
         </section>
 
-        <aside className="border border-border bg-card/50 p-5 shadow-sm backdrop-blur-sm sm:p-6">
+        <aside className="border border-border bg-background p-5 shadow-sm backdrop-blur-sm sm:p-6">
           <div className="mb-4 flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             <Search className="h-3.5 w-3.5 text-primary/70" />
             Try Instead

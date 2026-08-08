@@ -121,7 +121,7 @@ function computeConfidenceReason(
   confidence: number,
   sources: SourceChunk[],
   sufficientEvidence: boolean,
-  language: string,
+  language: string
 ): string {
   const n = sources.length
   const topScore = sources[0]?.score ?? 0
@@ -136,12 +136,14 @@ function computeConfidenceReason(
   }
   if (n === 1 && topScore < 0.5) {
     if (zh) return `仅找到 1 个来源，匹配度 ${pct}% — 请以官方文件核实`
-    if (ms) return `1 sumber ditemui, padanan ${pct}% — sahkan dengan sumber rasmi`
+    if (ms)
+      return `1 sumber ditemui, padanan ${pct}% — sahkan dengan sumber rasmi`
     return `1 source found, ${pct}% match — verify with official source`
   }
   if (confidence < 0.5) {
     if (zh) return `找到 ${n} 个来源，最佳匹配 ${pct}% — 部分匹配`
-    if (ms) return `${n} sumber ditemui, padanan terbaik ${pct}% — padanan separa`
+    if (ms)
+      return `${n} sumber ditemui, padanan terbaik ${pct}% — padanan separa`
     return `${n} sources found, best ${pct}% — partial match`
   }
   if (confidence < 0.75) {
@@ -201,13 +203,17 @@ const SourcePills = React.memo(function SourcePills({
   if (pills.length === 0) {
     if (sources.length === 0) return null
     const label =
-      language === "ms" ? "Buka PDF" : language === "zh-cn" ? "打开PDF" : "Open PDF"
+      language === "ms"
+        ? "Buka PDF"
+        : language === "zh-cn"
+          ? "打开PDF"
+          : "Open PDF"
     return (
       <div className="mt-3 mb-1 flex flex-wrap gap-1.5">
         <button
           type="button"
           onClick={() => onPillClick(0, 1)}
-          className="group/pill inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="group/pill inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
           aria-label={label}
           title={label}
         >
@@ -236,7 +242,7 @@ const SourcePills = React.memo(function SourcePills({
           key={pill.pageStart}
           type="button"
           onClick={() => onPillClick(pill.sourceIndex, pill.pageStart)}
-          className="group/pill inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="group/pill inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
           aria-label={`${pageLabel(pill)}${pill.sectionTitle ? ` — ${pill.sectionTitle}` : ""}`}
           title={pill.sectionTitle || pageLabel(pill)}
         >
@@ -305,9 +311,13 @@ export const AIMessageCard = React.memo(function AIMessageCard({
     const stored = window.localStorage.getItem(`lr-feedback:${message.id}`)
     return stored === "up" || stored === "down" ? stored : null
   })
-  const [highlightedSourceIdx, setHighlightedSourceIdx] = React.useState<number | null>(null)
+  const [highlightedSourceIdx, setHighlightedSourceIdx] = React.useState<
+    number | null
+  >(null)
   const [sharing, setSharing] = useState(false)
-  const highlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const highlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
 
   const handlePillClick = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -323,7 +333,8 @@ export const AIMessageCard = React.memo(function AIMessageCard({
       )
       // Open sources panel if closed + highlight the matching card
       if (!expandedSources.has(message.id)) toggleSources(message.id)
-      if (highlightTimerRef.current !== null) clearTimeout(highlightTimerRef.current)
+      if (highlightTimerRef.current !== null)
+        clearTimeout(highlightTimerRef.current)
       setHighlightedSourceIdx(sourceIndex)
       highlightTimerRef.current = setTimeout(() => {
         highlightTimerRef.current = null
@@ -358,54 +369,52 @@ export const AIMessageCard = React.memo(function AIMessageCard({
         // silent — don't interrupt demo on network failure
       }
     },
-    [feedback, sessionId, docId, message.id, message.question, message.sources],
+    [feedback, sessionId, docId, message.id, message.question, message.sources]
   )
 
-  const handleShare = React.useCallback(
-    async () => {
-      setSharing(true)
-      try {
-        const result = await createShare({
-          question: message.question,
-          answer: message.answer,
-          sources: message.sources,
-          language: message.language,
-          confidence: message.confidence,
-          confidence_label: message.confidence_label ?? "",
-          agency: agency ?? "",
-        })
-        if (!result) {
-          toast.error("Couldn't create link — try again")
-          return
-        }
-        const url = `${window.location.origin}${result.url}`
-        try {
-          await navigator.clipboard.writeText(url)
-          toast.success("Link copied! Share via WhatsApp or SMS.")
-        } catch {
-          // Clipboard denied (non-HTTPS, permissions) — show the link instead
-          toast.info(url, { duration: 12000 })
-        }
-      } catch {
+  const handleShare = React.useCallback(async () => {
+    setSharing(true)
+    try {
+      const result = await createShare({
+        question: message.question,
+        answer: message.answer,
+        sources: message.sources,
+        language: message.language,
+        confidence: message.confidence,
+        confidence_label: message.confidence_label ?? "",
+        agency: agency ?? "",
+      })
+      if (!result) {
         toast.error("Couldn't create link — try again")
-      } finally {
-        setSharing(false)
+        return
       }
-    },
-    [
-      message.question,
-      message.answer,
-      message.sources,
-      message.language,
-      message.confidence,
-      message.confidence_label,
-      agency,
-    ],
-  )
+      const url = `${window.location.origin}${result.url}`
+      try {
+        await navigator.clipboard.writeText(url)
+        toast.success("Link copied! Share via WhatsApp or SMS.")
+      } catch {
+        // Clipboard denied (non-HTTPS, permissions) — show the link instead
+        toast.info(url, { duration: 12000 })
+      }
+    } catch {
+      toast.error("Couldn't create link — try again")
+    } finally {
+      setSharing(false)
+    }
+  }, [
+    message.question,
+    message.answer,
+    message.sources,
+    message.language,
+    message.confidence,
+    message.confidence_label,
+    agency,
+  ])
 
   React.useEffect(() => {
     return () => {
-      if (highlightTimerRef.current !== null) clearTimeout(highlightTimerRef.current)
+      if (highlightTimerRef.current !== null)
+        clearTimeout(highlightTimerRef.current)
     }
   }, [])
 
@@ -442,11 +451,11 @@ export const AIMessageCard = React.memo(function AIMessageCard({
 
   return (
     <Message className="group items-start gap-2 sm:gap-3">
-      <MessageAvatar className="mt-1 hidden h-9 w-9 self-start bg-primary/10 ring-1 ring-primary/20 sm:flex sm:h-10 sm:w-10">
+      <MessageAvatar className="mt-1 ml-2 hidden h-9 w-9 self-start bg-primary/10 ring-1 ring-primary/20 sm:flex sm:h-10 sm:w-10">
         <AgentAvatar seed="Charlotte" size={26} />
       </MessageAvatar>
 
-      <MessageContent className="min-w-0 max-w-[95%] flex-1 gap-0 sm:max-w-[85%]">
+      <MessageContent className="max-w-[95%] min-w-0 flex-1 gap-0 sm:max-w-[85%]">
         <div className="relative overflow-hidden rounded-2xl rounded-tl-md border border-border/60 bg-card shadow-sm transition-all hover:shadow-md">
           <div className="p-3.5 sm:p-5">
             {/* Primary row: language badge + copy button */}
@@ -480,7 +489,13 @@ export const AIMessageCard = React.memo(function AIMessageCard({
 
             {/* Compact secondary line: evidence dot + label + cached + latency */}
             <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-              <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", evidenceState.dotColor)} />
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  evidenceState.dotColor
+                )}
+              />
               <span>{evidenceState.label}</span>
               {!simpleMode && message.cached ? (
                 <>
@@ -548,56 +563,65 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                           message.confidence,
                           message.sources,
                           message.sufficient_evidence,
-                          message.language,
+                          message.language
                         )
                       : undefined
                 }
               />
             )}
 
-            {!message.isStreaming && simpleMode && (() => {
-              const warn =
-                message.evidence_mode
-                  ? message.evidence_mode === "cautious" || message.evidence_mode === "insufficient"
-                  : !message.sufficient_evidence || message.confidence_label === "low"
-              if (!warn) return null
-              const sentence =
-                message.confidence_explanation !== undefined
-                  ? message.confidence_explanation
-                  : message.sources.length > 0
-                    ? computeConfidenceReason(
-                        message.confidence,
-                        message.sources,
-                        message.sufficient_evidence,
-                        message.language,
-                      )
-                    : null
-              return sentence ? (
-                <p className="mt-3 rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-xs font-medium text-foreground/80">
-                  ⚠ {sentence}
-                </p>
-              ) : null
-            })()}
+            {!message.isStreaming &&
+              simpleMode &&
+              (() => {
+                const warn = message.evidence_mode
+                  ? message.evidence_mode === "cautious" ||
+                    message.evidence_mode === "insufficient"
+                  : !message.sufficient_evidence ||
+                    message.confidence_label === "low"
+                if (!warn) return null
+                const sentence =
+                  message.confidence_explanation !== undefined
+                    ? message.confidence_explanation
+                    : message.sources.length > 0
+                      ? computeConfidenceReason(
+                          message.confidence,
+                          message.sources,
+                          message.sufficient_evidence,
+                          message.language
+                        )
+                      : null
+                return sentence ? (
+                  <p className="mt-3 rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-xs font-medium text-foreground/80">
+                    ⚠ {sentence}
+                  </p>
+                ) : null
+              })()}
 
-            {!message.isStreaming && message.suggestions && message.suggestions.length > 0 && (
-              <div className="mt-3 space-y-1.5">
-                <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                  {message.language === "ms" ? "Soalan susulan:" : message.language === "zh-cn" ? "后续问题：" : "Follow-up questions:"}
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {message.suggestions.map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => onSuggestionClick?.(q)}
-                      className="w-fit max-w-full truncate rounded-full bg-secondary px-3 py-1.5 text-left text-xs font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    >
-                      {q}
-                    </button>
-                  ))}
+            {!message.isStreaming &&
+              message.suggestions &&
+              message.suggestions.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                    {message.language === "ms"
+                      ? "Soalan susulan:"
+                      : message.language === "zh-cn"
+                        ? "后续问题："
+                        : "Follow-up questions:"}
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {message.suggestions.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => onSuggestionClick?.(q)}
+                        className="w-fit max-w-full truncate rounded-full bg-secondary px-3 py-1.5 text-left text-xs font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {!message.isStreaming && message.sources.length > 0 && (
               <SourcePills
@@ -632,8 +656,20 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                           ? "text-success"
                           : "text-muted-foreground/40",
                       ].join(" ")}
-                      title={language === "ms" ? "Jawapan berguna" : language === "zh" ? "有帮助" : "Helpful"}
-                      aria-label={language === "ms" ? "Jawapan berguna" : language === "zh" ? "有帮助" : "Helpful"}
+                      title={
+                        language === "ms"
+                          ? "Jawapan berguna"
+                          : language === "zh"
+                            ? "有帮助"
+                            : "Helpful"
+                      }
+                      aria-label={
+                        language === "ms"
+                          ? "Jawapan berguna"
+                          : language === "zh"
+                            ? "有帮助"
+                            : "Helpful"
+                      }
                     >
                       <ThumbsUp className="h-4 w-4" />
                     </button>
@@ -647,8 +683,20 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                           ? "text-destructive"
                           : "text-muted-foreground/40",
                       ].join(" ")}
-                      title={language === "ms" ? "Jawapan tidak berguna" : language === "zh" ? "没帮助" : "Not helpful"}
-                      aria-label={language === "ms" ? "Jawapan tidak berguna" : language === "zh" ? "没帮助" : "Not helpful"}
+                      title={
+                        language === "ms"
+                          ? "Jawapan tidak berguna"
+                          : language === "zh"
+                            ? "没帮助"
+                            : "Not helpful"
+                      }
+                      aria-label={
+                        language === "ms"
+                          ? "Jawapan tidak berguna"
+                          : language === "zh"
+                            ? "没帮助"
+                            : "Not helpful"
+                      }
                     >
                       <ThumbsDown className="h-4 w-4" />
                     </button>
@@ -656,9 +704,21 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                       type="button"
                       onClick={handleShare}
                       disabled={sharing}
-                      aria-label={language === "ms" ? "Kongsi jawapan" : language === "zh" ? "分享回答" : "Share answer"}
-                      className="p-2 transition-colors hover:text-foreground text-muted-foreground/40 disabled:opacity-50"
-                      title={language === "ms" ? "Kongsi jawapan" : language === "zh" ? "分享回答" : "Share answer"}
+                      aria-label={
+                        language === "ms"
+                          ? "Kongsi jawapan"
+                          : language === "zh"
+                            ? "分享回答"
+                            : "Share answer"
+                      }
+                      className="p-2 text-muted-foreground/40 transition-colors hover:text-foreground disabled:opacity-50"
+                      title={
+                        language === "ms"
+                          ? "Kongsi jawapan"
+                          : language === "zh"
+                            ? "分享回答"
+                            : "Share answer"
+                      }
                     >
                       <Share2 className="h-4 w-4" />
                     </button>
@@ -671,7 +731,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                   type="button"
                   onClick={() => toggleSources(message.id)}
                   aria-expanded={isSourcesOpen}
-                  className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                  className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:bg-secondary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:outline-none"
                 >
                   <BookOpen className="h-3.5 w-3.5" />
                   {isSourcesOpen ? (
@@ -778,8 +838,12 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                                         source.doc_name
                                       )
                                     }
-                                    className="ml-1 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-                                    title={language === "ms" ? "Lihat halaman asal" : "View source page"}
+                                    className="ml-1 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:outline-none"
+                                    title={
+                                      language === "ms"
+                                        ? "Lihat halaman asal"
+                                        : "View source page"
+                                    }
                                   >
                                     <ExternalLink className="h-3 w-3" />
                                     {language === "ms" ? "lihat" : "view"}
@@ -799,7 +863,9 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                                   />
                                 </div>
                                 <span className="text-[10px] whitespace-nowrap text-muted-foreground">
-                                  {(source.confidence_label ?? scoreLabel).toString()}{" "}
+                                  {(
+                                    source.confidence_label ?? scoreLabel
+                                  ).toString()}{" "}
                                   - {Math.round(source.score * 100)}%
                                 </span>
                               </div>
@@ -840,11 +906,11 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
 }) {
   return (
     <Message align="end" className="group items-start gap-2 sm:gap-3">
-      <MessageAvatar className="mt-1 hidden h-9 w-9 self-start bg-primary/10 ring-1 ring-primary/30 group-has-data-[slot=message-footer]/message:translate-y-0 sm:flex sm:h-10 sm:w-10">
+      <MessageAvatar className="mt-1 mr-2 hidden h-9 w-9 self-start bg-primary/10 ring-1 ring-primary/30 group-has-data-[slot=message-footer]/message:translate-y-0 sm:flex sm:h-10 sm:w-10">
         <User className="h-4.5 w-4.5 text-primary sm:h-5 sm:w-5" />
       </MessageAvatar>
 
-      <MessageContent className="w-auto min-w-0 max-w-[95%] items-end gap-1.5 sm:max-w-[80%]">
+      <MessageContent className="w-auto max-w-[95%] min-w-0 items-end gap-1.5 sm:max-w-[80%]">
         <div className="inline-block rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
           <p className="text-sm leading-relaxed">{message.question}</p>
         </div>

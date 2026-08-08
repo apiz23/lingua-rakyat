@@ -651,7 +651,7 @@ export default function ManagePage() {
               icon={HardDrive}
               label={copy.totalSize}
               value={formatFileSize(totalSize)}
-              color="text-secondary"
+              color="text-primary"
             />
           </div>
         )}
@@ -691,7 +691,7 @@ export default function ManagePage() {
               {(processingCount > 0 || errorCount > 0) && (
                 <div className="flex gap-2">
                   {processingCount > 0 && (
-                    <div className="flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1">
+                    <div className="flex items-center gap-1.5 bg-accent/10 px-3 py-1">
                       <Loader2 className="h-3 w-3 animate-spin text-accent" />
                       <span className="text-xs text-accent">
                         {processingCount} {copy.processing}
@@ -699,7 +699,7 @@ export default function ManagePage() {
                     </div>
                   )}
                   {errorCount > 0 && (
-                    <div className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1">
+                    <div className="flex items-center gap-1.5 bg-destructive/10 px-3 py-1">
                       <AlertCircle className="h-3 w-3 text-destructive" />
                       <span className="text-xs text-destructive">
                         {errorCount} {copy.failed}
@@ -855,7 +855,7 @@ export default function ManagePage() {
                             {getStatusIcon(doc.status)}
                             <span
                               className={cn(
-                                "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize",
+                                "inline-flex items-center border px-2 py-0.5 text-xs font-medium capitalize",
                                 getStatusBadge(doc.status)
                               )}
                             >
@@ -875,7 +875,7 @@ export default function ManagePage() {
                                 {doc.status === "ready" && (
                                   <button
                                     onClick={() => setViewingDoc(doc)}
-                                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                    className="p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                                     title={copy.viewDoc}
                                   >
                                     <Eye className="h-4 w-4" />
@@ -883,7 +883,7 @@ export default function ManagePage() {
                                 )}
                                 <button
                                   onClick={() => openRenameDialog(doc)}
-                                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                  className="p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                                   title={
                                     language === "ms"
                                       ? "Tukar nama dokumen"
@@ -902,7 +902,7 @@ export default function ManagePage() {
                                         error: "",
                                       })
                                     }
-                                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                    className="p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                                     title={
                                       language === "ms"
                                         ? "Indeks semula dokumen"
@@ -914,7 +914,7 @@ export default function ManagePage() {
                                 )}
                                 <button
                                   onClick={() => confirmDelete(doc)}
-                                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                  className="p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                                   title="Padam dokumen"
                                 >
                                   <Trash2 className="h-4 w-4" />

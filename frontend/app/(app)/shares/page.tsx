@@ -57,7 +57,7 @@ export default function MySharesPage() {
       </p>
 
       <Show when="signed-out">
-        <div className="mt-8 rounded-lg border border-dashed border-border p-8 text-center">
+        <div className="mt-8 border border-dashed border-border p-8 text-center">
           <Share2 className="mx-auto h-8 w-8 text-muted-foreground/50" />
           <p className="mt-3 text-sm text-muted-foreground">
             Sign in to see and manage the answers you have shared.
@@ -75,14 +75,14 @@ export default function MySharesPage() {
               <Skeleton key={i} className="h-20 bg-muted/40" />
             ))
           ) : shares.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            <p className="border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
               No shares yet — use the share button on any answer.
             </p>
           ) : (
             shares.map((share) => (
               <div
                 key={share.slug}
-                className="rounded-lg border border-border bg-card p-4"
+                className="border border-border bg-background p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <Link
@@ -113,7 +113,7 @@ export default function MySharesPage() {
                 <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                   {share.confidence_label && (
                     <span
-                      className={`rounded-full px-2 py-0.5 font-medium ${CHIP_STYLES[share.confidence_label] ?? CHIP_STYLES.medium}`}
+                      className={`px-2 py-0.5 font-medium ${CHIP_STYLES[share.confidence_label] ?? CHIP_STYLES.medium}`}
                     >
                       {share.confidence_label}
                     </span>
@@ -124,7 +124,7 @@ export default function MySharesPage() {
                   )}
                 </div>
                 {confirmSlug === share.slug && (
-                  <div className="mt-3 flex items-center gap-2 rounded-md bg-destructive/10 p-2 text-xs">
+                  <div className="mt-3 flex items-center gap-2 bg-destructive/10 p-2 text-xs">
                     <span className="flex-1">
                       Revoke this share? The public link stops working.
                     </span>

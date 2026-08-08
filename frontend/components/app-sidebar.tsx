@@ -33,18 +33,17 @@ import {
   sidebarMenuButtonVariants,
   useSidebar,
 } from "@/components/ui/sidebar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { useLanguage } from "@/components/language-provider"
 import { useWorkspaceSession } from "@/components/workspace-session-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { GithubIcon } from "./ui/github"
 import { LinkedinIcon } from "./ui/linkedin"
-import { listConversations, renameConversation, type ConversationSummary } from "@/lib/api"
+import {
+  listConversations,
+  renameConversation,
+  type ConversationSummary,
+} from "@/lib/api"
 
 type NavItem = {
   readonly href: string
@@ -195,17 +194,17 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-border/50 bg-background data-[state=collapsed]:w-16"
+      className="bg-background data-[state=collapsed]:w-16"
       variant="sidebar"
     >
-      <SidebarHeader className="border-b border-border/50">
+      <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
               size="lg"
               tooltip={copy.appName}
-              className="hover:bg-primary/5 data-[state=open]:bg-primary/5"
+              className="h-auto py-2 hover:bg-transparent"
               onClick={handleNavigation}
             >
               <Link href="/" className="group">
@@ -216,13 +215,13 @@ export function AppSidebar() {
                     width={64}
                     height={64}
                     className="rounded-full"
-                    />
+                  />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold text-foreground">
+                <div className="grid flex-1 text-left leading-tight">
+                  <span className="font-heading text-sm font-bold tracking-tight text-foreground">
                     {copy.appName}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     {copy.appTagline}
                   </span>
                 </div>
@@ -232,16 +231,16 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="bg-background py-3">
-        <SidebarGroup className="pb-1">
+      <SidebarContent className="px-2">
+        <SidebarGroup className="p-0">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => goToWorkspace(null)}
                 tooltip={copy.newChat}
-                className="min-h-9 justify-center gap-2 font-medium text-primary hover:bg-primary/10 hover:text-primary"
+                className="h-9 justify-start gap-2.5 bg-transparent px-3 text-sm font-medium text-foreground transition-colors hover:border-border hover:bg-muted/50"
               >
-                <Plus className="h-4 w-4 shrink-0" />
+                <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="group-data-[collapsible=icon]:hidden">
                   {copy.newChat}
                 </span>
@@ -250,11 +249,8 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup className="pb-1">
-          <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            {copy.pages}
-          </SidebarGroupLabel>
-          <SidebarMenu className="space-y-1">
+        <SidebarGroup className="p-0">
+          <SidebarMenu className="gap-0.5">
             {navItems.map((item) => {
               const active =
                 pathname === item.href || pathname?.startsWith(item.href + "/")
@@ -268,25 +264,25 @@ export function AppSidebar() {
                     tooltip={navLabels[item.href] ?? item.label}
                     onClick={handleNavigation}
                     className={cn(
-                      "transition-colors duration-150",
+                      "h-9 gap-2.5 px-2.5 text-sm",
                       active
-                        ? "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
-                        : "hover:bg-primary/5 hover:text-primary"
+                        ? "font-medium text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <Link
                       href={item.href}
-                      className="flex min-h-9 items-center gap-2 px-2 py-1"
+                      className="flex items-center gap-2.5"
                     >
                       <Icon
                         className={cn(
-                          "h-4 w-4",
-                          active ? "text-primary" : "text-muted-foreground"
+                          "h-4 w-4 shrink-0",
+                          active
+                            ? "text-foreground"
+                            : "text-muted-foreground/70"
                         )}
                       />
-                      <span className="font-medium">
-                        {navLabels[item.href] ?? item.label}
-                      </span>
+                      <span>{navLabels[item.href] ?? item.label}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -295,17 +291,17 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup className="min-h-0 flex-1 group-data-[collapsible=icon]:hidden">
-          <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+        <SidebarGroup className="min-h-0 flex-1 p-0 group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel className="mb-1 px-2 text-[10px] font-semibold tracking-widest text-muted-foreground/60 uppercase">
             {copy.recent}
           </SidebarGroupLabel>
-          <SidebarMenu className="gap-0.5">
+          <SidebarMenu className="gap-px">
             {loadingConversations ? (
               Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="mx-2 my-0.5 h-9 bg-muted/40" />
+                <Skeleton key={i} className="mx-2 my-1 h-8 bg-muted/30" />
               ))
             ) : conversations.length === 0 ? (
-              <p className="px-2 py-3 text-xs text-muted-foreground">
+              <p className="px-2 py-4 text-center text-[11px] text-muted-foreground/50">
                 {copy.recentEmpty}
               </p>
             ) : (
@@ -316,18 +312,19 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={conv.session_id}>
                     {isRenaming ? (
-                      <div className="flex w-full items-center gap-1 px-2.5 py-1.5">
+                      <div className="flex w-full items-center gap-1 px-2 py-1">
                         <input
                           type="text"
                           value={renameInput}
                           onChange={(e) => setRenameInput(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") handleConfirmRename(conv.session_id)
+                            if (e.key === "Enter")
+                              handleConfirmRename(conv.session_id)
                             if (e.key === "Escape") handleCancelRename()
                           }}
                           onBlur={() => handleConfirmRename(conv.session_id)}
                           autoFocus
-                          className="min-h-0 flex-1 rounded-md border border-primary bg-background px-2 py-1 text-sm outline-none"
+                          className="min-h-0 flex-1 rounded border border-border bg-background px-2 py-1 text-sm outline-none focus:border-primary/40"
                         />
                         <button
                           type="button"
@@ -335,7 +332,7 @@ export function AppSidebar() {
                           className="shrink-0 rounded p-1 text-success transition-colors hover:bg-success/10"
                           aria-label="Confirm"
                         >
-                          <Check className="h-3.5 w-3.5" />
+                          <Check className="h-3 w-3" />
                         </button>
                         <button
                           type="button"
@@ -343,7 +340,7 @@ export function AppSidebar() {
                           className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted"
                           aria-label="Cancel"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
                     ) : (
@@ -353,17 +350,17 @@ export function AppSidebar() {
                         isActive={active}
                         tooltip={displayTitle}
                         className={cn(
-                          "min-h-9 flex-col items-start gap-0 px-2.5 py-1.5 leading-tight",
+                          "h-auto flex-col items-start gap-0.5 px-2.5 py-2",
                           active
-                            ? "bg-primary/10 text-primary hover:bg-primary/15"
-                            : "hover:bg-muted"
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        <span className="w-full truncate text-sm font-medium">
+                        <span className="w-full truncate text-[13px] leading-tight">
                           {displayTitle}
                         </span>
-                        <span className="font-mono text-[10px] text-muted-foreground">
-                          {relativeTime(conv.last_at)} &middot; {conv.count}
+                        <span className="text-[10px] text-muted-foreground/60">
+                          {relativeTime(conv.last_at)} · {conv.count}
                         </span>
                       </SidebarMenuButton>
                     )}
@@ -375,110 +372,56 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/50 bg-background pt-3">
+      <SidebarFooter className="border-t border-border/30 px-3 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <Popover>
-              <PopoverTrigger
-                data-slot="sidebar-menu-button"
-                data-sidebar="menu-button"
-                className={cn(
-                  sidebarMenuButtonVariants(),
-                  "min-h-9 gap-2 px-2 py-1 hover:bg-primary/5 hover:text-primary group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!"
-                )}
+            {isSignedIn ? (
+              <SidebarMenuButton
+                onClick={() => signOut()}
+                tooltip={copy.signOut}
+                className="h-9 gap-2.5 px-2 text-sm text-muted-foreground hover:text-destructive"
               >
-                {isSignedIn && user?.imageUrl ? (
+                {user?.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={user.imageUrl}
                     alt=""
-                    className="h-5 w-5 shrink-0 rounded-full group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"
+                    className="h-5 w-5 shrink-0 rounded-full group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7"
                   />
                 ) : (
-                  <User className="h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5" />
+                  <User className="h-4 w-4 shrink-0 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5" />
                 )}
                 <span className="truncate group-data-[collapsible=icon]:hidden">
-                  {isSignedIn
-                    ? (user?.fullName ??
-                      user?.primaryEmailAddress?.emailAddress ??
-                      copy.account)
-                    : copy.signIn}
+                  {user?.fullName ?? copy.account}
                 </span>
-              </PopoverTrigger>
-              <PopoverContent side={isMobile ? "top" : "right"} align={isMobile ? "start" : "end"} className="w-60 gap-1 p-1.5">
-                {isSignedIn ? (
-                  <>
-                    <div className="px-2 py-1.5">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {user?.fullName ?? copy.account}
-                      </p>
-                      {user?.primaryEmailAddress?.emailAddress && (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {user.primaryEmailAddress.emailAddress}
-                        </p>
-                      )}
-                    </div>
-                    <div className="my-1 h-px bg-border" />
-                    <Link
-                      href="/shares"
-                      onClick={handleNavigation}
-                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-muted"
-                    >
-                      <Share2 className="h-4 w-4 text-muted-foreground" />
-                      {copy.myShares}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={toggleLanguage}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-muted"
-                    >
-                      <Languages className="h-4 w-4 text-muted-foreground" />
-                      {copy.language}
-                    </button>
-                    <div className="my-1 h-px bg-border" />
-                    <button
-                      type="button"
-                      onClick={() => signOut()}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      {copy.signOut}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/sign-in"
-                      onClick={handleNavigation}
-                      className="flex items-center justify-center rounded-md bg-primary px-2 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                    >
-                      {copy.signIn}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={toggleLanguage}
-                      className="mt-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-muted"
-                    >
-                      <Languages className="h-4 w-4 text-muted-foreground" />
-                      {copy.language}
-                    </button>
-                  </>
-                )}
-              </PopoverContent>
-            </Popover>
+              </SidebarMenuButton>
+            ) : (
+              <SidebarMenuButton
+                asChild
+                tooltip={copy.signIn}
+                className="h-9 gap-2.5 px-2 text-sm font-medium text-primary hover:text-primary"
+              >
+                <Link href="/sign-in" onClick={handleNavigation}>
+                  <User className="h-4 w-4 shrink-0 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5" />
+                  <span className="truncate group-data-[collapsible=icon]:hidden">
+                    {copy.signIn}
+                  </span>
+                </Link>
+              </SidebarMenuButton>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:hidden">
+        <div className="mt-2 flex items-center gap-1 px-1 group-data-[collapsible=icon]:hidden">
           <Link
             href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GitHub repository"
             onClick={handleNavigation}
-            className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+            className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:bg-muted hover:text-muted-foreground"
           >
-            <GithubIcon size={20} />
+            <GithubIcon size={15} />
           </Link>
 
           <Link
@@ -487,13 +430,13 @@ export function AppSidebar() {
             rel="noopener noreferrer"
             aria-label="LinkedIn profile"
             onClick={handleNavigation}
-            className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
+            className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:bg-muted hover:text-muted-foreground"
           >
-            <LinkedinIcon size={20} />
+            <LinkedinIcon size={15} />
           </Link>
 
-          <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-            <Command className="h-3.5 w-3.5" />
+          <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground/40">
+            <Command className="h-3 w-3" />
             {copy.shortcuts}
           </span>
         </div>

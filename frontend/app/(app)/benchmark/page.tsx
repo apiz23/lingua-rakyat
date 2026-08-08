@@ -91,7 +91,7 @@ function SegBar({ label, value, max = 1 }: { label: string; value: number; max?:
       </div>
       <div aria-hidden className="flex gap-[3px]">
         {Array.from({ length: 10 }).map((_, i) => (
-          <span key={i} className={cn("h-1.5 flex-1 rounded-[1px]", i < filled ? color : "bg-muted")} />
+          <span key={i} className={cn("h-1.5 flex-1", i < filled ? color : "bg-muted")} />
         ))}
       </div>
     </div>
@@ -390,7 +390,7 @@ export default function BenchmarkPage() {
                   <div className="flex gap-[3px]" aria-hidden>
                     {Array.from({ length: 10 }).map((_, i) => {
                       const filled = progress.total > 0 && (progress.completed / progress.total) > i / 10
-                      return <span key={i} className={cn("h-1.5 flex-1 rounded-[1px] transition-all duration-500", filled ? "bg-primary" : "bg-muted/60")} />
+                      return <span key={i} className={cn("h-1.5 flex-1 transition-all duration-500", filled ? "bg-primary" : "bg-muted/60")} />
                     })}
                   </div>
                   {progress.currentQuestion && (

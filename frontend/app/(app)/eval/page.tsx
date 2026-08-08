@@ -117,7 +117,7 @@ function SegBar({ label, value, max = 1 }: { label: string; value: number; max?:
       </div>
       <div aria-hidden className="flex gap-[3px]">
         {Array.from({ length: 10 }).map((_, i) => (
-          <span key={i} className={cn("h-1.5 flex-1 rounded-[1px]", i < filled ? SEG_COLOR[tone] : "bg-muted")} />
+          <span key={i} className={cn("h-1.5 flex-1", i < filled ? SEG_COLOR[tone] : "bg-muted")} />
         ))}
       </div>
     </div>
@@ -365,7 +365,7 @@ export default function EvalPage() {
                   }
                   {tab.label}
                   {tab.id === "testsuite" && streamProgress && (
-                    <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span className="ml-0.5 h-1.5 w-1.5 bg-primary" />
                   )}
                 </button>
               )
@@ -696,7 +696,7 @@ export default function EvalPage() {
                     const filled = streamProgress.total > 0
                       ? streamProgress.completed / Math.max(1, streamProgress.total) > threshold * (9 / 10)
                       : false
-                    return <span key={i} className={cn("h-2 flex-1 rounded-[1px] transition-all duration-500", filled ? "bg-primary" : "bg-muted")} />
+                    return <span key={i} className={cn("h-2 flex-1 transition-all duration-500", filled ? "bg-primary" : "bg-muted")} />
                   })}
                 </div>
                 {streamProgress.currentQuestion && (
@@ -720,7 +720,7 @@ export default function EvalPage() {
                         <div className="flex shrink-0 items-center gap-1.5">
                           <div className="flex w-12 gap-[2px]" aria-hidden>
                             {Array.from({ length: 10 }).map((_, j) => (
-                              <span key={j} className={cn("h-1 flex-1 rounded-[1px]", j < filled ? barTone : "bg-muted")} />
+                              <span key={j} className={cn("h-1 flex-1", j < filled ? barTone : "bg-muted")} />
                             ))}
                           </div>
                           <span className="w-9 text-right font-mono text-[10px] tabular-nums text-muted-foreground">{r1.toFixed(3)}</span>
@@ -793,7 +793,7 @@ export default function EvalPage() {
                       )}
                     >
                       {label}
-                      <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] tabular-nums", categoryFilter === key ? "bg-primary/20" : "bg-muted")}>
+                      <span className={cn("px-1.5 py-0.5 text-[10px] tabular-nums", categoryFilter === key ? "bg-primary/20" : "bg-muted")}>
                         {count}
                       </span>
                     </button>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { Document } from "@/lib/api"
 import ChatPanel from "@/components/chat-panel"
-import WorkspaceDocRail from "@/components/workspace-doc-rail"
 import { useWorkspaceSession } from "@/components/workspace-session-context"
 import { useDocuments } from "@/hooks/useDocuments"
 
@@ -11,7 +10,7 @@ export default function WorkSpacePage() {
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [initialQuestion, setInitialQuestion] = useState<string | undefined>()
   const { userId, activeSessionId } = useWorkspaceSession()
-  const { documents, readyDocs, loading, reload } = useDocuments()
+  const { documents, readyDocs, loading } = useDocuments()
 
   useEffect(() => {
     // Keep the current doc if it still exists; otherwise auto-anchor on the
@@ -32,13 +31,6 @@ export default function WorkSpacePage() {
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-background">
-      <WorkspaceDocRail
-        documents={documents}
-        loading={loading}
-        selectedDoc={selectedDoc}
-        onSelectDoc={setSelectedDoc}
-        onReload={reload}
-      />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <ChatPanel
           selectedDoc={selectedDoc}

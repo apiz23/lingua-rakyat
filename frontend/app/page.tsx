@@ -500,7 +500,7 @@ export default function Home() {
                       ? "Switch to English"
                       : "Tukar ke Bahasa Melayu"
                   }
-                  className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary"
+                  className="border border-border bg-background px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary"
                 >
                   {language === "ms" ? "EN" : "MS"}
                 </button>
@@ -514,13 +514,13 @@ export default function Home() {
                 transition={{ duration: 0.55, delay: 0.15, ease }}
                 className="relative h-[280px] w-full overflow-visible sm:h-[360px] lg:h-[440px] lg:w-5/12 xl:h-[520px]"
               >
-                <div className="absolute inset-x-6 top-10 bottom-0 rounded-[2rem] bg-primary/8 blur-3xl sm:inset-x-8 sm:top-12" />
+                <div className="absolute inset-x-6 top-10 bottom-0 bg-primary/8 blur-3xl sm:inset-x-8 sm:top-12" />
                 <div
-                  className={`relative h-full overflow-hidden rounded-[1.8rem] border backdrop-blur-sm sm:rounded-[2.2rem] ${surfaceClass}`}
+                  className={`relative h-full overflow-hidden border backdrop-blur-sm ${surfaceClass}`}
                 >
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_24%,rgba(74,222,128,0.12),transparent_30%),radial-gradient(circle_at_38%_78%,rgba(34,197,94,0.08),transparent_26%)] dark:bg-[radial-gradient(circle_at_68%_24%,rgba(74,222,128,0.18),transparent_32%),radial-gradient(circle_at_38%_78%,rgba(74,222,128,0.12),transparent_28%)]" />
                   <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/28 via-background/8 to-transparent sm:h-32" />
-                  <div className="absolute top-4 left-4 z-20 max-w-[42%] rounded-2xl border border-primary/15 bg-background/88 px-3 py-2 text-left shadow-lg backdrop-blur-sm sm:top-6 sm:left-6 sm:px-4">
+                  <div className="absolute top-4 left-4 z-20 max-w-[42%] border border-primary/15 bg-background/88 px-3 py-2 text-left shadow-lg backdrop-blur-sm sm:top-6 sm:left-6 sm:px-4">
                     <p className="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase">
                       {language === "ms" ? "Panduan" : "Guidance"}
                     </p>
@@ -542,7 +542,7 @@ export default function Home() {
                     transition={{ duration: 0.5, delay: 0.7, ease }}
                     className="absolute top-[18%] right-[4%] z-20 w-[108px] sm:w-[132px] lg:w-[150px]"
                   >
-                    <div className="rounded-[1.15rem] border border-foreground/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
+                    <div className="border border-foreground/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
                       <div className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
                         MyKad
                       </div>
@@ -551,7 +551,7 @@ export default function Home() {
                         alt="Malaysian MyKad identity card"
                         width={150}
                         height={96}
-                        className="h-auto w-full rounded-lg object-contain"
+                        className="h-auto w-full object-contain"
                       />
                     </div>
                   </motion.div>
@@ -565,7 +565,7 @@ export default function Home() {
                     transition={{ duration: 0.5, delay: 0.92, ease }}
                     className="absolute bottom-[10%] left-[8%] z-20 w-[84px] sm:w-[102px] lg:w-[112px]"
                   >
-                    <div className="rounded-[1.15rem] border border-foreground/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
+                    <div className="border border-foreground/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
                       <div className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
                         Passport
                       </div>
@@ -574,7 +574,7 @@ export default function Home() {
                         alt="Malaysian passport"
                         width={112}
                         height={148}
-                        className="h-auto w-full rounded-lg object-contain"
+                        className="h-auto w-full object-contain"
                       />
                     </div>
                   </motion.div>
@@ -598,7 +598,7 @@ export default function Home() {
               >
                 <motion.div
                   variants={itemVariants}
-                  className="relative z-10 mb-4 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground transition-all hover:bg-secondary/80 sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
+                  className="relative z-10 mb-4 inline-flex items-center gap-1.5 bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground transition-all hover:bg-secondary/80 sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
                 >
                   <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-4 lg:w-4" />
                   <span className="tracking-wide">{copy.kicker}</span>
@@ -686,7 +686,7 @@ export default function Home() {
                   {copy.strip.map((item, i) => (
                     <div
                       key={item.label}
-                      className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-2.5 py-1 sm:gap-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                      className="flex items-center gap-1.5 border border-border/60 bg-card px-2.5 py-1 sm:gap-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
                     >
                       <item.icon className="h-3 w-3 shrink-0 text-primary/70 sm:h-3.5 sm:w-3.5" />
                       <span className="font-medium">{item.label}</span>
@@ -705,7 +705,7 @@ export default function Home() {
 
         <FadeInUp>
           <section className="pb-16 sm:pb-24 lg:pb-32">
-            <div className="group relative overflow-hidden rounded-2xl bg-[oklch(0.2_0.03_152)] p-4 text-[oklch(0.85_0.02_152)] shadow-lg transition-all hover:shadow-xl sm:p-6 lg:p-8">
+            <div className="group relative overflow-hidden bg-[oklch(0.2_0.03_152)] p-4 text-[oklch(0.85_0.02_152)] shadow-lg transition-all hover:shadow-xl sm:p-6 lg:p-8">
               <div className="relative">
                 <div className="mb-3 flex items-center gap-2 text-xs text-[oklch(0.65_0.05_152)] sm:mb-4">
                   <FileText className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
@@ -722,7 +722,7 @@ export default function Home() {
                     <span>{copy.previewQ}</span>
                   </div>
 
-                  <div className="rounded-lg bg-[oklch(0.25_0.03_152)] px-3 py-2 text-[oklch(0.82_0.02_152)] sm:px-4 sm:py-3">
+                  <div className="bg-[oklch(0.25_0.03_152)] px-3 py-2 text-[oklch(0.82_0.02_152)] sm:px-4 sm:py-3">
                     <p className="leading-relaxed">{copy.previewA}</p>
                     <div className="mt-2 flex items-center gap-1.5 text-xs text-[oklch(0.6_0.03_152)] sm:mt-3">
                       <BookOpen className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
@@ -773,7 +773,7 @@ export default function Home() {
           </FadeInLeft>
 
           <FadeInUp>
-            <div className="mt-8 max-h-[360px] overflow-auto rounded-2xl border border-border bg-card sm:max-h-none">
+            <div className="mt-8 max-h-[360px] overflow-auto border border-border bg-card sm:max-h-none">
               <table className="w-full border-collapse text-sm sm:min-w-[860px]">
                 <thead className="bg-muted/50">
                   <tr>
@@ -845,7 +845,7 @@ export default function Home() {
             {copy.steps.map((step, i) => (
               <FadeInUp key={step.n} delay={i * 0.1}>
                 <motion.div
-                  className={`group relative min-h-60 overflow-hidden rounded-2xl border p-5 hover:border-primary/30 hover:shadow-lg sm:p-6 ${surfaceClass}`}
+                  className={`group relative min-h-60 overflow-hidden border p-5 hover:border-primary/30 hover:shadow-lg sm:p-6 ${surfaceClass}`}
                   whileHover={shouldReduce ? {} : { y: -4, scale: 1.012 }}
                   whileTap={shouldReduce ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 280, damping: 22 }}
@@ -885,10 +885,10 @@ export default function Home() {
             {copy.features.map((f, i) => (
               <FadeInUp key={f.label} delay={i * 0.07}>
                 <div
-                  className="group flex h-full flex-col rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-md sm:p-6"
+                  className="group flex h-full flex-col border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-md sm:p-6"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/15">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-primary/10 transition-colors group-hover:bg-primary/15">
                       <f.icon className="h-4 w-4 text-primary/70 transition-colors group-hover:text-primary" />
                     </div>
                     <h4 className="text-sm font-semibold text-foreground sm:text-base">

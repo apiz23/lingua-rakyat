@@ -335,7 +335,7 @@ export default function AboutPage() {
                         <ul className="mt-2 space-y-1.5">
                           {copy.problemItems.map((item, i) => (
                             <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive/70" />
+                              <span className="mt-0.5 h-1.5 w-1.5 shrink-0 bg-destructive/70" />
                               {item}
                             </li>
                           ))}

@@ -40,7 +40,7 @@ export function ShareSources({ sources }: { sources: SourceChunk[] }) {
           <button
             key={i}
             onClick={() => openPdf(s.document_id)}
-            className="cursor-pointer rounded-full border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+            className="cursor-pointer border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
           >
             {s.doc_name || s.document_id}
             {s.page_start ? ` · p.${s.page_start}` : ""}

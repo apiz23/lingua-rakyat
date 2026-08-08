@@ -245,29 +245,36 @@ def cache_invalidate_document(document_id: str) -> int:
     return removed
 
 
+COHERE_EMBED_BATCH_SIZE = 96
+
+
 def get_embeddings_cohere(texts: list[str], input_type: str = "search_document") -> list[list[float]]:
     cohere_key = os.getenv("COHERE_API_KEY")
     if not cohere_key:
         raise ValueError("COHERE_API_KEY not set.")
 
-    response = requests.post(
-        "https://api.cohere.ai/v1/embed",
-        json={
-            "texts": texts,
-            "model": "embed-multilingual-v3.0",
-            "input_type": input_type,
-        },
-        headers={
-            "Authorization": f"Bearer {cohere_key}",
-            "Content-Type": "application/json",
-        },
-        timeout=30,
-    )
-    response.raise_for_status()
-    embeddings = response.json().get("embeddings", [])
-    if not embeddings:
-        raise RuntimeError("Cohere returned an empty embeddings response.")
-    return embeddings
+    all_embeddings: list[list[float]] = []
+    for i in range(0, len(texts), COHERE_EMBED_BATCH_SIZE):
+        batch = texts[i : i + COHERE_EMBED_BATCH_SIZE]
+        response = requests.post(
+            "https://api.cohere.ai/v1/embed",
+            json={
+                "texts": batch,
+                "model": "embed-multilingual-v3.0",
+                "input_type": input_type,
+            },
+            headers={
+                "Authorization": f"Bearer {cohere_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        batch_embeddings = response.json().get("embeddings", [])
+        if not batch_embeddings:
+            raise RuntimeError("Cohere returned an empty embeddings response.")
+        all_embeddings.extend(batch_embeddings)
+    return all_embeddings
 
 
 class PDFValidationError(ValueError):
