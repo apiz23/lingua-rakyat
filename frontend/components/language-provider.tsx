@@ -25,7 +25,7 @@ export function LanguageProvider({
 }: {
   children: React.ReactNode
 }) {
-  const [language, setLanguageState] = useState<AppLanguage>("ms")
+  const [language, setLanguageState] = useState<AppLanguage>("en")
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY)

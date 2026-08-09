@@ -26,7 +26,7 @@ interface DemoVideoProps {
 export function DemoVideo({ src }: DemoVideoProps) {
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-lg sm:hidden">
+      <div className="neo-card overflow-hidden bg-card sm:hidden">
         <MediaPlayer className="aspect-video w-full rounded-none">
           <MediaPlayerVideo className="h-full w-full object-cover">
             <source src={src} type="video/mp4" />

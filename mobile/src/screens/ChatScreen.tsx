@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,7 +20,7 @@ import {
   askQuestionStream,
 } from "../api"
 import { Copy } from "../i18n"
-import { Palette, fonts, spacing, useTheme } from "../theme"
+import { Palette, fonts, radius, spacing, useTheme } from "../theme"
 
 interface Message {
   id: string
@@ -70,6 +71,14 @@ export default function ChatScreen({
   const [loading, setLoading] = useState(false)
   const [waitSeconds, setWaitSeconds] = useState(0)
   const scrollRef = useRef<ScrollView>(null)
+
+  // Scroll to bottom when keyboard opens so the composer stays visible.
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
+    })
+    return () => showSub.remove()
+  }, [])
 
   // Chat-first: the anchored doc (required by the backend) is the pinned
   // mention when set, otherwise the first ready doc. Retrieval still spans
@@ -214,7 +223,8 @@ export default function ChatScreen({
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0}
     >
       <ScrollView
         ref={scrollRef}
@@ -223,6 +233,8 @@ export default function ChatScreen({
           styles.scrollContent,
           messages.length === 0 && styles.scrollContentEmpty,
         ]}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardDismissMode="interactive"
         onContentSizeChange={() =>
           scrollRef.current?.scrollToEnd({ animated: true })
         }
@@ -419,7 +431,7 @@ const createStyles = (c: Palette) =>
       marginTop: spacing.lg,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 999,
+      borderRadius: radius,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
       overflow: "hidden",
@@ -431,8 +443,7 @@ const createStyles = (c: Palette) =>
       alignSelf: "flex-end",
       maxWidth: "85%",
       backgroundColor: c.primary,
-      borderRadius: 16,
-      borderBottomRightRadius: 4,
+      borderRadius: radius,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
     },
@@ -448,8 +459,7 @@ const createStyles = (c: Palette) =>
       backgroundColor: c.card,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 16,
-      borderTopLeftRadius: 4,
+      borderRadius: radius,
       padding: spacing.lg,
       gap: spacing.sm,
     },
@@ -481,7 +491,7 @@ const createStyles = (c: Palette) =>
       letterSpacing: 1,
       paddingHorizontal: spacing.sm,
       paddingVertical: 2,
-      borderRadius: 999,
+      borderRadius: radius,
       overflow: "hidden",
     },
     sourcesBlock: {
@@ -515,7 +525,7 @@ const createStyles = (c: Palette) =>
       borderWidth: 1,
       borderColor: c.border,
       backgroundColor: c.card,
-      borderRadius: 999,
+      borderRadius: radius,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
     },
@@ -525,6 +535,7 @@ const createStyles = (c: Palette) =>
       color: c.primary,
     },
     composerArea: {
+      flexShrink: 0,
       borderTopWidth: 1,
       borderTopColor: c.border,
       backgroundColor: c.card,
@@ -569,7 +580,7 @@ const createStyles = (c: Palette) =>
       fontSize: 12,
       color: c.primary,
       backgroundColor: c.highBg,
-      borderRadius: 999,
+      borderRadius: radius,
       paddingHorizontal: spacing.md,
       paddingVertical: 3,
       overflow: "hidden",
@@ -593,14 +604,14 @@ const createStyles = (c: Palette) =>
       backgroundColor: c.background,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 20,
+      borderRadius: radius,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
       maxHeight: 110,
     },
     sendButton: {
       backgroundColor: c.primary,
-      borderRadius: 999,
+      borderRadius: radius,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
     },

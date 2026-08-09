@@ -12,8 +12,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAuth, useSSO, useUser } from "@clerk/clerk-expo"
 import * as AuthSession from "expo-auth-session"
 import { AppLanguage, Copy, LANGUAGE_LABEL } from "../i18n"
-import { Palette, fonts, spacing, useTheme } from "../theme"
+import { Palette, fonts, radius, spacing, useTheme } from "../theme"
 import { GitHubLogo, GoogleLogo } from "../components/ProviderLogos"
+import { ThemeMode } from "../theme"
 
 const logo = require("../../assets/splash-icon.png")
 
@@ -31,6 +32,8 @@ interface Props {
   copy: Copy
   language: AppLanguage
   onSetLanguage: (lang: AppLanguage) => void
+  themeMode: ThemeMode
+  onSetTheme: (mode: ThemeMode) => void
   onClose: () => void
 }
 
@@ -38,6 +41,8 @@ export default function ProfileScreen({
   copy,
   language,
   onSetLanguage,
+  themeMode,
+  onSetTheme,
   onClose,
 }: Props) {
   const c = useTheme()
@@ -219,6 +224,48 @@ export default function ProfileScreen({
           })}
         </View>
 
+        {/* Appearance */}
+        <Text style={styles.sectionTitle}>{copy.appearance ?? "Appearance"}</Text>
+        <View style={styles.card}>
+          {(["system", "light", "dark"] as ThemeMode[]).map((mode, i) => {
+            const active = mode === themeMode
+            const label =
+              mode === "system"
+                ? (copy.themeSystem ?? "System")
+                : mode === "light"
+                  ? (copy.themeLight ?? "Light")
+                  : (copy.themeDark ?? "Dark")
+            return (
+              <React.Fragment key={mode}>
+                {i > 0 ? <View style={styles.rowDivider} /> : null}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && styles.rowPressed,
+                  ]}
+                  onPress={() => onSetTheme(mode)}
+                  accessibilityLabel={label}
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={styles.rowIcon}>
+                    {mode === "system" ? "◐" : mode === "light" ? "☀" : "●"}
+                  </Text>
+                  <Text
+                    style={[styles.rowLabel, active && styles.rowLabelActive]}
+                  >
+                    {label}
+                  </Text>
+                  <View
+                    style={[styles.radio, active && styles.radioActive]}
+                  >
+                    {active ? <View style={styles.radioDot} /> : null}
+                  </View>
+                </Pressable>
+              </React.Fragment>
+            )
+          })}
+        </View>
+
         {/* Footer */}
         <View style={styles.footer}>
           <Image source={logo} style={styles.footerLogo} resizeMode="contain" />
@@ -320,7 +367,7 @@ const createStyles = (c: Palette) =>
       backgroundColor: c.card,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 16,
+      borderRadius: radius,
       overflow: "hidden",
     },
     row: {

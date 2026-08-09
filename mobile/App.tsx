@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context"
+import { useColorScheme } from "react-native"
 import { StatusBar } from "expo-status-bar"
 import { ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo"
 import { tokenCache } from "@clerk/clerk-expo/token-cache"
@@ -27,7 +29,16 @@ import * as SplashScreen from "expo-splash-screen"
 import { Document, listDocuments } from "./src/api"
 import { setAuthTokenGetter } from "./src/auth-token"
 import { AppLanguage, COPY, LANGUAGE_LABEL, NEXT_LANGUAGE } from "./src/i18n"
-import { Palette, fonts, spacing, useTheme } from "./src/theme"
+import {
+  Palette,
+  ThemeMode,
+  ThemeProvider,
+  fonts,
+  isDarkPalette,
+  radius,
+  resolvePalette,
+  spacing,
+} from "./src/theme"
 import ChatScreen from "./src/screens/ChatScreen"
 import ProfileScreen from "./src/screens/ProfileScreen"
 import Sidebar from "./src/components/Sidebar"
@@ -58,13 +69,11 @@ function AuthTokenBridge() {
   return null
 }
 
-function Root() {
-  const c = useTheme()
-  const insets = useSafeAreaInsets()
-  const styles = useMemo(() => createStyles(c), [c])
 
-  // fontError fallback: render with system fonts rather than hanging on the
-  // splash spinner if Google-font assets fail to load on the device.
+function Root() {
+  const systemScheme = useColorScheme()
+  const insets = useSafeAreaInsets()
+
   const [fontsLoaded, fontError] = useFonts({
     BricolageGrotesque_700Bold,
     AtkinsonHyperlegible_400Regular,
@@ -72,7 +81,8 @@ function Root() {
   })
 
   const { user } = useUser()
-  const [language, setLanguage] = useState<AppLanguage>("ms")
+  const [themeMode, setThemeMode] = useState<ThemeMode>("system")
+  const [language, setLanguage] = useState<AppLanguage>("en")
   const [anonUserId, setAnonUserId] = useState("")
   const [sessionId, setSessionId] = useState("")
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -80,6 +90,9 @@ function Root() {
   const [docs, setDocs] = useState<Document[]>([])
   const [docsLoading, setDocsLoading] = useState(true)
   const [mentionDoc, setMentionDoc] = useState<Document | null>(null)
+
+  const c = resolvePalette(themeMode, systemScheme)
+  const styles = useMemo(() => createStyles(c), [c])
 
   // Anonymous identity, workspace session, and language preference —
   // persisted across launches.
@@ -107,6 +120,11 @@ function Root() {
         setLanguage(stored)
       }
     })
+    AsyncStorage.getItem("lr-mobile-theme").then((stored) => {
+      if (stored === "light" || stored === "dark" || stored === "system") {
+        setThemeMode(stored)
+      }
+    })
   }, [])
 
   const loadDocs = useCallback(async () => {
@@ -131,6 +149,19 @@ function Root() {
 
   const toggleLanguage = () => {
     applyLanguage(NEXT_LANGUAGE[language])
+  }
+
+  const toggleTheme = () => {
+    const next: ThemeMode =
+      themeMode === "system"
+        ? systemScheme === "dark"
+          ? "light"
+          : "dark"
+        : themeMode === "dark"
+          ? "light"
+          : "system"
+    setThemeMode(next)
+    AsyncStorage.setItem("lr-mobile-theme", next)
   }
 
   const newChat = () => {
@@ -165,10 +196,11 @@ function Root() {
   }
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <StatusBar style="auto" />
+    <ThemeProvider mode={themeMode}>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <StatusBar style={isDarkPalette(c) ? "light" : "dark"} />
 
-      <View style={styles.header}>
+        <View style={styles.header}>
         <Pressable
           onPress={() => setDrawerOpen(true)}
           style={styles.iconButton}
@@ -194,6 +226,21 @@ function Root() {
             {LANGUAGE_LABEL[NEXT_LANGUAGE[language]]}
           </Text>
         </Pressable>
+
+        <Pressable
+          onPress={toggleTheme}
+          style={styles.iconButton}
+          accessibilityLabel="Toggle theme"
+          hitSlop={8}
+        >
+          <Text style={styles.themeIcon}>
+            {themeMode === "system"
+              ? "◐"
+              : themeMode === "dark"
+                ? "☀"
+                : "●"}
+          </Text>
+        </Pressable>
       </View>
 
       <ChatScreen
@@ -214,6 +261,11 @@ function Root() {
           copy={copy}
           language={language}
           onSetLanguage={applyLanguage}
+          themeMode={themeMode}
+          onSetTheme={(mode) => {
+            setThemeMode(mode)
+            AsyncStorage.setItem("lr-mobile-theme", mode)
+          }}
           onClose={() => setProfileOpen(false)}
         />
       </Modal>
@@ -235,7 +287,8 @@ function Root() {
           setProfileOpen(true)
         }}
       />
-    </View>
+      </View>
+    </ThemeProvider>
   )
 }
 
@@ -305,7 +358,7 @@ const createStyles = (c: Palette) =>
       borderWidth: 1,
       borderColor: c.border,
       backgroundColor: c.card,
-      borderRadius: 999,
+      borderRadius: radius,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
     },
@@ -313,5 +366,10 @@ const createStyles = (c: Palette) =>
       fontFamily: fonts.bodyBold,
       fontSize: 12,
       color: c.mutedForeground,
+    },
+    themeIcon: {
+      fontFamily: fonts.body,
+      fontSize: 20,
+      color: c.foreground,
     },
   })

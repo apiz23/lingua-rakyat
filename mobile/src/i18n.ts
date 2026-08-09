@@ -40,6 +40,10 @@ export type Copy = {
   signInPrompt: string
   language: string
   version: string
+  appearance: string
+  themeSystem: string
+  themeLight: string
+  themeDark: string
 }
 
 export const COPY: Record<AppLanguage, Copy> = {
@@ -82,6 +86,10 @@ export const COPY: Record<AppLanguage, Copy> = {
       "Log masuk untuk simpan sejarah sembang anda merentas peranti.",
     language: "Bahasa",
     version: "Versi",
+    appearance: "Penampilan",
+    themeSystem: "Sistem",
+    themeLight: "Cahaya",
+    themeDark: "Gelap",
   },
   en: {
     appName: "Lingua Rakyat",
@@ -121,6 +129,10 @@ export const COPY: Record<AppLanguage, Copy> = {
     signInPrompt: "Sign in to keep your chat history across devices.",
     language: "Language",
     version: "Version",
+    appearance: "Appearance",
+    themeSystem: "System",
+    themeLight: "Light",
+    themeDark: "Dark",
   },
   zh: {
     appName: "Lingua Rakyat",
@@ -160,6 +172,10 @@ export const COPY: Record<AppLanguage, Copy> = {
     signInPrompt: "登录以在多设备间保存聊天记录。",
     language: "语言",
     version: "版本",
+    appearance: "外观",
+    themeSystem: "系统",
+    themeLight: "浅色",
+    themeDark: "深色",
   },
 }
 

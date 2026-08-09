@@ -2,7 +2,7 @@
 // web app's frontend/lib/api.ts, trimmed to what mobile v1 uses.
 
 import { fetch as streamingFetch } from "expo/fetch"
-import { authHeader } from "./auth-token"
+import { authHeader, clearAuthToken } from "./auth-token"
 
 export const API_URL = "https://lingua-rakyat-ai.vercel.app"
 
@@ -84,9 +84,13 @@ export async function askQuestionStream(
 ): Promise<void> {
   // expo/fetch: WinterCG fetch with a streaming body — React Native's
   // built-in fetch buffers the whole response, which breaks SSE.
-  const res = await streamingFetch(`${API_URL}/api/chat/ask-stream`, {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(await authHeader()),
+  }
+  let res = await streamingFetch(`${API_URL}/api/chat/ask-stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeader()) },
+    headers,
     body: JSON.stringify({
       user_id: params.userId,
       document_id: params.documentId,
@@ -100,6 +104,28 @@ export async function askQuestionStream(
       document_ids: params.documentIds ?? [],
     }),
   })
+
+  // If the Clerk token is expired/invalid, clear auth and retry anonymously.
+  if (res.status === 401 && headers.Authorization) {
+    clearAuthToken()
+    delete headers.Authorization
+    res = await streamingFetch(`${API_URL}/api/chat/ask-stream`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        user_id: params.userId,
+        document_id: params.documentId,
+        document_name: params.documentName,
+        session_id: params.sessionId,
+        question: params.question,
+        model_override: DEFAULT_CHAT_MODEL_ID,
+        enable_query_augmentation: true,
+        bypass_cache: false,
+        chat_history: params.chatHistory ?? [],
+        document_ids: params.documentIds ?? [],
+      }),
+    })
+  }
 
   if (res.status === 429) {
     const retryAfter = parseInt(res.headers.get("Retry-After") ?? "60", 10)

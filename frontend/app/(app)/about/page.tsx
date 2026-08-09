@@ -118,7 +118,7 @@ function StackCard({ name, role, color, what, why }: {
   const whyLabel = language === "ms" ? "Kenapa: " : "Why: "
 
   return (
-    <Card className="border-border/60 bg-card/40 transition-all hover:border-primary/20">
+    <Card className="bg-card/40 transition-all hover:border-primary/40">
       <CardHeader className="pb-2 pt-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-heading text-sm font-semibold text-foreground">{name}</span>
@@ -141,8 +141,8 @@ function MetricCard({ name, icon: Icon, what, detail, range }: {
   name: string; icon: ComponentType<{ className?: string }>; what: string; detail: string; range: string
 }) {
   return (
-    <Card className="border-border/60 bg-card/40">
-      <CardContent className="pb-4 pt-4">
+                    <Card className="bg-card/40">
+                      <CardContent className="pb-4 pt-4">
         <div className="mb-2 flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <Icon className="h-4 w-4 shrink-0 text-primary/60" />
@@ -324,7 +324,7 @@ export default function AboutPage() {
                 </div>
                 <div className="p-5 space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <Card className="border-border/60 bg-card/40">
+                    <Card className="bg-card/40">
                       <CardContent className="pb-4 pt-4">
                         <div className="mb-2 flex items-center gap-2">
                           <div className="flex h-6 w-6 items-center justify-center bg-destructive/10">
@@ -343,7 +343,7 @@ export default function AboutPage() {
                       </CardContent>
                     </Card>
 
-                    <Card className="border-border/60 bg-card/40">
+                    <Card className="bg-card/40">
                       <CardContent className="pb-4 pt-4">
                         <div className="mb-2 flex items-center gap-2">
                           <div className="flex h-6 w-6 items-center justify-center bg-primary/10">
@@ -511,7 +511,7 @@ export default function AboutPage() {
               </div>
               <div className="p-5 space-y-3">
                 {keyFeatures.map((feat) => (
-                  <Card key={feat.label} className="border-border/60 bg-card/40">
+                  <Card key={feat.label} className="bg-card/40">
                     <CardContent className="pb-3 pt-3">
                       <div className="mb-2 flex items-center gap-2">
                         <div className={cn("flex h-6 w-6 items-center justify-center", feat.bg)}>

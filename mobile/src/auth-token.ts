@@ -9,6 +9,12 @@ export function setAuthTokenGetter(fn: TokenGetter | null) {
   tokenGetter = fn
 }
 
+/** Clear the token getter — called when the backend rejects the token (401)
+ *  so future requests fall back to anonymous mode. */
+export function clearAuthToken() {
+  tokenGetter = null
+}
+
 export async function authHeader(): Promise<Record<string, string>> {
   if (!tokenGetter) return {}
   try {

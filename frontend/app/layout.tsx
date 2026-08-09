@@ -98,12 +98,10 @@ export default function RootLayout({
         jetbrainsMono.variable
       )}
     >
-      <body className="min-h-screen bg-background text-foreground">
+      <body className="min-h-screen overflow-x-hidden bg-background text-foreground">
         <ClerkProvider afterSignOutUrl="/workspace">
           <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
+            defaultTheme="light"
             disableTransitionOnChange
           >
             <div
@@ -111,7 +109,6 @@ export default function RootLayout({
               className="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-70"
             >
               <TopoPattern />
-              <div className="bg-civic-glow absolute -top-[20%] right-[5%] h-[55%] w-[45%] blur-3xl" />
               <div className="bg-noise absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" />
             </div>
             <LanguageProvider>

@@ -114,9 +114,9 @@ function StatTile({
   const borderClass = tone === "success" ? "border-l-success"
     : tone === "warning" ? "border-l-warning"
     : tone === "primary" ? "border-l-primary"
-    : "border-l-border"
+    : "border-l-foreground"
   return (
-    <div className={cn("border border-border border-l-[3px] bg-card p-4 transition-colors hover:border-primary/20", borderClass)}>
+    <div className={cn("neo-card border-l-[3px] p-4", borderClass)}>
       <div className="mb-3 flex items-center justify-between">
         <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
         <Icon className={cn("h-4 w-4", valueClass)} />
@@ -306,7 +306,7 @@ export default function BenchmarkPage() {
           <button
             onClick={() => void loadData()}
             disabled={loading}
-            className="inline-flex items-center gap-2 border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+            className="neo-btn inline-flex items-center gap-2 bg-card px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
             {copy.refresh}
@@ -314,7 +314,7 @@ export default function BenchmarkPage() {
         </div>
 
         {/* ── Score hero + run controls ── */}
-        <section className={cn("border p-5 sm:p-6", scoreConf.border, scoreConf.bg)}>
+        <section className={cn("border-2 border-foreground/60 bg-card p-5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:p-6", scoreConf.bg)}>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             {/* Score display */}
             <div className="flex items-end gap-5">
@@ -323,14 +323,14 @@ export default function BenchmarkPage() {
                   {copy.benchmarkScore}
                 </p>
                 <div className="flex items-baseline gap-3">
-                  <span className={cn("font-heading text-7xl font-black tracking-tight tabular-nums sm:text-8xl", scoreConf.text)}>
-                    {loading ? "—" : overallScore}
-                  </span>
-                  <span className="text-2xl font-normal text-muted-foreground/50">/100</span>
+                  <span className={cn("font-heading text-5xl font-black tracking-tight tabular-nums sm:text-7xl lg:text-8xl", scoreConf.text)}>
+                     {loading ? "—" : overallScore}
+                   </span>
+                   <span className="text-xl font-normal text-muted-foreground/50 sm:text-2xl">/100</span>
                 </div>
                 <div className="mt-1.5 flex items-center gap-2">
                   <span className={cn(
-                    "inline-flex items-center border px-2.5 py-0.5 text-[11px] font-semibold",
+                    "inline-flex items-center border-2 px-2.5 py-0.5 text-[11px] font-semibold shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]",
                     scoreConf.border, scoreConf.text,
                     scoreTone === "success" ? "bg-success/10" : scoreTone === "warning" ? "bg-warning/10" : "bg-primary/10"
                   )}>
@@ -349,7 +349,7 @@ export default function BenchmarkPage() {
             {/* Run controls */}
             <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[300px]">
               <Select value={selectedDocId} onValueChange={setSelectedDocId}>
-                <SelectTrigger className="border-border bg-background text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                <SelectTrigger className="w-full bg-background text-sm">
                   <SelectValue placeholder={copy.noReady} />
                 </SelectTrigger>
                 <SelectContent>
@@ -366,7 +366,7 @@ export default function BenchmarkPage() {
               <button
                 onClick={() => void handleRunBenchmark()}
                 disabled={!selectedDoc || running}
-                className="inline-flex items-center justify-center gap-2 bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="neo-btn inline-flex items-center justify-center gap-2 bg-primary px-4 py-3 text-sm text-primary-foreground hover:bg-primary/85 disabled:opacity-50"
               >
                 {running ? (
                   <>
@@ -451,8 +451,8 @@ export default function BenchmarkPage() {
         {/* ── Results + right panel ── */}
         <section className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
           {/* Per-case results */}
-          <div className="border border-border bg-card">
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="neo-card">
+            <div className="flex items-center justify-between border-b-2 border-foreground/40 px-5 py-4">
               <div>
                 <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">{copy.latestResults}</p>
                 <h3 className="mt-0.5 font-heading text-lg font-bold tracking-tight">
@@ -476,7 +476,7 @@ export default function BenchmarkPage() {
                 </div>
               </div>
             ) : (
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-foreground/20">
                 {testResult.results.map(result => {
                   const r1 = result.scores.rouge1_f1
                   const r1Tone = r1 >= 0.25 ? "text-success" : r1 >= 0.1 ? "text-primary" : "text-warning"
@@ -485,7 +485,7 @@ export default function BenchmarkPage() {
                     <div key={`${result.case_index}-${result.question}`} className="p-4 transition-colors hover:bg-muted/20">
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <p className="line-clamp-1 text-sm font-semibold text-foreground">{result.question}</p>
-                        <span className="shrink-0 bg-muted px-2 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+                        <span className="shrink-0 border-2 border-foreground/40 bg-muted px-2 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
                           {result.language.toUpperCase()}
                         </span>
                       </div>
@@ -496,7 +496,7 @@ export default function BenchmarkPage() {
                           { label: "Conf",    value: pct(result.scores.confidence),  cls: confTone },
                           { label: "Speed",   value: formatLatency(result.scores.latency_ms), cls: "" },
                         ].map(({ label, value, cls }) => (
-                          <div key={label} className="bg-muted/30 px-2.5 py-2">
+                          <div key={label} className="border-2 border-foreground/30 bg-muted/30 px-2.5 py-2">
                             <p className="text-[10px] text-muted-foreground">{label}</p>
                             <p className={cn("mt-0.5 font-mono text-sm font-semibold tabular-nums", cls || "text-foreground")}>{value}</p>
                           </div>
@@ -513,19 +513,19 @@ export default function BenchmarkPage() {
           {/* Right column */}
           <div className="space-y-4">
             {/* ROUGE context */}
-            <div className="border border-border bg-card p-5">
+            <div className="neo-card p-5">
               <div className="mb-3 flex items-center gap-2">
                 <Info className="h-4 w-4 shrink-0 text-primary" />
                 <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">{copy.rougeNote}</p>
               </div>
               <p className="text-sm leading-relaxed text-muted-foreground">{copy.rougeNoteBody}</p>
-              <div className="mt-3 border border-primary/20 bg-primary/5 px-3 py-2">
+              <div className="mt-3 border-2 border-primary/50 bg-primary/5 px-3 py-2 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
                 <p className="font-mono text-[11px] text-primary">{copy.rougeTypical}</p>
               </div>
             </div>
 
             {/* Scorecard */}
-            <div className="border border-border bg-card p-5">
+            <div className="neo-card p-5">
               <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">{copy.scorecard}</p>
               <h3 className="mt-0.5 font-heading text-base font-bold">{copy.scorecardHeading}</h3>
               <div className="mt-4 space-y-2">
@@ -537,9 +537,9 @@ export default function BenchmarkPage() {
                   const cfg = SCORE_CONFIG[tone]
                   const active = scoreTone === tone && overallScore > 0
                   return (
-                    <div key={label} className={cn("border-l-[3px] px-3 py-2.5 text-sm transition-colors",
+                    <div key={label} className={cn("border-l-[3px] px-3 py-2.5 text-sm",
                       cfg.border,
-                      active ? cn(cfg.bg, "border border-r border-t border-b", cfg.border) : "border-l"
+                      active ? cn(cfg.bg, "border-2 border-l-[3px]", cfg.border, "shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]") : "border-l"
                     )}>
                       <p className={cn("font-semibold", active ? cfg.text : "text-foreground")}>{label}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
@@ -550,7 +550,7 @@ export default function BenchmarkPage() {
             </div>
 
             {/* Live snapshot */}
-            <div className="border border-border bg-card p-5">
+            <div className="neo-card p-5">
               <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">{copy.liveSnapshot}</p>
               {report?.status === "ok" ? (
                 <div className="mt-4 space-y-2">
@@ -563,14 +563,14 @@ export default function BenchmarkPage() {
                       ? [{ label: copy.faithfulness, value: `${Math.round(report.faithfulness!.avg_faithfulness_score * 100)}%` }]
                       : []),
                   ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center justify-between bg-muted/20 px-3 py-2.5">
+                    <div key={label} className="flex items-center justify-between border-2 border-foreground/30 bg-muted/20 px-3 py-2.5">
                       <span className="text-xs text-muted-foreground">{label}</span>
                       <span className="font-mono text-sm font-semibold text-foreground">{value}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="mt-4 border border-dashed border-border bg-muted/10 px-4 py-5 text-xs text-muted-foreground">
+                <div className="mt-4 border-2 border-dashed border-foreground/50 bg-muted/10 px-4 py-5 text-xs text-muted-foreground">
                   {copy.noReport}
                 </div>
               )}
@@ -578,7 +578,7 @@ export default function BenchmarkPage() {
 
             {/* ROUGE score bars (if generation quality) */}
             {report?.generation_quality && (
-              <div className="border border-border bg-card p-5">
+              <div className="neo-card p-5">
                 <p className="mb-3 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
                   <TrendingUp className="mr-1 inline h-3 w-3" />
                   Generation Quality

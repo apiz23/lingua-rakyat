@@ -71,7 +71,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <SidebarKeyboardShortcut />
       <AppSidebar />
       <SidebarInset className="">
-        <header className="sticky top-0 z-10 flex h-fit shrink-0 items-center gap-2 border-b border-border/50 bg-background/95 px-4 py-2 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
+        <header className="sticky top-0 z-10 flex h-fit shrink-0 items-center gap-2 border-b-2 border-foreground/30 bg-background px-4 py-2">
           <SidebarTrigger className="-ml-1 text-muted-foreground transition-colors hover:text-primary" />
 
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -85,7 +85,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={openCommandPalette}
-              className="inline-flex h-8 w-8 items-center justify-center border border-border/60 text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary active:scale-[0.93] sm:hidden"
+              className="neo-btn inline-flex h-8 w-8 items-center justify-center bg-background text-muted-foreground hover:text-primary sm:hidden"
               aria-label="Open command palette"
             >
               <Search className="h-4 w-4" />
@@ -95,11 +95,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={openCommandPalette}
-              className="hidden items-center border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:inline-flex"
+              className="neo-btn hidden items-center bg-background px-2.5 py-1.5 text-xs text-muted-foreground hover:text-primary sm:inline-flex"
               aria-label="Open command palette"
             >
               <span className="mr-2">Search</span>
-              <kbd className="rounded border border-border/60 px-1.5 py-0.5 text-[10px]">
+              <kbd className="border-2 border-foreground/40 bg-muted px-1.5 py-0.5 text-[10px]">
                 Ctrl K
               </kbd>
             </button>
@@ -107,7 +107,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {/* GitHub Link with text - Use LinkPreview ALONE without nested Link */}
             <LinkPreview
               url={GITHUB_URL}
-              className="hidden items-center gap-2 border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:inline-flex"
+              className="neo-btn hidden items-center gap-2 bg-background px-3 py-1.5 text-xs text-muted-foreground hover:text-primary sm:inline-flex"
             >
               <GithubIcon size={14} />
               <span>Repository</span>
@@ -118,7 +118,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-8 items-center justify-center border border-border/60 text-muted-foreground transition-colors duration-150 hover:border-primary/30 hover:bg-primary/5 hover:text-primary sm:hidden"
+              className="neo-btn inline-flex h-8 w-8 items-center justify-center bg-background text-muted-foreground hover:text-primary sm:hidden"
             >
               <GithubIcon size={16} />
               <span className="sr-only">GitHub Repository</span>
@@ -126,7 +126,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto bg-linear-to-br from-background via-background to-muted/5">
+        <main className="min-h-0 flex-1 overflow-y-auto bg-background">
           {children}
         </main>
       </SidebarInset>

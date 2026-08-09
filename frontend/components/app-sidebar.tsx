@@ -238,7 +238,7 @@ export function AppSidebar() {
               <SidebarMenuButton
                 onClick={() => goToWorkspace(null)}
                 tooltip={copy.newChat}
-                className="h-9 justify-start gap-2.5 bg-transparent px-3 text-sm font-medium text-foreground transition-colors hover:border-border hover:bg-muted/50"
+                className="neo-btn h-9 justify-start gap-2.5 bg-card px-3 text-sm font-semibold text-foreground hover:bg-card"
               >
                 <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="group-data-[collapsible=icon]:hidden">
@@ -324,7 +324,7 @@ export function AppSidebar() {
                           }}
                           onBlur={() => handleConfirmRename(conv.session_id)}
                           autoFocus
-                          className="min-h-0 flex-1 rounded border border-border bg-background px-2 py-1 text-sm outline-none focus:border-primary/40"
+                          className="neo-input min-h-0 flex-1 bg-background px-2 py-1 text-sm"
                         />
                         <button
                           type="button"
@@ -372,7 +372,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/30 px-3 py-3">
+      <SidebarFooter className="border-t-2 border-foreground/15 px-3 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
             {isSignedIn ? (
@@ -419,7 +419,7 @@ export function AppSidebar() {
             rel="noopener noreferrer"
             aria-label="GitHub repository"
             onClick={handleNavigation}
-            className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:bg-muted hover:text-muted-foreground"
+            className="inline-flex h-7 w-7 items-center justify-center border-2 border-transparent rounded-none text-muted-foreground/50 transition-colors hover:border-foreground/30 hover:bg-muted hover:text-muted-foreground"
           >
             <GithubIcon size={15} />
           </Link>
@@ -430,7 +430,7 @@ export function AppSidebar() {
             rel="noopener noreferrer"
             aria-label="LinkedIn profile"
             onClick={handleNavigation}
-            className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/50 transition-colors hover:bg-muted hover:text-muted-foreground"
+            className="inline-flex h-7 w-7 items-center justify-center border-2 border-transparent rounded-none text-muted-foreground/50 transition-colors hover:border-foreground/30 hover:bg-muted hover:text-muted-foreground"
           >
             <LinkedinIcon size={15} />
           </Link>

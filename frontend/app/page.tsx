@@ -29,11 +29,15 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
 import Footer from "@/components/footer"
-import { useMobile } from "@/hooks/use-mobile"
 import { useLanguage } from "@/components/language-provider"
 import logo from "@/public/icons/android-chrome-512x512.png"
-import { HyperText } from "@/components/ui/hyper-text"
 import { ModeToggle } from "@/components/mode-toggle"
+import { HyperText } from "@/components/ui/hyper-text"
+import {
+  ScrollVelocityContainer,
+  ScrollVelocityRow,
+} from "@/components/ui/scroll-based-velocity"
+import { Terminal, AnimatedSpan, TypingAnimation } from "@/components/ui/terminal"
 
 const DemoVideo = dynamic(
   () => import("@/components/demo-video").then((m) => m.DemoVideo),
@@ -44,7 +48,6 @@ const TechStackLogos = dynamic(
   { ssr: false }
 )
 import bgNew from "@/public/assets/background-new3.webp"
-import bgMobile from "@/assets/mobile-wallpaper.png"
 import mykadImg from "@/public/assets/MyKad.webp"
 import passportImg from "@/public/assets/passport.webp"
 import personImg from "@/public/assets/person.webp"
@@ -149,12 +152,11 @@ function ScaleIn({
 
 export default function Home() {
   const { language, toggleLanguage } = useLanguage()
-  const isMobile = useMobile()
   const shouldReduce = useReducedMotion()
   const { scrollYProgress } = useScroll()
   const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.8])
   const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.98])
-  const surfaceClass = "border-border bg-card shadow-sm"
+  const surfaceClass = "neo-card bg-card"
   const mutedTextClass = "text-muted-foreground"
   const faintTextClass = "text-muted-foreground"
 
@@ -460,17 +462,17 @@ export default function Home() {
       <div
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url(${isMobile ? bgMobile.src : bgNew.src})`,
+          backgroundImage: `url(${bgNew.src})`,
         }}
       />
 
       {/* Overlay for text readability */}
-      <div className="absolute inset-0 z-[1] bg-background/40 backdrop-blur-[1px] dark:bg-background/72 dark:backdrop-blur-[2px]" />
+      <div className="absolute inset-0 z-[1] bg-background/45 dark:bg-background/75" />
 
-      <main className="relative z-10 mx-auto w-full max-w-[1152px] px-4 sm:px-6 lg:px-10 xl:px-12">
+      <main className="relative z-10 mx-auto w-full max-w-full px-5 sm:px-8 lg:max-w-[70%] lg:px-10 xl:px-14">
         <motion.section
           style={{ opacity: heroOpacity, scale: heroScale }}
-          className="relative flex items-center pt-10 pb-12 sm:pt-24 sm:pb-16 lg:pt-20 lg:pb-14"
+          className="relative flex items-center pt-10 pb-12 sm:pt-8 sm:pb-16 lg:pt-6 lg:pb-14"
         >
           <div className="relative z-10 w-full">
             <motion.div
@@ -500,7 +502,7 @@ export default function Home() {
                       ? "Switch to English"
                       : "Tukar ke Bahasa Melayu"
                   }
-                  className="border border-border bg-background px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary"
+                  className="neo-btn bg-background px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-foreground uppercase hover:text-primary"
                 >
                   {language === "ms" ? "EN" : "MS"}
                 </button>
@@ -508,19 +510,16 @@ export default function Home() {
             </motion.div>
 
             <div className="flex flex-col items-center gap-8 lg:flex-row-reverse lg:justify-between lg:gap-12">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.55, delay: 0.15, ease }}
-                className="relative h-[280px] w-full overflow-visible sm:h-[360px] lg:h-[440px] lg:w-5/12 xl:h-[520px]"
-              >
-                <div className="absolute inset-x-6 top-10 bottom-0 bg-primary/8 blur-3xl sm:inset-x-8 sm:top-12" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.55, delay: 0.15, ease }}
+            className="relative h-[280px] w-full overflow-visible sm:h-[360px] lg:h-[440px] lg:w-5/12 xl:h-[520px]"
+          >
                 <div
-                  className={`relative h-full overflow-hidden border backdrop-blur-sm ${surfaceClass}`}
+                  className={`relative h-full overflow-hidden ${surfaceClass}`}
                 >
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_24%,rgba(74,222,128,0.12),transparent_30%),radial-gradient(circle_at_38%_78%,rgba(34,197,94,0.08),transparent_26%)] dark:bg-[radial-gradient(circle_at_68%_24%,rgba(74,222,128,0.18),transparent_32%),radial-gradient(circle_at_38%_78%,rgba(74,222,128,0.12),transparent_28%)]" />
-                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/28 via-background/8 to-transparent sm:h-32" />
-                  <div className="absolute top-4 left-4 z-20 max-w-[42%] border border-primary/15 bg-background/88 px-3 py-2 text-left shadow-lg backdrop-blur-sm sm:top-6 sm:left-6 sm:px-4">
+                  <div className="absolute top-4 left-4 z-20 max-w-[42%] border-2 border-foreground bg-background/95 px-3 py-2 text-left shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:top-6 sm:left-6 sm:px-4">
                     <p className="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase">
                       {language === "ms" ? "Panduan" : "Guidance"}
                     </p>
@@ -540,20 +539,15 @@ export default function Home() {
                     }}
                     animate={{ opacity: 1, y: 0, rotate: -6 }}
                     transition={{ duration: 0.5, delay: 0.7, ease }}
-                    className="absolute top-[18%] right-[4%] z-20 w-[108px] sm:w-[132px] lg:w-[150px]"
+                    className="absolute top-[44%] left-[5%] z-20 w-[108px] sm:w-[132px] lg:w-[150px]"
                   >
-                    <div className="border border-foreground/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
-                      <div className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
-                        MyKad
-                      </div>
-                      <Image
-                        src={mykadImg}
-                        alt="Malaysian MyKad identity card"
-                        width={150}
-                        height={96}
-                        className="h-auto w-full object-contain"
-                      />
-                    </div>
+                    <Image
+                      src={mykadImg}
+                      alt="Malaysian MyKad identity card"
+                      width={150}
+                      height={96}
+                      className="h-auto w-full object-contain"
+                    />
                   </motion.div>
                   <motion.div
                     initial={{
@@ -563,20 +557,15 @@ export default function Home() {
                     }}
                     animate={{ opacity: 1, x: 0, rotate: 8 }}
                     transition={{ duration: 0.5, delay: 0.92, ease }}
-                    className="absolute bottom-[10%] left-[8%] z-20 w-[84px] sm:w-[102px] lg:w-[112px]"
+                    className="absolute right-[4%] bottom-[10%] z-20 w-[84px] sm:w-[102px] lg:w-[112px]"
                   >
-                    <div className="border border-foreground/10 bg-background/88 p-2 shadow-xl backdrop-blur-sm">
-                      <div className="mb-1.5 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
-                        Passport
-                      </div>
-                      <Image
-                        src={passportImg}
-                        alt="Malaysian passport"
-                        width={112}
-                        height={148}
-                        className="h-auto w-full object-contain"
-                      />
-                    </div>
+                    <Image
+                      src={passportImg}
+                      alt="Malaysian passport"
+                      width={112}
+                      height={148}
+                      className="h-auto w-full object-contain"
+                    />
                   </motion.div>
                   <div className="absolute right-[4%] bottom-0 z-10 h-[96%] w-[78%] sm:right-[6%] sm:w-[72%] lg:w-[80%]">
                     <Image
@@ -584,7 +573,7 @@ export default function Home() {
                       alt="Malaysian civic guide helping users understand official documents"
                       fill
                       priority
-                      className="object-contain object-bottom drop-shadow-[0_28px_42px_rgba(0,0,0,0.22)]"
+                      className="object-contain object-bottom"
                     />
                   </div>
                 </div>
@@ -596,10 +585,10 @@ export default function Home() {
                 animate="visible"
                 className="w-full text-center lg:w-7/12 lg:text-left"
               >
-                <motion.div
-                  variants={itemVariants}
-                  className="relative z-10 mb-4 inline-flex items-center gap-1.5 bg-secondary px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground transition-all hover:bg-secondary/80 sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
-                >
+              <motion.div
+                variants={itemVariants}
+                className="relative z-10 mb-4 inline-flex items-center gap-1.5 neo-btn bg-background px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
+              >
                   <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-4 lg:w-4" />
                   <span className="tracking-wide">{copy.kicker}</span>
                 </motion.div>
@@ -650,7 +639,7 @@ export default function Home() {
                     <Link href="/workspace">
                       <Button
                         size="default"
-                        className="group w-full gap-2 bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md sm:px-6 sm:py-2.5 sm:text-base lg:px-7 lg:py-3"
+                        className="group w-full gap-2 bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/85 sm:px-6 sm:py-2.5 sm:text-base lg:px-7 lg:py-3"
                       >
                         {copy.cta}
                         <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1 sm:h-4 sm:w-4" />
@@ -667,7 +656,7 @@ export default function Home() {
                     <Button
                       size="default"
                       variant="outline"
-                      className="group w-full gap-2 border-2 px-5 py-2.5 text-sm font-semibold transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-md sm:px-6 sm:py-2.5 sm:text-base lg:px-7 lg:py-3"
+                      className="group w-full gap-2 px-5 py-2.5 text-sm font-semibold hover:bg-primary/5 sm:px-6 sm:py-2.5 sm:text-base lg:px-7 lg:py-3"
                       onClick={() =>
                         document
                           .getElementById("demo-section")
@@ -681,20 +670,15 @@ export default function Home() {
                 </motion.div>
 
                 <div
-                  className={`relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3 border-t border-border/30 pt-6 text-xs sm:mt-10 sm:gap-5 sm:pt-8 lg:mt-12 lg:justify-start lg:gap-6 lg:border-0 lg:pt-0 lg:text-sm ${mutedTextClass}`}
+                  className={`relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3 pt-2 text-xs sm:mt-10 sm:gap-4 lg:mt-12 lg:justify-start lg:gap-4 lg:text-sm ${mutedTextClass}`}
                 >
                   {copy.strip.map((item, i) => (
                     <div
                       key={item.label}
-                      className="flex items-center gap-1.5 border border-border/60 bg-card px-2.5 py-1 sm:gap-2 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                      className="flex items-center gap-1.5 border-2 border-foreground bg-card px-2.5 py-1 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.6)]"
                     >
                       <item.icon className="h-3 w-3 shrink-0 text-primary/70 sm:h-3.5 sm:w-3.5" />
-                      <span className="font-medium">{item.label}</span>
-                      {i < copy.strip.length - 1 && (
-                        <span className="hidden text-foreground/25 sm:ml-1 sm:inline">
-                          •
-                        </span>
-                      )}
+                      <span className="font-semibold">{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -703,63 +687,77 @@ export default function Home() {
           </div>
         </motion.section>
 
+        <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2 border-y-4 border-foreground bg-primary py-3 text-primary-foreground sm:mb-20">
+          <ScrollVelocityContainer className="text-3xl font-black tracking-tight uppercase sm:text-5xl lg:text-6xl">
+            <ScrollVelocityRow baseVelocity={3} direction={1}>
+              <span className="mx-6">Bahasa Melayu • English • 中文 •</span>
+            </ScrollVelocityRow>
+            <ScrollVelocityRow baseVelocity={3} direction={-1}>
+              <span className="mx-6">Multilingual RAG • Civic AI •</span>
+            </ScrollVelocityRow>
+          </ScrollVelocityContainer>
+        </div>
+
         <FadeInUp>
           <section className="pb-16 sm:pb-24 lg:pb-32">
-            <div className="group relative overflow-hidden bg-[oklch(0.2_0.03_152)] p-4 text-[oklch(0.85_0.02_152)] shadow-lg transition-all hover:shadow-xl sm:p-6 lg:p-8">
-              <div className="relative">
-                <div className="mb-3 flex items-center gap-2 text-xs text-[oklch(0.65_0.05_152)] sm:mb-4">
-                  <FileText className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
-                  <span className="font-mono text-xs tracking-[0.12em] uppercase">
-                    BANTUAN_RAKYAT_1MALAYSIA_2024.PDF
-                  </span>
-                </div>
+            <Terminal
+              className="max-w-none max-h-none border-2 border-foreground bg-black text-zinc-100 shadow-[8px_8px_0_0_hsl(var(--shadow-color)/0.85)]"
+            >
+              <AnimatedSpan className="flex items-center gap-2 text-xs text-zinc-400 sm:text-sm">
+                <FileText className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+                <span className="font-mono text-xs tracking-[0.12em] uppercase sm:text-sm">
+                  BANTUAN_RAKYAT_1MALAYSIA_2024.PDF
+                </span>
+              </AnimatedSpan>
 
-                <div className="space-y-4 font-mono text-xs sm:space-y-5 sm:text-sm">
-                  <div>
-                    <span className="font-bold text-[oklch(0.7_0.15_152)]">
-                      {">"}{" "}
-                    </span>
-                    <span>{copy.previewQ}</span>
-                  </div>
-
-                  <div className="bg-[oklch(0.25_0.03_152)] px-3 py-2 text-[oklch(0.82_0.02_152)] sm:px-4 sm:py-3">
-                    <p className="leading-relaxed">{copy.previewA}</p>
-                    <div className="mt-2 flex items-center gap-1.5 text-xs text-[oklch(0.6_0.03_152)] sm:mt-3">
-                      <BookOpen className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
-                      <span>&mdash; {copy.previewSrc}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <span className="text-[oklch(0.5_0.03_152)]">{">"}</span>
-                    <motion.span
-                      animate={{ opacity: [1, 1, 0, 0] }}
-                      transition={{
-                        duration: 0.9,
-                        repeat: Infinity,
-                        times: [0, 0.45, 0.5, 1],
-                      }}
-                      className="ml-1 inline-block h-[1em] w-1.5 bg-[oklch(0.7_0.15_152)] align-middle sm:w-2"
-                    />
-                  </div>
-                </div>
+              <div className="font-mono text-xs sm:text-sm">
+                <span className="font-bold text-zinc-300">
+                  {">"}{" "}
+                </span>
+                <TypingAnimation className="text-zinc-100">
+                  {copy.previewQ}
+                </TypingAnimation>
               </div>
-            </div>
+
+              <AnimatedSpan className="bg-zinc-900 px-3 py-2 text-zinc-100 sm:px-4 sm:py-3">
+                <p className="leading-relaxed font-mono text-xs sm:text-sm">
+                  {copy.previewA}
+                </p>
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-400 sm:mt-3">
+                  <BookOpen className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
+                  <span>&mdash; {copy.previewSrc}</span>
+                </div>
+              </AnimatedSpan>
+
+              <AnimatedSpan className="flex items-center gap-1 font-mono text-xs sm:text-sm">
+                <span className="font-bold text-zinc-300">
+                  {">"}
+                </span>
+                <motion.span
+                  animate={{ opacity: [1, 1, 0, 0] }}
+                  transition={{
+                    duration: 0.9,
+                    repeat: Infinity,
+                    times: [0, 0.45, 0.5, 1],
+                  }}
+                  className="ml-1 inline-block h-[1em] w-1.5 bg-zinc-300 align-middle sm:w-2"
+                />
+              </AnimatedSpan>
+            </Terminal>
           </section>
         </FadeInUp>
 
         {/* Comparison */}
-        <section className="pb-16 sm:pb-24 lg:pb-32">
+        <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p
-              className={`mt-5 text-xs font-semibold tracking-[0.22em] uppercase ${faintTextClass}`}
-            >
+            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
+              <span className="mr-2 text-background/60">01</span>
               {comparison.kicker}
             </p>
           </FadeInLeft>
 
           <FadeInLeft delay={0.05}>
-            <h2 className="mt-2 max-w-[32ch] font-heading text-2xl font-semibold text-foreground sm:mt-3 sm:text-3xl lg:text-4xl">
+            <h2 className="mt-4 max-w-[32ch] font-heading text-2xl font-black tracking-tight text-foreground uppercase sm:mt-5 sm:text-3xl lg:text-4xl">
               {comparison.title}
             </h2>
           </FadeInLeft>
@@ -773,18 +771,18 @@ export default function Home() {
           </FadeInLeft>
 
           <FadeInUp>
-            <div className="mt-8 max-h-[360px] overflow-auto border border-border bg-card sm:max-h-none">
+            <div className="mt-8 max-h-[360px] overflow-auto border-2 border-foreground bg-card shadow-[6px_6px_0_0_hsl(var(--shadow-color)/0.85)] sm:max-h-none">
               <table className="w-full border-collapse text-sm sm:min-w-[860px]">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="border-b border-border px-3 py-3 text-left text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase sm:w-[320px] sm:px-4">
+                    <th className="border-b-2 border-foreground/30 px-3 py-3 text-left text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase sm:w-[320px] sm:px-4">
                       Feature
                     </th>
                     {comparison.columns.map((col, colIdx) => (
                       <th
                         key={col}
                         className={[
-                          "border-b border-border px-3 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase sm:px-4",
+                          "border-b-2 border-foreground/30 px-3 py-3 text-left text-xs font-semibold tracking-[0.18em] uppercase sm:px-4",
                           colIdx === 0
                             ? "bg-secondary text-secondary-foreground"
                             : "text-muted-foreground",
@@ -796,7 +794,7 @@ export default function Home() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y-2 divide-foreground/15">
                   {comparison.rows.map((row) => (
                     <tr key={row.label} className="hover:bg-muted/30">
                       <td className="px-3 py-3 font-medium text-foreground/80 sm:px-4">
@@ -834,9 +832,10 @@ export default function Home() {
           </FadeInUp>
         </section>
 
-        <section className="pb-16 sm:pb-24 lg:pb-32">
+        <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p className="mt-5 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
+              <span className="mr-2 text-background/60">02</span>
               {copy.howItWorks}
             </p>
           </FadeInLeft>
@@ -845,15 +844,15 @@ export default function Home() {
             {copy.steps.map((step, i) => (
               <FadeInUp key={step.n} delay={i * 0.1}>
                 <motion.div
-                  className={`group relative min-h-60 overflow-hidden border p-5 hover:border-primary/30 hover:shadow-lg sm:p-6 ${surfaceClass}`}
+                  className={`group relative min-h-60 overflow-hidden border-2 border-foreground bg-card p-5 shadow-[6px_6px_0_0_hsl(var(--shadow-color)/0.85)] transition-all sm:p-6`}
                   whileHover={shouldReduce ? {} : { y: -4, scale: 1.012 }}
                   whileTap={shouldReduce ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 280, damping: 22 }}
                 >
-                  <span className="pointer-events-none absolute right-3 -bottom-3 font-heading text-8xl leading-none font-black text-primary/[0.06] select-none sm:text-9xl">
+                  <span className="absolute top-3 right-3 border-2 border-foreground bg-primary px-2 py-0.5 font-heading text-sm leading-none font-black text-primary-foreground shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.85)] select-none">
                     {step.n}
                   </span>
-                  <step.icon className="relative mb-4 h-5 w-5 text-primary/50 transition-all group-hover:scale-110 group-hover:text-primary sm:h-6 sm:w-6" />
+                  <step.icon className="relative mb-4 h-5 w-5 text-primary/70 transition-all group-hover:scale-110 group-hover:text-primary sm:h-6 sm:w-6" />
                   <h3 className="relative font-heading text-lg font-semibold text-foreground sm:text-xl">
                     {step.title}
                   </h3>
@@ -868,15 +867,16 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="pb-16 sm:pb-24 lg:pb-32">
+        <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p className="mt-5 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
+              <span className="mr-2 text-background/60">03</span>
               {copy.whatItDoes}
             </p>
           </FadeInLeft>
 
           <FadeInLeft delay={0.05}>
-            <h2 className="mt-4 max-w-[42ch] font-heading text-xl leading-snug font-semibold text-foreground sm:mt-6 sm:text-2xl md:text-3xl lg:text-4xl">
+            <h2 className="mt-4 max-w-[42ch] font-heading text-xl leading-snug font-black tracking-tight text-foreground uppercase sm:mt-6 sm:text-2xl md:text-3xl lg:text-4xl">
               {copy.builtFor}
             </h2>
           </FadeInLeft>
@@ -885,10 +885,10 @@ export default function Home() {
             {copy.features.map((f, i) => (
               <FadeInUp key={f.label} delay={i * 0.07}>
                 <div
-                  className="group flex h-full flex-col border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-md sm:p-6"
+                  className="neo-card group flex h-full flex-col bg-card p-5 transition-all hover:bg-card sm:p-6"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-primary/10 transition-colors group-hover:bg-primary/15">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-foreground bg-primary/10 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.6)] transition-colors group-hover:bg-primary/15">
                       <f.icon className="h-4 w-4 text-primary/70 transition-colors group-hover:text-primary" />
                     </div>
                     <h4 className="text-sm font-semibold text-foreground sm:text-base">
@@ -907,14 +907,15 @@ export default function Home() {
         </section>
 
         {/* Video demo section with responsive media player */}
-        <section id="demo-section" className="pb-16 sm:pb-24 lg:pb-32">
+        <section id="demo-section" className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p className="mt-5 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
+              <span className="mr-2 text-background/60">04</span>
               {copy.watchDemo}
             </p>
           </FadeInLeft>
           <FadeInLeft delay={0.05}>
-            <h2 className="mt-2 font-heading text-2xl font-semibold text-foreground sm:mt-3 sm:text-3xl">
+            <h2 className="mt-2 font-heading text-2xl font-black tracking-tight text-foreground uppercase sm:mt-3 sm:text-3xl">
               {copy.seeItWork}
             </h2>
           </FadeInLeft>
@@ -927,9 +928,10 @@ export default function Home() {
         </section>
 
         {/* Tech stack section with responsive logo carousel */}
-        <section className="pb-16 sm:pb-24 lg:pb-32">
+        <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p className="mt-5 text-center text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+            <p className="mx-auto mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
+              <span className="mr-2 text-background/60">05</span>
               {copy.builtWith}
             </p>
           </FadeInLeft>

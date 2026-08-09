@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAuth, useUser } from "@clerk/clerk-expo"
 import { Document } from "../api"
 import { Copy } from "../i18n"
-import { Palette, fonts, spacing, useTheme } from "../theme"
+import { Palette, fonts, radius, spacing, useTheme } from "../theme"
 
 const DRAWER_WIDTH = Math.min(300, Dimensions.get("window").width * 0.82)
 
@@ -228,7 +228,7 @@ const createStyles = (c: Palette) =>
     newChatButton: {
       borderWidth: 1,
       borderColor: c.primary,
-      borderRadius: 12,
+      borderRadius: radius,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
       marginBottom: spacing.xl,
@@ -267,7 +267,7 @@ const createStyles = (c: Palette) =>
       backgroundColor: c.card,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 12,
+      borderRadius: radius,
       padding: spacing.md,
       gap: 2,
     },
@@ -310,7 +310,7 @@ const createStyles = (c: Palette) =>
       backgroundColor: c.card,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 14,
+      borderRadius: radius,
       padding: spacing.md,
     },
     profileRowPressed: {
@@ -319,7 +319,7 @@ const createStyles = (c: Palette) =>
     avatar: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: radius,
       backgroundColor: c.muted,
     },
     avatarFallback: {

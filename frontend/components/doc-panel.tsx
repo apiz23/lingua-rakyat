@@ -208,10 +208,10 @@ export default function DocumentPanel({
       key={doc.id}
       onClick={() => onSelectDoc(doc)}
       className={cn(
-        "group relative cursor-pointer rounded-lg border p-3 transition-all hover:shadow-md",
+        "group relative cursor-pointer border-2 p-3 transition-all",
         selectedDoc?.id === doc.id
-          ? "border-primary bg-primary/5 shadow-sm"
-          : "border-border bg-background hover:border-primary/50 hover:bg-accent/20"
+          ? "border-primary bg-primary/5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]"
+          : "border-foreground bg-background hover:border-primary hover:bg-accent/20"
       )}
     >
       {/* Selection indicator */}
@@ -332,14 +332,14 @@ export default function DocumentPanel({
               placeholder={copy.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background py-2 pr-4 pl-9 text-sm transition-colors focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+              className="neo-input w-full bg-background py-2 pr-4 pl-9 text-sm"
             />
           </div>
 
           {/* Upload button - Hidden on mobile (will use floating button) */}
           <button
             onClick={() => setIsUploadOpen(true)}
-            className="mt-4 hidden w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 md:flex"
+            className="neo-btn mt-4 hidden w-full items-center justify-center gap-2 bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/85 md:flex"
           >
             <Upload className="h-4 w-4" />
             {copy.upload}
@@ -386,7 +386,7 @@ export default function DocumentPanel({
               <div className="md:hidden">
                 <button
                   onClick={() => setIsUploadOpen(true)}
-                  className="mt-6 flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg"
+                  className="neo-btn mt-6 flex items-center gap-2 bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/85"
                 >
                   <Upload className="h-4 w-4" />
                   {copy.firstUpload}

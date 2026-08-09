@@ -29,6 +29,22 @@ export function ModeToggle() {
     setMounted(true)
   }, [])
 
+  React.useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented) return
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === "d"
+      ) {
+        event.preventDefault()
+        setTheme((prev) => (prev === "light" ? "dark" : "light"))
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [setTheme])
+
   const handleThemeChange = React.useCallback(
     (newTheme: string) => {
       setIsAnimating(true)
@@ -51,16 +67,12 @@ export function ModeToggle() {
               handleThemeChange(theme === "light" ? "dark" : "light")
             }
             className={cn(
-              "relative h-8 w-8 overflow-hidden rounded-md border-border/50 bg-background/40 backdrop-blur-sm transition-all duration-300",
-              "hover:border-primary/30 hover:bg-primary/5 hover:shadow-md",
+              "relative h-8 w-8",
+              "hover:bg-primary/10",
               isAnimating && "scale-95"
             )}
             aria-label="Toggle theme"
           >
-            {/* Animated background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent opacity-0 transition-opacity duration-300 hover:opacity-100" />
-
-            {/* Icons with improved animations */}
             <div className="relative flex items-center justify-center">
               <Sun
                 className={cn(

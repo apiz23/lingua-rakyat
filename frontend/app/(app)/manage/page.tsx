@@ -75,13 +75,13 @@ const getStatusIcon = (status: Document["status"]) => {
 const getStatusBadge = (status: Document["status"]) => {
   switch (status) {
     case "ready":
-      return "bg-primary/10 text-primary border-primary/20"
+      return "bg-primary/10 text-primary border-primary/50"
     case "processing":
-      return "bg-accent/10 text-accent border-accent/20"
+      return "bg-accent/10 text-accent border-accent/50"
     case "error":
-      return "bg-destructive/10 text-destructive border-destructive/20"
+      return "bg-destructive/10 text-destructive border-destructive/50"
     default:
-      return "bg-muted text-muted-foreground border-border"
+      return "bg-muted text-muted-foreground border-foreground/50"
   }
 }
 
@@ -113,8 +113,8 @@ function ConfirmDialog({
 
   if (!open) return null
   return (
-    <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm duration-150">
-      <div className="animate-in fade-in zoom-in-95 w-full max-w-sm border border-border bg-card p-6 shadow-2xl duration-200">
+    <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 duration-150">
+      <div className="animate-in fade-in zoom-in-95 w-full max-w-sm border-2 border-foreground bg-card p-6 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] duration-200">
         <div className="flex items-start gap-4">
           <div
             className={cn(
@@ -139,7 +139,7 @@ function ConfirmDialog({
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   placeholder={language === "ms" ? "Token pentadbir" : "Admin token"}
-                  className="w-full border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                  className="neo-input w-full bg-background px-3 py-2 text-sm"
                   autoFocus
                 />
               </div>
@@ -149,7 +149,7 @@ function ConfirmDialog({
         <div className="mt-6 flex justify-end gap-3">
           <button
             onClick={() => { setToken(""); onCancel() }}
-            className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary active:scale-[0.97]"
+            className="neo-btn bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
           >
             {cancelLabel}
           </button>
@@ -157,10 +157,10 @@ function ConfirmDialog({
             onClick={() => { onConfirm(token); setToken("") }}
             disabled={danger && !token.trim()}
             className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors active:scale-[0.97] disabled:opacity-50",
+              "neo-btn px-4 py-2 text-sm font-medium disabled:opacity-50",
               danger
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/85"
             )}
           >
             {confirmLabel}
@@ -187,7 +187,7 @@ function StatCard({
   color = "text-primary",
 }: StatCardProps) {
   return (
-    <div className="group border border-border bg-card/40 p-5 backdrop-blur-sm transition-all duration-300 hover:border-primary/20 hover:shadow-lg">
+    <div className="neo-card group bg-card p-5 transition-all">
       <div className="flex items-center gap-4">
         <div
           className={cn(
@@ -619,7 +619,7 @@ export default function ManagePage() {
             <button
               onClick={refreshDocuments}
               disabled={loading || isFetching.current}
-              className="flex items-center justify-center gap-2 border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-50"
+              className="neo-btn flex items-center justify-center gap-2 bg-background px-4 py-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
             >
               <RefreshCw
                 className={cn(
@@ -666,13 +666,13 @@ export default function ManagePage() {
                 placeholder={copy.search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full border border-border bg-background py-2 pr-4 pl-9 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none sm:w-64"
+                className="neo-input w-full bg-background py-2 pr-4 pl-9 text-sm sm:w-64"
               />
             </div>
             <div className="flex shrink-0 justify-between gap-4">
               <button
                 onClick={() => setUploadModalOpen(true)}
-                className="flex w-full items-center justify-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:w-auto"
+                className="neo-btn flex w-full items-center justify-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/85 sm:w-auto"
               >
                 <Plus className="h-4 w-4" />
                 {copy.uploadPdf}
@@ -681,7 +681,7 @@ export default function ManagePage() {
           </div>
         </section>
 
-        {/* ── Document Table ── */}
+        {/* ── Document List ── */}
         <section>
           <p className="mb-3 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
             {copy.library}
@@ -711,11 +711,10 @@ export default function ManagePage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Bulk delete */}
               {selected.size > 0 && (
                 <button
                   onClick={confirmBulkDelete}
-                  className="flex items-center gap-2 bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
+                  className="neo-btn flex items-center gap-2 bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
                 >
                   <Trash2 className="h-4 w-4" />
                   {language === "ms" ? `Padam ${selected.size}` : `Delete ${selected.size}`}
@@ -725,7 +724,7 @@ export default function ManagePage() {
           </div>
 
           {loading ? (
-            <div className="flex h-64 items-center justify-center border border-border">
+            <div className="flex h-64 items-center justify-center border-2 border-foreground/40 bg-card shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.3)]">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
@@ -734,7 +733,7 @@ export default function ManagePage() {
               </div>
             </div>
           ) : filteredDocuments.length === 0 ? (
-            <div className="flex h-64 flex-col items-center justify-center border-2 border-dashed border-border text-center">
+            <div className="flex h-64 flex-col items-center justify-center border-2 border-dashed border-foreground/50 text-center">
               <FolderOpen className="h-12 w-12 text-muted-foreground/30" />
               <p className="mt-4 text-lg font-medium text-foreground">
                 {searchQuery ? copy.noMatchDocs : copy.noDocs}
@@ -745,7 +744,7 @@ export default function ManagePage() {
               {!searchQuery && (
                 <button
                   onClick={() => setUploadModalOpen(true)}
-                  className="mt-4 flex items-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  className="neo-btn mt-4 flex items-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/85"
                 >
                   <Upload className="h-4 w-4" />
                   {copy.uploadFirstBtn}
@@ -753,193 +752,336 @@ export default function ManagePage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto border border-border bg-card/40 backdrop-blur-sm">
-              {/* Modern Table Design */}
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-secondary/20">
-                    <th className="px-4 py-3 text-left">
-                      <button
-                        onClick={toggleSelectAll}
-                        className="flex items-center"
-                      >
-                        {allSelected ? (
-                          <CheckSquare className="h-4 w-4 text-primary" />
-                        ) : someSelected ? (
-                          <CheckSquare className="h-4 w-4 text-primary/50" />
-                        ) : (
-                          <Square className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      {copy.tableDoc}
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      {language === "ms" ? "Saiz" : "Size"}
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      {copy.tableUploaded}
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      {copy.tableActions}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filteredDocuments.map((doc) => {
-                    const isDeleting = deletingIds.has(doc.id)
-                    const isSelected = selected.has(doc.id)
+            <>
+              {/* Desktop: Table view */}
+              <div className="hidden overflow-x-auto border-2 border-foreground/50 bg-card shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:block">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b-2 border-foreground/40 bg-secondary/20">
+                      <th className="px-4 py-3 text-left">
+                        <button
+                          onClick={toggleSelectAll}
+                          className="flex items-center"
+                        >
+                          {allSelected ? (
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                          ) : someSelected ? (
+                            <CheckSquare className="h-4 w-4 text-primary/50" />
+                          ) : (
+                            <Square className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {copy.tableDoc}
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {language === "ms" ? "Saiz" : "Size"}
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {copy.tableUploaded}
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {copy.tableActions}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-foreground/20">
+                    {filteredDocuments.map((doc) => {
+                      const isDeleting = deletingIds.has(doc.id)
+                      const isSelected = selected.has(doc.id)
 
-                    return (
-                      <tr
-                        key={doc.id}
-                        className={cn(
-                          "transition-colors",
-                          isSelected ? "bg-primary/5" : "hover:bg-accent/30",
-                          isDeleting && "pointer-events-none opacity-50"
-                        )}
-                      >
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => toggleSelect(doc.id)}
-                            className="flex items-center"
-                          >
-                            {isSelected ? (
-                              <CheckSquare className="h-4 w-4 text-primary" />
-                            ) : (
-                              <Square className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={cn(
-                                "shrink-0 p-2",
-                                doc.status === "ready" && "bg-primary/10",
-                                doc.status === "processing" && "bg-accent/10",
-                                doc.status === "error" && "bg-destructive/10"
-                              )}
+                      return (
+                        <tr
+                          key={doc.id}
+                          className={cn(
+                            "transition-colors",
+                            isSelected ? "bg-primary/5" : "hover:bg-accent/30",
+                            isDeleting && "pointer-events-none opacity-50"
+                          )}
+                        >
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => toggleSelect(doc.id)}
+                              className="flex items-center"
                             >
-                              <FileText
+                              {isSelected ? (
+                                <CheckSquare className="h-4 w-4 text-primary" />
+                              ) : (
+                                <Square className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div
                                 className={cn(
-                                  "h-4 w-4",
-                                  doc.status === "ready" && "text-primary",
-                                  doc.status === "processing" && "text-accent",
-                                  doc.status === "error" && "text-destructive"
+                                  "shrink-0 p-2",
+                                  doc.status === "ready" && "bg-primary/10",
+                                  doc.status === "processing" && "bg-accent/10",
+                                  doc.status === "error" && "bg-destructive/10"
                                 )}
-                              />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-foreground">
-                                {doc.name}
-                              </p>
-                              {doc.status === "error" && doc.error_message && (
-                                <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
-                                  <AlertCircle className="h-3 w-3" />
-                                  {doc.error_message}
+                              >
+                                <FileText
+                                  className={cn(
+                                    "h-4 w-4",
+                                    doc.status === "ready" && "text-primary",
+                                    doc.status === "processing" && "text-accent",
+                                    doc.status === "error" && "text-destructive"
+                                  )}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-foreground">
+                                  {doc.name}
                                 </p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-muted-foreground">
-                          {formatFileSize(doc.size_bytes)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {getStatusIcon(doc.status)}
-                            <span
-                              className={cn(
-                                "inline-flex items-center border px-2 py-0.5 text-xs font-medium capitalize",
-                                getStatusBadge(doc.status)
-                              )}
-                            >
-                              {doc.status}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-muted-foreground">
-                          {formatDate(doc.uploaded_at)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-center gap-1">
-                            {isDeleting || renamingId === doc.id || reindexingId === doc.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-destructive" />
-                            ) : (
-                              <>
-                                {doc.status === "ready" && (
-                                  <button
-                                    onClick={() => setViewingDoc(doc)}
-                                    className="p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                                    title={copy.viewDoc}
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </button>
+                                {doc.status === "error" && doc.error_message && (
+                                  <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                                    <AlertCircle className="h-3 w-3" />
+                                    {doc.error_message}
+                                  </p>
                                 )}
-                                <button
-                                  onClick={() => openRenameDialog(doc)}
-                                  className="p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                                  title={
-                                    language === "ms"
-                                      ? "Tukar nama dokumen"
-                                      : "Rename document"
-                                  }
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </button>
-                                {doc.storage_path && (
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-muted-foreground">
+                            {formatFileSize(doc.size_bytes)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {getStatusIcon(doc.status)}
+                              <span
+                                className={cn(
+                                  "inline-flex items-center border-2 px-2 py-0.5 text-xs font-semibold shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)] capitalize",
+                                  getStatusBadge(doc.status)
+                                )}
+                              >
+                                {doc.status}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-muted-foreground">
+                            {formatDate(doc.uploaded_at)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-center gap-1">
+                              {isDeleting || renamingId === doc.id || reindexingId === doc.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                              ) : (
+                                <>
+                                  {doc.status === "ready" && (
+                                    <button
+                                      onClick={() => setViewingDoc(doc)}
+                                      className="p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                      title={copy.viewDoc}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </button>
+                                  )}
                                   <button
-                                    onClick={() =>
-                                      setReindexDialog({
-                                        open: true,
-                                        document: doc,
-                                        token: "",
-                                        error: "",
-                                      })
-                                    }
+                                    onClick={() => openRenameDialog(doc)}
                                     className="p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                                     title={
                                       language === "ms"
-                                        ? "Indeks semula dokumen"
-                                        : "Re-index document"
+                                        ? "Tukar nama dokumen"
+                                        : "Rename document"
                                     }
                                   >
-                                    <RotateCcw className="h-4 w-4" />
+                                    <Pencil className="h-4 w-4" />
                                   </button>
-                                )}
-                                <button
-                                  onClick={() => confirmDelete(doc)}
-                                  className="p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                  title="Padam dokumen"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                                  {doc.storage_path && (
+                                    <button
+                                      onClick={() =>
+                                        setReindexDialog({
+                                          open: true,
+                                          document: doc,
+                                          token: "",
+                                          error: "",
+                                        })
+                                      }
+                                      className="p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                                      title={
+                                        language === "ms"
+                                          ? "Indeks semula dokumen"
+                                          : "Re-index document"
+                                      }
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => confirmDelete(doc)}
+                                    className="p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                    title="Padam dokumen"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
 
-              {/* Table Footer */}
-              <div className="border-t border-border bg-secondary/10 px-4 py-3 text-xs text-muted-foreground">
-                {selected.size > 0 ? (
-                  <span className="font-medium text-foreground">
-                    {selected.size} {copy.of} {filteredDocuments.length} {copy.selected}
-                  </span>
-                ) : (
-                  <span>{copy.showing} {filteredDocuments.length} {copy.docs}</span>
-                )}
+                <div className="border-t-2 border-foreground/30 bg-secondary/10 px-4 py-3 text-xs text-muted-foreground">
+                  {selected.size > 0 ? (
+                    <span className="font-medium text-foreground">
+                      {selected.size} {copy.of} {filteredDocuments.length} {copy.selected}
+                    </span>
+                  ) : (
+                    <span>{copy.showing} {filteredDocuments.length} {copy.docs}</span>
+                  )}
+                </div>
               </div>
-            </div>
+
+              {/* Mobile: Card view */}
+              <div className="space-y-3 sm:hidden">
+                {filteredDocuments.map((doc) => {
+                  const isDeleting = deletingIds.has(doc.id)
+                  const isSelected = selected.has(doc.id)
+
+                  return (
+                    <div
+                      key={doc.id}
+                      className={cn(
+                        "border-2 border-foreground/50 bg-card p-4 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]",
+                        isSelected && "border-primary bg-primary/5",
+                        isDeleting && "pointer-events-none opacity-50"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <button
+                          onClick={() => toggleSelect(doc.id)}
+                          className="mt-0.5 shrink-0"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Square className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                        <div
+                          className={cn(
+                            "shrink-0 p-2",
+                            doc.status === "ready" && "bg-primary/10",
+                            doc.status === "processing" && "bg-accent/10",
+                            doc.status === "error" && "bg-destructive/10"
+                          )}
+                        >
+                          <FileText
+                            className={cn(
+                              "h-4 w-4",
+                              doc.status === "ready" && "text-primary",
+                              doc.status === "processing" && "text-accent",
+                              doc.status === "error" && "text-destructive"
+                            )}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {doc.name}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span>{formatFileSize(doc.size_bytes)}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{formatDate(doc.uploaded_at)}</span>
+                          </div>
+                          {doc.status === "error" && doc.error_message && (
+                            <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{doc.error_message}</span>
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {getStatusIcon(doc.status)}
+                          <span
+                            className={cn(
+                              "inline-flex items-center border-2 px-2 py-0.5 text-[10px] font-semibold shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)] capitalize",
+                              getStatusBadge(doc.status)
+                            )}
+                          >
+                            {doc.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex justify-end gap-1 border-t-2 border-foreground/20 pt-3">
+                        {isDeleting || renamingId === doc.id || reindexingId === doc.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                        ) : (
+                          <>
+                            {doc.status === "ready" && (
+                              <button
+                                onClick={() => setViewingDoc(doc)}
+                                className="border-2 border-foreground/40 p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
+                                title={copy.viewDoc}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openRenameDialog(doc)}
+                              className="border-2 border-foreground/40 p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
+                              title={
+                                language === "ms"
+                                  ? "Tukar nama dokumen"
+                                  : "Rename document"
+                              }
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            {doc.storage_path && (
+                              <button
+                                onClick={() =>
+                                  setReindexDialog({
+                                    open: true,
+                                    document: doc,
+                                    token: "",
+                                    error: "",
+                                  })
+                                }
+                                className="border-2 border-foreground/40 p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
+                                title={
+                                  language === "ms"
+                                    ? "Indeks semula dokumen"
+                                    : "Re-index document"
+                                }
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => confirmDelete(doc)}
+                              className="border-2 border-foreground/40 p-2 text-muted-foreground transition-all hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
+                              title="Padam dokumen"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                <div className="border-t-2 border-foreground/20 px-1 py-3 text-xs text-muted-foreground">
+                  {selected.size > 0 ? (
+                    <span className="font-medium text-foreground">
+                      {selected.size} {copy.of} {filteredDocuments.length} {copy.selected}
+                    </span>
+                  ) : (
+                    <span>{copy.showing} {filteredDocuments.length} {copy.docs}</span>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </section>
       </main>
@@ -969,8 +1111,8 @@ export default function ManagePage() {
 
       {/* ── Confirm Dialog ── */}
       {renameDialog.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="animate-in fade-in zoom-in-95 w-full max-w-md border border-border bg-card p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md border-2 border-foreground bg-card p-6 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]">
             <div className="flex items-start gap-4">
               <div className="bg-primary/10 p-2.5">
                 <Pencil className="h-5 w-5 text-primary" />
@@ -1000,7 +1142,7 @@ export default function ManagePage() {
                       name: event.target.value,
                     }))
                   }
-                  className="mt-2 w-full border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  className="neo-input mt-2 w-full bg-background px-3 py-2 text-sm"
                   autoFocus
                 />
               </label>
@@ -1018,13 +1160,13 @@ export default function ManagePage() {
                       token: event.target.value,
                     }))
                   }
-                  className="mt-2 w-full border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  className="neo-input mt-2 w-full bg-background px-3 py-2 text-sm"
                 />
               </label>
             </div>
 
             {renameDialog.error && (
-              <div className="mt-4 flex items-center gap-2 border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <div className="mt-4 flex items-center gap-2 border-2 border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                 {renameDialog.error}
               </div>
@@ -1033,14 +1175,14 @@ export default function ManagePage() {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={closeRenameDialog}
-                className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+                className="neo-btn bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
               >
                 {language === "ms" ? "Batal" : "Cancel"}
               </button>
               <button
                 onClick={doRename}
                 disabled={renamingId !== null}
-                className="bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="neo-btn bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/85 disabled:opacity-50"
               >
                 {renamingId ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1053,8 +1195,8 @@ export default function ManagePage() {
 
       {/* ── Re-index Dialog ── */}
       {reindexDialog.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="animate-in fade-in zoom-in-95 w-full max-w-md border border-border bg-card p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md border-2 border-foreground bg-card p-6 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]">
             <div className="flex items-start gap-4">
               <div className="bg-primary/10 p-2.5">
                 <RotateCcw className="h-5 w-5 text-primary" />
@@ -1082,13 +1224,13 @@ export default function ManagePage() {
                     setReindexDialog((prev) => ({ ...prev, token: e.target.value }))
                   }
                   onKeyDown={(e) => e.key === "Enter" && doReindex()}
-                  className="mt-2 w-full border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
+                  className="neo-input mt-2 w-full bg-background px-3 py-2 text-sm"
                   autoFocus
                 />
               </label>
             </div>
             {reindexDialog.error && (
-              <div className="mt-4 flex items-center gap-2 border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <div className="mt-4 flex items-center gap-2 border-2 border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                 {reindexDialog.error}
               </div>
@@ -1098,14 +1240,14 @@ export default function ManagePage() {
                 onClick={() =>
                   setReindexDialog({ open: false, document: null, token: "", error: "" })
                 }
-                className="border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+                className="neo-btn bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
               >
                 {language === "ms" ? "Batal" : "Cancel"}
               </button>
               <button
                 onClick={doReindex}
                 disabled={reindexingId !== null}
-                className="bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="neo-btn bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/85 disabled:opacity-50"
               >
                 {reindexingId ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

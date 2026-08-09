@@ -960,7 +960,7 @@ export default function ChatPanel({
               <MessageScrollerViewport className="scrollbar-thumb-muted scrollbar-track-transparent">
                 <MessageScrollerContent
                   aria-busy={loading}
-                  className="mx-auto w-full max-w-5xl gap-3 px-6 py-4 sm:gap-4 sm:px-10 sm:py-6"
+                  className="mx-auto w-full max-w-5xl gap-3 px-4 py-3 sm:gap-4 sm:px-10 sm:py-6"
                 >
                   {showHistory ? (
                     <MessageScrollerItem messageId="thread-history">
@@ -1021,7 +1021,7 @@ export default function ChatPanel({
           </MessageScrollerProvider>
         ) : (
           <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
-            <div className="mx-auto max-w-5xl px-6 py-4 sm:px-10 sm:py-6">
+            <div className="mx-auto max-w-5xl px-4 py-3 sm:px-10 sm:py-6">
               <AnimatePresence>
                 {selectedDoc && showHistory ? (
                   <ThreadHistoryPanel
@@ -1051,7 +1051,7 @@ export default function ChatPanel({
                       <div className="flex min-h-[60vh] flex-col items-center justify-center">
                         <div className="max-w-md p-8 text-center">
                           <div className="mx-auto mb-6 inline-flex">
-                            <div className="rounded-2xl border border-border/60 bg-card p-8 shadow-sm">
+                            <div className="neo-card p-8">
                               <FileText className="mx-auto h-16 w-16 text-primary/60" />
                             </div>
                           </div>
@@ -1075,7 +1075,7 @@ export default function ChatPanel({
         )}
       </AiChatBody>
 
-      <AiChatFooter className="bg-background/95 backdrop-blur-sm">
+      <AiChatFooter className="bg-background">
         <div className="mx-auto max-w-5xl">
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
@@ -1083,7 +1083,7 @@ export default function ChatPanel({
                 <button
                   type="button"
                   onClick={onBack}
-                  className="shrink-0 rounded-lg p-2 transition-colors hover:bg-muted"
+                  className="neo-btn shrink-0 p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                   title={copy.back}
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -1125,7 +1125,7 @@ export default function ChatPanel({
                       type="button"
                       title={copy.scopeTitle}
                       aria-label={copy.scopeTitle}
-                      className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+                      className="neo-btn flex items-center gap-1.5 bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
                     >
                       {mentionDoc ? (
                         <FileText className="h-3 w-3 shrink-0" />
@@ -1194,7 +1194,7 @@ export default function ChatPanel({
                       </button>
                     </div>
 
-                    <div className="mt-1 border-t border-border/60 pt-1">
+                    <div className="mt-1 border-t-2 border-foreground/20 pt-1">
                       <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                         {copy.mentionListTitle}
                       </div>
@@ -1227,7 +1227,7 @@ export default function ChatPanel({
                 }
                 aria-label={largeText ? copy.textSizeNormal : copy.textSizeLarge}
                 aria-pressed={largeText}
-                className="rounded-full border border-border/60 bg-background px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
+                className="neo-btn bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
               >
                 {largeText ? "A" : "A⁺"}
               </button>
@@ -1235,7 +1235,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={toggleLanguage}
-                className="rounded-full border border-border/60 bg-background px-2.5 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase transition-colors hover:border-primary/30 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.95]"
+                className="neo-btn bg-background px-2.5 py-1.5 text-[11px] tracking-[0.18em] text-muted-foreground uppercase hover:border-primary hover:text-primary"
                 title={copy.language}
               >
                 {language === "ms" ? "EN" : language === "en" ? "中文" : "BM"}
@@ -1244,7 +1244,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="neo-btn p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                 title={copy.newChat}
               >
                 <Plus className="h-4 w-4" />
@@ -1254,7 +1254,7 @@ export default function ChatPanel({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="neo-btn p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                     title={copy.options}
                   >
                     <MoreVertical className="h-4 w-4" />
@@ -1312,7 +1312,7 @@ export default function ChatPanel({
             <div className="mb-1.5 flex items-center gap-1.5">
               <span
                 title={copy.mentionOnlyTitle}
-                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-bold text-secondary-foreground"
+                className="neo-btn inline-flex max-w-full items-center gap-1.5 bg-secondary px-2.5 py-1 text-[11px] text-secondary-foreground"
               >
                 <FileText className="h-3 w-3 shrink-0" />
                 <span className="truncate">@{mentionDoc.name}</span>
@@ -1330,7 +1330,7 @@ export default function ChatPanel({
 
           <div className="relative" onKeyDownCapture={handleMentionKeyDown}>
             {mentionQuery !== null ? (
-              <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm overflow-hidden rounded-xl border border-border bg-popover shadow-md">
+              <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm overflow-hidden rounded-none border-2 border-foreground bg-popover shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]">
                 <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                   {copy.mentionListTitle}
                 </div>
@@ -1385,7 +1385,7 @@ export default function ChatPanel({
                   type="button"
                   title={copy.modelTitle}
                   aria-label={copy.modelTitle}
-                  className="flex h-8 w-fit items-center gap-1 rounded-full border border-border/60 bg-background px-3 text-xs text-muted-foreground transition-colors hover:bg-muted"
+                  className="neo-btn flex h-8 w-fit items-center gap-1 bg-background px-3 text-xs text-muted-foreground hover:bg-muted"
                 >
                   <Cpu className="h-3 w-3 shrink-0" />
                   <span className="max-w-[110px] truncate sm:max-w-[160px]">
@@ -1456,10 +1456,10 @@ export default function ChatPanel({
               type="button"
               onClick={toggleAutoSpeak}
               className={cn(
-                "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
+                "neo-btn flex items-center gap-1 bg-background px-2.5 py-1 text-[10px]",
                 autoSpeak
-                  ? "border-primary/30 bg-primary/10 text-primary"
-                  : "border-border/60 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
               title={copy.autoSpeakTitle}
               aria-label={copy.autoSpeakTitle}

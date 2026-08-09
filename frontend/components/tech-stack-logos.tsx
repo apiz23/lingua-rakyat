@@ -18,7 +18,7 @@ export function TechStackLogos({ techs }: TechStackLogosProps) {
         {techs.map((tech) => (
           <LinkPreview key={tech.name} url={tech.url}>
             <span
-              className="inline-block cursor-pointer rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-secondary hover:text-primary hover:shadow-sm sm:px-5 sm:py-2 sm:text-sm"
+              className="neo-btn inline-block cursor-pointer rounded-full bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-primary sm:px-5 sm:py-2 sm:text-sm"
             >
               {tech.name}
             </span>

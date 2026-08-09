@@ -1,6 +1,8 @@
 // Civic-green theme — hex approximations of the web app's oklch tokens
-// (frontend/app/globals.css), light and dark. Follows the system scheme.
+// (frontend/app/globals.css), light and dark. Follows the system scheme
+// by default, with an in-app toggle override via ThemeContext.
 
+import React, { createContext, useContext } from "react"
 import { useColorScheme } from "react-native"
 
 export type Palette = {
@@ -21,6 +23,8 @@ export type Palette = {
   low: string
   lowBg: string
 }
+
+export type ThemeMode = "light" | "dark" | "system"
 
 export const lightPalette: Palette = {
   background: "#FAF7F0",       // oklch(0.975 0.015 85) warm off-white
@@ -60,9 +64,41 @@ export const darkPalette: Palette = {
   lowBg: "#2E1B19",
 }
 
-// System scheme decides; light is the fallback (primary design target).
+// Resolve palette from the user's chosen mode + system fallback.
+export function resolvePalette(
+  mode: ThemeMode,
+  systemScheme: "light" | "dark" | null | undefined,
+): Palette {
+  const effective =
+    mode === "system" ? (systemScheme === "dark" ? "dark" : "light") : mode
+  return effective === "dark" ? darkPalette : lightPalette
+}
+
+// Whether the resolved palette is dark (for StatusBar, etc.).
+export function isDarkPalette(palette: Palette): boolean {
+  return palette === darkPalette
+}
+
+// ---------- Context ----------
+
+const ThemeCtx = createContext<Palette>(lightPalette)
+
+/** Wrap the app tree so all useTheme() calls receive the resolved palette. */
+export function ThemeProvider({
+  mode,
+  children,
+}: {
+  mode: ThemeMode
+  children: React.ReactNode
+}) {
+  const scheme = useColorScheme()
+  const palette = resolvePalette(mode, scheme)
+  return <ThemeCtx.Provider value={palette}>{children}</ThemeCtx.Provider>
+}
+
+// All components import this — reads from ThemeContext (no useColorScheme).
 export function useTheme(): Palette {
-  return useColorScheme() === "dark" ? darkPalette : lightPalette
+  return useContext(ThemeCtx)
 }
 
 export const fonts = {
@@ -78,3 +114,6 @@ export const spacing = {
   lg: 16,
   xl: 24,
 }
+
+// Zero border-radius — matches frontend/app/globals.css (--radius: 0px).
+export const radius = 0

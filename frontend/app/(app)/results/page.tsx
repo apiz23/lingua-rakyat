@@ -30,7 +30,7 @@ function MetricCard({
   icon: React.ReactNode; live?: boolean
 }) {
   return (
-    <div className="border border-border bg-card p-5">
+    <div className="neo-card bg-card p-5">
       <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
         {icon} {title}
         {live && (
@@ -235,16 +235,16 @@ export default function ResultsPage() {
     : "Target < 3s"
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
       {/* Header */}
-      <div className="mb-10">
+      <div className="mb-8 sm:mb-10">
         <p className="mb-3 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
           {copy.eyebrow}
         </p>
-        <h1 className="mb-3 font-heading text-4xl font-bold tracking-tight sm:text-5xl">
+        <h1 className="mb-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
           {copy.heading}
         </h1>
-        <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
+        <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
           {copy.subtitle}
         </p>
         {loading && (
@@ -273,7 +273,7 @@ export default function ResultsPage() {
             <Link href="/workspace">{copy.quickLinksWorkspaceBtn} <ArrowRight className="ml-1 h-4 w-4" /></Link>
           </Button>
         </div>
-        <div className="border border-border bg-card p-5">
+        <div className="neo-card bg-card p-5">
           <div className="mb-2 flex items-center gap-2">
             <FolderOpen className="h-5 w-5 text-primary" />
             <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksDocsTitle}</h3>
@@ -283,7 +283,7 @@ export default function ResultsPage() {
             <Link href="/manage">{copy.quickLinksDocsBtn} <ArrowRight className="ml-1 h-4 w-4" /></Link>
           </Button>
         </div>
-        <div className="border border-border bg-card p-5">
+        <div className="neo-card bg-card p-5">
           <div className="mb-2 flex items-center gap-2">
             <FlaskConical className="h-5 w-5 text-primary" />
             <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksEvalTitle}</h3>
@@ -324,7 +324,7 @@ export default function ResultsPage() {
         <CheckCircle2 className="mr-2 h-5 w-5 text-primary" />
         {copy.featuresHeading}
       </h2>
-      <div className="mb-10 border border-border bg-card">
+      <div className="neo-card mb-10 bg-card">
         <div className="divide-y divide-border">
           {copy.features.map((f) => (
             <ComplianceRow key={f.title} title={f.title} description={f.desc} status={copy.fulfilled} />
@@ -344,7 +344,7 @@ export default function ResultsPage() {
       </h2>
       <div className="grid gap-4 sm:grid-cols-3">
         {copy.sdgs.map(({ sdg, label, desc }) => (
-          <div key={sdg} className="border border-primary/20 bg-primary/5 p-5">
+          <div key={sdg} className="neo-card border-2 border-primary/40 bg-primary/5 p-5">
             <div className="mb-3 flex items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-primary/30 bg-primary text-primary-foreground">
                 <span className="font-heading text-xl font-black">{sdg}</span>
@@ -356,7 +356,7 @@ export default function ResultsPage() {
         ))}
       </div>
 
-      <div className="mt-10 grid grid-cols-2 gap-6 border border-border bg-card p-6 sm:grid-cols-4">
+      <div className="neo-card mt-10 grid grid-cols-2 gap-6 bg-card p-6 sm:grid-cols-4">
         {[
           { value: "33M+", label: copy.statMalaysians },
           { value: "3", label: copy.statLanguages },

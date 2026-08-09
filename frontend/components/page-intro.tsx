@@ -22,7 +22,7 @@ export default function PageIntro({
   return (
     <section
       className={cn(
-        "overflow-hidden border border-border bg-card/40 backdrop-blur-sm shadow-sm",
+        "overflow-hidden border-2 border-foreground bg-card/60 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]",
         className
       )}
     >

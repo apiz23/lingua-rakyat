@@ -49,7 +49,7 @@ export function ThreadHistoryPanel({
       }}
       className="overflow-hidden"
     >
-      <div className="mb-4 rounded-2xl border border-border/50 bg-card p-4 shadow-sm sm:mb-6">
+      <div className="neo-card mb-4 bg-card p-4 sm:mb-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold">{copy.threadList}</h3>

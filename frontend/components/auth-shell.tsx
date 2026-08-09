@@ -35,7 +35,7 @@ export function AuthShell({
           Lingua Rakyat
         </Link>
 
-        <Card className="border border-border shadow-sm">
+        <Card>
           <CardHeader className="gap-1.5 pb-2">
             <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
               {eyebrow}

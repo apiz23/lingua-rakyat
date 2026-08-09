@@ -87,7 +87,7 @@
 
 .dark {
   /* WARM CIVIC dark — neutral ink surfaces, green reserved for signal */
-  --background: oklch(0.16 0.006 145);
+  --background: oklch(0.14 0.006 145);
   --foreground: oklch(0.93 0.01 85);
 
   --card: oklch(0.195 0.007 145);
@@ -146,7 +146,7 @@
   --shadow-blur: 15px;
   --shadow-spread: -3px;
   --shadow-opacity: 0.4;
-  --shadow-color: 0 0% 0%;
+  --shadow-color: 0 0% 65%;
 
   --shadow-2xs: 0px 8px 15px -3px hsl(0 0% 0% / 0.2);
   --shadow-xs: 0px 8px 15px -3px hsl(0 0% 0% / 0.2);
@@ -383,4 +383,64 @@
 
 html[data-text-size="large"] {
   font-size: 112.5%;
+}
+
+/* =========================
+   NEO-BRUTALISM UTILITIES
+   Keep existing palette; only border/shadow tokens added below.
+========================= */
+@layer components {
+  /* Cards & containers — flat fill, hard border, hard offset shadow */
+  .neo-card {
+    border: 2px solid var(--foreground);
+    border-radius: 0px;
+    background: var(--card);
+    box-shadow: 4px 4px 0 0 hsl(var(--shadow-color) / 0.85);
+    transition: all 0.1s ease;
+  }
+  .neo-card:hover {
+    box-shadow: 2px 2px 0 0 hsl(var(--shadow-color) / 0.85);
+    transform: translate(2px, 2px);
+  }
+  .neo-card:active {
+    box-shadow: 0 0 0 0 hsl(var(--shadow-color) / 0.85);
+    transform: translate(4px, 4px);
+  }
+
+  /* Buttons — border + hard shadow + press animation */
+  .neo-btn {
+    border: 2px solid var(--foreground);
+    border-radius: 0px;
+    box-shadow: 4px 4px 0 0 hsl(var(--shadow-color) / 0.85);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    transition: all 0.1s ease;
+  }
+  .neo-btn:hover {
+    box-shadow: 2px 2px 0 0 hsl(var(--shadow-color) / 0.85);
+    transform: translate(2px, 2px);
+  }
+  .neo-btn:active {
+    box-shadow: 0 0 0 0 hsl(var(--shadow-color) / 0.85);
+    transform: translate(4px, 4px);
+  }
+  .neo-btn:disabled {
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* Inputs — sharp corners, focus = shadow intensifies (no glow ring) */
+  .neo-input {
+    border: 2px solid var(--foreground);
+    border-radius: 0px;
+    box-shadow: 3px 3px 0 0 hsl(var(--shadow-color) / 0.6);
+    transition: all 0.1s ease;
+  }
+  .neo-input:focus,
+  .neo-input:focus-visible,
+  .neo-input:focus-within {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: 4px 4px 0 0 var(--ring);
+  }
 }

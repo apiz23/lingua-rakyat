@@ -71,7 +71,7 @@ function SlideOverview() {
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto p-8">
       <div className="grid flex-1 gap-4 sm:grid-cols-2">
-        <div className="border border-border bg-card p-5">
+        <div className="neo-card bg-card p-5">
           <div className="mb-3 flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center bg-red-500/10">
               <FileText className="h-3.5 w-3.5 text-red-500" />
@@ -88,7 +88,7 @@ function SlideOverview() {
           </ul>
         </div>
 
-        <div className="border border-primary/25 bg-card p-5">
+        <div className="neo-card border-2 border-primary/40 bg-card p-5">
           <div className="mb-3 flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center bg-primary/10">
               <Check className="h-3.5 w-3.5 text-primary" />
@@ -173,7 +173,7 @@ function SlideTechStack({ backend, frontend }: { backend: typeof BACKEND_STACK; 
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {backend.map((tech) => (
-              <div key={tech.name} className="border border-border/60 bg-card/40 px-3 py-2">
+              <div key={tech.name} className="neo-card bg-card/40 px-3 py-2">
                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
                   <span className="text-sm font-semibold text-foreground">{tech.name}</span>
                   <Badge className={cn("border text-[10px] font-medium", tech.color)}>
@@ -194,7 +194,7 @@ function SlideTechStack({ backend, frontend }: { backend: typeof BACKEND_STACK; 
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {frontend.map((tech) => (
-              <div key={tech.name} className="border border-border/60 bg-card/40 px-3 py-2">
+              <div key={tech.name} className="neo-card bg-card/40 px-3 py-2">
                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
                   <span className="text-sm font-semibold text-foreground">{tech.name}</span>
                   <Badge className={cn("border text-[10px] font-medium", tech.color)}>
@@ -220,7 +220,7 @@ function SlideFeatures({ features }: { features: typeof KEY_FEATURES }) {
         {features.map((feat) => {
           const Icon = feat.icon
           return (
-            <div key={feat.label} className="border border-border/60 bg-card/40 p-4">
+            <div key={feat.label} className="neo-card bg-card/40 p-4">
               <div className="mb-2 flex items-center gap-2">
                 <div className={cn("flex h-6 w-6 items-center justify-center", feat.bg)}>
                   <Icon className={cn("h-3.5 w-3.5", feat.color)} />
@@ -250,7 +250,7 @@ function SlideMetrics({ metrics }: { metrics: typeof EVAL_METRICS }) {
         {metrics.map((m) => {
           const Icon = m.icon
           return (
-            <div key={m.name} className="border border-border/60 bg-card/40 p-4">
+            <div key={m.name} className="neo-card bg-card/40 p-4">
               <div className="mb-1.5 flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4 shrink-0 text-primary/60" />

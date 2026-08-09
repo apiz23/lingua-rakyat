@@ -115,7 +115,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     <div
       data-slot="chat-input"
       className={cn(
-        "rounded-none border border-border/50 bg-background shadow-sm transition-all focus-within:border-primary/50 focus-within:shadow-md",
+        "neo-input rounded-none bg-background",
         className
       )}
     >

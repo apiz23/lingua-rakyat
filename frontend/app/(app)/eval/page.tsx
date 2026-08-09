@@ -67,7 +67,7 @@ const ACCENT: Record<Tone, string> = {
   success: "border-l-success text-success",
   warning: "border-l-warning text-warning",
   primary: "border-l-primary text-primary",
-  default: "border-l-border text-foreground",
+  default: "border-l-foreground text-foreground",
 }
 
 // ── StatCard ───────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ function StatCard({
 }) {
   const [borderCls, valueCls] = ACCENT[tone].split(" ")
   return (
-    <div className={cn("border border-border border-l-[3px] bg-card p-4 transition-colors hover:border-primary/20", borderCls)}>
+    <div className={cn("neo-card border-l-[3px] p-4", borderCls)}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">{label}</p>
@@ -129,12 +129,12 @@ function SegBar({ label, value, max = 1 }: { label: string; value: number; max?:
 function GradeBadge({ grade }: { grade: number }) {
   return (
     <span className={cn(
-      "inline-flex items-center border px-2 py-0.5 text-[10px] font-semibold",
+      "inline-flex items-center border-2 px-2 py-0.5 text-[10px] font-semibold shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.5)]",
       grade <= 5
-        ? "border-success/20 bg-success/10 text-success"
+        ? "border-success/50 bg-success/10 text-success"
         : grade <= 7
-          ? "border-primary/20 bg-primary/10 text-primary"
-          : "border-warning/20 bg-warning/10 text-warning"
+          ? "border-primary/50 bg-primary/10 text-primary"
+          : "border-warning/50 bg-warning/10 text-warning"
     )}>
       Grade {grade.toFixed(1)}
     </span>
@@ -145,7 +145,7 @@ function GradeBadge({ grade }: { grade: number }) {
 
 function InfoNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2 border border-border/40 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+    <div className="flex items-start gap-2 border-2 border-foreground/60 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
       <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/60" />
       <span>{children}</span>
     </div>
@@ -312,7 +312,7 @@ export default function EvalPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* ── Sticky header + tabs ── */}
-      <div className="sticky top-0 z-20 border-b border-border bg-background/98 backdrop-blur-sm">
+      <div className="sticky top-0 z-20 border-b border-foreground/30 bg-background">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {/* Top row */}
           <div className="flex items-center justify-between gap-4 py-3">
@@ -353,10 +353,10 @@ export default function EvalPage() {
                   aria-selected={active}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset sm:px-4 sm:text-sm",
+                    "flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-semibold transition-colors focus-visible:outline-none sm:px-4 sm:text-sm",
                     active
                       ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+                      : "border-transparent text-muted-foreground hover:border-foreground hover:text-foreground"
                   )}
                 >
                   {showSpinner
@@ -376,7 +376,7 @@ export default function EvalPage() {
 
       {/* ── Info banner (dismissible) ── */}
       {!bannerDismissed && (
-        <div className="border-b border-border bg-muted/30">
+        <div className="border-b border-foreground/30 bg-muted/30">
           <div className="mx-auto flex max-w-7xl items-start gap-3 px-4 py-2.5 sm:px-6">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <p className="flex-1 text-xs text-muted-foreground">
@@ -396,7 +396,7 @@ export default function EvalPage() {
         ════════════════════════════════════ */}
         <div className={cn(activeTab !== "metrics" && "hidden")}>
           {!hasMetrics ? (
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-border py-24 text-center">
+            <div className="flex flex-col items-center justify-center border-2 border-dashed border-foreground/50 py-24 text-center">
               <BarChart3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground/20" />
               <p className="font-medium text-foreground">No data recorded yet</p>
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
@@ -490,10 +490,10 @@ export default function EvalPage() {
 
               {/* Readability status note */}
               <div className={cn(
-                "flex items-center gap-2 border px-4 py-3 text-sm",
+                "flex items-center gap-2 border-2 px-4 py-3 text-sm shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]",
                 report!.readability.avg_fk_grade <= 6
-                  ? "border-success/20 bg-success/5 text-success"
-                  : "border-border bg-muted/30 text-muted-foreground"
+                  ? "border-success/50 bg-success/5 text-success"
+                  : "border-foreground/60 bg-muted/30 text-muted-foreground"
               )}>
                 {report!.readability.avg_fk_grade <= 6
                   ? <CheckCircle className="h-4 w-4 shrink-0" />
@@ -518,7 +518,7 @@ export default function EvalPage() {
                     The AI&apos;s answers are compared word-by-word against expert-written expected answers.
                     Each bar shows how closely they match — higher is better.
                   </InfoNote>
-                  <div className="mt-3 border border-border bg-card p-5 space-y-3.5">
+                  <div className="neo-card mt-3 space-y-3.5 p-5">
                     <SegBar label="Keyword Match — how many individual words the AI got right" value={report!.generation_quality!.avg_rouge1_f1} max={0.5} />
                     <SegBar label="Phrase Match — how many two-word phrases the AI got right" value={report!.generation_quality!.avg_rouge2_f1} max={0.3} />
                     <SegBar label="Answer Flow — how naturally the answer reads compared to the expected answer" value={report!.generation_quality!.avg_rougeL_f1} max={0.4} />
@@ -526,7 +526,7 @@ export default function EvalPage() {
                     {(report!.faithfulness?.scored_queries ?? 0) > 0 && (
                       <SegBar label="Truthfulness — answer backed by the source document (not made up)" value={report!.faithfulness!.avg_faithfulness_score} />
                     )}
-                    <div className="flex items-center justify-between border-t border-border pt-3">
+                    <div className="flex items-center justify-between border-t-2 border-foreground/40 pt-3">
                       <span className="text-[11px] font-medium text-muted-foreground">Exact Word Match Rate</span>
                       <span className="font-mono text-xs tabular-nums text-foreground">
                         {report!.generation_quality!.exact_match_rate}%
@@ -546,17 +546,17 @@ export default function EvalPage() {
                     </h2>
                   </div>
                   <InfoNote>How the AI performs when answering in each language.</InfoNote>
-                  <div className="mt-3 border border-border">
+                  <div className="neo-card mt-3">
                     <ScrollArea className="w-full whitespace-nowrap">
                       <table className="w-full min-w-[560px] text-sm">
                         <thead>
-                          <tr className="border-b border-border bg-muted/40">
+                          <tr className="border-b-2 border-foreground/40 bg-muted/40">
                             {["Language", "Questions", "Search Accuracy", "Avg Speed", "Reading Level"].map(h => (
                               <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase first:text-left last:text-right [&:not(:first-child)]:text-right">{h}</th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-border">
+                        <tbody className="divide-y divide-foreground/20">
                           {Object.entries(report!.per_language).map(([lang, stats]) => {
                             const info = LANG_LABELS[lang] ?? { name: lang, code: lang.toUpperCase() }
                             const confTone = toneFor(stats.avg_confidence)
@@ -565,7 +565,7 @@ export default function EvalPage() {
                               <tr key={lang} className="transition-colors hover:bg-muted/20">
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-2">
-                                    <span className="bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
+                                    <span className="border-2 border-foreground/40 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
                                     <span className="text-sm font-medium">{info.name}</span>
                                   </div>
                                 </td>
@@ -597,7 +597,7 @@ export default function EvalPage() {
             against expert-written expected answers. This shows how accurate and reliable the AI is.
           </InfoNote>
 
-          <div className="border border-border bg-card p-5 sm:p-6">
+          <div className="neo-card p-5 sm:p-6">
             {/* Controls row */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Select
@@ -648,17 +648,17 @@ export default function EvalPage() {
                 { key: "identity", label: "MyKad / Identity", count: 5 },
                 { key: "passport", label: "Passport", count: 6 },
               ].map(cat => (
-                <span key={cat.key} className="inline-flex items-center gap-1.5 border border-border bg-muted/30 px-2.5 py-1 text-muted-foreground">
+                <span key={cat.key} className="inline-flex items-center gap-1.5 border-2 border-foreground/60 bg-muted/30 px-2.5 py-1 text-muted-foreground shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
                   <span className="font-medium text-foreground">{cat.label}</span>
-                  <span className="bg-muted px-1 py-0.5 font-mono text-[10px] tabular-nums">{cat.count} questions</span>
+                  <span className="border-2 border-foreground/30 bg-muted px-1 py-0.5 font-mono text-[10px] tabular-nums">{cat.count} questions</span>
                 </span>
               ))}
-              <span className="border border-border bg-muted/30 px-2.5 py-1 text-muted-foreground">English · Malay · Chinese</span>
+              <span className="border-2 border-foreground/60 bg-muted/30 px-2.5 py-1 text-muted-foreground shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">English · Malay · Chinese</span>
             </div>
 
             {/* Category / unrelated status */}
             {detectedCategory === "unrelated" && skippedReason && (
-              <div className="mt-4 flex items-start gap-3 border border-border bg-muted/20 px-4 py-3">
+              <div className="mt-4 flex items-start gap-3 border-2 border-foreground/60 bg-muted/20 px-4 py-3 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Document not matched to any test category</p>
@@ -670,7 +670,7 @@ export default function EvalPage() {
               </div>
             )}
             {detectedCategory && detectedCategory !== "unrelated" && (
-              <div className="mt-4 flex items-center gap-2 border border-success/20 bg-success/5 px-4 py-2.5">
+              <div className="mt-4 flex items-center gap-2 border-2 border-success/50 bg-success/5 px-4 py-2.5 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
                 <CheckCircle className="h-3.5 w-3.5 shrink-0 text-success" />
                 <span className="text-sm text-success">
                   Matched: <span className="font-medium capitalize">{detectedCategory.replace("_", " ")}</span>
@@ -682,7 +682,7 @@ export default function EvalPage() {
 
           {/* Streaming progress */}
           {streamProgress && (
-            <div className="border border-border bg-card p-5">
+            <div className="neo-card p-5">
               <div className="mb-4 space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">Running accuracy test…</span>
@@ -707,7 +707,7 @@ export default function EvalPage() {
               </div>
 
               {streamProgress.liveResults.length > 0 && (
-                <div className="divide-y divide-border border border-border">
+                <div className="divide-y divide-foreground/20 border-2 border-foreground/60">
                   {streamProgress.liveResults.map((r, i) => {
                     const r1 = r.scores.rouge1_f1
                     const filled = Math.min(Math.round((r1 / 0.5) * 10), 10)
@@ -715,7 +715,7 @@ export default function EvalPage() {
                     const info = LANG_LABELS[r.language] ?? { code: r.language.toUpperCase() }
                     return (
                       <div key={i} className="flex items-center gap-3 bg-card px-3 py-2 text-xs">
-                        <span className="shrink-0 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
+                    <span className="shrink-0 border-2 border-foreground/40 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
                         <span className="flex-1 truncate text-foreground/80">{r.question}</span>
                         <div className="flex shrink-0 items-center gap-1.5">
                           <div className="flex w-12 gap-[2px]" aria-hidden>
@@ -738,7 +738,7 @@ export default function EvalPage() {
           {testResult && (
             <div className="space-y-4">
               {/* Aggregate */}
-              <div className="border border-success/20 bg-success/5 p-5">
+              <div className="border-2 border-success/50 bg-success/5 p-5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]">
                 <div className="mb-4 flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-success" />
                   <span className="font-semibold text-success">
@@ -759,7 +759,7 @@ export default function EvalPage() {
                     { label: "Answer Flow",    value: testResult.aggregate.avg_rougeL_f1 },
                     { label: "Overall Score",  value: testResult.aggregate.avg_bleu },
                   ].map(({ label, value }) => (
-                    <div key={label} className="border border-border/50 bg-card p-3 text-center">
+                    <div key={label} className="border-2 border-foreground/60 bg-card p-3 text-center shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
                       <p className="text-[10px] text-muted-foreground">{label}</p>
                       <p className="mt-0.5 font-heading text-xl font-bold tabular-nums">{value.toFixed(3)}</p>
                     </div>
@@ -786,14 +786,14 @@ export default function EvalPage() {
                       key={key}
                       onClick={() => setCategoryFilter(key)}
                       className={cn(
-                        "inline-flex items-center gap-1.5 border px-3 py-1 text-xs font-medium transition-colors",
+                        "inline-flex items-center gap-1.5 border-2 px-3 py-1 text-xs font-semibold shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)] transition-all",
                         categoryFilter === key
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                          ? "border-foreground bg-primary/10 text-primary"
+                          : "border-foreground/60 text-muted-foreground hover:translate-x-[1px] hover:translate-y-[1px] hover:text-foreground"
                       )}
                     >
                       {label}
-                      <span className={cn("px-1.5 py-0.5 text-[10px] tabular-nums", categoryFilter === key ? "bg-primary/20" : "bg-muted")}>
+                      <span className={cn("border-2 border-foreground/30 px-1.5 py-0.5 text-[10px] tabular-nums", categoryFilter === key ? "bg-primary/20" : "bg-muted")}>
                         {count}
                       </span>
                     </button>
@@ -812,12 +812,12 @@ export default function EvalPage() {
                     const r1Tone = toneFor(r.scores.rouge1_f1 / 0.4)
                     const r1Cls = r1Tone === "success" ? "text-success" : r1Tone === "primary" ? "text-primary" : "text-warning"
                     return (
-                      <div key={i} className="border border-border">
+                      <div key={i} className="border-2 border-foreground/60 bg-card shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
                         <button
                           onClick={() => toggleCase(i)}
-                          className="flex w-full items-center gap-3 bg-card/60 px-4 py-3 text-left text-sm transition-colors hover:bg-muted/30"
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-muted/30"
                         >
-                          <span className="shrink-0 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
+                        <span className="shrink-0 border-2 border-foreground/40 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
                           <span className="hidden shrink-0 text-[10px] text-muted-foreground sm:block">{catLabel}</span>
                           <span className="flex-1 truncate font-medium">{r.question}</span>
                           <div className="flex shrink-0 items-center gap-3">
@@ -827,7 +827,7 @@ export default function EvalPage() {
                           </div>
                         </button>
                         {isOpen && (
-                          <div className="space-y-4 border-t border-border bg-muted/10 p-4">
+                          <div className="space-y-4 border-t-2 border-foreground/40 bg-muted/10 p-4">
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                               {[
                                 { label: "Keyword Match",  value: r.scores.rouge1_f1 },
@@ -835,7 +835,7 @@ export default function EvalPage() {
                                 { label: "Answer Flow",    value: r.scores.rougeL_f1 },
                                 { label: "Overall Score",  value: r.scores.bleu },
                               ].map(({ label, value }) => (
-                                <div key={label} className="border border-border/50 bg-card p-2.5 text-center">
+                                <div key={label} className="border-2 border-foreground/40 bg-card p-2.5 text-center shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.3)]">
                                   <p className="text-[10px] text-muted-foreground">{label}</p>
                                   <p className="mt-0.5 font-mono text-base font-bold tabular-nums">{value.toFixed(3)}</p>
                                 </div>
@@ -844,11 +844,11 @@ export default function EvalPage() {
                             <div className="grid gap-3 text-xs sm:grid-cols-2">
                               <div>
                                 <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">AI&apos;s Answer</p>
-                                <p className="border border-border bg-card p-3 text-xs leading-relaxed text-foreground/80">{r.answer}</p>
+                                <p className="border-2 border-foreground/50 bg-card p-3 text-xs leading-relaxed text-foreground/80 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.3)]">{r.answer}</p>
                               </div>
                               <div>
                                 <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-success uppercase">Expected Answer</p>
-                                <p className="border border-success/20 bg-success/5 p-3 text-xs leading-relaxed text-foreground/80">{r.ground_truth}</p>
+                                <p className="border-2 border-success/50 bg-success/5 p-3 text-xs leading-relaxed text-foreground/80 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.3)]">{r.ground_truth}</p>
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -888,17 +888,17 @@ export default function EvalPage() {
               {simplifyDemo.examples.map((ex, i) => {
                 const info = LANG_LABELS[ex.language] ?? { name: ex.language, code: ex.language.toUpperCase() }
                 return (
-                  <div key={i} className="border border-border">
-                    <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-4 py-2">
-                      <span className="bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
+                  <div key={i} className="border-2 border-foreground/60 bg-card shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
+                    <div className="flex items-center gap-2 border-b-2 border-foreground/40 bg-muted/30 px-4 py-2">
+                      <span className="border-2 border-foreground/40 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{info.code}</span>
                       <span className="text-xs font-medium text-muted-foreground">{info.name}</span>
                     </div>
                     <div className="grid gap-0 sm:grid-cols-2">
-                      <div className="border-b border-border p-4 sm:border-r sm:border-b-0">
+                      <div className="border-b-2 border-foreground/40 p-4 sm:border-r-2 sm:border-b-0">
                         <p className="mb-2 text-[10px] font-semibold tracking-wider text-warning uppercase">Before — Original Government Language</p>
                         <p className="text-sm leading-relaxed text-foreground/70">{ex.original}</p>
                       </div>
-                      <div className="bg-success/5 p-4">
+                      <div className="border-2 border-success/50 bg-success/5 p-4">
                         <p className="mb-2 text-[10px] font-semibold tracking-wider text-success uppercase">After — Plain, Easy-to-Read Language</p>
                         <p className="text-sm leading-relaxed font-medium text-foreground">{ex.simplified}</p>
                       </div>
@@ -949,7 +949,7 @@ export default function EvalPage() {
           </div>
 
           {augmentResult && (
-            <div className="mt-4 divide-y divide-border border border-border">
+            <div className="mt-4 divide-y divide-foreground/20 border-2 border-foreground/60 bg-card">
               {Object.entries(augmentResult).map(([lang, text]) => {
                 const isParaphrase = lang.startsWith("paraphrase_")
                 const baseLang = lang.replace("paraphrase_", "")
