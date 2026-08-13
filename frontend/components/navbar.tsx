@@ -4,18 +4,13 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import {
   Globe,
-  Moon,
-  Sun,
   LayoutDashboard,
   FolderOpen,
   FileText,
-  BarChart3,
-  Target,
   TrendingUp,
   Sparkles,
   ChevronRight,
 } from "lucide-react"
-import { useTheme } from "next-themes"
 
 import { useLanguage } from "@/components/language-provider"
 import { useMobile } from "@/hooks/use-mobile"
@@ -27,7 +22,6 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
 
@@ -45,16 +39,10 @@ const OPEN_COMMAND_EVENT = "lingua-rakyat:open-command-palette"
 export default function CommandPaletteTopRight() {
   const router = useRouter()
   const { language, toggleLanguage } = useLanguage()
-  const { resolvedTheme, setTheme } = useTheme()
   const isMobile = useMobile()
 
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState("")
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -106,10 +94,7 @@ export default function CommandPaletteTopRight() {
           workspace: "Ruang Kerja",
           manage: "Urus Dokumen",
           results: "Pameran",
-          toggleTheme: "Tukar tema",
           toggleLanguage: "Tukar bahasa",
-          light: "Mod cerah",
-          dark: "Mod gelap",
         }
       : {
           triggerLabel: "Search...",
@@ -122,10 +107,7 @@ export default function CommandPaletteTopRight() {
           workspace: "Workspace",
           manage: "Manage Documents",
           results: "Showcase",
-          toggleTheme: "Toggle theme",
           toggleLanguage: "Toggle language",
-          light: "Light mode",
-          dark: "Dark mode",
         }
 
   const pageItems = React.useMemo<CommandEntry[]>(
@@ -171,14 +153,6 @@ export default function CommandPaletteTopRight() {
   const actionItems = React.useMemo<CommandEntry[]>(
     () => [
       {
-        id: "theme",
-        label: copy.toggleTheme,
-        hint: mounted && resolvedTheme === "dark" ? copy.dark : copy.light,
-        icon: mounted && resolvedTheme === "dark" ? Sun : Moon,
-        action: () => setTheme(resolvedTheme === "dark" ? "light" : "dark"),
-        shortcut: "D",
-      },
-      {
         id: "language",
         label: copy.toggleLanguage,
         hint: language === "ms" ? "English" : "Bahasa Melayu",
@@ -186,17 +160,7 @@ export default function CommandPaletteTopRight() {
         action: toggleLanguage,
       },
     ],
-    [
-      copy.dark,
-      copy.light,
-      copy.toggleLanguage,
-      copy.toggleTheme,
-      language,
-      mounted,
-      resolvedTheme,
-      setTheme,
-      toggleLanguage,
-    ]
+    [copy.toggleLanguage, language, toggleLanguage]
   )
 
   function runAction(action: () => void) {
@@ -271,12 +235,6 @@ export default function CommandPaletteTopRight() {
                     {item.hint}
                   </span>
                 </div>
-
-                {item.shortcut && (
-                  <CommandShortcut className="group-data-[selected=true]:text-primary/70">
-                    <Kbd className="text-xs">{item.shortcut}</Kbd>
-                  </CommandShortcut>
-                )}
               </CommandItem>
             ))}
           </CommandGroup>

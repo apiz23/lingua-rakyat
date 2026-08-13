@@ -31,13 +31,15 @@ import Image from "next/image"
 import Footer from "@/components/footer"
 import { useLanguage } from "@/components/language-provider"
 import logo from "@/public/icons/android-chrome-512x512.png"
-import { ModeToggle } from "@/components/mode-toggle"
-import { HyperText } from "@/components/ui/hyper-text"
 import {
   ScrollVelocityContainer,
   ScrollVelocityRow,
 } from "@/components/ui/scroll-based-velocity"
-import { Terminal, AnimatedSpan, TypingAnimation } from "@/components/ui/terminal"
+import {
+  Terminal,
+  AnimatedSpan,
+  TypingAnimation,
+} from "@/components/ui/terminal"
 
 const DemoVideo = dynamic(
   () => import("@/components/demo-video").then((m) => m.DemoVideo),
@@ -457,7 +459,7 @@ export default function Home() {
         }
 
   return (
-    <div className="relative min-h-dvh bg-background">
+    <div className="relative min-h-dvh overflow-x-clip bg-background">
       {/* Background Image */}
       <div
         className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
@@ -467,7 +469,7 @@ export default function Home() {
       />
 
       {/* Overlay for text readability */}
-      <div className="absolute inset-0 z-[1] bg-background/45 dark:bg-background/75" />
+      <div className="absolute inset-0 z-1 bg-background/45 dark:bg-background/75" />
 
       <main className="relative z-10 mx-auto w-full max-w-full px-5 sm:px-8 lg:max-w-[70%] lg:px-10 xl:px-14">
         <motion.section
@@ -479,7 +481,7 @@ export default function Home() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="mb-12 flex items-center justify-between gap-3 sm:mb-16"
+              className="mb-12 flex items-center justify-between gap-3 sm:mb-10"
             >
               <div className="flex items-center gap-3">
                 <Image
@@ -494,7 +496,6 @@ export default function Home() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <ModeToggle />
                 <button
                   onClick={toggleLanguage}
                   aria-label={
@@ -510,12 +511,12 @@ export default function Home() {
             </motion.div>
 
             <div className="flex flex-col items-center gap-8 lg:flex-row-reverse lg:justify-between lg:gap-12">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.55, delay: 0.15, ease }}
-            className="relative h-[280px] w-full overflow-visible sm:h-[360px] lg:h-[440px] lg:w-5/12 xl:h-[520px]"
-          >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.55, delay: 0.15, ease }}
+                className="relative h-[280px] w-full overflow-visible sm:h-[360px] lg:h-[440px] lg:w-5/12 xl:h-[520px]"
+              >
                 <div
                   className={`relative h-full overflow-hidden ${surfaceClass}`}
                 >
@@ -585,38 +586,34 @@ export default function Home() {
                 animate="visible"
                 className="w-full text-center lg:w-7/12 lg:text-left"
               >
-              <motion.div
-                variants={itemVariants}
-                className="relative z-10 mb-4 inline-flex items-center gap-1.5 neo-btn bg-background px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
-              >
+                <motion.div
+                  variants={itemVariants}
+                  className="neo-btn relative z-10 mb-4 inline-flex items-center gap-1.5 bg-background px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
+                >
                   <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-4 lg:w-4" />
                   <span className="tracking-wide">{copy.kicker}</span>
                 </motion.div>
 
                 <motion.h1
-                  variants={itemVariants}
+                  initial={{
+                    opacity: 0,
+                    y: shouldReduce ? 0 : 20,
+                    filter: shouldReduce ? "blur(0px)" : "blur(8px)",
+                  }}
+                  whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  viewport={{ once: false, amount: 0.1 }}
+                  transition={{
+                    duration: shouldReduce ? 0.01 : 0.6,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  }}
                   className="relative z-10 mb-4 text-3xl font-black tracking-tight uppercase sm:mb-6 sm:text-4xl md:text-5xl lg:mb-8 lg:text-6xl xl:text-7xl"
                 >
-                  <HyperText
-                    as="div"
-                    startOnView={!shouldReduce}
-                    animateOnHover={!shouldReduce}
-                    duration={shouldReduce ? 1 : 900}
-                    delay={shouldReduce ? 0 : 100}
-                    className="block py-0 font-heading text-[1.65rem] leading-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl"
-                  >
+                  <span className="block py-0 font-heading text-[1.65rem] leading-tight text-foreground uppercase sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl">
                     {copy.headline1}
-                  </HyperText>
-                  <HyperText
-                    as="div"
-                    startOnView={!shouldReduce}
-                    animateOnHover={!shouldReduce}
-                    duration={shouldReduce ? 1 : 900}
-                    delay={shouldReduce ? 0 : 240}
-                    className="mt-1 block py-0 font-heading text-[1.65rem] leading-tight text-primary sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl"
-                  >
+                  </span>
+                  <span className="mt-1 block py-0 font-heading text-[1.65rem] leading-tight text-primary uppercase sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl">
                     {copy.headline2}
-                  </HyperText>
+                  </span>
                 </motion.h1>
 
                 <motion.p
@@ -687,7 +684,7 @@ export default function Home() {
           </div>
         </motion.section>
 
-        <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2 border-y-4 border-foreground bg-primary py-3 text-primary-foreground sm:mb-20">
+        <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2 rotate-[2deg] border-y-4 border-foreground bg-primary py-3 text-primary-foreground sm:mb-20">
           <ScrollVelocityContainer className="text-3xl font-black tracking-tight uppercase sm:text-5xl lg:text-6xl">
             <ScrollVelocityRow baseVelocity={3} direction={1}>
               <span className="mx-6">Bahasa Melayu • English • 中文 •</span>
@@ -700,9 +697,7 @@ export default function Home() {
 
         <FadeInUp>
           <section className="pb-16 sm:pb-24 lg:pb-32">
-            <Terminal
-              className="max-w-none max-h-none border-2 border-foreground bg-black text-zinc-100 shadow-[8px_8px_0_0_hsl(var(--shadow-color)/0.85)]"
-            >
+            <Terminal className="max-h-none max-w-none border-2 border-foreground bg-black text-zinc-100 shadow-[8px_8px_0_0_hsl(var(--shadow-color)/0.85)]">
               <AnimatedSpan className="flex items-center gap-2 text-xs text-zinc-400 sm:text-sm">
                 <FileText className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
                 <span className="font-mono text-xs tracking-[0.12em] uppercase sm:text-sm">
@@ -711,16 +706,14 @@ export default function Home() {
               </AnimatedSpan>
 
               <div className="font-mono text-xs sm:text-sm">
-                <span className="font-bold text-zinc-300">
-                  {">"}{" "}
-                </span>
+                <span className="font-bold text-zinc-300">{">"} </span>
                 <TypingAnimation className="text-zinc-100">
                   {copy.previewQ}
                 </TypingAnimation>
               </div>
 
               <AnimatedSpan className="bg-zinc-900 px-3 py-2 text-zinc-100 sm:px-4 sm:py-3">
-                <p className="leading-relaxed font-mono text-xs sm:text-sm">
+                <p className="font-mono text-xs leading-relaxed sm:text-sm">
                   {copy.previewA}
                 </p>
                 <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-400 sm:mt-3">
@@ -730,9 +723,7 @@ export default function Home() {
               </AnimatedSpan>
 
               <AnimatedSpan className="flex items-center gap-1 font-mono text-xs sm:text-sm">
-                <span className="font-bold text-zinc-300">
-                  {">"}
-                </span>
+                <span className="font-bold text-zinc-300">{">"}</span>
                 <motion.span
                   animate={{ opacity: [1, 1, 0, 0] }}
                   transition={{
@@ -884,9 +875,7 @@ export default function Home() {
           <div className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4">
             {copy.features.map((f, i) => (
               <FadeInUp key={f.label} delay={i * 0.07}>
-                <div
-                  className="neo-card group flex h-full flex-col bg-card p-5 transition-all hover:bg-card sm:p-6"
-                >
+                <div className="neo-card group flex h-full flex-col bg-card p-5 transition-all hover:bg-card sm:p-6">
                   <div className="flex items-center gap-2.5">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-foreground bg-primary/10 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.6)] transition-colors group-hover:bg-primary/15">
                       <f.icon className="h-4 w-4 text-primary/70 transition-colors group-hover:text-primary" />
@@ -907,7 +896,10 @@ export default function Home() {
         </section>
 
         {/* Video demo section with responsive media player */}
-        <section id="demo-section" className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
+        <section
+          id="demo-section"
+          className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32"
+        >
           <FadeInLeft>
             <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
               <span className="mr-2 text-background/60">04</span>
@@ -949,10 +941,9 @@ export default function Home() {
           </FadeInLeft>
         </section>
       </main>
-      <div className="relative z-50 bg-background/30">
+      <div className="relative z-10">
         <Footer />
       </div>
     </div>
   )
 }
-

@@ -100,10 +100,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen overflow-x-hidden bg-background text-foreground">
         <ClerkProvider afterSignOutUrl="/workspace">
-          <ThemeProvider
-            defaultTheme="light"
-            disableTransitionOnChange
-          >
+          <ThemeProvider>
             <div
               aria-hidden="true"
               className="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-70"
