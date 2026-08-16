@@ -215,7 +215,7 @@ export default function UploadModal({
         aria-modal="true"
         aria-labelledby="upload-modal-title"
         tabIndex={-1}
-        className="animate-in fade-in zoom-in-95 neo-card relative w-full max-w-md bg-card p-6 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] outline-none duration-200"
+        className="animate-in fade-in zoom-in-95 neo-card relative w-full max-w-md rounded-lg bg-card p-6 shadow-xl outline-none duration-200"
       >
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
@@ -316,10 +316,10 @@ export default function UploadModal({
               <div
                 {...getRootProps()}
                 onClick={open}
-                className={`mb-4 neo-card cursor-pointer border-2 border-dashed p-8 text-center transition-colors ${
+                className={`mb-4 neo-card cursor-pointer border border-dashed p-8 text-center transition-colors ${
                   isDragActive
                     ? "border-primary bg-primary/5"
-                    : "border-foreground hover:border-primary/50 hover:bg-accent/50"
+                    : "border-border hover:border-primary/50 hover:bg-accent/50"
                 }`}
               >
                 <input {...getInputProps()} />
@@ -339,7 +339,7 @@ export default function UploadModal({
             )}
 
             {file && (
-              <div className="mb-4 border-2 border-foreground bg-muted/50 p-4 shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.6)]">
+              <div className="mb-4 rounded-md border border-border bg-muted/50 p-4 shadow-sm">
                 <div className="flex items-start gap-3">
                   <File className="h-8 w-8 shrink-0 text-primary" />
                   <div className="min-w-0 flex-1">

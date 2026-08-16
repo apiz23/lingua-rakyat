@@ -911,7 +911,7 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
       </MessageAvatar>
 
       <MessageContent className="w-auto max-w-[95%] min-w-0 items-end gap-1.5 sm:max-w-[80%]">
-        <div className="inline-block border-2 border-foreground bg-primary px-4 py-2.5 text-primary-foreground shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:px-5 sm:py-3">
+        <div className="inline-block border border-primary bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
           <p className="text-sm leading-relaxed">{message.question}</p>
         </div>
 

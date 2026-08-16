@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { getEvalReport, type EvalReport } from "@/lib/api"
 import { useLanguage } from "@/components/language-provider"
+import PageIntro from "@/components/page-intro"
 
 function pct(v: number) { return `${Math.round(v * 100)}%` }
 
@@ -237,33 +238,28 @@ export default function ResultsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
       {/* Header */}
-      <div className="mb-8 sm:mb-10">
-        <p className="mb-3 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-          {copy.eyebrow}
-        </p>
-        <h1 className="mb-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-          {copy.heading}
-        </h1>
-        <p className="max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-          {copy.subtitle}
-        </p>
-        {loading && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+      <PageIntro
+        eyebrow={copy.eyebrow}
+        title={copy.heading}
+        description={copy.subtitle}
+        className="mb-8 sm:mb-10"
+      >
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             {copy.loadingMetrics}
           </div>
-        )}
-        {!loading && hasMetrics && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-success">
+        ) : hasMetrics ? (
+          <div className="flex items-center gap-2 text-sm text-success">
             <CheckCircle2 className="h-3.5 w-3.5" />
             {copy.liveQueries(report!.total_queries)}
           </div>
-        )}
-      </div>
+        ) : null}
+      </PageIntro>
 
       {/* Quick Links */}
       <div className="mb-10 grid gap-4 md:grid-cols-3">
-        <div className="border border-primary/20 bg-primary/5 p-5">
+        <div className="neo-card border border-primary/20 bg-primary/5 p-5">
           <div className="mb-2 flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-primary" />
             <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksWorkspaceTitle}</h3>
@@ -344,10 +340,10 @@ export default function ResultsPage() {
       </h2>
       <div className="grid gap-4 sm:grid-cols-3">
         {copy.sdgs.map(({ sdg, label, desc }) => (
-          <div key={sdg} className="neo-card border-2 border-primary/40 bg-primary/5 p-5">
+          <div key={sdg} className="neo-card border border-primary/40 bg-primary/5 p-5">
             <div className="mb-3 flex items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-primary/30 bg-primary text-primary-foreground">
-                <span className="font-heading text-xl font-black">{sdg}</span>
+                <span className="font-heading text-xl font-bold">{sdg}</span>
               </div>
               <p className="text-xs font-semibold text-primary">{label}</p>
             </div>

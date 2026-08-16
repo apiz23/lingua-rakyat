@@ -114,7 +114,7 @@ function ConfirmDialog({
   if (!open) return null
   return (
     <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 duration-150">
-      <div className="animate-in fade-in zoom-in-95 w-full max-w-sm border-2 border-foreground bg-card p-6 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] duration-200">
+      <div className="animate-in fade-in zoom-in-95 w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-xl duration-200">
         <div className="flex items-start gap-4">
           <div
             className={cn(
@@ -724,7 +724,7 @@ export default function ManagePage() {
           </div>
 
           {loading ? (
-            <div className="flex h-64 items-center justify-center border-2 border-foreground/40 bg-card shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.3)]">
+            <div className="flex h-64 items-center justify-center rounded-lg border border-border bg-card shadow-sm">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
@@ -733,7 +733,7 @@ export default function ManagePage() {
               </div>
             </div>
           ) : filteredDocuments.length === 0 ? (
-            <div className="flex h-64 flex-col items-center justify-center border-2 border-dashed border-foreground/50 text-center">
+            <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-border text-center">
               <FolderOpen className="h-12 w-12 text-muted-foreground/30" />
               <p className="mt-4 text-lg font-medium text-foreground">
                 {searchQuery ? copy.noMatchDocs : copy.noDocs}
@@ -754,10 +754,10 @@ export default function ManagePage() {
           ) : (
             <>
               {/* Desktop: Table view */}
-              <div className="hidden overflow-x-auto border-2 border-foreground/50 bg-card shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:block">
+              <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm sm:block">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b-2 border-foreground/40 bg-secondary/20">
+                    <tr className="border-b border-border bg-secondary/20">
                       <th className="px-4 py-3 text-left">
                         <button
                           onClick={toggleSelectAll}
@@ -855,7 +855,7 @@ export default function ManagePage() {
                               {getStatusIcon(doc.status)}
                               <span
                                 className={cn(
-                                  "inline-flex items-center border-2 px-2 py-0.5 text-xs font-semibold shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)] capitalize",
+                                  "inline-flex items-center border px-2 py-0.5 text-xs font-medium capitalize",
                                   getStatusBadge(doc.status)
                                 )}
                               >
@@ -950,7 +950,7 @@ export default function ManagePage() {
                     <div
                       key={doc.id}
                       className={cn(
-                        "border-2 border-foreground/50 bg-card p-4 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]",
+                        "rounded-lg border border-border bg-card p-4 shadow-sm",
                         isSelected && "border-primary bg-primary/5",
                         isDeleting && "pointer-events-none opacity-50"
                       )}
@@ -1003,7 +1003,7 @@ export default function ManagePage() {
                           {getStatusIcon(doc.status)}
                           <span
                             className={cn(
-                              "inline-flex items-center border-2 px-2 py-0.5 text-[10px] font-semibold shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)] capitalize",
+                              "inline-flex items-center border px-2 py-0.5 text-[10px] font-medium capitalize",
                               getStatusBadge(doc.status)
                             )}
                           >
@@ -1012,7 +1012,7 @@ export default function ManagePage() {
                         </div>
                       </div>
 
-                      <div className="mt-3 flex justify-end gap-1 border-t-2 border-foreground/20 pt-3">
+                      <div className="mt-3 flex justify-end gap-1 border-t border-border/40 pt-3">
                         {isDeleting || renamingId === doc.id || reindexingId === doc.id ? (
                           <Loader2 className="h-4 w-4 animate-spin text-destructive" />
                         ) : (
@@ -1020,7 +1020,7 @@ export default function ManagePage() {
                             {doc.status === "ready" && (
                               <button
                                 onClick={() => setViewingDoc(doc)}
-                                className="border-2 border-foreground/40 p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
+                                className="rounded-md border border-border p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
                                 title={copy.viewDoc}
                               >
                                 <Eye className="h-4 w-4" />
@@ -1028,7 +1028,7 @@ export default function ManagePage() {
                             )}
                             <button
                               onClick={() => openRenameDialog(doc)}
-                              className="border-2 border-foreground/40 p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
+                              className="rounded-md border border-border p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
                               title={
                                 language === "ms"
                                   ? "Tukar nama dokumen"
@@ -1047,7 +1047,7 @@ export default function ManagePage() {
                                     error: "",
                                   })
                                 }
-                                className="border-2 border-foreground/40 p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
+                                className="rounded-md border border-border p-2 text-muted-foreground transition-all hover:border-foreground hover:bg-primary/10 hover:text-primary"
                                 title={
                                   language === "ms"
                                     ? "Indeks semula dokumen"
@@ -1059,7 +1059,7 @@ export default function ManagePage() {
                             )}
                             <button
                               onClick={() => confirmDelete(doc)}
-                              className="border-2 border-foreground/40 p-2 text-muted-foreground transition-all hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
+                              className="rounded-md border border-border p-2 text-muted-foreground transition-all hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
                               title="Padam dokumen"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -1104,6 +1104,8 @@ export default function ManagePage() {
         highlightText={null}
         docName={viewingDoc?.name ?? ""}
         documentId={viewingDoc?.id ?? ""}
+        document={viewingDoc}
+        messages={[]}
         language={language}
         onClose={() => setViewingDoc(null)}
         mobileVariant="dialog"
@@ -1112,7 +1114,7 @@ export default function ManagePage() {
       {/* ── Confirm Dialog ── */}
       {renameDialog.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="animate-in fade-in zoom-in-95 w-full max-w-md border-2 border-foreground bg-card p-6 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl">
             <div className="flex items-start gap-4">
               <div className="bg-primary/10 p-2.5">
                 <Pencil className="h-5 w-5 text-primary" />
@@ -1166,7 +1168,7 @@ export default function ManagePage() {
             </div>
 
             {renameDialog.error && (
-              <div className="mt-4 flex items-center gap-2 border-2 border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <div className="mt-4 flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                 {renameDialog.error}
               </div>
@@ -1196,7 +1198,7 @@ export default function ManagePage() {
       {/* ── Re-index Dialog ── */}
       {reindexDialog.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="animate-in fade-in zoom-in-95 w-full max-w-md border-2 border-foreground bg-card p-6 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]">
+          <div className="animate-in fade-in zoom-in-95 w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl">
             <div className="flex items-start gap-4">
               <div className="bg-primary/10 p-2.5">
                 <RotateCcw className="h-5 w-5 text-primary" />
@@ -1230,7 +1232,7 @@ export default function ManagePage() {
               </label>
             </div>
             {reindexDialog.error && (
-              <div className="mt-4 flex items-center gap-2 border-2 border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <div className="mt-4 flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                 {reindexDialog.error}
               </div>

@@ -83,7 +83,7 @@ function AiChatFooter({ children, className }: AiChatFooterProps) {
   return (
     <div
       data-slot="ai-chat-footer"
-      className={cn("border-t bg-background px-4 py-2", className)}
+      className={cn("border-t bg-background px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]", className)}
     >
       {children}
     </div>

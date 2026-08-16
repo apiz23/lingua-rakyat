@@ -58,28 +58,16 @@
   --font-heading: var(--font-heading), var(--font-sans), system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
 
-  --radius: 0px;
+  --radius: 8px;
 
-  --shadow-x: 0px;
-  --shadow-y: 4px;
-  --shadow-blur: 10px;
-  --shadow-spread: -2px;
-  --shadow-opacity: 0.1;
-  --shadow-color: 0 0% 0%;
-
-  --shadow-2xs: 0px 4px 10px -2px hsl(0 0% 0% / 0.05);
-  --shadow-xs: 0px 4px 10px -2px hsl(0 0% 0% / 0.05);
-  --shadow-sm:
-    0px 4px 10px -2px hsl(0 0% 0% / 0.1), 0px 1px 2px -3px hsl(0 0% 0% / 0.1);
-  --shadow:
-    0px 4px 10px -2px hsl(0 0% 0% / 0.1), 0px 1px 2px -3px hsl(0 0% 0% / 0.1);
-  --shadow-md:
-    0px 4px 10px -2px hsl(0 0% 0% / 0.1), 0px 2px 4px -3px hsl(0 0% 0% / 0.1);
-  --shadow-lg:
-    0px 4px 10px -2px hsl(0 0% 0% / 0.1), 0px 4px 6px -3px hsl(0 0% 0% / 0.1);
-  --shadow-xl:
-    0px 4px 10px -2px hsl(0 0% 0% / 0.1), 0px 8px 10px -3px hsl(0 0% 0% / 0.1);
-  --shadow-2xl: 0px 4px 10px -2px hsl(0 0% 0% / 0.25);
+  --shadow-2xs: 0 1px 2px hsl(0 0% 0% / 0.03);
+  --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.04);
+  --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.04), 0 1px 3px hsl(0 0% 0% / 0.04);
+  --shadow: 0 1px 3px hsl(0 0% 0% / 0.04), 0 2px 6px hsl(0 0% 0% / 0.04);
+  --shadow-md: 0 2px 4px hsl(0 0% 0% / 0.04), 0 4px 12px hsl(0 0% 0% / 0.04);
+  --shadow-lg: 0 4px 8px hsl(0 0% 0% / 0.04), 0 8px 24px hsl(0 0% 0% / 0.05);
+  --shadow-xl: 0 8px 16px hsl(0 0% 0% / 0.05), 0 16px 40px hsl(0 0% 0% / 0.06);
+  --shadow-2xl: 0 16px 32px hsl(0 0% 0% / 0.07);
 
   --tracking-normal: 0;
   --tracking-heading: 0;
@@ -139,28 +127,16 @@
   --font-heading: var(--font-heading), var(--font-sans), system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
 
-  --radius: 0px;
+  --radius: 8px;
 
-  --shadow-x: 0px;
-  --shadow-y: 8px;
-  --shadow-blur: 15px;
-  --shadow-spread: -3px;
-  --shadow-opacity: 0.4;
-  --shadow-color: 0 0% 65%;
-
-  --shadow-2xs: 0px 8px 15px -3px hsl(0 0% 0% / 0.2);
-  --shadow-xs: 0px 8px 15px -3px hsl(0 0% 0% / 0.2);
-  --shadow-sm:
-    0px 8px 15px -3px hsl(0 0% 0% / 0.4), 0px 1px 2px -4px hsl(0 0% 0% / 0.4);
-  --shadow:
-    0px 8px 15px -3px hsl(0 0% 0% / 0.4), 0px 1px 2px -4px hsl(0 0% 0% / 0.4);
-  --shadow-md:
-    0px 8px 15px -3px hsl(0 0% 0% / 0.4), 0px 2px 4px -4px hsl(0 0% 0% / 0.4);
-  --shadow-lg:
-    0px 8px 15px -3px hsl(0 0% 0% / 0.4), 0px 4px 6px -4px hsl(0 0% 0% / 0.4);
-  --shadow-xl:
-    0px 8px 15px -3px hsl(0 0% 0% / 0.4), 0px 8px 10px -4px hsl(0 0% 0% / 0.4);
-  --shadow-2xl: 0px 8px 15px -3px hsl(0 0% 0% / 1);
+  --shadow-2xs: 0 1px 2px hsl(0 0% 0% / 0.12);
+  --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.14);
+  --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.16), 0 1px 3px hsl(0 0% 0% / 0.12);
+  --shadow: 0 1px 3px hsl(0 0% 0% / 0.14), 0 2px 6px hsl(0 0% 0% / 0.12);
+  --shadow-md: 0 2px 4px hsl(0 0% 0% / 0.14), 0 4px 12px hsl(0 0% 0% / 0.14);
+  --shadow-lg: 0 4px 8px hsl(0 0% 0% / 0.14), 0 8px 24px hsl(0 0% 0% / 0.16);
+  --shadow-xl: 0 8px 16px hsl(0 0% 0% / 0.16), 0 16px 40px hsl(0 0% 0% / 0.18);
+  --shadow-2xl: 0 16px 32px hsl(0 0% 0% / 0.2);
 }
 
 /* =========================
@@ -219,10 +195,10 @@
   --font-heading: var(--font-heading);
   --font-mono: var(--font-mono);
 
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -301,6 +277,17 @@
   kbd {
     font-family: var(--font-mono);
   }
+}
+
+/* =========================
+   WEIGHT NORMALISATION
+   Atkinson Hyperlegible ships only 400 + 700. Declared 500/600 on body
+   text silently renders as faux-700 (everything looks bold). Map the
+   in-between utilities back to regular so emphasis stays reserved for
+   true bold. Headings (--font-heading) and mono keep their real weights.
+========================= */
+:where(.font-medium, .font-semibold):not(h1, h2, h3, h4, h5, h6, .font-heading, .font-mono) {
+  font-weight: 400;
 }
 
 /* =========================
@@ -386,61 +373,57 @@ html[data-text-size="large"] {
 }
 
 /* =========================
-   NEO-BRUTALISM UTILITIES
-   Keep existing palette; only border/shadow tokens added below.
+   MINIMAL UTILITIES
+   Premium utilitarian — flat fill, hairline border, crisp radius,
+   ultra-diffuse shadows only. Class names kept stable so existing
+   components (neo-card / neo-btn / neo-input) keep working.
 ========================= */
 @layer components {
-  /* Cards & containers — flat fill, hard border, hard offset shadow */
+  /* Cards & containers — flat fill, 1px hairline border, soft lift on hover */
   .neo-card {
-    border: 2px solid var(--foreground);
-    border-radius: 0px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
     background: var(--card);
-    box-shadow: 4px 4px 0 0 hsl(var(--shadow-color) / 0.85);
-    transition: all 0.1s ease;
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.03);
+    transition:
+      box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
   }
   .neo-card:hover {
-    box-shadow: 2px 2px 0 0 hsl(var(--shadow-color) / 0.85);
-    transform: translate(2px, 2px);
-  }
-  .neo-card:active {
-    box-shadow: 0 0 0 0 hsl(var(--shadow-color) / 0.85);
-    transform: translate(4px, 4px);
+    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.04);
   }
 
-  /* Buttons — border + hard shadow + press animation */
+  /* Buttons — hairline border, flat fill, micro-scale press (no hard shadow) */
   .neo-btn {
-    border: 2px solid var(--foreground);
-    border-radius: 0px;
-    box-shadow: 4px 4px 0 0 hsl(var(--shadow-color) / 0.85);
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    transition: all 0.1s ease;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      transform 100ms ease;
   }
-  .neo-btn:hover {
-    box-shadow: 2px 2px 0 0 hsl(var(--shadow-color) / 0.85);
-    transform: translate(2px, 2px);
-  }
-  .neo-btn:active {
-    box-shadow: 0 0 0 0 hsl(var(--shadow-color) / 0.85);
-    transform: translate(4px, 4px);
+  .neo-btn:active:not(:disabled) {
+    transform: scale(0.98);
   }
   .neo-btn:disabled {
-    box-shadow: none;
-    transform: none;
+    opacity: 0.5;
   }
 
-  /* Inputs — sharp corners, focus = shadow intensifies (no glow ring) */
+  /* Inputs — hairline border, quiet focus ring (no glow, no hard offset) */
   .neo-input {
-    border: 2px solid var(--foreground);
-    border-radius: 0px;
-    box-shadow: 3px 3px 0 0 hsl(var(--shadow-color) / 0.6);
-    transition: all 0.1s ease;
+    border: 1px solid var(--input);
+    border-radius: 6px;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
   }
   .neo-input:focus,
   .neo-input:focus-visible,
   .neo-input:focus-within {
     outline: none;
     border-color: var(--ring);
-    box-shadow: 4px 4px 0 0 var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 18%, transparent);
   }
 }

@@ -72,7 +72,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <SidebarKeyboardShortcut />
       <AppSidebar />
       <SidebarInset className="">
-        <header className="sticky top-0 z-10 flex h-fit shrink-0 items-center gap-2 border-b-2 border-foreground/30 bg-background/95 px-4 py-3 backdrop-blur-sm">
+        <header className="sticky top-0 z-10 flex h-fit shrink-0 items-center gap-2 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-sm">
           <SidebarTrigger className="-ml-1 text-muted-foreground transition-colors hover:text-primary" />
 
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -82,7 +82,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 alt="Lingua Rakyat"
                 width={28}
                 height={28}
-                className="h-7 w-7 shrink-0 rounded-full border-2 border-primary/40 object-cover"
+                className="h-7 w-7 shrink-0 rounded-full border border-primary/40 object-cover"
               />
               <span className="hidden truncate font-heading text-sm font-bold tracking-[0.18em] text-foreground uppercase sm:block">
                 Lingua&nbsp;Rakyat
@@ -114,7 +114,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Search className="h-3.5 w-3.5" />
               <span>Search</span>
-              <kbd className="border-2 border-foreground/40 bg-muted px-1.5 py-0.5 text-[10px] font-mono">
+              <kbd className="border border-foreground/40 bg-muted px-1.5 py-0.5 text-[10px] font-mono">
                 Ctrl K
               </kbd>
             </button>

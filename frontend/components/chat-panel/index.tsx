@@ -78,7 +78,7 @@ import { VoiceMicButton } from "./voice-mic-button"
 import { EmptyState } from "./empty-state"
 import { ThreadHistoryPanel, type ChatThread } from "./thread-history-panel"
 
-// react-pdf (pdf.js) touches browser-only DOMMatrix at module load — never SSR it
+// PDF preview fetches the takumi wasm and touches browser APIs — never SSR it
 const PdfPanel = dynamic(() => import("./pdf-panel"), { ssr: false })
 
 function shortModelLabel(modelId: string): string {
@@ -1077,7 +1077,7 @@ export default function ChatPanel({
 
       <AiChatFooter className="bg-background">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-1.5 flex items-center justify-between gap-2">
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
             <div className="flex min-w-0 items-center gap-2">
               {onBack ? (
                 <button
@@ -1103,7 +1103,7 @@ export default function ChatPanel({
                   )}
                 </AttachmentMedia>
                 <AttachmentContent>
-                  <AttachmentTitle className="max-w-[180px] sm:max-w-[280px]">
+                  <AttachmentTitle className="max-w-[120px] sm:max-w-[280px]">
                     {selectedDoc?.name ?? copy.noDoc}
                   </AttachmentTitle>
                   <AttachmentDescription className="text-[11px]">
@@ -1194,7 +1194,7 @@ export default function ChatPanel({
                       </button>
                     </div>
 
-                    <div className="mt-1 border-t-2 border-foreground/20 pt-1">
+                    <div className="mt-1 border-t border-border/40 pt-1">
                       <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                         {copy.mentionListTitle}
                       </div>
@@ -1330,7 +1330,7 @@ export default function ChatPanel({
 
           <div className="relative" onKeyDownCapture={handleMentionKeyDown}>
             {mentionQuery !== null ? (
-              <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm overflow-hidden rounded-none border-2 border-foreground bg-popover shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]">
+              <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
                 <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                   {copy.mentionListTitle}
                 </div>
@@ -1488,6 +1488,8 @@ export default function ChatPanel({
         highlightText={pdfViewerState?.highlightText ?? null}
         docName={pdfViewerState?.docName || selectedDoc?.name || ""}
         documentId={pdfViewerState?.documentId || selectedDoc?.id || ""}
+        document={selectedDoc}
+        messages={messages}
         language={language}
         onClose={handleClosePdf}
       />

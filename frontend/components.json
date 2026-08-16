@@ -28,6 +28,7 @@
     "@smoothui": "https://smoothui.dev/r/{name}.json",
     "@aceternity": "https://ui.aceternity.com/registry/{name}.json",
     "@joyco": "https://registry.joyco.studio/r/{name}.json",
-    "@elements": "https://www.tryelements.dev/r/{name}.json"
+    "@elements": "https://www.tryelements.dev/r/{name}.json",
+    "@pdfcn": "https://pdfcn.dev/r/{name}.json"
   }
 }

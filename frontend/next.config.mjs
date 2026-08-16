@@ -8,6 +8,13 @@ const _require = createRequire(
 )
 const pdfWorkerSrc = _require.resolve("pdfjs-dist/build/pdf.worker.min.mjs")
 
+// takumi-pdf ships its renderer as a wasm binary; copy it to public/ so the
+// client can instantiate it via takumi-pdf/no-init + initSync.
+const _requireRoot = createRequire(import.meta.url)
+const takumiWasmSrc = _requireRoot.resolve(
+  "takumi-pdf/takumi_pdf_wasm_bg.wasm"
+)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
@@ -68,6 +75,10 @@ const nextConfig = {
             {
               from: pdfWorkerSrc,
               to: "../public/pdf.worker.min.mjs",
+            },
+            {
+              from: takumiWasmSrc,
+              to: "../public/takumi_pdf_wasm_bg.wasm",
             },
           ],
         })

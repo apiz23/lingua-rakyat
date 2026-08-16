@@ -208,10 +208,10 @@ export default function DocumentPanel({
       key={doc.id}
       onClick={() => onSelectDoc(doc)}
       className={cn(
-        "group relative cursor-pointer border-2 p-3 transition-all",
+        "group relative cursor-pointer rounded-lg border p-3 transition-all",
         selectedDoc?.id === doc.id
-          ? "border-primary bg-primary/5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]"
-          : "border-foreground bg-background hover:border-primary hover:bg-accent/20"
+          ? "border-primary bg-primary/5 shadow-sm"
+          : "border-border bg-background hover:border-primary hover:bg-accent/20"
       )}
     >
       {/* Selection indicator */}
@@ -371,7 +371,7 @@ export default function DocumentPanel({
               <p className="text-sm text-muted-foreground">{copy.loading}</p>
             </div>
           ) : filteredDocuments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 text-center">
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
               <div className="rounded-full bg-muted p-4">
                 <FileText className="h-8 w-8 text-muted-foreground" />
               </div>

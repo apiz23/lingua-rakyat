@@ -13,7 +13,7 @@ function CodeBlock({ children, className, ...props }: CodeBlockProps) {
   return (
     <div
       className={cn(
-        "not-prose flex w-full flex-col overflow-clip border-2 border-foreground/60 bg-card text-card-foreground shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]",
+        "not-prose flex w-full flex-col overflow-clip rounded-lg border border-border bg-card text-card-foreground shadow-sm",
         className
       )}
       {...props}

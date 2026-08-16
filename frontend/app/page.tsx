@@ -921,8 +921,8 @@ export default function Home() {
 
         {/* Tech stack section with responsive logo carousel */}
         <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
-          <FadeInLeft>
-            <p className="mx-auto mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
+          <FadeInLeft className="flex justify-center">
+            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
               <span className="mr-2 text-background/60">05</span>
               {copy.builtWith}
             </p>

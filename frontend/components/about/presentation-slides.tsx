@@ -88,7 +88,7 @@ function SlideOverview() {
           </ul>
         </div>
 
-        <div className="neo-card border-2 border-primary/40 bg-card p-5">
+        <div className="neo-card border border-primary/40 bg-card p-5">
           <div className="mb-3 flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center bg-primary/10">
               <Check className="h-3.5 w-3.5 text-primary" />

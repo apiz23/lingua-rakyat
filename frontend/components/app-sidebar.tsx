@@ -194,7 +194,7 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="bg-background data-[state=collapsed]:w-16"
+      className="data-[state=collapsed]:w-16"
       variant="sidebar"
     >
       <SidebarHeader>
@@ -238,7 +238,7 @@ export function AppSidebar() {
               <SidebarMenuButton
                 onClick={() => goToWorkspace(null)}
                 tooltip={copy.newChat}
-                className="neo-btn h-9 justify-start gap-2.5 bg-card px-3 text-sm font-semibold text-foreground hover:bg-card"
+                className="neo-btn h-9 justify-start gap-2.5 px-3 text-sm text-foreground hover:text-primary"
               >
                 <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="group-data-[collapsible=icon]:hidden">
@@ -372,7 +372,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t-2 border-foreground/15 px-3 py-3">
+      <SidebarFooter className="border-t border-border px-3 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
             {isSignedIn ? (
@@ -419,7 +419,7 @@ export function AppSidebar() {
             rel="noopener noreferrer"
             aria-label="GitHub repository"
             onClick={handleNavigation}
-            className="inline-flex h-7 w-7 items-center justify-center border-2 border-transparent rounded-none text-muted-foreground/50 transition-colors hover:border-foreground/30 hover:bg-muted hover:text-muted-foreground"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-muted-foreground/50 transition-colors hover:border-foreground/30 hover:bg-muted hover:text-muted-foreground"
           >
             <GithubIcon size={15} />
           </Link>
@@ -430,7 +430,7 @@ export function AppSidebar() {
             rel="noopener noreferrer"
             aria-label="LinkedIn profile"
             onClick={handleNavigation}
-            className="inline-flex h-7 w-7 items-center justify-center border-2 border-transparent rounded-none text-muted-foreground/50 transition-colors hover:border-foreground/30 hover:bg-muted hover:text-muted-foreground"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-muted-foreground/50 transition-colors hover:border-foreground/30 hover:bg-muted hover:text-muted-foreground"
           >
             <LinkedinIcon size={15} />
           </Link>

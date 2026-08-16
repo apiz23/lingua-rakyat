@@ -173,7 +173,7 @@ export default function CommandPaletteTopRight() {
       <CommandDialog
         open={open}
         onOpenChange={setOpen}
-        className="rounded-none border-2 border-foreground bg-background shadow-[6px_6px_0_0_hsl(var(--shadow-color)/0.85)]"
+        className="rounded-lg border border-border bg-background shadow-xl"
       >
         <div className="border-b border-border/40 bg-linear-to-r from-primary/5 via-transparent to-primary/5">
           <CommandInput

@@ -115,7 +115,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     <div
       data-slot="chat-input"
       className={cn(
-        "neo-input rounded-none bg-background",
+        "neo-input bg-background",
         className
       )}
     >
@@ -127,7 +127,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         placeholder={placeholder}
         rows={1}
         disabled={disabled || loading}
-        className="max-h-28 w-full resize-none rounded-none bg-transparent px-3 py-2.5 text-sm focus:outline-none sm:px-4"
+        className="max-h-28 w-full resize-none bg-transparent px-3 py-2.5 text-sm focus:outline-none sm:px-4"
       />
 
       <div className="flex items-center justify-between gap-2 px-2 pb-2 sm:px-3 sm:pb-2.5">
@@ -146,7 +146,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
                 size="icon-sm"
                 onClick={handlePickAttachment}
                 disabled={disabled || loading}
-                className="shrink-0 rounded-none"
+                className="shrink-0 rounded-md"
                 title="Attach files"
               >
                 <Paperclip className="h-4 w-4" />
@@ -161,7 +161,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
           type="button"
           onClick={() => void doSubmit()}
           disabled={disabled || loading || !inputValue.trim()}
-          className="shrink-0 rounded-none"
+          className="shrink-0 rounded-md"
           size="icon-sm"
           title="Send"
         >

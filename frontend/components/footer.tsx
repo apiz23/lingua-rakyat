@@ -62,7 +62,7 @@ export default function Footer() {
   return (
     <footer className="w-full border-t-2 border-foreground bg-background/50 text-foreground backdrop-blur-sm">
       <div className="mx-auto w-full max-w-full px-5 py-10 sm:px-8 lg:max-w-[70%] lg:px-10">
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-[1.3fr_1fr_1fr]">
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-3">
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-3">
               <Image
@@ -71,14 +71,11 @@ export default function Footer() {
                 width={32}
                 height={32}
                 priority
-                className="h-8 w-8 shrink-0 rounded-full border-2 border-foreground object-cover"
+                className="h-8 w-8 shrink-0"
               />
               <div className="flex flex-col gap-0.5">
                 <span className="font-heading text-sm leading-none font-bold tracking-[0.22em] uppercase">
                   {copy.brand}
-                </span>
-                <span className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                  Civic AI
                 </span>
               </div>
             </div>
@@ -110,7 +107,7 @@ export default function Footer() {
           </div>
 
           {columns.map((col) => (
-            <nav key={col.title} aria-label={col.title}>
+            <nav key={col.title} aria-label={col.title} className="justify-self-end">
               <p className="font-heading text-xs font-bold tracking-[0.22em] text-muted-foreground uppercase">
                 {col.title}
               </p>

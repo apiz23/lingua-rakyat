@@ -38,6 +38,7 @@ import {
   KEY_FEATURES_MS,
 } from "./data"
 import { useLanguage } from "@/components/language-provider"
+import PageIntro from "@/components/page-intro"
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -293,22 +294,12 @@ export default function AboutPage() {
         <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
 
           {/* ── Page header ── */}
-          <div>
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <Badge className="border-primary/20 bg-primary/8 text-primary">
-                {copy.badge}
-              </Badge>
-              <Badge variant="outline" className="border-border/60 text-muted-foreground">
-                v2.0.0
-              </Badge>
-            </div>
-            <h1 className="font-heading text-xl font-black tracking-tight text-foreground sm:text-2xl">
-              {copy.heading}
-            </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              {copy.subtitle}
-            </p>
-          </div>
+          <PageIntro
+            eyebrow={copy.badge}
+            badge="v2.0.0"
+            title={copy.heading}
+            description={copy.subtitle}
+          />
 
           {/* ── 2-column body ── */}
           <div className="grid gap-6 xl:grid-cols-2">
