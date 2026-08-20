@@ -78,7 +78,7 @@ import { VoiceMicButton } from "./voice-mic-button"
 import { EmptyState } from "./empty-state"
 import { ThreadHistoryPanel, type ChatThread } from "./thread-history-panel"
 
-// PDF preview fetches the takumi wasm and touches browser APIs — never SSR it
+// react-pdf (pdf.js) touches browser-only DOMMatrix at module load — never SSR it
 const PdfPanel = dynamic(() => import("./pdf-panel"), { ssr: false })
 
 function shortModelLabel(modelId: string): string {

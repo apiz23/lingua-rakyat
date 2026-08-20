@@ -16,7 +16,9 @@ import {
   StreamEvent,
 } from "@/lib/api"
 import { toast } from "sonner"
+import { Skeleton } from "boneyard-js/react"
 import { cn } from "@/lib/utils"
+import { isBoneyardBuild } from "@/lib/boneyard"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -182,6 +184,60 @@ type TabId = typeof TABS[number]["id"]
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
+function SimplifyDemoFixture() {
+  return (
+    <div className="mt-5 space-y-4">
+      {[
+        { code: "MS", name: "Malay", original: "Pemohon hendaklah mengemukakan permohonan secara bertulis kepada Ketua Pengarah melalui Borang PBT-4 beserta dokumen-dokumen sokongan yang telah disahkan.", simplified: "Anda perlu hantar permohonan bertulis kepada Ketua Pengarah guna Borang PBT-4 dan lampirkan dokumen yang disahkan." },
+        { code: "EN", name: "English", original: "The applicant shall submit the duly completed application form together with certified supporting documents to the Director General for approval.", simplified: "You must send the completed form with certified documents to the Director General for approval." },
+      ].map((ex) => (
+        <div key={ex.code} className="border-2 border-foreground/60 bg-card shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
+          <div className="flex items-center gap-2 border-b-2 border-foreground/40 bg-muted/30 px-4 py-2">
+            <span className="border-2 border-foreground/40 bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{ex.code}</span>
+            <span className="text-xs font-medium text-muted-foreground">{ex.name}</span>
+          </div>
+          <div className="grid gap-0 sm:grid-cols-2">
+            <div className="border-b-2 border-foreground/40 p-4 sm:border-r-2 sm:border-b-0">
+              <p className="mb-2 text-[10px] font-semibold tracking-wider text-warning uppercase">Before — Original Government Language</p>
+              <p className="text-sm leading-relaxed text-foreground/70">{ex.original}</p>
+            </div>
+            <div className="border-2 border-success/50 bg-success/5 p-4">
+              <p className="mb-2 text-[10px] font-semibold tracking-wider text-success uppercase">After — Plain, Easy-to-Read Language</p>
+              <p className="text-sm leading-relaxed font-medium text-foreground">{ex.simplified}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SimplifyDemoFallback() {
+  return (
+    <div className="mt-5 space-y-4">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="border-2 border-foreground/60 bg-card shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
+          <div className="flex items-center gap-2 border-b-2 border-foreground/40 bg-muted/30 px-4 py-2">
+            <div className="h-4 w-8 rounded-sm bg-muted" />
+            <div className="h-3 w-16 rounded-sm bg-muted" />
+          </div>
+          <div className="grid gap-0 sm:grid-cols-2">
+            <div className="space-y-2 border-b-2 border-foreground/40 p-4 sm:border-r-2 sm:border-b-0">
+              <div className="h-3 w-2/3 rounded-sm bg-muted" />
+              <div className="h-3 w-5/6 rounded-sm bg-muted" />
+              <div className="h-3 w-1/2 rounded-sm bg-muted" />
+            </div>
+            <div className="space-y-2 p-4">
+              <div className="h-3 w-3/4 rounded-sm bg-muted" />
+              <div className="h-3 w-2/3 rounded-sm bg-muted" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function EvalPage() {
   const [report, setReport]               = useState<EvalReport | null>(null)
   const [simplifyDemo, setSimplifyDemo]   = useState<SimplifyDemo | null>(null)
@@ -198,7 +254,7 @@ export default function EvalPage() {
   const [expandedCases, setExpandedCases] = useState<Set<number>>(new Set())
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [evalModel, setEvalModel]         = useState("")
-  const [activeTab, setActiveTab]         = useState<TabId>("metrics")
+  const [activeTab, setActiveTab]         = useState<TabId>(isBoneyardBuild() ? "simplify" : "metrics")
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [streamProgress, setStreamProgress] = useState<{
     completed: number; total: number; currentQuestion: string
@@ -877,6 +933,12 @@ export default function EvalPage() {
             those passages into simple, everyday language before showing answers to users.
             Here are real before-and-after examples from this AI.
           </InfoNote>
+          <Skeleton
+            name="eval-simplify-demo"
+            loading={isBoneyardBuild() || loadingDemo}
+            fixture={<SimplifyDemoFixture />}
+            fallback={<SimplifyDemoFallback />}
+          >
           <div className="mt-5">
           {loadingDemo ? (
             <div className="flex items-center gap-2 py-12 text-muted-foreground">
@@ -911,6 +973,7 @@ export default function EvalPage() {
             <p className="py-12 text-center text-sm text-muted-foreground">Failed to load examples.</p>
           )}
           </div>
+          </Skeleton>
         </div>
 
         {/* ════════════════════════════════════

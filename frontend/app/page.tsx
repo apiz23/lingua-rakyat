@@ -186,8 +186,8 @@ export default function Home() {
     language === "ms"
       ? {
           kicker: "AI Multilingual untuk Dokumen Kerajaan",
-          headline1: "Retrieval-Augmented",
-          headline2: "Generation",
+          headline1: "Dokumen kerajaan, diterangkan dalam",
+          headline2: "bahasa anda.",
 
           subhead:
             "Sistem soal jawab dokumen kerajaan berasaskan AI yang menggunakan Cohere multilingual embeddings, penyusunan semula neural Cohere, dan Groq LLaMA 3.3 70B. Jawapan bersumberkan dokumen dengan skor ketepatan, dalam Bahasa Melayu, English, dan Mandarin.",
@@ -266,8 +266,8 @@ export default function Home() {
       : {
           kicker: "Multilingual AI for Government Documents",
 
-          headline1: "Retrieval-Augmented",
-          headline2: "Generation",
+          headline1: "Government documents, explained in",
+          headline2: "your language.",
 
           subhead:
             "An AI-powered government document Q&A system using Cohere multilingual embeddings, Cohere neural reranking, and Groq LLaMA 3.3 70B. Source-cited answers with faithfulness scoring in Malay, English, and Chinese.",
@@ -347,7 +347,7 @@ export default function Home() {
     language === "ms"
       ? {
           kicker: "Differentiation vs Generic RAG",
-          title: "Government documents, explained in your language.",
+          title: "Dibina untuk AI sivik Malaysia, bukan chatbot generik.",
           subhead:
             'Bukan "GPT + PDF upload". Diposisikan sebagai "Malaysian-first civic AI": bercakap Bahasa Melayu secara semula jadi, faham konteks kerajaan, dan telus melalui sumber + halaman.',
           columns: [
@@ -403,7 +403,7 @@ export default function Home() {
         }
       : {
           kicker: "Differentiation vs Generic RAG",
-          title: "Government documents, explained in your language.",
+          title: "Built for Malaysian civic AI, not generic chatbots.",
           subhead:
             'Not "GPT + PDF upload". Positioned as "Malaysian-first civic AI": speaks Malay naturally, knows government context, and stays transparent with sources + pages.',
           columns: [
@@ -684,8 +684,8 @@ export default function Home() {
           </div>
         </motion.section>
 
-        <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2 rotate-[2deg] border-y-4 border-foreground bg-primary py-3 text-primary-foreground sm:mb-20">
-          <ScrollVelocityContainer className="text-3xl font-black tracking-tight uppercase sm:text-5xl lg:text-6xl">
+        <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2 border-y-4 border-foreground bg-primary py-4 text-primary-foreground sm:mb-20">
+          <ScrollVelocityContainer className="text-3xl font-bold tracking-tight uppercase sm:text-4xl lg:text-5xl">
             <ScrollVelocityRow baseVelocity={3} direction={1}>
               <span className="mx-6">Bahasa Melayu • English • 中文 •</span>
             </ScrollVelocityRow>
@@ -741,8 +741,8 @@ export default function Home() {
         {/* Comparison */}
         <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
-              <span className="mr-2 text-background/60">01</span>
+            <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
+              <span className="mr-2 text-secondary-foreground/60">01</span>
               {comparison.kicker}
             </p>
           </FadeInLeft>
@@ -825,8 +825,8 @@ export default function Home() {
 
         <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
-              <span className="mr-2 text-background/60">02</span>
+            <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
+              <span className="mr-2 text-secondary-foreground/60">02</span>
               {copy.howItWorks}
             </p>
           </FadeInLeft>
@@ -860,8 +860,8 @@ export default function Home() {
 
         <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
-            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
-              <span className="mr-2 text-background/60">03</span>
+            <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
+              <span className="mr-2 text-secondary-foreground/60">03</span>
               {copy.whatItDoes}
             </p>
           </FadeInLeft>
@@ -901,8 +901,8 @@ export default function Home() {
           className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32"
         >
           <FadeInLeft>
-            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
-              <span className="mr-2 text-background/60">04</span>
+            <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
+              <span className="mr-2 text-secondary-foreground/60">04</span>
               {copy.watchDemo}
             </p>
           </FadeInLeft>
@@ -922,8 +922,8 @@ export default function Home() {
         {/* Tech stack section with responsive logo carousel */}
         <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft className="flex justify-center">
-            <p className="mt-5 inline-flex items-center border-2 border-foreground bg-foreground px-2.5 py-1 font-mono text-[11px] font-bold tracking-[0.2em] text-background uppercase shadow-[3px_3px_0_0_hsl(var(--shadow-color)/0.85)]">
-              <span className="mr-2 text-background/60">05</span>
+            <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
+              <span className="mr-2 text-secondary-foreground/60">05</span>
               {copy.builtWith}
             </p>
           </FadeInLeft>

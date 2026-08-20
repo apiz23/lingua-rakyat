@@ -19,7 +19,9 @@ import {
   Zap,
 } from "lucide-react"
 import { getEvalReport, type EvalReport } from "@/lib/api"
+import { Skeleton } from "boneyard-js/react"
 import { useLanguage } from "@/components/language-provider"
+import { isBoneyardBuild } from "@/lib/boneyard"
 import PageIntro from "@/components/page-intro"
 
 function pct(v: number) { return `${Math.round(v * 100)}%` }
@@ -42,6 +44,33 @@ function MetricCard({
       </p>
       <div className="mb-1 font-heading text-2xl font-bold text-foreground">{value}</div>
       <p className="text-xs text-muted-foreground">{description}</p>
+    </div>
+  )
+}
+
+function ResultsMetricsFixture() {
+  return (
+    <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <MetricCard title="ROUGE-1 F1" value="0.152" description="Word overlap vs ground truth answers. Normal RAG range: 0.10–0.30." icon={<BookOpen className="h-4 w-4" />} live />
+      <MetricCard title="BLEU Score" value="0.092" description="N-gram precision vs reference answers." icon={<Globe2 className="h-4 w-4" />} live />
+      <MetricCard title="Readability" value="5.3 (target ≤ 6)" description="Flesch-Kincaid grade level. Lower = easier to read." icon={<BookOpen className="h-4 w-4" />} live />
+      <MetricCard title="Retrieval Confidence" value="68% (target ≥ 50%)" description="Mean reranked score across all queries." icon={<ShieldCheck className="h-4 w-4" />} live />
+      <MetricCard title="Faithfulness" value="91% (342 scored)" description="How grounded answers are in the source document (Cohere reranker)." icon={<ShieldCheck className="h-4 w-4" />} live />
+      <MetricCard title="Latency" value="p50 1.8s · p95 2.4s" description="End-to-end response latency (retrieval + reranking + generation)." icon={<Zap className="h-4 w-4" />} live />
+    </div>
+  )
+}
+
+function MetricsFallback() {
+  return (
+    <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="neo-card bg-card p-5">
+          <div className="mb-3 h-3 w-24 rounded-sm bg-muted" />
+          <div className="mb-1 h-7 w-32 rounded-sm bg-muted" />
+          <div className="h-3 w-full rounded-sm bg-muted/70" />
+        </div>
+      ))}
     </div>
   )
 }
@@ -301,14 +330,21 @@ export default function ResultsPage() {
         <Target className="mr-2 h-5 w-5 text-primary" />
         {copy.qualityMetricsHeading}
       </h2>
-      <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <MetricCard title={copy.metricRougeTitle} value={rougeVal} description={copy.metricRougeDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
-        <MetricCard title={copy.metricBleuTitle} value={bleuVal} description={copy.metricBleuDesc} icon={<Globe2 className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
-        <MetricCard title={copy.metricReadabilityTitle} value={readabilityVal} description={copy.metricReadabilityDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics} />
-        <MetricCard title={copy.metricConfidenceTitle} value={confidenceVal} description={copy.metricConfidenceDesc} icon={<ShieldCheck className="h-4 w-4" />} live={hasMetrics} />
-        <MetricCard title={copy.metricFaithfulTitle} value={faithfulnessVal} description={copy.metricFaithfulDesc} icon={<ShieldCheck className="h-4 w-4" />} live={hasMetrics && (report!.faithfulness?.scored_queries ?? 0) > 0} />
-        <MetricCard title={copy.metricLatencyTitle} value={latencyVal} description={copy.metricLatencyDesc} icon={<Zap className="h-4 w-4" />} live={hasMetrics} />
-      </div>
+      <Skeleton
+        name="results-metrics"
+        loading={isBoneyardBuild() || loading}
+        fixture={<ResultsMetricsFixture />}
+        fallback={<MetricsFallback />}
+      >
+        <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <MetricCard title={copy.metricRougeTitle} value={rougeVal} description={copy.metricRougeDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
+          <MetricCard title={copy.metricBleuTitle} value={bleuVal} description={copy.metricBleuDesc} icon={<Globe2 className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
+          <MetricCard title={copy.metricReadabilityTitle} value={readabilityVal} description={copy.metricReadabilityDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics} />
+          <MetricCard title={copy.metricConfidenceTitle} value={confidenceVal} description={copy.metricConfidenceDesc} icon={<ShieldCheck className="h-4 w-4" />} live={hasMetrics} />
+          <MetricCard title={copy.metricFaithfulTitle} value={faithfulnessVal} description={copy.metricFaithfulDesc} icon={<ShieldCheck className="h-4 w-4" />} live={hasMetrics && (report!.faithfulness?.scored_queries ?? 0) > 0} />
+          <MetricCard title={copy.metricLatencyTitle} value={latencyVal} description={copy.metricLatencyDesc} icon={<Zap className="h-4 w-4" />} live={hasMetrics} />
+        </div>
+      </Skeleton>
 
       <div className="mb-8 h-px w-full bg-border" />
 

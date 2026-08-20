@@ -427,3 +427,73 @@ html[data-text-size="large"] {
     box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 18%, transparent);
   }
 }
+
+/* =========================
+   NEO-BRUTALISM NEUTRALIZER
+   Global pass over legacy brutalist patterns — no JSX changes needed.
+   Thick borders → hairline · hard offset shadows → soft diffuse ·
+   decorative rotations/offsets → neutral. Applies page-wide via tokens.
+========================= */
+@layer utilities {
+  .border-2,
+  .border-x-2,
+  .border-y-2,
+  .border-t-2,
+  .border-b-2,
+  .border-r-2,
+  .border-l-2,
+  .border-4,
+  .border-x-4,
+  .border-y-4,
+  .border-t-4,
+  .border-b-4,
+  .border-r-4,
+  .border-l-4 {
+    border-width: 1px !important;
+  }
+
+  .divide-y-2 {
+    border-top-width: 1px !important;
+  }
+
+  [class*="shadow-[1px"],
+  [class*="shadow-[2px"],
+  [class*="shadow-[3px"],
+  [class*="shadow-[4px"],
+  [class*="shadow-[5px"],
+  [class*="shadow-[6px"],
+  [class*="shadow-[7px"],
+  [class*="shadow-[8px"] {
+    box-shadow:
+      0 1px 2px hsl(0 0% 0% / 0.04),
+      0 1px 3px hsl(0 0% 0% / 0.04) !important;
+  }
+
+  [class*="rotate-[2deg]"],
+  [class*="rotate-[3deg]"],
+  [class*="rotate-[-"] {
+    transform: rotate(0deg) !important;
+  }
+
+  [class*="translate-x-[1px"],
+  [class*="translate-y-[1px"] {
+    transform: translate(0, 0) !important;
+  }
+
+  /* brutalist 4-side bordered boxes → token radius (8px) so they match
+     neo-card / buttons / token --radius instead of staying sharp */
+  .border-2 {
+    border-radius: var(--radius) !important;
+  }
+
+  /* foreground-tinted borders → transparent (kills black section rules,
+     box outlines, table rules, and brutalist chips) */
+  [class^="border-foreground"],
+  [class*=" border-foreground"] {
+    border-color: transparent !important;
+  }
+
+  [class*=" divide-foreground"] > :not(:last-child) {
+    border-color: transparent !important;
+  }
+}

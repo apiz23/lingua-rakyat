@@ -25,6 +25,8 @@ import {
   runTestSuiteStream,
 } from "@/lib/api"
 import { useLanguage } from "@/components/language-provider"
+import { isBoneyardBuild } from "@/lib/boneyard"
+import { Skeleton } from "boneyard-js/react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import {
@@ -128,6 +130,155 @@ function StatTile({
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────
+
+function BenchmarkFixture() {
+  const score = 72
+  const scoreConf = SCORE_CONFIG.primary
+  return (
+    <>
+      <section className={cn("border-2 border-foreground/60 bg-card p-5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:p-6", scoreConf.bg)}>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-end gap-5">
+            <div>
+              <p className={cn("text-[10px] font-semibold tracking-[0.18em] uppercase", scoreConf.text)}>Benchmark Score</p>
+              <div className="flex items-baseline gap-3">
+                <span className={cn("font-heading text-5xl font-black tracking-tight tabular-nums sm:text-7xl lg:text-8xl", scoreConf.text)}>{score}</span>
+                <span className="text-xl font-normal text-muted-foreground/50 sm:text-2xl">/100</span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className={cn("inline-flex items-center border-2 px-2.5 py-0.5 text-[11px] font-semibold shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]", scoreConf.border, scoreConf.text, "bg-primary/10")}>
+                  {scoreConf.label}
+                </span>
+                <span className="text-[11px] text-muted-foreground">5 cases run</span>
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">Live score from the last test suite run</p>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[300px]">
+            <div className="h-9 w-full rounded-md border border-border bg-muted/30" />
+            <div className="h-11 w-full rounded-md bg-primary/20" />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label="ROUGE-1" value="0.184" sub="Word overlap vs ground truth" icon={Sparkles} tone="primary" />
+        <StatTile label="Confidence" value="68%" sub="Mean reranked score" icon={ShieldCheck} tone="primary" />
+        <StatTile label="Readability" value="5.6" sub="Flesch-Kincaid grade level" icon={CheckCircle2} tone="success" />
+        <StatTile label="Latency" value="1.9s" sub="Avg end-to-end response" icon={Clock3} tone="primary" />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
+        <div className="neo-card">
+          <div className="flex items-center justify-between border-b-2 border-foreground/40 px-5 py-4">
+            <div>
+              <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">Latest Results</p>
+              <h3 className="mt-0.5 font-heading text-lg font-bold tracking-tight">5 cases run</h3>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-2xl font-bold tabular-nums text-foreground">0.184</p>
+              <p className="text-[10px] text-muted-foreground">ROUGE-1</p>
+            </div>
+          </div>
+          <div className="divide-y divide-foreground/20">
+            {[
+              { q: "Apakah syarat kelayakan skim pencen?", lang: "MS", r1: "0.211", conf: "74%", spd: "1.7s" },
+              { q: "What documents are required for NRIC renewal?", lang: "EN", r1: "0.168", conf: "66%", spd: "2.1s" },
+              { q: "申请公积金需要哪些文件？", lang: "ZH", r1: "0.143", conf: "59%", spd: "2.3s" },
+            ].map((row) => (
+              <div key={row.q} className="p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="line-clamp-1 text-sm font-semibold text-foreground">{row.q}</p>
+                  <span className="shrink-0 border-2 border-foreground/40 bg-muted px-2 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">{row.lang}</span>
+                </div>
+                <div className="mb-3 grid grid-cols-4 gap-2">
+                  {[
+                    { label: "ROUGE-1", value: row.r1, cls: "text-primary" },
+                    { label: "BLEU", value: "0.031", cls: "" },
+                    { label: "Conf", value: row.conf, cls: "text-primary" },
+                    { label: "Speed", value: row.spd, cls: "" },
+                  ].map(({ label, value, cls }) => (
+                    <div key={label} className="border-2 border-foreground/30 bg-muted/30 px-2.5 py-2">
+                      <p className="text-[10px] text-muted-foreground">{label}</p>
+                      <p className={cn("mt-0.5 font-mono text-sm font-semibold tabular-nums", cls || "text-foreground")}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">Summary answer referencing the source document passage.</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="neo-card p-5">
+            <p className="mb-3 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">What ROUGE measures</p>
+            <div className="space-y-3">
+              <div className="h-3 w-full rounded-sm bg-muted" />
+              <div className="h-3 w-5/6 rounded-sm bg-muted" />
+              <div className="h-3 w-2/3 rounded-sm bg-muted" />
+            </div>
+          </div>
+          <div className="neo-card p-5">
+            <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">Scorecard</p>
+            <h3 className="mt-0.5 font-heading text-base font-bold">How to read this</h3>
+            <div className="mt-4 space-y-2">
+              <div className="h-12 w-full rounded-sm bg-muted" />
+              <div className="h-12 w-full rounded-sm bg-muted" />
+              <div className="h-12 w-full rounded-sm bg-muted" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+}
+
+function BenchmarkFallback() {
+  return (
+    <>
+      <section className="border-2 border-foreground/60 bg-card p-5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:p-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <div className="h-3 w-36 rounded-sm bg-muted" />
+            <div className="h-12 w-40 rounded-sm bg-muted" />
+            <div className="h-4 w-32 rounded-sm bg-muted" />
+          </div>
+          <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[300px]">
+            <div className="h-9 w-full rounded-md bg-muted" />
+            <div className="h-11 w-full rounded-md bg-muted" />
+          </div>
+        </div>
+      </section>
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="neo-card p-4">
+            <div className="mb-3 h-3 w-20 rounded-sm bg-muted" />
+            <div className="h-7 w-16 rounded-sm bg-muted" />
+          </div>
+        ))}
+      </section>
+      <section className="neo-card">
+        <div className="border-b-2 border-foreground/40 px-5 py-4">
+          <div className="mb-2 h-3 w-28 rounded-sm bg-muted" />
+          <div className="h-5 w-36 rounded-sm bg-muted" />
+        </div>
+        <div className="divide-y divide-foreground/20">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-3 p-4">
+              <div className="h-4 w-3/4 rounded-sm bg-muted" />
+              <div className="grid grid-cols-4 gap-2">
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <div key={j} className="h-12 rounded-md bg-muted/60" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  )
+}
 
 export default function BenchmarkPage() {
   const { language } = useLanguage()
@@ -314,7 +465,13 @@ export default function BenchmarkPage() {
         </div>
 
         {/* ── Score hero + run controls ── */}
-        <section className={cn("border-2 border-foreground/60 bg-card p-5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:p-6", scoreConf.bg)}>
+        <Skeleton
+          name="benchmark-dashboard"
+          loading={isBoneyardBuild() || loading}
+          fixture={<BenchmarkFixture />}
+          fallback={<BenchmarkFallback />}
+        >
+          <section className={cn("border-2 border-foreground/60 bg-card p-5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:p-6", scoreConf.bg)}>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             {/* Score display */}
             <div className="flex items-end gap-5">
@@ -592,6 +749,7 @@ export default function BenchmarkPage() {
             )}
           </div>
         </section>
+        </Skeleton>
       </main>
     </div>
   )

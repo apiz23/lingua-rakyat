@@ -1,205 +1,46 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { initSync, render } from "takumi-pdf/no-init"
-import { Document, Page, View } from "@/lib/pdf-primitives"
-import { Text } from "@/components/pdf/text/text"
-import { PdfcnThemeProvider } from "@/components/pdf/theme-provider"
-import { professionalTheme } from "@/components/pdf/theme-professional"
-import type { Document as AppDocument } from "@/lib/api"
-import type { Message } from "./message-cards"
+import { Document, Page, pdfjs } from "react-pdf"
+import "react-pdf/dist/Page/TextLayer.css"
+import "react-pdf/dist/Page/AnnotationLayer.css"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import SmoothDialog from "@/components/smoothui/dialog"
-import { FileX, Loader2, RefreshCw, X } from "lucide-react"
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  FileX,
+  Loader2,
+  X,
+} from "lucide-react"
 
-// takumi-pdf ships a wasm-bindgen "no-init" entry that does NOT touch the
-// wasm module at import time. We fetch the binary (copied to /public) and
-// instantiate it once with initSync — no bundler `?url`/`?module` tricks that
-// Turbopack can't resolve.
-let wasmInit: Promise<void> | null = null
-function ensureWasm() {
-  if (!wasmInit) {
-    wasmInit = (async () => {
-      const res = await fetch("/takumi_pdf_wasm_bg.wasm")
-      if (!res.ok) throw new Error("Failed to load takumi PDF wasm")
-      initSync(await res.arrayBuffer())
-    })()
-  }
-  return wasmInit
-}
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 export interface PdfPanelProps {
   open: boolean
+  url: string
+  targetPage: number
+  highlightText: string | null
   docName: string
-  document: AppDocument | null
-  messages: Message[]
+  documentId: string
   language: string
   onClose: () => void
   mobileVariant?: "drawer" | "dialog"
-  // Retained for backward compatibility with the old react-pdf viewer;
-  // the generated preview does not use them.
-  url?: string
-  targetPage?: number
-  highlightText?: string | null
-  documentId?: string
-}
-
-const COPY: Record<string, { summary: string; meta: string; conversation: string; question: string; answer: string; noConversation: string; failed: string; retry: string; generating: string }> = {
-  ms: {
-    summary: "Ringkasan Dokumen",
-    meta: "Maklumat Dokumen",
-    conversation: "Ringkasan Perbualan",
-    question: "Soalan",
-    answer: "Jawapan",
-    noConversation: "Belum ada perbualan untuk dokumen ini.",
-    failed: "Gagal menjana PDF.",
-    retry: "Cuba semula",
-    generating: "Menjana PDF…",
-  },
-  en: {
-    summary: "Document Summary",
-    meta: "Document Info",
-    conversation: "Conversation Summary",
-    question: "Question",
-    answer: "Answer",
-    noConversation: "No conversation yet for this document.",
-    failed: "Failed to generate PDF.",
-    retry: "Try again",
-    generating: "Generating PDF…",
-  },
-  "zh-cn": {
-    summary: "文件摘要",
-    meta: "文件信息",
-    conversation: "对话摘要",
-    question: "问题",
-    answer: "回答",
-    noConversation: "此文件还没有对话。",
-    failed: "生成 PDF 失败。",
-    retry: "重试",
-    generating: "正在生成 PDF…",
-  },
-}
-
-function stripMarkdown(value: string): string {
-  return value
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]*)`/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^[-*+]\s+/gm, "• ")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${bytes} B`
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString()
-}
-
-interface SummaryDocumentProps {
-  doc: AppDocument | null
-  messages: Message[]
-  language: string
-}
-
-function SummaryDocument({ doc, messages, language }: SummaryDocumentProps) {
-  const copy = COPY[language] ?? COPY.en
-  const t = professionalTheme
-  const recent = messages.slice(-15)
-
-  const metaRow = (label: string, value: string) => (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-      <Text variant="sm" color="mutedForeground" noMargin style={{ width: 140 }}>
-        {label}
-      </Text>
-      <Text variant="sm" weight="medium" noMargin style={{ flex: 1 }}>
-        {value}
-      </Text>
-    </View>
-  )
-
-  return (
-    <Document title={doc?.name ?? "Lingua Rakyat"}>
-      <Page>
-        <View
-          style={{
-            borderBottomWidth: 1,
-            borderBottomColor: t.colors.border,
-            paddingBottom: t.spacing.componentGap,
-            marginBottom: t.spacing.sectionGap,
-          }}
-        >
-          <Text variant="xs" weight="bold" transform="uppercase" color="mutedForeground" noMargin>
-            Lingua Rakyat · {copy.summary}
-          </Text>
-          <Text variant="3xl" weight="bold" noMargin style={{ marginTop: 6 }}>
-            {doc?.name ?? "Lingua Rakyat"}
-          </Text>
-        </View>
-
-        <View style={{ marginBottom: t.spacing.sectionGap }}>
-          <Text variant="lg" weight="bold" noMargin style={{ marginBottom: t.spacing.componentGap }}>
-            {copy.meta}
-          </Text>
-          {doc ? (
-            <>
-              {doc.agency ? metaRow("Agency", doc.agency) : null}
-              {metaRow("Status", doc.status)}
-              {metaRow("Size", formatFileSize(doc.size_bytes))}
-              {metaRow("Chunks", String(doc.chunk_count))}
-              {metaRow("Uploaded", formatDate(doc.uploaded_at))}
-            </>
-          ) : (
-            <Text variant="sm" color="mutedForeground" noMargin>
-              —
-            </Text>
-          )}
-        </View>
-
-        <View style={{ marginBottom: t.spacing.sectionGap }}>
-          <Text variant="lg" weight="bold" noMargin style={{ marginBottom: t.spacing.componentGap }}>
-            {copy.conversation}
-          </Text>
-          {recent.length === 0 ? (
-            <Text variant="sm" color="mutedForeground" noMargin>
-              {copy.noConversation}
-            </Text>
-          ) : (
-            recent.map((m, i) => (
-              <View key={m.id || i} style={{ marginBottom: t.spacing.sectionGap, breakInside: "avoid" }}>
-                <Text variant="sm" weight="bold" transform="uppercase" color="mutedForeground" noMargin>
-                  {copy.question}
-                </Text>
-                <Text variant="base" weight="semibold" noMargin style={{ marginTop: 2, marginBottom: 8 }}>
-                  {stripMarkdown(m.question)}
-                </Text>
-                <Text variant="sm" weight="bold" transform="uppercase" color="mutedForeground" noMargin>
-                  {copy.answer}
-                </Text>
-                <Text variant="sm" noMargin style={{ whiteSpace: "pre-wrap", marginTop: 2 }}>
-                  {stripMarkdown(m.answer)}
-                </Text>
-              </View>
-            ))
-          )}
-        </View>
-      </Page>
-    </Document>
-  )
+  // Kept optional for backward compatibility with the summary-generating
+  // viewer; the react-pdf evidence viewer does not use them.
+  document?: import("@/lib/api").Document | null
+  messages?: import("./message-cards").Message[]
 }
 
 function useIsDesktop() {
+  // PdfPanel is SSR-disabled (dynamic import, ssr:false) so window is always
+  // available here. Initialise synchronously to avoid Drawer→Sheet swap on
+  // first render, which caused Radix's onOpenChange(false) to fire and close
+  // the panel immediately after it opened.
   const [isDesktop, setIsDesktop] = useState(
     () => window.matchMedia("(min-width: 1024px)").matches
   )
@@ -212,125 +53,195 @@ function useIsDesktop() {
   return isDesktop
 }
 
-function GeneratedPdfViewer({
-  doc,
-  messages,
+function PdfLoadingSpinner() {
+  return (
+    <div className="flex h-full items-center justify-center py-12">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
+
+function PdfErrorState({
   language,
+  onRetry,
 }: {
-  doc: AppDocument | null
-  messages: Message[]
   language: string
+  onRetry: () => void
 }) {
-  const copy = COPY[language] ?? COPY.en
-  const [url, setUrl] = useState<string | null>(null)
-  const [error, setError] = useState(false)
-  const [generating, setGenerating] = useState(true)
-  const requestRef = useRef(0)
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+      <FileX className="h-8 w-8 text-muted-foreground/50" />
+      <p className="text-sm text-muted-foreground">
+        {language === "ms" ? "Gagal memuatkan PDF." : "Failed to load PDF."}
+      </p>
+      <button
+        onClick={onRetry}
+        className="text-xs text-primary underline-offset-2 hover:underline"
+      >
+        {language === "ms" ? "Cuba semula" : "Try again"}
+      </button>
+    </div>
+  )
+}
 
-  const generate = useCallback(async () => {
-    const requestId = ++requestRef.current
-    setGenerating(true)
-    setError(false)
-    try {
-      await ensureWasm()
-      const tree = (
-        <PdfcnThemeProvider theme={professionalTheme}>
-          <SummaryDocument doc={doc} messages={messages} language={language} />
-        </PdfcnThemeProvider>
-      )
-      const bytes = await render(tree, {
-        size: "a4",
-        margin: {
-          top: 72,
-          right: 64,
-          bottom: 96,
-          left: 64,
-        },
-        footer: (
-          <div
-            style={{
-              width: "100%",
-              display: "flex",
-              justifyContent: "center",
-              fontSize: 10,
-              color: "#71717a",
-              paddingTop: 8,
-            }}
-          >
-            Lingua Rakyat · Page <span className="pageNumber" /> of{" "}
-            <span className="totalPages" />
-          </div>
-        ),
-        metadata: {
-          title: doc?.name ?? "Lingua Rakyat",
-          creator: "Lingua Rakyat",
-          creationDate: new Date().toISOString().slice(0, 10),
-        },
-        lang: language,
-      })
-      if (requestId !== requestRef.current) return
-      const exact = bytes.buffer.slice(
-        bytes.byteOffset,
-        bytes.byteOffset + bytes.byteLength
-      ) as ArrayBuffer
-      const blob = new Blob([exact], { type: "application/pdf" })
-      const objectUrl = URL.createObjectURL(blob)
-      setUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev)
-        return objectUrl
-      })
-    } catch {
-      if (requestId === requestRef.current) setError(true)
-    } finally {
-      if (requestId === requestRef.current) setGenerating(false)
-    }
-  }, [doc, messages, language])
+interface PdfViewerProps {
+  documentId: string
+  targetPage: number
+  highlightText: string | null
+  language: string
+}
+
+function PdfViewer({
+  documentId,
+  targetPage,
+  highlightText,
+  language,
+}: PdfViewerProps) {
+  const proxyUrl = `${API_URL}/api/documents/${documentId}/pdf`
+
+  const [numPages, setNumPages] = useState<number | null>(null)
+  const [currentPage, setCurrentPage] = useState(targetPage)
+  const [hasTextLayer, setHasTextLayer] = useState<boolean | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [resolvedUrl, setResolvedUrl] = useState(proxyUrl)
+  const [panelWidth, setPanelWidth] = useState(440)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  // Highlight on every page — lets user navigate to find the source text
+  // even when page_start was not stored (null) and we fell back to page 1.
+  const activeHighlight = highlightText
 
   useEffect(() => {
-    generate()
-  }, [generate])
+    // Sync sync state to an external doc view change; cascading render is fine here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(targetPage)
+    setHasTextLayer(null)
+  }, [targetPage])
 
   useEffect(() => {
-    return () => {
-      requestRef.current += 1
-      if (url) URL.revokeObjectURL(url)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Page count belongs to the previous PDF; keep it stale and a citation
+    // pointing past the new doc's last page crashes react-pdf.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setResolvedUrl(`${API_URL}/api/documents/${documentId}/pdf`)
+    setLoadError(false)
+    setNumPages(null)
+  }, [documentId])
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const ro = new ResizeObserver(([entry]) =>
+      setPanelWidth(entry.contentRect.width)
+    )
+    ro.observe(containerRef.current)
+    return () => ro.disconnect()
   }, [])
 
-  if (generating) {
-    return (
-      <div className="flex h-full items-center justify-center py-12">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">{copy.generating}</span>
-        </div>
-      </div>
-    )
-  }
+  // Auto-scroll to first highlight mark after text layer renders
+  useEffect(() => {
+    if (!activeHighlight || !scrollAreaRef.current) return
+    const container = scrollAreaRef.current
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-        <FileX className="h-8 w-8 text-muted-foreground/50" />
-        <p className="text-sm text-muted-foreground">{copy.failed}</p>
-        <button
-          onClick={generate}
-          className="flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
-        >
-          <RefreshCw className="h-3 w-3" />
-          {copy.retry}
-        </button>
-      </div>
-    )
-  }
+    const scrollToMark = () => {
+      const mark = container.querySelector<HTMLElement>("mark.pdf-hl")
+      if (!mark) return false
+      mark.scrollIntoView({ behavior: "smooth", block: "center" })
+      return true
+    }
+
+    if (scrollToMark()) return
+
+    const observer = new MutationObserver(() => {
+      if (scrollToMark()) observer.disconnect()
+    })
+    observer.observe(container, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [currentPage, activeHighlight])
+
+  const customTextRenderer = useCallback(
+    ({ str }: { str: string }) => {
+      if (!activeHighlight || str.trim().length < 3) return str
+      const inChunk = activeHighlight
+        .toLowerCase()
+        .includes(str.toLowerCase().trim())
+      if (inChunk) return `<mark class="pdf-hl">${str}</mark>`
+      return str
+    },
+    [activeHighlight]
+  )
 
   return (
-    <iframe
-      src={url ?? undefined}
-      title={doc?.name ?? "PDF preview"}
-      className="h-full w-full border-0 bg-white"
-    />
+    <div ref={containerRef} className="flex h-full flex-col">
+      {hasTextLayer === false && highlightText && (
+        <div className="flex items-center gap-2 border-b border-warning/40 bg-warning/10 px-3 py-2 text-[11px] text-warning">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            {language === "ms"
+              ? "Penyerlahan teks tidak tersedia untuk dokumen imbasan."
+              : "Text highlighting unavailable for scanned documents."}
+          </span>
+        </div>
+      )}
+
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto bg-muted">
+        {loadError ? (
+          <PdfErrorState
+            language={language}
+            onRetry={() => {
+              setLoadError(false)
+              setResolvedUrl(`${API_URL}/api/documents/${documentId}/pdf`)
+            }}
+          />
+        ) : (
+          <Document
+            file={resolvedUrl}
+            onLoadSuccess={({ numPages: n }) => {
+              setNumPages(n)
+              setCurrentPage((p) => Math.min(Math.max(1, p), n))
+            }}
+            onLoadError={() => setLoadError(true)}
+            loading={<PdfLoadingSpinner />}
+          >
+            <Page
+              pageNumber={numPages ? Math.min(currentPage, numPages) : 1}
+              width={panelWidth - 24}
+              customTextRenderer={customTextRenderer}
+              onGetTextSuccess={(textContent) =>
+                setHasTextLayer(textContent.items.length > 0)
+              }
+              renderTextLayer={true}
+              renderAnnotationLayer={false}
+              loading={<PdfLoadingSpinner />}
+            />
+          </Document>
+        )}
+      </div>
+
+      <div className="flex h-10 shrink-0 items-center justify-between border-t border-border px-3">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage <= 1}
+          aria-label="Previous page"
+          className="p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-[11px] text-muted-foreground">
+          {language === "ms" ? "Halaman" : "Page"} {currentPage}
+          {numPages ? ` / ${numPages}` : ""}
+        </span>
+        <button
+          onClick={() =>
+            setCurrentPage((p) => Math.min(numPages ?? p, p + 1))
+          }
+          disabled={numPages !== null && currentPage >= numPages}
+          aria-label="Next page"
+          className="p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -348,7 +259,7 @@ function PanelHeader({
       </span>
       <button
         onClick={onClose}
-        aria-label="Close PDF preview"
+        aria-label="Close PDF viewer"
         className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-foreground"
       >
         <X className="h-4 w-4" />
@@ -359,18 +270,24 @@ function PanelHeader({
 
 export default function PdfPanel({
   open,
+  targetPage,
+  highlightText,
   docName,
-  document,
-  messages,
+  documentId,
   language,
   onClose,
   mobileVariant = "drawer",
 }: PdfPanelProps) {
   const isDesktop = useIsDesktop()
 
-  const viewer = open ? (
-    <GeneratedPdfViewer doc={document} messages={messages} language={language} />
-  ) : null
+  const viewer = (
+    <PdfViewer
+      documentId={documentId}
+      targetPage={targetPage}
+      highlightText={highlightText}
+      language={language}
+    />
+  )
 
   if (isDesktop) {
     return (

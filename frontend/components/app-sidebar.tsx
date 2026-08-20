@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
-import { useClerk, useUser } from "@clerk/nextjs"
+import { useUser } from "@clerk/nextjs"
 import {
   FolderOpen,
   Target,
@@ -91,7 +91,6 @@ export function AppSidebar() {
   const { setOpenMobile, isMobile } = useSidebar()
   const { userId, activeSessionId, setActiveSessionId } = useWorkspaceSession()
   const { user, isSignedIn } = useUser()
-  const { signOut } = useClerk()
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [loadingConversations, setLoadingConversations] = useState(false)
@@ -377,23 +376,26 @@ export function AppSidebar() {
           <SidebarMenuItem>
             {isSignedIn ? (
               <SidebarMenuButton
-                onClick={() => signOut()}
-                tooltip={copy.signOut}
-                className="h-9 gap-2.5 px-2 text-sm text-muted-foreground hover:text-destructive"
+                asChild
+                tooltip={copy.account}
+                className="h-9 gap-2.5 px-2 text-sm text-muted-foreground hover:text-foreground"
+                onClick={handleNavigation}
               >
-                {user?.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={user.imageUrl}
-                    alt=""
-                    className="h-5 w-5 shrink-0 rounded-full group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7"
-                  />
-                ) : (
-                  <User className="h-4 w-4 shrink-0 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5" />
-                )}
-                <span className="truncate group-data-[collapsible=icon]:hidden">
-                  {user?.fullName ?? copy.account}
-                </span>
+                <Link href="/profile">
+                  {user?.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={user.imageUrl}
+                      alt=""
+                      className="h-5 w-5 shrink-0 rounded-full group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7"
+                    />
+                  ) : (
+                    <User className="h-4 w-4 shrink-0 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5" />
+                  )}
+                  <span className="truncate group-data-[collapsible=icon]:hidden">
+                    {user?.fullName ?? copy.account}
+                  </span>
+                </Link>
               </SidebarMenuButton>
             ) : (
               <SidebarMenuButton

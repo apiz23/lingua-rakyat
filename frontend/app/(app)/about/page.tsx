@@ -308,7 +308,7 @@ export default function AboutPage() {
             <div className="space-y-6">
 
               {/* Overview */}
-              <section className="border border-border bg-card">
+              <section className="overflow-hidden rounded-lg border border-border bg-card">
                 <SectionAnchor id="overview" />
                 <div className="border-b border-border px-5 py-4">
                   <SectionHeader icon={BookOpen} label={copy.overviewLabel} />
@@ -364,7 +364,7 @@ export default function AboutPage() {
               </section>
 
               {/* Ingestion Pipeline */}
-              <section className="border border-border bg-card">
+              <section className="overflow-hidden rounded-lg border border-border bg-card">
                 <SectionAnchor id="ingestion" />
                 <div className="border-b border-border px-5 py-4">
                   <SectionHeader icon={Upload} label={copy.ingestionLabel} badge={copy.ingestionBadge} />
@@ -387,7 +387,7 @@ export default function AboutPage() {
               </section>
 
               {/* Q&A Pipeline */}
-              <section className="border border-border bg-card">
+              <section className="overflow-hidden rounded-lg border border-border bg-card">
                 <SectionAnchor id="qa-pipeline" />
                 <div className="border-b border-border px-5 py-4">
                   <SectionHeader icon={MessageSquare} label={copy.qaLabel} badge={copy.qaBadge} />
@@ -410,7 +410,7 @@ export default function AboutPage() {
               </section>
 
               {/* API Reference */}
-              <section className="border border-border bg-card">
+              <section className="overflow-hidden rounded-lg border border-border bg-card">
                 <SectionAnchor id="api" />
                 <div className="border-b border-border px-5 py-4">
                   <SectionHeader icon={Server} label={copy.apiLabel} />
@@ -456,7 +456,7 @@ export default function AboutPage() {
             <div className="space-y-6">
 
               {/* Tech Stack */}
-              <section className="border border-border bg-card">
+              <section className="overflow-hidden rounded-lg border border-border bg-card">
                 <SectionAnchor id="tech-stack" />
                 <div className="border-b border-border px-5 py-4">
                   <SectionHeader icon={Layers} label={copy.techLabel} />
@@ -495,7 +495,7 @@ export default function AboutPage() {
           <div className="grid gap-6 xl:grid-cols-2">
 
             {/* Key Features */}
-            <section className="border border-border bg-card">
+            <section className="overflow-hidden rounded-lg border border-border bg-card">
               <SectionAnchor id="features" />
               <div className="border-b border-border px-5 py-4">
                 <SectionHeader icon={Zap} label={copy.featuresLabel} />
@@ -525,7 +525,7 @@ export default function AboutPage() {
             </section>
 
             {/* Eval Metrics */}
-            <section className="border border-border bg-card">
+            <section className="overflow-hidden rounded-lg border border-border bg-card">
               <SectionAnchor id="metrics" />
               <div className="border-b border-border px-5 py-4">
                 <SectionHeader icon={BarChart3} label={copy.metricsLabel} />

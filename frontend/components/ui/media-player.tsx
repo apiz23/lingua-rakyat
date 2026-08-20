@@ -1991,7 +1991,7 @@ function MediaPlayerSeek(props: MediaPlayerSeekProps) {
           role="presentation"
           aria-hidden="true"
           data-slot="media-player-seek-chapter-separator"
-          className="absolute top-0 h-full bg-zinc-50 dark:bg-zinc-950"
+          className="absolute top-0 h-full bg-muted-foreground/40"
           style={{
             width: ".1563rem",
             left: `${position}%`,
@@ -2096,7 +2096,7 @@ function MediaPlayerSeek(props: MediaPlayerSeekProps) {
             >
               <div
                 className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-md border bg-background text-foreground shadow-sm dark:bg-zinc-900",
+                  "flex flex-col items-center gap-1.5 rounded-md border bg-background text-foreground shadow-sm",
                   thumbnail && "min-h-10",
                   !thumbnail && currentChapterCue && "px-3 py-1.5",
                 )}
@@ -2285,7 +2285,7 @@ function MediaPlayerVolume(props: MediaPlayerVolumeProps) {
         onValueChange={onVolumeChange}
         onValueCommit={onVolumeCommit}
       >
-        <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-zinc-500">
+        <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-muted-foreground/25">
           <SliderPrimitive.Range className="absolute h-full bg-primary will-change-[width]" />
         </SliderPrimitive.Track>
         <SliderPrimitive.Thumb className="block size-2.5 shrink-0 rounded-full bg-primary shadow-sm ring-ring/50 transition-[color,box-shadow] will-change-transform hover:ring-4 focus-visible:outline-hidden focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50" />
@@ -3055,7 +3055,7 @@ function MediaPlayerTooltip(props: MediaPlayerTooltipProps) {
       <TooltipContent
         container={context.portalContainer}
         sideOffset={tooltipSideOffset}
-        className="flex items-center gap-2 border bg-accent px-2 py-1 font-medium text-foreground data-[side=top]:mb-3.5 dark:bg-zinc-900 [&>span]:hidden"
+        className="flex items-center gap-2 border bg-accent px-2 py-1 font-medium text-foreground data-[side=top]:mb-3.5 [&>span]:hidden"
       >
         <p>{tooltip}</p>
         {Array.isArray(shortcut) ? (

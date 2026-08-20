@@ -24,7 +24,7 @@ export default function PageIntro({
   return (
     <section
       className={cn(
-        "border border-border bg-card px-6 py-8 sm:px-8",
+        "border border-border bg-card rounded-lg px-6 py-8 sm:px-8",
         className
       )}
     >
@@ -33,7 +33,7 @@ export default function PageIntro({
           {(eyebrow || badge || Icon) && (
             <div className="flex flex-wrap items-center gap-3">
               {Icon && (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-primary/20 bg-primary/5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/5">
                   <Icon className="h-5 w-5 text-primary" />
                 </div>
               )}
@@ -43,7 +43,7 @@ export default function PageIntro({
                 </p>
               )}
               {badge && (
-                <span className="border border-border/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <span className="rounded-sm border border-border/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                   {badge}
                 </span>
               )}

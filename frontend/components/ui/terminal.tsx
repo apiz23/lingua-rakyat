@@ -279,9 +279,9 @@ export const Terminal = ({
     >
       <div className="border-border flex flex-col gap-y-2 border-b p-4">
         <div className="flex flex-row gap-x-2">
-          <div className="h-2 w-2 rounded-full bg-red-500"></div>
-          <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
-          <div className="h-2 w-2 rounded-full bg-green-500"></div>
+          <div className="h-2 w-2 rounded-full bg-destructive"></div>
+          <div className="h-2 w-2 rounded-full bg-warning"></div>
+          <div className="h-2 w-2 rounded-full bg-success"></div>
         </div>
       </div>
       <pre className="overflow-visible p-4 whitespace-pre-wrap break-words">
