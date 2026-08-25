@@ -87,7 +87,7 @@ function relativeTime(iso: string): string {
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { language, toggleLanguage } = useLanguage()
+  const { language } = useLanguage()
   const { setOpenMobile, isMobile } = useSidebar()
   const { userId, activeSessionId, setActiveSessionId } = useWorkspaceSession()
   const { user, isSignedIn } = useUser()

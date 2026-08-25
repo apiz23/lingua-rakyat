@@ -1,11 +1,10 @@
 "use client"
 
-import { Skeleton } from "boneyard-js/react"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { LucideIcon } from "lucide-react"
 import { FileQuestion, Landmark, Sparkles, Upload } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
 import { Document } from "@/lib/api"
-import { isBoneyardBuild } from "@/lib/boneyard"
 import {
   AGENCY_QUESTION_MAP,
   GENERIC_ASK_CHIP,
@@ -81,7 +80,7 @@ function buildChips(readyDocs: Document[], lang: Lang): Chip[] {
     }
   }
 
-  if (chips.length < 4) {
+  while (chips.length < 4) {
     chips.push({ icon: Sparkles, question: GENERIC_ASK_CHIP[lang] })
   }
 
@@ -93,50 +92,15 @@ export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStatePr
   const lang: Lang = language === "zh" ? "zh" : language === "en" ? "en" : "ms"
   const greeting = GREETING[lang]
 
-  // During `npx boneyard-js build` keep the skeleton branch mounted so the CLI
-  // can snapshot the chip layout even though docs have already loaded.
-  const skeletonLoading = isBoneyardBuild() || docsLoading
-
-  if (skeletonLoading) {
+  if (docsLoading) {
     return (
-      <Skeleton
-        name="chat-empty-state"
-        loading={skeletonLoading}
-        fallback={
-          <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[62px] animate-pulse rounded-xl border border-border bg-card"
-              />
-            ))}
-          </div>
-        }
-        fixture={
-          <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
-            {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary" />
-                <span className="h-4 w-3/4 rounded bg-muted" />
-              </div>
-            ))}
-          </div>
-        }
-      >
-        <div className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
-          <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-[62px] animate-pulse rounded-xl border border-border bg-card"
-              />
-            ))}
-          </div>
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
+        <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[62px] rounded-xl border border-border bg-card" />
+          ))}
         </div>
-      </Skeleton>
+      </div>
     )
   }
 
@@ -166,9 +130,9 @@ export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStatePr
       <p className="mb-8 text-sm text-muted-foreground/70">{greeting.hint}</p>
 
       <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
-        {chips.map(({ icon: Icon, question }) => (
+        {chips.map(({ icon: Icon, question }, idx) => (
           <button
-            key={question}
+            key={`${question}-${idx}`}
             type="button"
             onClick={() => onChipClick(question)}
             className="neo-btn flex items-center gap-3 rounded-xl bg-card px-4 py-3.5 text-left hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"

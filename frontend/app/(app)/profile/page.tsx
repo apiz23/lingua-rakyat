@@ -4,8 +4,6 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useClerk, useUser } from "@clerk/nextjs"
-import { Skeleton } from "boneyard-js/react"
-import { isBoneyardBuild } from "@/lib/boneyard"
 import { toast } from "sonner"
 import {
   ExternalLink,
@@ -118,63 +116,6 @@ function ConfidenceBadge({ label }: { label: string }) {
   )
 }
 
-function ProfileFixture() {
-  const { language } = useLanguage()
-  const copy = COPY[language] ?? COPY.en
-  return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <section className="overflow-hidden rounded-lg border border-border bg-card lg:col-span-1">
-        <div className="border-b border-border px-5 py-4">
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-            <UserRound className="h-3.5 w-3.5" />
-            {copy.account}
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-4 px-6 py-6 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-            <User className="h-8 w-8 text-primary" />
-          </div>
-          <div>
-            <p className="font-heading text-lg font-semibold text-foreground">Ahmad Bin Abdullah</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">ahmad@example.com</p>
-          </div>
-          <div className="neo-btn inline-flex w-full items-center justify-center gap-2 bg-background px-4 py-2 text-xs font-medium text-destructive">
-            <LogOut className="h-3.5 w-3.5" />
-            {copy.signOut}
-          </div>
-        </div>
-      </section>
-      <section className="overflow-hidden rounded-lg border border-border bg-card lg:col-span-2">
-        <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-            <Share2 className="h-3.5 w-3.5" />
-            {copy.shares}
-          </div>
-        </div>
-        <div className="space-y-2.5 p-5">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-4 rounded-md border border-border/70 bg-muted/20 p-4">
-              <div className="min-w-0 flex-1">
-                <div className="h-4 w-3/4 rounded bg-muted" />
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="rounded-sm bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">JPN</span>
-                  <span className="rounded-sm bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">High</span>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="neo-btn inline-flex items-center gap-1.5 bg-background px-3 py-1.5 text-xs font-medium text-primary">
-                  <ExternalLink className="h-3 w-3" />
-                  {copy.open}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  )
-}
-
 export default function ProfilePage() {
   const { language } = useLanguage()
   const copy = COPY[language] ?? COPY.en
@@ -197,7 +138,6 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!isLoaded) return
     if (!isSignedIn) {
-      if (isBoneyardBuild()) return
       router.replace("/sign-in")
       return
     }
@@ -221,25 +161,13 @@ export default function ProfilePage() {
   if (!isLoaded || !isSignedIn) {
     return (
       <div className="flex h-full flex-col p-4 sm:p-8">
-        <Skeleton
-          name="profile-page"
-          loading={!isLoaded || !isSignedIn}
-          fallback={
-            <>
-              <div className="h-32 w-full rounded-lg border border-border bg-card" />
-              <div className="grid gap-6 lg:grid-cols-3">
-                <div className="h-72 rounded-lg border border-border bg-card lg:col-span-1" />
-                <div className="h-72 rounded-lg border border-border bg-card lg:col-span-2" />
-              </div>
-            </>
-          }
-          fixture={<ProfileFixture />}
-        >
+        <>
+          <div className="h-32 w-full rounded-lg border border-border bg-card" />
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="h-72 rounded-lg border border-border bg-card lg:col-span-1" />
             <div className="h-72 rounded-lg border border-border bg-card lg:col-span-2" />
           </div>
-        </Skeleton>
+        </>
       </div>
     )
   }

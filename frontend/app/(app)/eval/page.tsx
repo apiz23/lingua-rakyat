@@ -16,9 +16,7 @@ import {
   StreamEvent,
 } from "@/lib/api"
 import { toast } from "sonner"
-import { Skeleton } from "boneyard-js/react"
 import { cn } from "@/lib/utils"
-import { isBoneyardBuild } from "@/lib/boneyard"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -254,7 +252,7 @@ export default function EvalPage() {
   const [expandedCases, setExpandedCases] = useState<Set<number>>(new Set())
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [evalModel, setEvalModel]         = useState("")
-  const [activeTab, setActiveTab]         = useState<TabId>(isBoneyardBuild() ? "simplify" : "metrics")
+  const [activeTab, setActiveTab]         = useState<TabId>("metrics")
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [streamProgress, setStreamProgress] = useState<{
     completed: number; total: number; currentQuestion: string
@@ -933,12 +931,6 @@ export default function EvalPage() {
             those passages into simple, everyday language before showing answers to users.
             Here are real before-and-after examples from this AI.
           </InfoNote>
-          <Skeleton
-            name="eval-simplify-demo"
-            loading={isBoneyardBuild() || loadingDemo}
-            fixture={<SimplifyDemoFixture />}
-            fallback={<SimplifyDemoFallback />}
-          >
           <div className="mt-5">
           {loadingDemo ? (
             <div className="flex items-center gap-2 py-12 text-muted-foreground">
@@ -973,7 +965,6 @@ export default function EvalPage() {
             <p className="py-12 text-center text-sm text-muted-foreground">Failed to load examples.</p>
           )}
           </div>
-          </Skeleton>
         </div>
 
         {/* ════════════════════════════════════

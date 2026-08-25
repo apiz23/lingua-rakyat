@@ -3,11 +3,12 @@ routers/documents.py - Document upload and management endpoints.
 """
 
 import io
+import hashlib
 import logging
 import os
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
@@ -87,6 +88,21 @@ def get_documents_table() -> str:
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+# Cache for list_storage_documents() — avoids repeated storage API calls.
+# TTL: 60 seconds. Fresh enough to detect new uploads, cheap enough to skip
+# redundant Supabase storage list() calls on every request.
+_storage_cache: list[dict[str, Any]] | None = None
+_storage_cache_at: datetime | None = None
+_STORAGE_CACHE_TTL = timedelta(seconds=60)
+
+
+def _invalidate_storage_cache() -> None:
+    """Clear the storage listing cache after mutations."""
+    global _storage_cache, _storage_cache_at
+    _storage_cache = None
+    _storage_cache_at = None
 
 
 def validate_uploaded_pdf_bytes(file_content: bytes) -> None:
@@ -178,6 +194,13 @@ def delete_document_record(document_id: str) -> None:
 
 
 def list_storage_documents() -> list[dict[str, Any]]:
+    global _storage_cache, _storage_cache_at
+
+    now = datetime.now(timezone.utc)
+    if _storage_cache is not None and _storage_cache_at is not None:
+        if now - _storage_cache_at < _STORAGE_CACHE_TTL:
+            return _storage_cache
+
     sb = get_supabase()
     bucket = get_bucket()
     entries = sb.storage.from_(bucket).list()
@@ -223,6 +246,8 @@ def list_storage_documents() -> list[dict[str, Any]]:
             "public_url": build_public_url(storage_path),
         })
 
+    _storage_cache = docs
+    _storage_cache_at = now
     return docs
 
 
@@ -285,6 +310,7 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
         merged = valid_documents + new_entries
         if new_entries or removed_ids:
             upsert_documents(merged)
+            _invalidate_storage_cache()
 
         return sorted(merged, key=lambda doc: doc["uploaded_at"], reverse=True)
     except Exception as exc:
@@ -452,6 +478,7 @@ async def upload_document(
         "error_message": None,
     }
     upsert_documents([doc_record])
+    _invalidate_storage_cache()
 
     background_tasks.add_task(ingest_uploaded_document, document_id, file_content, safe_filename)
 
@@ -544,6 +571,7 @@ async def rename_document(request: Request, document_id: str, body: RenameDocume
         document_name=new_name,
         chunk_count=int(doc_to_rename.get("chunk_count", 0) or 0),
     )
+    _invalidate_storage_cache()
 
     return DocumentResponse(**normalize_document_row(doc_to_rename))
 
@@ -575,6 +603,7 @@ async def register_document(
         "error_message": None,
     }
     upsert_documents([new_doc])
+    _invalidate_storage_cache()
 
     return {
         "success": True,
@@ -641,6 +670,7 @@ async def delete_document(document_id: str, upload_token: str = ""):
     delete_document_from_vectorstore(document_id)
     delete_chat_messages_for_document(document_id)
     delete_document_record(document_id)
+    _invalidate_storage_cache()
 
     return {"success": True, "message": f"Document '{doc_to_delete['name']}' deleted"}
 
@@ -695,12 +725,14 @@ def proxy_pdf(request: Request, document_id: str):
         logger.warning("[PDF] Storage download failed for %s (%s): %s", document_id, storage_path, exc)
         raise HTTPException(status_code=404, detail="PDF file not found in storage") from exc
     safe_name = (row.get("name") or "document").replace('"', "").replace("\\", "")
+    etag = hashlib.md5(data).hexdigest()
     return Response(
         content=data,
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'inline; filename="{safe_name}.pdf"',
             "Cache-Control": "private, max-age=3600",
+            "ETag": f'"{etag}"',
         },
     )
 

@@ -25,8 +25,6 @@ import {
   runTestSuiteStream,
 } from "@/lib/api"
 import { useLanguage } from "@/components/language-provider"
-import { isBoneyardBuild } from "@/lib/boneyard"
-import { Skeleton } from "boneyard-js/react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import {
@@ -465,12 +463,7 @@ export default function BenchmarkPage() {
         </div>
 
         {/* ── Score hero + run controls ── */}
-        <Skeleton
-          name="benchmark-dashboard"
-          loading={isBoneyardBuild() || loading}
-          fixture={<BenchmarkFixture />}
-          fallback={<BenchmarkFallback />}
-        >
+        {loading ? <BenchmarkFallback /> : (<>
           <section className={cn("border-2 border-foreground/60 bg-card p-5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:p-6", scoreConf.bg)}>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             {/* Score display */}
@@ -749,7 +742,7 @@ export default function BenchmarkPage() {
             )}
           </div>
         </section>
-        </Skeleton>
+        </>)}
       </main>
     </div>
   )

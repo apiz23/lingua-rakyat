@@ -153,7 +153,7 @@ function ScaleIn({
 }
 
 export default function Home() {
-  const { language, toggleLanguage } = useLanguage()
+  const { language, setLanguage } = useLanguage()
   const shouldReduce = useReducedMotion()
   const { scrollYProgress } = useScroll()
   const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.8])
@@ -190,7 +190,7 @@ export default function Home() {
           headline2: "bahasa anda.",
 
           subhead:
-            "Sistem soal jawab dokumen kerajaan berasaskan AI yang menggunakan Cohere multilingual embeddings, penyusunan semula neural Cohere, dan Groq LLaMA 3.3 70B. Jawapan bersumberkan dokumen dengan skor ketepatan, dalam Bahasa Melayu, English, dan Mandarin.",
+            "Sistem soal jawab dokumen kerajaan berasaskan AI yang menggunakan Cohere multilingual embeddings, penyusunan semula neural Cohere, dan LLM. Jawapan bersumberkan dokumen dengan skor ketepatan, dalam Bahasa Melayu, English, dan Mandarin.",
 
           cta: "Terokai Demo Teknikal",
           ctaSecondary: "Tonton Demo",
@@ -198,7 +198,7 @@ export default function Home() {
           strip: [
             { icon: FileSearch, label: "Carian Semantik" },
             { icon: BarChart3, label: "ROUGE-1/2/L" },
-            { icon: Zap, label: "Inferens Groq" },
+            { icon: Zap, label: "Inferens Pantas" },
             { icon: Target, label: "Skor Keyakinan" },
           ],
 
@@ -220,7 +220,7 @@ export default function Home() {
             {
               n: "03",
               title: "Generation",
-              desc: "Pengawal bukti → prompt berasaskan konteks → Groq LLaMA 3.3 70B → jawapan beranak + petikan sumber + skor keyakinan + skor ketepatan.",
+              desc: "Pengawal bukti → prompt berasaskan konteks → LLM → jawapan beranak + petikan sumber + skor keyakinan + skor ketepatan.",
               icon: FileSearch,
             },
           ],
@@ -243,7 +243,7 @@ export default function Home() {
             },
             {
               label: "Suara I/O",
-              desc: "Tanya melalui suara (Groq Whisper STT) dan dengar jawapan dibaca balik (ElevenLabs TTS). Sokongan speechSynthesis pelayar sebagai sandaran.",
+              desc: "Tanya melalui suara (Whisper STT) dan dengar jawapan dibaca balik (ElevenLabs TTS). Sokongan speechSynthesis pelayar sebagai sandaran.",
               icon: Mic,
             },
             {
@@ -270,7 +270,7 @@ export default function Home() {
           headline2: "your language.",
 
           subhead:
-            "An AI-powered government document Q&A system using Cohere multilingual embeddings, Cohere neural reranking, and Groq LLaMA 3.3 70B. Source-cited answers with faithfulness scoring in Malay, English, and Chinese.",
+            "An AI-powered government document Q&A system using Cohere multilingual embeddings, Cohere neural reranking, and LLM. Source-cited answers with faithfulness scoring in Malay, English, and Chinese.",
 
           cta: "Explore Technical Demo",
           ctaSecondary: "Watch Demo",
@@ -278,7 +278,7 @@ export default function Home() {
           strip: [
             { icon: FileSearch, label: "Semantic Search" },
             { icon: BarChart3, label: "ROUGE-1/2/L" },
-            { icon: Zap, label: "Groq Inference" },
+            { icon: Zap, label: "Fast Inference" },
             { icon: Target, label: "Confidence Scoring" },
           ],
 
@@ -300,7 +300,7 @@ export default function Home() {
             {
               n: "03",
               title: "Generation",
-              desc: "Evidence guard → context-aware prompt → Groq LLaMA 3.3 70B → streamed answer + source citations + confidence + faithfulness score.",
+              desc: "Evidence guard → context-aware prompt → LLM → streamed answer + source citations + confidence + faithfulness score.",
               icon: FileSearch,
             },
           ],
@@ -323,7 +323,7 @@ export default function Home() {
             },
             {
               label: "Voice I/O",
-              desc: "Ask by voice (Groq Whisper STT) and hear answers read back (ElevenLabs TTS). Browser speechSynthesis fallback when offline.",
+              desc: "Ask by voice (Whisper STT) and hear answers read back (ElevenLabs TTS). Browser speechSynthesis fallback when offline.",
               icon: Mic,
             },
             {
@@ -497,7 +497,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={toggleLanguage}
+                  onClick={() => setLanguage(language === "ms" ? "en" : "ms")}
                   aria-label={
                     language === "ms"
                       ? "Switch to English"
@@ -608,10 +608,10 @@ export default function Home() {
                   }}
                   className="relative z-10 mb-4 text-3xl font-black tracking-tight uppercase sm:mb-6 sm:text-4xl md:text-5xl lg:mb-8 lg:text-6xl xl:text-7xl"
                 >
-                  <span className="block py-0 font-heading text-[1.65rem] leading-tight text-foreground uppercase sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl">
+                  <span className="block py-0 font-heading text-[1.65rem] leading-tight text-foreground uppercase sm:text-4xl md:text-5xl lg:text-6xl xl:text-4xl">
                     {copy.headline1}
                   </span>
-                  <span className="mt-1 block py-0 font-heading text-[1.65rem] leading-tight text-primary uppercase sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-5xl">
+                  <span className="mt-1 block py-0 font-heading text-[1.65rem] leading-tight text-primary uppercase sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-4xl">
                     {copy.headline2}
                   </span>
                 </motion.h1>

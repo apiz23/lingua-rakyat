@@ -96,8 +96,8 @@ function ConfidenceBadge({
     <span
       className={
         isHigh
-          ? "inline-flex items-center gap-1 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"
-          : "inline-flex items-center gap-1 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning"
+          ? "inline-flex items-center gap-1 rounded-md bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"
+          : "inline-flex items-center gap-1 rounded-md bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning"
       }
     >
       <ShieldCheck className="h-3 w-3" />
@@ -128,8 +128,8 @@ export default async function SharePage({ params }: SharePageProps) {
     copy.confidence.medium
 
   return (
-    <div className="relative flex min-h-dvh flex-col items-center px-4 py-6 sm:py-12">
-      <div className="flex w-full max-w-2xl flex-col">
+    <div className="relative flex min-h-dvh flex-col px-4 py-6 sm:py-12">
+      <div className="mx-auto flex w-full max-w-2xl flex-col">
         {/* Header */}
         <div className="mb-6 flex shrink-0 items-center justify-between sm:mb-8">
           <Link href="/" className="flex items-center gap-2.5">
@@ -154,7 +154,7 @@ export default async function SharePage({ params }: SharePageProps) {
         </div>
 
         {/* Card */}
-        <div className="overflow-hidden border border-border bg-card shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           {/* Top section: metadata */}
           <div className="border-b border-border px-5 py-4 sm:px-8 sm:py-5">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -162,7 +162,7 @@ export default async function SharePage({ params }: SharePageProps) {
                 {copy.kicker}
               </span>
               {data.agency ? (
-                <span className="bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                <span className="rounded-md bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                   {data.agency}
                 </span>
               ) : null}
@@ -188,7 +188,7 @@ export default async function SharePage({ params }: SharePageProps) {
           {/* Answer + sources (scrollable if long) */}
           <ScrollArea className="max-h-[60vh]">
             <div className="px-5 py-5 sm:px-8 sm:py-6">
-              <div className="prose prose-sm max-w-none text-foreground prose-headings:font-heading prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground">
+              <div className="prose prose-sm max-w-none text-foreground text-justify hyphens-auto prose-headings:font-heading prose-headings:text-foreground prose-headings:text-left prose-a:text-primary prose-strong:text-foreground">
                 <ChatMarkdown content={data.answer} />
               </div>
 
@@ -198,9 +198,7 @@ export default async function SharePage({ params }: SharePageProps) {
                     <BookOpen className="h-3.5 w-3.5" />
                     {copy.sources}
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <ShareSources sources={data.sources} />
-                  </div>
+                  <ShareSources sources={data.sources} />
                 </div>
               )}
             </div>
@@ -211,7 +209,7 @@ export default async function SharePage({ params }: SharePageProps) {
         <div className="mt-6 sm:mt-8">
           <Link
             href="/workspace"
-            className="group flex items-center justify-center gap-2 bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md sm:py-3"
+            className="group flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md sm:py-3"
           >
             {copy.ask}
             <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />

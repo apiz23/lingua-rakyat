@@ -38,7 +38,7 @@ const OPEN_COMMAND_EVENT = "lingua-rakyat:open-command-palette"
 
 export default function CommandPaletteTopRight() {
   const router = useRouter()
-  const { language, toggleLanguage } = useLanguage()
+  const { language, setLanguage } = useLanguage()
   const isMobile = useMobile()
 
   const [open, setOpen] = React.useState(false)
@@ -157,10 +157,10 @@ export default function CommandPaletteTopRight() {
         label: copy.toggleLanguage,
         hint: language === "ms" ? "English" : "Bahasa Melayu",
         icon: Globe,
-        action: toggleLanguage,
+        action: () => setLanguage(language === "ms" ? "en" : "ms"),
       },
     ],
-    [copy.toggleLanguage, language, toggleLanguage]
+    [copy.toggleLanguage, language, setLanguage]
   )
 
   function runAction(action: () => void) {

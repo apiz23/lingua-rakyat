@@ -43,12 +43,12 @@ const markdownComponents: Partial<Components> = {
     </p>
   ),
   ul: (props) => (
-    <ul className="my-3 list-disc space-y-1.5 pl-5 marker:text-primary">
+    <ul className="my-3 list-none space-y-2 pl-5 [&>li]:relative [&>li]:before:absolute [&>li]:before:left-[-1.25em] [&>li]:before:top-[0.55em] [&>li]:before:h-1.5 [&>li]:before:w-1.5 [&>li]:before:rounded-full [&>li]:before:bg-primary/60">
       {props.children}
     </ul>
   ),
   ol: (props) => (
-    <ol className="my-3 list-decimal space-y-1.5 pl-5 marker:text-primary">
+    <ol className="my-3 list-none space-y-2 pl-5 counter-reset-[list-counter] [&>li]:relative [&>li]:pl-1 [&>li]:counter-increment-[list-counter] [&>li]:before:absolute [&>li]:before:left-[-1.5em] [&>li]:before:top-0 [&>li]:before:flex [&>li]:before:h-5 [&>li]:before:w-5 [&>li]:before:items-center [&>li]:before:justify-center [&>li]:before:rounded-full [&>li]:before:bg-primary/10 [&>li]:before:font-mono [&>li]:before:text-[11px] [&>li]:before:font-semibold [&>li]:before:text-primary/80 [&>li]:before:content-[counter(list-counter)]">
       {props.children}
     </ol>
   ),
@@ -58,7 +58,7 @@ const markdownComponents: Partial<Components> = {
     </li>
   ),
   blockquote: (props) => (
-    <blockquote className="my-4 border-l-4 border-primary/40 bg-primary/5 py-2 pr-4 pl-4 text-sm text-foreground/70 italic">
+    <blockquote className="my-4 rounded-r-lg bg-primary/5 py-2 pr-4 pl-4 text-sm text-foreground/70 italic">
       {props.children}
     </blockquote>
   ),

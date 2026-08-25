@@ -1,9 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs"
 import type { Metadata } from "next"
 import { Toaster } from "@/components/ui/sonner"
-import { configureBoneyard } from "boneyard-js/react"
 
-import "@/bones/registry"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { LanguageProvider } from "@/components/language-provider"
@@ -40,18 +38,6 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   weight: ["500", "600", "700"],
   display: "swap",
-})
-
-// boneyard — pixel-perfect skeleton bones. Re-run `npx boneyard-js build`
-// whenever layouts change to regenerate ./bones. Colors follow the civic
-// warm-paper neutrals from globals.css.
-configureBoneyard({
-  color: "#ece8df",
-  darkColor: "#26241d",
-  animate: "shimmer",
-  shimmerColor: "#f4f1ea",
-  darkShimmerColor: "#31302a",
-  select: "viewport",
 })
 
 export const metadata: Metadata = {

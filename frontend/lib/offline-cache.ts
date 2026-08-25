@@ -3,7 +3,6 @@ import type { ChatHistoryMessage, Document, SourceChunk } from "@/lib/api"
 const DOCS_KEY = "lr-offline-documents:v1"
 const HISTORY_KEY = "lr-offline-history:v1"
 const SOURCES_KEY = "lr-offline-sources:v1"
-const PDF_CACHE = "lingua-rakyat-pdfs-v1"
 
 type OfflineSourceRecord = SourceChunk & {
   question: string
@@ -37,35 +36,10 @@ function writeJson<T>(key: string, value: T) {
 
 export function cacheDocuments(documents: Document[]) {
   writeJson(DOCS_KEY, documents)
-  cacheDocumentFiles(documents)
 }
 
 export function getCachedDocuments(): Document[] {
   return readJson<Document[]>(DOCS_KEY, [])
-}
-
-function cacheDocumentFiles(documents: Document[]) {
-  if (typeof window === "undefined" || !("caches" in window)) return
-
-  const urls = documents
-    .map((document) => document.public_url)
-    .filter((url): url is string => Boolean(url))
-
-  if (!urls.length) return
-
-  window.caches
-    .open(PDF_CACHE)
-    .then((cache) =>
-      Promise.all(
-        urls.map(async (url) => {
-          const cached = await cache.match(url)
-          if (cached) return
-          const response = await fetch(new Request(url, { mode: "no-cors" }))
-          await cache.put(url, response)
-        })
-      )
-    )
-    .catch(() => {})
 }
 
 export function cacheHistory(messages: ChatHistoryMessage[]) {

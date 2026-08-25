@@ -19,9 +19,7 @@ import {
   Zap,
 } from "lucide-react"
 import { getEvalReport, type EvalReport } from "@/lib/api"
-import { Skeleton } from "boneyard-js/react"
 import { useLanguage } from "@/components/language-provider"
-import { isBoneyardBuild } from "@/lib/boneyard"
 import PageIntro from "@/components/page-intro"
 
 function pct(v: number) { return `${Math.round(v * 100)}%` }
@@ -330,12 +328,7 @@ export default function ResultsPage() {
         <Target className="mr-2 h-5 w-5 text-primary" />
         {copy.qualityMetricsHeading}
       </h2>
-      <Skeleton
-        name="results-metrics"
-        loading={isBoneyardBuild() || loading}
-        fixture={<ResultsMetricsFixture />}
-        fallback={<MetricsFallback />}
-      >
+      {loading ? <MetricsFallback /> : (
         <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <MetricCard title={copy.metricRougeTitle} value={rougeVal} description={copy.metricRougeDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
           <MetricCard title={copy.metricBleuTitle} value={bleuVal} description={copy.metricBleuDesc} icon={<Globe2 className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
@@ -344,7 +337,7 @@ export default function ResultsPage() {
           <MetricCard title={copy.metricFaithfulTitle} value={faithfulnessVal} description={copy.metricFaithfulDesc} icon={<ShieldCheck className="h-4 w-4" />} live={hasMetrics && (report!.faithfulness?.scored_queries ?? 0) > 0} />
           <MetricCard title={copy.metricLatencyTitle} value={latencyVal} description={copy.metricLatencyDesc} icon={<Zap className="h-4 w-4" />} live={hasMetrics} />
         </div>
-      </Skeleton>
+      )}
 
       <div className="mb-8 h-px w-full bg-border" />
 
