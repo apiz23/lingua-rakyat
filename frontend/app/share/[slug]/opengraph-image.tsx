@@ -83,7 +83,7 @@ export default async function OpengraphImage({ params }: ShareImageProps) {
 
   return new ImageResponse(
     (
-      <OgShell aside={<OgAside tag={copy.tag} logo={logo} />}>
+      <OgShell aside={<OgAside tag={copy.tag} />}>
         <OgKicker label={copy.kicker} right="Lingua Rakyat" logo={logo} />
 
         <div style={{ display: "flex", flexDirection: "column" }}>

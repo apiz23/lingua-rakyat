@@ -243,7 +243,8 @@ export function OgShell({
       <div
         style={{
           display: "flex",
-          flex: 1,
+          width: 852,
+          flexShrink: 0,
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "56px 52px 48px 68px",
@@ -255,6 +256,7 @@ export function OgShell({
         style={{
           display: "flex",
           width: 348,
+          flexShrink: 0,
           position: "relative",
           overflow: "hidden",
           background: ogColors.green,
@@ -266,10 +268,23 @@ export function OgShell({
   )
 }
 
-/** Standard right panel: contour rings, mark, wordmark, language tag.
- *  Pass the inlined logo from `loadBrandLogo()` to use the real app icon;
- *  otherwise the path-drawn recreation is used. */
-export function OgAside({ tag, logo }: { tag: string; logo?: string | null }) {
+/** Standard right panel: contour rings, stacked wordmark, language tag.
+ *  Every box gets an explicit size — satori collapses `flex: 1` here and wraps
+ *  the tag text to a sliver. Deliberately image-free; the real logo leads the
+ *  kicker on the left, where <img> sizing is reliable. */
+export function OgAside({ tag }: { tag: string }) {
+  const wordStyle = {
+    display: "flex",
+    width: 348,
+    justifyContent: "center",
+    fontFamily: ogFonts.display,
+    fontWeight: 800,
+    fontSize: 52,
+    lineHeight: "54px",
+    letterSpacing: 1,
+    color: ogColors.paper,
+  } as const
+
   return (
     <>
       <div style={{ position: "absolute", top: 0, left: 0, display: "flex" }}>
@@ -278,48 +293,26 @@ export function OgAside({ tag, logo }: { tag: string; logo?: string | null }) {
       <div
         style={{
           display: "flex",
-          flex: 1,
           position: "relative",
+          width: 348,
+          height: 630,
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
+        <div style={wordStyle}>LINGUA</div>
+        <div style={wordStyle}>RAKYAT</div>
         <div
           style={{
             display: "flex",
-            padding: 22,
-            borderRadius: 46,
-            background: ogColors.cream,
-          }}
-        >
-          {logo ? (
-            <img width={150} height={150} src={logo} alt="" style={{ objectFit: "contain" }} />
-          ) : (
-            <BrandMark size={150} />
-          )}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 34,
-            fontFamily: ogFonts.body,
-            fontWeight: 700,
-            fontSize: 20,
-            letterSpacing: 6,
-            color: ogColors.paper,
-          }}
-        >
-          LINGUA RAKYAT
-        </div>
-        <div
-          style={{
-            display: "flex",
-            marginTop: 14,
+            width: 348,
+            justifyContent: "center",
+            marginTop: 22,
             fontFamily: ogFonts.body,
             fontWeight: 400,
-            fontSize: 20,
-            letterSpacing: 3,
+            fontSize: 21,
+            letterSpacing: 5,
             color: ogColors.sage,
           }}
         >
@@ -330,6 +323,8 @@ export function OgAside({ tag, logo }: { tag: string; logo?: string | null }) {
             display: "flex",
             position: "absolute",
             bottom: 40,
+            width: 348,
+            justifyContent: "center",
             fontFamily: ogFonts.body,
             fontSize: 17,
             letterSpacing: 3,
@@ -356,7 +351,13 @@ export function OgKicker({
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
       {logo ? (
-        <img width={46} height={46} src={logo} alt="" style={{ borderRadius: 10 }} />
+        <img
+          width={46}
+          height={46}
+          src={logo}
+          alt=""
+          style={{ width: 46, height: 46, borderRadius: 10 }}
+        />
       ) : (
         <div style={{ display: "flex", width: 14, height: 14, background: ogColors.accent }} />
       )}

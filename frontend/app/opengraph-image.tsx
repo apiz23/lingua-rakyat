@@ -21,7 +21,7 @@ export default async function OpengraphImage() {
 
   return new ImageResponse(
     (
-      <OgShell aside={<OgAside tag="EN · BM · ZH" logo={logo} />}>
+      <OgShell aside={<OgAside tag="EN · BM · ZH" />}>
         <OgKicker label="LINGUA RAKYAT" right="Malaysia · GovTech" logo={logo} />
 
         <div style={{ display: "flex", flexDirection: "column" }}>
