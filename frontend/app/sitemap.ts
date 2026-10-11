@@ -1,23 +1,25 @@
-import { MetadataRoute } from "next"
+import type { MetadataRoute } from "next"
+
+const BASE_URL = "https://lingua-rakyat.my"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: "https://lingua-rakyat.my",
+      url: BASE_URL,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 1,
     },
     {
-      url: "https://lingua-rakyat.my/about",
+      url: `${BASE_URL}/about`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.8,
+      priority: 0.6,
     },
     {
-      url: "https://lingua-rakyat.my/workspace",
+      url: `${BASE_URL}/results`,
       lastModified: new Date(),
-      changeFrequency: "weekly",
+      changeFrequency: "monthly",
       priority: 0.5,
     },
   ]

@@ -1,169 +1,153 @@
 import { ImageResponse } from "next/og"
-import { readFile } from "node:fs/promises"
-import { join } from "node:path"
+
 import { getShare } from "@/lib/api"
+import {
+  OgAside,
+  OgChip,
+  OgKicker,
+  OgShell,
+  loadBrandFonts,
+  loadBrandLogo,
+  ogColors,
+  ogFonts,
+} from "@/lib/og"
 import { plainExcerpt } from "./share-text"
 
-export const alt = "Shared answer from Lingua Rakyat"
+export const alt = "Shared answer on Lingua Rakyat — grounded in the source document, with sources cited."
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
+export const revalidate = 300
 
-const GREEN = "#14532d"
-const PAPER = "#f5f3ec"
-const MINT = "#bbf7d0"
-const AMBER = "#d97706"
+type ShareImageProps = { params: Promise<{ slug: string }> }
 
-const CHIP_LABELS: Record<string, Record<string, string>> = {
-  en: { high: "High match", medium: "Medium match", low: "Low match — verify" },
-  ms: { high: "Padanan tinggi", medium: "Padanan sederhana", low: "Padanan rendah — sila sahkan" },
-  zh: { high: "匹配度高", medium: "匹配度中", low: "匹配度低 — 请核实" },
+const COPY = {
+  en: { kicker: "SHARED ANSWER", tag: "EN", disclaimer: "Grounded in the source document" },
+  ms: { kicker: "JAWAPAN DIKONGSI", tag: "BM", disclaimer: "Berdasarkan dokumen sumber" },
+  zh: { kicker: "SHARED ANSWER", tag: "ZH", disclaimer: "Berdasarkan dokumen sumber" },
+} as const
+
+function copyFor(language?: string) {
+  if (language?.startsWith("zh")) return COPY.zh
+  if (language?.startsWith("ms") || language?.startsWith("id")) return COPY.ms
+  return COPY.en
 }
 
-function chipFor(label: string, language: string) {
-  if (!label) return null
-  const lang = language.startsWith("zh") ? "zh" : language.startsWith("ms") || language.startsWith("id") ? "ms" : "en"
-  const text = CHIP_LABELS[lang][label] ?? CHIP_LABELS.en[label]
-  if (!text) return null
-  // high: mint on deep green; medium: paper on translucent; low: amber
-  const style =
-    label === "high"
-      ? { backgroundColor: "#166534", color: MINT }
-      : label === "low"
-        ? { backgroundColor: AMBER, color: "#1c1207" }
-        : { backgroundColor: "rgba(245,243,236,0.16)", color: PAPER }
-  return { text, style }
-}
+// Satori renders with latin brand faces only. If the shared text contains CJK,
+// fall back to latin copy instead of shipping tofu boxes into the preview card.
+const CJK = /[\u3400-\u9fff]/
+const hasCjk = (text: string) => CJK.test(text)
+const latinOnly = (text: string | null | undefined) =>
+  text && !hasCjk(text) ? text : null
 
-async function loadFont(): Promise<ArrayBuffer | null> {
-  try {
-    const data = await readFile(join(process.cwd(), "assets/bricolage-700.woff"))
-    return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
-  } catch (err) {
-    console.warn("[og] Bricolage font unavailable, using system sans:", err)
-    return null // fall back to system sans — never fail the image
-  }
-}
-
-export default async function Image({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+export default async function OpengraphImage({ params }: ShareImageProps) {
+  const [fonts, logo] = await Promise.all([loadBrandFonts(), loadBrandLogo()])
   const { slug } = await params
-  const [data, font] = await Promise.all([getShare(slug), loadFont()])
+  const data = await getShare(slug)
 
-  const question = data ? plainExcerpt(data.question, 90) : "Shared answer"
-  const answer = data ? plainExcerpt(data.answer, 200) : ""
-  const agency = data?.agency ?? ""
-  const chip = data ? chipFor(data.confidence_label ?? "", data.language ?? "en") : null
-  const topSource = data?.sources?.[0]
-  const docName = topSource?.doc_name ? topSource.doc_name.replace(/\.pdf$/i, "") : ""
-  const page = topSource?.page_start
+  const copy = copyFor(data?.language)
+  const rawQuestion = data?.question ?? ""
+  const rawAnswer = data?.answer ?? ""
+  const cjk = hasCjk(rawQuestion) || hasCjk(rawAnswer)
+
+  const question = cjk
+    ? "Your question, answered in plain language"
+    : plainExcerpt(
+        rawQuestion || "Your question about a government document",
+        82
+      )
+  const answer = cjk
+    ? "Lingua Rakyat answers from the official PDF itself and lists the sources behind the answer."
+    : plainExcerpt(
+        rawAnswer ||
+          "A plain-language answer, grounded in the official PDF and cited to its sources.",
+        130
+      )
+  const docName = latinOnly(data?.sources?.[0]?.doc_name?.replace(/\.pdf$/i, ""))
+  const agency = latinOnly(data?.agency)
+  const confidence =
+    data?.confidence_label === "high"
+      ? data.language?.startsWith("ms")
+        ? "Padanan tinggi"
+        : "High match"
+      : data?.confidence_label === "low"
+        ? data.language?.startsWith("ms")
+          ? "Sila sahkan"
+          : "Verify"
+        : null
+
+  const chips = [
+    agency ? plainExcerpt(agency, 20) : null,
+    docName ? plainExcerpt(docName, 24) : null,
+    confidence,
+  ].filter(Boolean) as string[]
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          backgroundColor: GREEN,
-          padding: "56px 72px",
-          color: "#ffffff",
-          fontFamily: font ? "Bricolage" : "sans-serif",
-        }}
-      >
-        {/* Top row: wordmark + agency badge */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: 1, display: "flex" }}>
-            Lingua Rakyat
-          </div>
-          {agency ? (
-            <div
-              style={{
-                display: "flex",
-                fontSize: 26,
-                fontWeight: 700,
-                padding: "10px 26px",
-                borderRadius: 999,
-                backgroundColor: PAPER,
-                color: GREEN,
-              }}
-            >
-              {agency}
-            </div>
-          ) : null}
-        </div>
+      <OgShell aside={<OgAside tag={copy.tag} logo={logo} />}>
+        <OgKicker label={copy.kicker} right="Lingua Rakyat" logo={logo} />
 
-        {/* Middle: question label + question + answer excerpt */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           <div
             style={{
-              fontSize: 22,
-              letterSpacing: 4,
-              textTransform: "uppercase",
-              color: MINT,
               display: "flex",
+              maxWidth: 660,
+              fontFamily: ogFonts.display,
+              fontWeight: 700,
+              fontSize: 52,
+              lineHeight: "54px",
+              letterSpacing: -1,
+              color: ogColors.ink,
             }}
           >
             {question}
           </div>
           <div
             style={{
-              fontSize: answer.length > 120 ? 40 : 48,
-              fontWeight: 700,
-              lineHeight: 1.25,
-              color: PAPER,
               display: "flex",
+              marginTop: 22,
+              maxWidth: 660,
+              fontFamily: ogFonts.body,
+              fontWeight: 400,
+              fontSize: 26,
+              lineHeight: "39px",
+              color: ogColors.inkSoft,
             }}
           >
-            {answer || question}
+            {answer}
           </div>
         </div>
 
-        {/* Bottom row: doc pill + chip + domain */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            {docName ? (
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 24,
-                  padding: "10px 22px",
-                  borderRadius: 999,
-                  backgroundColor: "rgba(245,243,236,0.14)",
-                  color: PAPER,
-                }}
-              >
-                {page ? `${docName} · p.${page}` : docName}
-              </div>
-            ) : null}
-            {chip ? (
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 24,
-                  fontWeight: 700,
-                  padding: "10px 22px",
-                  borderRadius: 999,
-                  ...chip.style,
-                }}
-              >
-                {chip.text}
-              </div>
-            ) : null}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            paddingTop: 20,
+            borderTop: `2px solid ${ogColors.greenLine}`,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              fontFamily: ogFonts.body,
+              fontWeight: 700,
+              fontSize: 17,
+              letterSpacing: 4,
+              color: ogColors.inkSoft,
+            }}
+          >
+            {copy.disclaimer.toUpperCase()}
           </div>
-          <div style={{ display: "flex", fontSize: 26, color: MINT }}>lingua-rakyat.my</div>
+          {chips.length > 0 ? (
+            <div style={{ display: "flex", gap: 10 }}>
+              {chips.map((chip) => (
+                <OgChip key={chip} label={chip} />
+              ))}
+            </div>
+          ) : null}
         </div>
-      </div>
+      </OgShell>
     ),
-    {
-      ...size,
-      fonts: font
-        ? [{ name: "Bricolage", data: font, weight: 700 as const, style: "normal" as const }]
-        : undefined,
-    }
+    { ...size, fonts }
   )
 }

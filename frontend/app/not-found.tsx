@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 
 export const metadata: Metadata = {
   title: "404 – Page Not Found",
+  description: "This route does not exist. Return to the Lingua Rakyat workspace.",
 }
 
 export default function NotFound() {
