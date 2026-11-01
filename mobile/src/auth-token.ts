@@ -9,12 +9,9 @@ export function setAuthTokenGetter(fn: TokenGetter | null) {
   tokenGetter = fn
 }
 
-/** Clear the token getter — called when the backend rejects the token (401)
- *  so future requests fall back to anonymous mode. */
-export function clearAuthToken() {
-  tokenGetter = null
-}
-
+/** Returns the current Clerk bearer header, or an empty object when the app
+ *  has no session. A rejected token must surface as reauthentication — never
+ *  as a silent downgrade to anonymous access. */
 export async function authHeader(): Promise<Record<string, string>> {
   if (!tokenGetter) return {}
   try {
