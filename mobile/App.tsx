@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Image,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -13,7 +12,6 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context"
-import { useColorScheme } from "react-native"
 import { StatusBar } from "expo-status-bar"
 import { ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo"
 import { tokenCache } from "@clerk/clerk-expo/token-cache"
@@ -29,26 +27,13 @@ import * as SplashScreen from "expo-splash-screen"
 import { Document, listDocuments } from "./src/api"
 import { setAuthTokenGetter } from "./src/auth-token"
 import { AppLanguage, COPY, LANGUAGE_LABEL, NEXT_LANGUAGE } from "./src/i18n"
-import {
-  Palette,
-  ThemeMode,
-  ThemeProvider,
-  fonts,
-  isDarkPalette,
-  radius,
-  resolvePalette,
-  spacing,
-} from "./src/theme"
+import { Palette, ThemeProvider, fonts, palette, spacing } from "./src/theme"
 import ChatScreen from "./src/screens/ChatScreen"
 import ProfileScreen from "./src/screens/ProfileScreen"
-import Sidebar from "./src/components/Sidebar"
 
 const logo = require("./assets/splash-icon.png")
 
-// Completes the pending OAuth browser session when the app regains focus.
 WebBrowser.maybeCompleteAuthSession()
-
-// Hold the native splash (Lingua Rakyat logo) until fonts and identity load.
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
 const CLERK_PUBLISHABLE_KEY =
@@ -58,8 +43,6 @@ function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-// Feeds Clerk's session token to the plain-fetch API client (src/api.ts),
-// mirroring the web app's auth-token bridge.
 function AuthTokenBridge() {
   const { getToken, isSignedIn } = useAuth()
   useEffect(() => {
@@ -69,9 +52,13 @@ function AuthTokenBridge() {
   return null
 }
 
-
 function Root() {
-  const systemScheme = useColorScheme()
+  const { user, isLoaded, isSignedIn } = useUser()
+  if (!isLoaded || (isSignedIn && !user?.id)) return null
+  return <ActorRoot key={isSignedIn ? `user:${user?.id}` : "signed-out"} />
+}
+
+function ActorRoot() {
   const insets = useSafeAreaInsets()
 
   const [fontsLoaded, fontError] = useFonts({
@@ -81,21 +68,19 @@ function Root() {
   })
 
   const { user } = useUser()
-  const [themeMode, setThemeMode] = useState<ThemeMode>("system")
+  const { isSignedIn } = useAuth()
   const [language, setLanguage] = useState<AppLanguage>("en")
   const [anonUserId, setAnonUserId] = useState("")
   const [sessionId, setSessionId] = useState("")
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [docs, setDocs] = useState<Document[]>([])
   const [docsLoading, setDocsLoading] = useState(true)
   const [mentionDoc, setMentionDoc] = useState<Document | null>(null)
+  const [anonymousAccepted, setAnonymousAccepted] = useState(false)
 
-  const c = resolvePalette(themeMode, systemScheme)
+  const c = palette
   const styles = useMemo(() => createStyles(c), [c])
 
-  // Anonymous identity, workspace session, and language preference —
-  // persisted across launches.
   useEffect(() => {
     AsyncStorage.getItem("lr-mobile-user-id").then((stored) => {
       if (stored) {
@@ -118,11 +103,6 @@ function Root() {
     AsyncStorage.getItem("lr-mobile-language").then((stored) => {
       if (stored === "ms" || stored === "en" || stored === "zh") {
         setLanguage(stored)
-      }
-    })
-    AsyncStorage.getItem("lr-mobile-theme").then((stored) => {
-      if (stored === "light" || stored === "dark" || stored === "system") {
-        setThemeMode(stored)
       }
     })
   }, [])
@@ -151,32 +131,16 @@ function Root() {
     applyLanguage(NEXT_LANGUAGE[language])
   }
 
-  const toggleTheme = () => {
-    const next: ThemeMode =
-      themeMode === "system"
-        ? systemScheme === "dark"
-          ? "light"
-          : "dark"
-        : themeMode === "dark"
-          ? "light"
-          : "system"
-    setThemeMode(next)
-    AsyncStorage.setItem("lr-mobile-theme", next)
-  }
-
   const newChat = () => {
     const next = makeId("session")
     AsyncStorage.setItem("lr-mobile-session", next)
     setSessionId(next)
     setMentionDoc(null)
-    setDrawerOpen(false)
   }
 
   const copy = COPY[language]
   const readyDocs = docs.filter((d) => d.status === "ready")
-  // Signed-in citizens keep one history across web + mobile via the Clerk
-  // user id; everyone else stays on the device-local anonymous id.
-  const userId = user?.id ?? anonUserId
+  const userId = isSignedIn ? (user?.id ?? "") : anonUserId
 
   const appReady = (fontsLoaded || !!fontError) && !!userId && !!sessionId
 
@@ -196,97 +160,90 @@ function Root() {
   }
 
   return (
-    <ThemeProvider mode={themeMode}>
+    <ThemeProvider>
       <View style={[styles.root, { paddingTop: insets.top }]}>
-        <StatusBar style={isDarkPalette(c) ? "light" : "dark"} />
+        <StatusBar style="dark" />
 
         <View style={styles.header}>
-        <Pressable
-          onPress={() => setDrawerOpen(true)}
-          style={styles.iconButton}
-          accessibilityLabel={copy.menu}
-          hitSlop={8}
-        >
-          <Text style={styles.menuIcon}>☰</Text>
-        </Pressable>
+          <View style={styles.brandRow}>
+            <Image source={logo} style={styles.headerLogo} resizeMode="contain" />
+            <Text style={styles.appName} numberOfLines={1}>
+              {copy.appName}
+            </Text>
+          </View>
 
-        <View style={styles.brandRow}>
-          <Image source={logo} style={styles.headerLogo} resizeMode="contain" />
-          <Text style={styles.appName} numberOfLines={1}>
-            {copy.appName}
-          </Text>
+          <Pressable
+            onPress={newChat}
+            style={styles.headerButton}
+            accessibilityLabel={copy.newChat}
+            hitSlop={8}
+          >
+            <Text style={styles.headerButtonText}>+</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={toggleLanguage}
+            style={styles.langButton}
+            accessibilityLabel={LANGUAGE_LABEL[NEXT_LANGUAGE[language]]}
+          >
+            <Text style={styles.langText}>
+              {LANGUAGE_LABEL[NEXT_LANGUAGE[language]]}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setProfileOpen(true)}
+            style={styles.headerButton}
+            accessibilityLabel={copy.profileTab}
+            hitSlop={8}
+          >
+            {isSignedIn && user?.imageUrl ? (
+              <Image source={{ uri: user.imageUrl }} style={styles.headerAvatar} />
+            ) : (
+              <Text style={styles.icon}>👤</Text>
+            )}
+          </Pressable>
         </View>
 
-        <Pressable
-          onPress={toggleLanguage}
-          style={styles.langButton}
-          accessibilityLabel={LANGUAGE_LABEL[NEXT_LANGUAGE[language]]}
-        >
-          <Text style={styles.langText}>
-            {LANGUAGE_LABEL[NEXT_LANGUAGE[language]]}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={toggleTheme}
-          style={styles.iconButton}
-          accessibilityLabel="Toggle theme"
-          hitSlop={8}
-        >
-          <Text style={styles.themeIcon}>
-            {themeMode === "system"
-              ? "◐"
-              : themeMode === "dark"
-                ? "☀"
-                : "●"}
-          </Text>
-        </Pressable>
-      </View>
-
-      <ChatScreen
-        copy={copy}
-        readyDocs={readyDocs}
-        userId={userId}
-        sessionId={sessionId}
-        mentionDoc={mentionDoc}
-        onMentionDoc={setMentionDoc}
-      />
-
-      <Modal
-        visible={profileOpen}
-        animationType="slide"
-        onRequestClose={() => setProfileOpen(false)}
-      >
-        <ProfileScreen
+        {!isSignedIn && !anonymousAccepted && (
+          <Pressable accessibilityRole="button" onPress={() => setAnonymousAccepted(true)} style={styles.headerButton}>
+            <Text>{copy.continueWithoutSaving}</Text>
+          </Pressable>
+        )}
+        <ChatScreen
+          key={`${userId}:${sessionId}`}
           copy={copy}
-          language={language}
-          onSetLanguage={applyLanguage}
-          themeMode={themeMode}
-          onSetTheme={(mode) => {
-            setThemeMode(mode)
-            AsyncStorage.setItem("lr-mobile-theme", mode)
-          }}
-          onClose={() => setProfileOpen(false)}
+          readyDocs={readyDocs}
+          docsLoading={docsLoading}
+          userId={userId}
+          isSignedIn={!!isSignedIn}
+          canAsk={!!isSignedIn || anonymousAccepted}
+          anonUserId={anonUserId}
+          sessionId={sessionId}
+          mentionDoc={mentionDoc}
+          onMentionDoc={setMentionDoc}
+          onRequestSignIn={() => setProfileOpen(true)}
         />
-      </Modal>
 
-      <Sidebar
-        visible={drawerOpen}
-        copy={copy}
-        docs={docs}
-        loading={docsLoading}
-        onClose={() => setDrawerOpen(false)}
-        onNewChat={newChat}
-        onPickDoc={(doc) => {
-          setMentionDoc(doc)
-          setDrawerOpen(false)
-        }}
-        onRefresh={loadDocs}
-        onOpenProfile={() => {
-          setDrawerOpen(false)
-          setProfileOpen(true)
-        }}
-      />
+        <Modal
+          visible={profileOpen}
+          animationType="slide"
+          onRequestClose={() => setProfileOpen(false)}
+        >
+          <ProfileScreen
+            copy={copy}
+            language={language}
+            onSetLanguage={applyLanguage}
+            onClose={() => setProfileOpen(false)}
+            userId={userId}
+            onSelectSession={(sid) => {
+              AsyncStorage.setItem("lr-mobile-session", sid)
+              setSessionId(sid)
+              setMentionDoc(null)
+              setProfileOpen(false)
+            }}
+          />
+        </Modal>
       </View>
     </ThemeProvider>
   )
@@ -323,20 +280,20 @@ const createStyles = (c: Palette) =>
     header: {
       flexDirection: "row",
       alignItems: "center",
-      gap: spacing.md,
+      gap: spacing.sm,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
       backgroundColor: c.background,
     },
-    iconButton: {
+    headerButton: {
       padding: spacing.xs,
     },
-    menuIcon: {
-      fontFamily: fonts.body,
+    headerButtonText: {
+      fontFamily: fonts.bodyBold,
       fontSize: 20,
-      color: c.foreground,
+      color: c.primary,
     },
     brandRow: {
       flex: 1,
@@ -354,11 +311,17 @@ const createStyles = (c: Palette) =>
       fontSize: 18,
       color: c.primary,
     },
+    headerAvatar: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: c.muted,
+    },
     langButton: {
       borderWidth: 1,
       borderColor: c.border,
       backgroundColor: c.card,
-      borderRadius: radius,
+      borderRadius: 8,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
     },
@@ -367,9 +330,7 @@ const createStyles = (c: Palette) =>
       fontSize: 12,
       color: c.mutedForeground,
     },
-    themeIcon: {
-      fontFamily: fonts.body,
-      fontSize: 20,
-      color: c.foreground,
+    icon: {
+      fontSize: 18,
     },
   })

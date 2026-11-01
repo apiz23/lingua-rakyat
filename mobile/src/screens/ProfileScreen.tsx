@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import {
+  ActivityIndicator,
   Image,
   Platform,
   Pressable,
@@ -14,7 +15,11 @@ import * as AuthSession from "expo-auth-session"
 import { AppLanguage, Copy, LANGUAGE_LABEL } from "../i18n"
 import { Palette, fonts, radius, spacing, useTheme } from "../theme"
 import { GitHubLogo, GoogleLogo } from "../components/ProviderLogos"
-import { ThemeMode } from "../theme"
+import {
+  ConversationSummary,
+  listConversations,
+  clearChatHistory,
+} from "../api"
 
 const logo = require("../../assets/splash-icon.png")
 
@@ -32,27 +37,57 @@ interface Props {
   copy: Copy
   language: AppLanguage
   onSetLanguage: (lang: AppLanguage) => void
-  themeMode: ThemeMode
-  onSetTheme: (mode: ThemeMode) => void
   onClose: () => void
+  userId: string
+  onSelectSession: (sessionId: string) => void
 }
 
 export default function ProfileScreen({
   copy,
   language,
   onSetLanguage,
-  themeMode,
-  onSetTheme,
   onClose,
+  userId,
+  onSelectSession,
 }: Props) {
   const c = useTheme()
   const insets = useSafeAreaInsets()
   const styles = useMemo(() => createStyles(c), [c])
   const [authError, setAuthError] = useState(false)
-
+  const [conversations, setConversations] = useState<ConversationSummary[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyNeedsSignIn, setHistoryNeedsSignIn] = useState(false)
   const { user } = useUser()
   const { signOut, isSignedIn } = useAuth()
   const { startSSOFlow } = useSSO()
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      setConversations([])
+      setHistoryNeedsSignIn(false)
+      setHistoryLoading(false)
+      return
+    }
+    let active = true
+    setHistoryLoading(true)
+    listConversations(userId)
+      .then((list) => {
+        if (active) setConversations(list)
+      })
+      .catch((error: unknown) => {
+        if (!active) return
+        setConversations([])
+        setHistoryNeedsSignIn(
+          error instanceof Error && error.message === "HistoryAuthorizationError",
+        )
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [userId, isSignedIn])
 
   const signInWith = async (strategy: "oauth_google" | "oauth_github") => {
     setAuthError(false)
@@ -73,8 +108,6 @@ export default function ProfileScreen({
     user?.fullName ?? user?.username ?? user?.primaryEmailAddress?.emailAddress
   const email = user?.primaryEmailAddress?.emailAddress
 
-  // Android's Modal already renders below the status bar; only iOS
-  // full-screen modals draw underneath it.
   const topInset = Platform.OS === "ios" ? insets.top : 0
 
   return (
@@ -141,7 +174,7 @@ export default function ProfileScreen({
               onPress={() => signOut()}
               accessibilityLabel={copy.signOut}
             >
-              <Text style={styles.rowIcon}>⎋</Text>
+              <Text style={styles.rowIconDanger}>⎋</Text>
               <Text style={[styles.rowLabel, styles.rowLabelDanger]}>
                 {copy.signOut}
               </Text>
@@ -224,46 +257,56 @@ export default function ProfileScreen({
           })}
         </View>
 
-        {/* Appearance */}
-        <Text style={styles.sectionTitle}>{copy.appearance ?? "Appearance"}</Text>
+        {/* Chat History */}
+        <Text style={styles.sectionTitle}>{copy.chatHistory}</Text>
         <View style={styles.card}>
-          {(["system", "light", "dark"] as ThemeMode[]).map((mode, i) => {
-            const active = mode === themeMode
-            const label =
-              mode === "system"
-                ? (copy.themeSystem ?? "System")
-                : mode === "light"
-                  ? (copy.themeLight ?? "Light")
-                  : (copy.themeDark ?? "Dark")
-            return (
-              <React.Fragment key={mode}>
+          {historyLoading ? (
+            <View style={styles.historyLoading}>
+              <ActivityIndicator size="small" color={c.primary} />
+            </View>
+          ) : conversations.length === 0 ? (
+            <View style={styles.historyEmpty}>
+              <Text style={styles.historyEmptyText}>
+                {!isSignedIn || historyNeedsSignIn
+                  ? language === "ms"
+                    ? "Log masuk untuk melihat sejarah sembang tersimpan"
+                    : "Sign in to view saved chat history"
+                  : copy.chatHistoryEmpty}
+              </Text>
+            </View>
+          ) : (
+            conversations.map((conv, i) => (
+              <React.Fragment key={conv.session_id}>
                 {i > 0 ? <View style={styles.rowDivider} /> : null}
                 <Pressable
                   style={({ pressed }) => [
                     styles.row,
                     pressed && styles.rowPressed,
                   ]}
-                  onPress={() => onSetTheme(mode)}
-                  accessibilityLabel={label}
-                  accessibilityState={{ selected: active }}
+                  onPress={() => onSelectSession(conv.session_id)}
+                  accessibilityLabel={
+                    conv.custom_title || conv.title
+                  }
                 >
-                  <Text style={styles.rowIcon}>
-                    {mode === "system" ? "◐" : mode === "light" ? "☀" : "●"}
-                  </Text>
-                  <Text
-                    style={[styles.rowLabel, active && styles.rowLabelActive]}
-                  >
-                    {label}
-                  </Text>
-                  <View
-                    style={[styles.radio, active && styles.radioActive]}
-                  >
-                    {active ? <View style={styles.radioDot} /> : null}
+                  <View style={styles.historyIconBox}>
+                    <Text style={styles.historyIcon}>💬</Text>
                   </View>
+                  <View style={styles.historyTextWrap}>
+                    <Text
+                      style={styles.rowLabel}
+                      numberOfLines={1}
+                    >
+                      {conv.custom_title || conv.title}
+                    </Text>
+                    <Text style={styles.historyMeta} numberOfLines={1}>
+                      {conv.count} {copy.chatHistoryMessages}
+                    </Text>
+                  </View>
+                  <Text style={styles.rowChevron}>›</Text>
                 </Pressable>
               </React.Fragment>
-            )
-          })}
+            ))
+          )}
         </View>
 
         {/* Footer */}
@@ -389,7 +432,7 @@ const createStyles = (c: Palette) =>
       width: 28,
       alignItems: "center",
     },
-    rowIcon: {
+    rowIconDanger: {
       width: 28,
       textAlign: "center",
       fontFamily: fonts.body,
@@ -446,6 +489,36 @@ const createStyles = (c: Palette) =>
       color: c.destructive,
       marginTop: spacing.sm,
       marginLeft: spacing.xs,
+    },
+    historyLoading: {
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+    },
+    historyEmpty: {
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+    },
+    historyEmptyText: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: c.mutedForeground,
+    },
+    historyIconBox: {
+      width: 28,
+      alignItems: "center",
+    },
+    historyIcon: {
+      fontSize: 16,
+    },
+    historyTextWrap: {
+      flex: 1,
+      minWidth: 0,
+    },
+    historyMeta: {
+      fontFamily: fonts.body,
+      fontSize: 11,
+      color: c.mutedForeground,
+      marginTop: 1,
     },
     footer: {
       alignItems: "center",

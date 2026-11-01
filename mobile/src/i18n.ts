@@ -40,10 +40,14 @@ export type Copy = {
   signInPrompt: string
   language: string
   version: string
-  appearance: string
-  themeSystem: string
-  themeLight: string
-  themeDark: string
+  chatHistory: string
+  chatHistoryEmpty: string
+  chatHistoryError: string
+  chatHistoryMessages: string
+  deleteHistory: string
+  sessionExpired: string
+  signIn: string
+  continueWithoutSaving: string
 }
 
 export const COPY: Record<AppLanguage, Copy> = {
@@ -86,10 +90,14 @@ export const COPY: Record<AppLanguage, Copy> = {
       "Log masuk untuk simpan sejarah sembang anda merentas peranti.",
     language: "Bahasa",
     version: "Versi",
-    appearance: "Penampilan",
-    themeSystem: "Sistem",
-    themeLight: "Cahaya",
-    themeDark: "Gelap",
+    chatHistory: "Sejarah Sembang",
+    chatHistoryEmpty: "Tiada sejarah sembang lagi",
+    chatHistoryError: "Gagal memuatkan sejarah",
+    chatHistoryMessages: "mesej",
+    deleteHistory: "Padam",
+    sessionExpired: "Sesi anda telah tamat. Log masuk semula untuk meneruskan.",
+    signIn: "Log masuk",
+    continueWithoutSaving: "Teruskan tanpa menyimpan",
   },
   en: {
     appName: "Lingua Rakyat",
@@ -129,10 +137,14 @@ export const COPY: Record<AppLanguage, Copy> = {
     signInPrompt: "Sign in to keep your chat history across devices.",
     language: "Language",
     version: "Version",
-    appearance: "Appearance",
-    themeSystem: "System",
-    themeLight: "Light",
-    themeDark: "Dark",
+    chatHistory: "Chat History",
+    chatHistoryEmpty: "No chat history yet",
+    chatHistoryError: "Failed to load history",
+    chatHistoryMessages: "messages",
+    deleteHistory: "Delete",
+    sessionExpired: "Your session has expired. Sign in again to continue.",
+    signIn: "Sign in",
+    continueWithoutSaving: "Continue without saving",
   },
   zh: {
     appName: "Lingua Rakyat",
@@ -172,10 +184,14 @@ export const COPY: Record<AppLanguage, Copy> = {
     signInPrompt: "登录以在多设备间保存聊天记录。",
     language: "语言",
     version: "版本",
-    appearance: "外观",
-    themeSystem: "系统",
-    themeLight: "浅色",
-    themeDark: "深色",
+    chatHistory: "聊天记录",
+    chatHistoryEmpty: "暂无聊天记录",
+    chatHistoryError: "加载记录失败",
+    chatHistoryMessages: "条消息",
+    deleteHistory: "删除",
+    sessionExpired: "您的会话已过期。请重新登录以继续。",
+    signIn: "登录",
+    continueWithoutSaving: "不保存并继续",
   },
 }
 

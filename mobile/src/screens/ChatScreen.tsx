@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
+  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +14,7 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
+  AuthRequiredError,
   ChatStreamEvent,
   Document,
   RateLimitError,
@@ -36,23 +38,36 @@ interface Message {
 interface Props {
   copy: Copy
   readyDocs: Document[]
+  docsLoading: boolean
   userId: string
+  isSignedIn: boolean
+  canAsk: boolean
+  anonUserId: string
   sessionId: string
   mentionDoc: Document | null
   onMentionDoc: (doc: Document | null) => void
+  onRequestSignIn: () => void
 }
 
 function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+const PICKER_MAX_HEIGHT = 260
+const MENTION_MAX_HEIGHT = 200
+
 export default function ChatScreen({
   copy,
   readyDocs,
+  docsLoading,
   userId,
+  isSignedIn,
+  canAsk,
+  anonUserId,
   sessionId,
   mentionDoc,
   onMentionDoc,
+  onRequestSignIn,
 }: Props) {
   const c = useTheme()
   const insets = useSafeAreaInsets()
@@ -70,27 +85,34 @@ export default function ChatScreen({
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [waitSeconds, setWaitSeconds] = useState(0)
+  const [docPickerOpen, setDocPickerOpen] = useState(false)
+  const [authRequired, setAuthRequired] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
+  const requestRef = useRef<AbortController | null>(null)
+  const generationRef = useRef(0)
 
-  // Scroll to bottom when keyboard opens so the composer stays visible.
+  useEffect(() => {
+    return () => {
+      generationRef.current += 1
+      requestRef.current?.abort()
+      requestRef.current = null
+    }
+  }, [userId, sessionId])
+
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () => {
+      setDocPickerOpen(false)
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)
     })
     return () => showSub.remove()
   }, [])
 
-  // Chat-first: the anchored doc (required by the backend) is the pinned
-  // mention when set, otherwise the first ready doc. Retrieval still spans
-  // every ready doc unless a mention pins it down.
   const anchorDoc = mentionDoc ?? readyDocs[0] ?? null
 
-  // New chat (session change) clears the transcript.
   useEffect(() => {
     setMessages([])
   }, [sessionId])
 
-  // Rate-limit countdown.
   useEffect(() => {
     if (waitSeconds <= 0) return
     const t = setInterval(
@@ -100,7 +122,7 @@ export default function ChatScreen({
     return () => clearInterval(t)
   }, [waitSeconds > 0])
 
-  // "@" mention detection at the end of the input.
+  // "@" mention detection
   const mentionQuery = useMemo(() => {
     const match = input.match(/@([^\s@]*)$/)
     return match && readyDocs.length > 0 ? match[1] : null
@@ -111,12 +133,17 @@ export default function ChatScreen({
     const q = mentionQuery.toLowerCase()
     return readyDocs
       .filter((d) => d.name.toLowerCase().includes(q))
-      .slice(0, 5)
+      .slice(0, 8)
   }, [mentionQuery, readyDocs])
 
   const selectMention = (doc: Document) => {
     onMentionDoc(doc)
     setInput((prev) => prev.replace(/@([^\s@]*)$/, "").trimEnd())
+  }
+
+  const selectFromPicker = (doc: Document) => {
+    onMentionDoc(doc)
+    setDocPickerOpen(false)
   }
 
   const updateMessage = (id: string, patch: Partial<Message>) => {
@@ -133,12 +160,19 @@ export default function ChatScreen({
 
   const submit = async (questionOverride?: string) => {
     const question = (questionOverride ?? input).trim()
-    if (!question || loading || !sessionId || waitSeconds > 0 || !anchorDoc)
+    if (!canAsk || !question || loading || !sessionId || waitSeconds > 0 || !anchorDoc)
       return
 
     setInput("")
+    setDocPickerOpen(false)
+    setAuthRequired(false)
     setLoading(true)
     const msgId = makeId()
+    requestRef.current?.abort()
+    const controller = new AbortController()
+    requestRef.current = controller
+    const generation = ++generationRef.current
+    const current = () => generationRef.current === generation && !controller.signal.aborted
     setMessages((prev) => [
       ...prev,
       { id: msgId, question, answer: "", sources: [], streaming: true },
@@ -149,7 +183,6 @@ export default function ChatScreen({
       .slice(-3)
       .map((m) => ({ question: m.question, answer: m.answer.slice(0, 400) }))
 
-    // Mention pins retrieval to one doc; otherwise span the whole library.
     const documentIds = mentionDoc
       ? [mentionDoc.id]
       : readyDocs.length > 1
@@ -160,14 +193,18 @@ export default function ChatScreen({
       await askQuestionStream(
         {
           userId,
+          anonUserId,
           documentId: anchorDoc.id,
           documentName: anchorDoc.name,
           sessionId,
           question,
           chatHistory,
           documentIds,
+          requireAuth: isSignedIn,
+          signal: controller.signal,
         },
         (event: ChatStreamEvent) => {
+          if (!current()) return
           if (event.type === "token") {
             appendAnswer(msgId, event.text)
           } else if (event.type === "complete") {
@@ -187,8 +224,7 @@ export default function ChatScreen({
           }
         }
       )
-      // Stream ended without a complete event (connection dropped): don't
-      // leave the bubble stuck on the typing indicator.
+      if (!current()) return
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msgId && m.streaming
@@ -201,7 +237,11 @@ export default function ChatScreen({
         )
       )
     } catch (e) {
-      if (e instanceof RateLimitError) {
+      if (!current()) return
+      if (e instanceof AuthRequiredError) {
+        setAuthRequired(true)
+        updateMessage(msgId, { streaming: false, error: copy.sessionExpired })
+      } else if (e instanceof RateLimitError) {
         setWaitSeconds(e.waitSeconds)
         updateMessage(msgId, { streaming: false, error: copy.rateLimited })
       } else {
@@ -211,14 +251,42 @@ export default function ChatScreen({
         })
       }
     } finally {
-      setLoading(false)
+      if (current()) { setLoading(false); requestRef.current = null }
     }
   }
 
-  // Typing stays enabled while an answer streams (like ChatGPT); only
-  // sending is gated on loading.
-  const inputDisabled = !sessionId || waitSeconds > 0 || !anchorDoc
+  const inputDisabled = !canAsk || !sessionId || waitSeconds > 0 || !anchorDoc
   const composerDisabled = inputDisabled || loading
+
+  const renderDocItem = ({ item }: { item: Document }) => {
+    const isSelected = item.id === mentionDoc?.id
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.pickerRow,
+          isSelected && styles.pickerRowSelected,
+          pressed && styles.pickerRowPressed,
+        ]}
+        onPress={() => selectFromPicker(item)}
+      >
+        <View style={styles.pickerDocInfo}>
+          {item.agency ? (
+            <Text style={styles.pickerAgency} numberOfLines={1}>
+              {item.agency}
+            </Text>
+          ) : null}
+          <Text style={styles.pickerDocName} numberOfLines={2}>
+            {item.name}
+          </Text>
+        </View>
+        {isSelected ? (
+          <Text style={styles.pickerCheck}>✓</Text>
+        ) : (
+          <Text style={styles.pickerChevron}>›</Text>
+        )}
+      </Pressable>
+    )
+  }
 
   return (
     <KeyboardAvoidingView
@@ -226,6 +294,7 @@ export default function ChatScreen({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0}
     >
+      {/* Chat messages */}
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -244,10 +313,17 @@ export default function ChatScreen({
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>{copy.appName}</Text>
             <Text style={styles.emptyTagline}>{copy.tagline}</Text>
-            <Text style={styles.emptyMeta}>
-              {readyDocs.length} {copy.readyDocsSuffix}
-              {readyDocs.length > 1 ? ` · ${copy.allDocsNote}` : ""}
-            </Text>
+            {docsLoading ? (
+              <View style={styles.emptyLoadingRow}>
+                <ActivityIndicator size="small" color={c.primary} />
+                <Text style={styles.emptyMeta}>Loading documents...</Text>
+              </View>
+            ) : (
+              <Text style={styles.emptyMeta}>
+                {readyDocs.length} {copy.readyDocsSuffix}
+                {readyDocs.length > 1 ? ` · ${copy.allDocsNote}` : ""}
+              </Text>
+            )}
             <Text style={styles.emptyHint}>{copy.emptyHint}</Text>
           </View>
         ) : null}
@@ -315,46 +391,143 @@ export default function ChatScreen({
         ))}
       </ScrollView>
 
+      {/* Document picker dropdown */}
+      {docPickerOpen ? (
+        <View style={styles.pickerContainer}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>
+              {copy.documents}
+              {docsLoading
+                ? ""
+                : readyDocs.length > 0
+                  ? ` · ${readyDocs.length}`
+                  : ""}
+            </Text>
+            <Pressable
+              onPress={() => setDocPickerOpen(false)}
+              hitSlop={8}
+              style={styles.pickerCloseBtn}
+            >
+              <Text style={styles.pickerClose}>✕</Text>
+            </Pressable>
+          </View>
+          {docsLoading ? (
+            <View style={styles.skeletonList}>
+              {[1, 2, 3].map((i) => (
+                <View key={i} style={styles.skeletonRow}>
+                  <View style={styles.skeletonBadge} />
+                  <View style={styles.skeletonTextBlock}>
+                    <View style={[styles.skeletonLine, { width: "70%" }]} />
+                    <View style={[styles.skeletonLine, { width: "45%" }]} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : readyDocs.length > 0 ? (
+            <FlatList
+              data={readyDocs}
+              keyExtractor={(d) => d.id}
+              renderItem={renderDocItem}
+              style={{ maxHeight: PICKER_MAX_HEIGHT }}
+              keyboardShouldPersistTaps="handled"
+              ItemSeparatorComponent={() => <View style={styles.pickerDivider} />}
+            />
+          ) : (
+            <View style={styles.pickerEmpty}>
+              <Text style={styles.pickerEmptyText}>{copy.noDocs}</Text>
+            </View>
+          )}
+        </View>
+      ) : null}
+
+      {/* @ mention panel — scrollable with indicator */}
+      {mentionQuery !== null ? (
+        <View style={styles.mentionPanel}>
+          <Text style={styles.mentionTitle}>{copy.mentionTitle}</Text>
+          {mentionMatches.length === 0 ? (
+            <Text style={styles.mentionEmpty}>{copy.mentionNoMatch}</Text>
+          ) : (
+            <View>
+              <ScrollView
+                style={{ maxHeight: MENTION_MAX_HEIGHT }}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                showsVerticalScrollIndicator
+              >
+                {mentionMatches.map((d) => (
+                  <Pressable
+                    key={d.id}
+                    style={styles.mentionRow}
+                    onPress={() => selectMention(d)}
+                  >
+                    <Text style={styles.mentionRowText} numberOfLines={1}>
+                      {d.agency ? `${d.agency} · ` : ""}
+                      {d.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              {mentionMatches.length >= 5 ? (
+                <View style={styles.scrollIndicator}>
+                  <Text style={styles.scrollIndicatorText}>↕ scroll</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+        </View>
+      ) : null}
+
+      {/* Pinned doc chip */}
+      {mentionDoc ? (
+        <View style={styles.pinnedRow}>
+          <Text style={styles.pinnedChip} numberOfLines={1}>
+            @{mentionDoc.name}
+          </Text>
+          <Pressable onPress={() => onMentionDoc(null)} hitSlop={8}>
+            <Text style={styles.pinnedClear}>✕</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {/* Composer */}
       <View
         style={[
           styles.composerArea,
-          { paddingBottom: Math.max(insets.bottom, spacing.sm) },
+          { paddingBottom: insets.bottom || spacing.sm },
         ]}
       >
-        {mentionQuery !== null ? (
-          <View style={styles.mentionPanel}>
-            <Text style={styles.mentionTitle}>{copy.mentionTitle}</Text>
-            {mentionMatches.length === 0 ? (
-              <Text style={styles.mentionEmpty}>{copy.mentionNoMatch}</Text>
-            ) : (
-              mentionMatches.map((d) => (
-                <Pressable
-                  key={d.id}
-                  style={styles.mentionRow}
-                  onPress={() => selectMention(d)}
-                >
-                  <Text style={styles.mentionRowText} numberOfLines={1}>
-                    {d.agency ? `${d.agency} · ` : ""}
-                    {d.name}
-                  </Text>
-                </Pressable>
-              ))
-            )}
-          </View>
-        ) : null}
-
-        {mentionDoc ? (
-          <View style={styles.pinnedRow}>
-            <Text style={styles.pinnedChip} numberOfLines={1}>
-              @{mentionDoc.name}
-            </Text>
-            <Pressable onPress={() => onMentionDoc(null)} hitSlop={8}>
-              <Text style={styles.pinnedClear}>✕</Text>
+        {authRequired ? (
+          <View style={styles.authBanner} accessibilityLiveRegion="polite">
+            <Text style={styles.authBannerText}>{copy.sessionExpired}</Text>
+            <Pressable
+              onPress={onRequestSignIn}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Text style={styles.authBannerAction}>{copy.signIn}</Text>
             </Pressable>
           </View>
         ) : null}
-
         <View style={styles.composer}>
+          <Pressable
+            style={[
+              styles.attachButton,
+              docsLoading && styles.attachButtonLoading,
+            ]}
+            onPress={() => {
+              Keyboard.dismiss()
+              setDocPickerOpen((prev) => !prev)
+            }}
+            disabled={docsLoading}
+            accessibilityLabel={copy.documents}
+          >
+            {docsLoading ? (
+              <ActivityIndicator size="small" color={c.primary} />
+            ) : (
+              <Text style={styles.attachIcon}>📄</Text>
+            )}
+          </Pressable>
+
           <TextInput
             style={styles.input}
             value={input}
@@ -423,6 +596,11 @@ const createStyles = (c: Palette) =>
       fontSize: 12,
       color: c.mutedForeground,
       textAlign: "center",
+    },
+    emptyLoadingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
     },
     emptyHint: {
       fontFamily: fonts.body,
@@ -534,18 +712,125 @@ const createStyles = (c: Palette) =>
       fontSize: 13,
       color: c.primary,
     },
-    composerArea: {
-      flexShrink: 0,
+
+    // ── Document picker dropdown ──
+    pickerContainer: {
+      backgroundColor: c.card,
       borderTopWidth: 1,
       borderTopColor: c.border,
-      backgroundColor: c.card,
     },
-    mentionPanel: {
-      borderBottomWidth: 1,
-      borderBottomColor: c.border,
+    pickerHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
-      gap: spacing.xs,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    pickerTitle: {
+      fontFamily: fonts.bodyBold,
+      fontSize: 11,
+      letterSpacing: 1,
+      textTransform: "uppercase",
+      color: c.mutedForeground,
+    },
+    pickerCloseBtn: {
+      padding: spacing.xs,
+    },
+    pickerClose: {
+      fontFamily: fonts.body,
+      fontSize: 16,
+      color: c.mutedForeground,
+    },
+    pickerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    pickerRowSelected: {
+      backgroundColor: c.highBg,
+    },
+    pickerRowPressed: {
+      backgroundColor: c.muted,
+    },
+    pickerDocInfo: {
+      flex: 1,
+      gap: 2,
+    },
+    pickerAgency: {
+      fontFamily: fonts.bodyBold,
+      fontSize: 9,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+      color: c.primary,
+    },
+    pickerDocName: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: c.foreground,
+      lineHeight: 18,
+    },
+    pickerCheck: {
+      fontFamily: fonts.bodyBold,
+      fontSize: 14,
+      color: c.primary,
+    },
+    pickerChevron: {
+      fontFamily: fonts.body,
+      fontSize: 18,
+      color: c.mutedForeground,
+    },
+    pickerDivider: {
+      height: 1,
+      backgroundColor: c.border,
+      marginLeft: spacing.lg,
+    },
+    pickerEmpty: {
+      padding: spacing.lg,
+      alignItems: "center",
+    },
+    pickerEmptyText: {
+      fontFamily: fonts.body,
+      fontSize: 13,
+      color: c.mutedForeground,
+    },
+
+    // ── Skeleton loading ──
+    skeletonList: {
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    skeletonRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    skeletonBadge: {
+      width: 32,
+      height: 12,
+      borderRadius: 4,
+      backgroundColor: c.muted,
+    },
+    skeletonTextBlock: {
+      flex: 1,
+      gap: 4,
+    },
+    skeletonLine: {
+      height: 10,
+      borderRadius: 4,
+      backgroundColor: c.muted,
+    },
+
+    // ── @ mention panel ──
+    mentionPanel: {
+      backgroundColor: c.card,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
     },
     mentionTitle: {
       fontFamily: fonts.bodyBold,
@@ -553,6 +838,7 @@ const createStyles = (c: Palette) =>
       letterSpacing: 1,
       textTransform: "uppercase",
       color: c.mutedForeground,
+      marginBottom: spacing.xs,
     },
     mentionEmpty: {
       fontFamily: fonts.body,
@@ -561,18 +847,35 @@ const createStyles = (c: Palette) =>
     },
     mentionRow: {
       paddingVertical: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
     },
     mentionRowText: {
       fontFamily: fonts.body,
       fontSize: 14,
       color: c.primary,
     },
+    scrollIndicator: {
+      alignItems: "center",
+      paddingVertical: spacing.xs,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border,
+    },
+    scrollIndicatorText: {
+      fontFamily: fonts.body,
+      fontSize: 10,
+      color: c.mutedForeground,
+      letterSpacing: 0.5,
+    },
+
+    // ── Pinned doc chip ──
     pinnedRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.sm,
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.sm,
+      backgroundColor: c.card,
     },
     pinnedChip: {
       flexShrink: 1,
@@ -590,11 +893,57 @@ const createStyles = (c: Palette) =>
       fontSize: 14,
       color: c.mutedForeground,
     },
+
+    // ── Composer ──
+    composerArea: {
+      flexShrink: 0,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+      backgroundColor: c.card,
+    },
+    authBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      backgroundColor: c.lowBg,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    authBannerText: {
+      flexShrink: 1,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: c.destructive,
+    },
+    authBannerAction: {
+      fontFamily: fonts.bodyBold,
+      fontSize: 12,
+      color: c.primary,
+    },
     composer: {
       flexDirection: "row",
       alignItems: "flex-end",
       gap: spacing.sm,
       padding: spacing.md,
+    },
+    attachButton: {
+      justifyContent: "center",
+      alignItems: "center",
+      width: 40,
+      height: 40,
+      borderRadius: radius,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.background,
+    },
+    attachButtonLoading: {
+      opacity: 0.6,
+    },
+    attachIcon: {
+      fontSize: 18,
     },
     input: {
       flex: 1,
@@ -603,7 +952,7 @@ const createStyles = (c: Palette) =>
       color: c.foreground,
       backgroundColor: c.background,
       borderWidth: 1,
-      borderColor: c.border,
+      borderColor: c.input,
       borderRadius: radius,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
