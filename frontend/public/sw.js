@@ -1,74 +1,40 @@
-const CACHE_NAME = "lingua-rakyat-offline-v1"
-const APP_SHELL = ["/", "/workspace", "/icons/android-chrome-512x512.png"]
+// This worker deliberately stores no pages, responses, or user data.
+const LEGACY_CACHE = "lingua-rakyat-offline-v1"
+const PROTOCOL_VERSION = "phase0b-2"
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-  )
+  event.waitUntil(self.skipWaiting())
 })
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
-      )
-      .then(() => self.clients.claim())
+    caches.delete(LEGACY_CACHE).then(async () => {
+      await self.clients.claim()
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+      for (const client of clients) client.postMessage({ type: "LR_OFFLINE_INVALIDATE", version: PROTOCOL_VERSION })
+    })
   )
 })
 
-function safeCachePut(request, response) {
-  // Cache API only supports http(s) requests — chrome-extension:, data:, etc.
-  // throw synchronously and would otherwise become an unhandled rejection.
-  if (!request.url.startsWith("http")) return
-  caches.open(CACHE_NAME).then((cache) => cache.put(request, response))
-}
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "LR_OFFLINE_CHECK" || !event.ports?.[0]) return
+  event.waitUntil(caches.has(LEGACY_CACHE).then((exists) => {
+    event.ports[0].postMessage({ type: "LR_OFFLINE_STATUS", version: PROTOCOL_VERSION, clean: !exists })
+  }).catch(() => {
+    event.ports[0].postMessage({ type: "LR_OFFLINE_STATUS", version: PROTOCOL_VERSION, clean: false })
+  }))
+})
 
 self.addEventListener("fetch", (event) => {
   const request = event.request
-  if (request.method !== "GET") return
-
+  if (request.method !== "GET" || request.mode !== "navigate") return
   const url = new URL(request.url)
-  // Only this app's own pages/assets are ours to cache — never intercept
-  // third-party requests (analytics beacons, extensions, OAuth providers).
   if (url.origin !== self.location.origin) return
-  if (url.pathname.startsWith("/api/")) return
-
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          safeCachePut(request, response.clone())
-          return response
-        })
-        .catch(async () => {
-          const cached = await caches.match(request)
-          if (cached) return cached
-          const fallback = await caches.match("/workspace")
-          return fallback || (await caches.match("/")) || Response.error()
-        })
-    )
-    return
-  }
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached
-      return fetch(request)
-        .then((response) => {
-          if (!response || response.status !== 200) return response
-          safeCachePut(request, response.clone())
-          return response
-        })
-        .catch(() => cached || Response.error())
-    })
+    fetch(request).catch(() => new Response(
+      "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Offline</title></head><body><main><h1>You're offline</h1><p>Documents and saved answers are unavailable offline. Reconnect to continue.</p></main></body></html>",
+      { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } }
+    ))
   )
 })

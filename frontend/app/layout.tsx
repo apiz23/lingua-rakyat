@@ -117,11 +117,12 @@ export default function RootLayout({
             </div>
             <LanguageProvider>
               <TooltipProvider>
-                <Toaster richColors expand={true} position="top-center" />
-                {children}
-                <AuthSync />
-                <OfflineProvider />
-                <CommandPaletteTopRight />
+                <OfflineProvider>
+                  <Toaster richColors expand={true} position="top-center" />
+                  {children}
+                  <AuthSync />
+                  <CommandPaletteTopRight />
+                </OfflineProvider>
               </TooltipProvider>
             </LanguageProvider>
           </ThemeProvider>
