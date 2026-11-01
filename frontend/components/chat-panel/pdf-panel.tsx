@@ -282,6 +282,7 @@ export default function PdfPanel({
 
   const viewer = (
     <PdfViewer
+      key={documentId}
       documentId={documentId}
       targetPage={targetPage}
       highlightText={highlightText}

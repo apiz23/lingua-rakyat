@@ -5,7 +5,10 @@ import React, { useState } from "react"
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { cn } from "@/lib/utils"
-import { SourceChunk } from "@/lib/api"
+import { type AnswerVerification, SourceChunk } from "@/lib/api"
+import { CHAT_COPY } from "@/lib/i18n/chat"
+import { getVerificationLifecycleState } from "@/lib/chat-stream"
+import { createIdentityLifecycle } from "@/lib/identity-lifecycle"
 import { useLanguage } from "@/components/language-provider"
 import AgentAvatar from "@/components/smoothui/agent-avatar"
 import { StreamingText } from "@/components/elements/ai-elements/chat/streaming-text"
@@ -59,7 +62,13 @@ export interface Message {
   // this field yet — so computeConfidenceReason is the fallback whenever it
   // is undefined. A backend value of null is deliberate: no sentence to show.
   confidence_explanation?: string | null
+  // Additive backend verification state. Absent on older history rows and when
+  // verification is disabled, so the UI keeps its previous evidence display.
+  verification?: AnswerVerification | null
   isStreaming?: boolean
+  // True after tokens arrive but before the verifier returns. The answer is
+  // provisional until the authoritative "complete" event replaces it.
+  verifying?: boolean
   suggestions?: string[]
 }
 
@@ -274,7 +283,6 @@ export const AIMessageCard = React.memo(function AIMessageCard({
   sessionId,
   docId,
   simpleMode,
-  agency,
 }: {
   message: Message
   isLatest: boolean
@@ -294,7 +302,6 @@ export const AIMessageCard = React.memo(function AIMessageCard({
   sessionId?: string
   docId?: string
   simpleMode?: boolean
-  agency?: string
 }) {
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
@@ -315,6 +322,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
     number | null
   >(null)
   const [sharing, setSharing] = useState(false)
+  const [lifetime] = useState(createIdentityLifecycle)
   const highlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
@@ -354,9 +362,11 @@ export const AIMessageCard = React.memo(function AIMessageCard({
         window.localStorage.removeItem(`lr-feedback:${message.id}`)
       }
       if (!next || !sessionId) return
+      const requestLifetime = lifetime.begin()
       try {
-        await fetch(`${API_URL}/api/feedback`, {
+        await fetch(`${API_URL}/api/v1/public/feedback`, {
           method: "POST",
+          signal: requestLifetime.signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             session_id: sessionId,
@@ -367,56 +377,58 @@ export const AIMessageCard = React.memo(function AIMessageCard({
         })
       } catch {
         // silent — don't interrupt demo on network failure
+      } finally {
+        requestLifetime.finish()
       }
     },
-    [feedback, sessionId, docId, message.id, message.question, message.sources]
+    [feedback, sessionId, docId, message.id, message.question, message.sources, lifetime]
   )
 
   const handleShare = React.useCallback(async () => {
+    const requestLifetime = lifetime.begin()
     setSharing(true)
     try {
       const result = await createShare({
+        session_id: sessionId ?? "",
         question: message.question,
         answer: message.answer,
-        sources: message.sources,
-        language: message.language,
-        confidence: message.confidence,
-        confidence_label: message.confidence_label ?? "",
-        agency: agency ?? "",
-      })
-      if (!result) {
-        toast.error("Couldn't create link — try again")
-        return
-      }
+      }, requestLifetime.signal)
+      if (!requestLifetime.current()) return
       const url = `${window.location.origin}${result.url}`
       try {
         await navigator.clipboard.writeText(url)
+        if (!requestLifetime.current()) return
         toast.success("Link copied! Share via WhatsApp or SMS.")
       } catch {
+        if (!requestLifetime.current()) return
         // Clipboard denied (non-HTTPS, permissions) — show the link instead
         toast.info(url, { duration: 12000 })
       }
-    } catch {
+    } catch (error) {
+      if (!requestLifetime.current()) return
+      if (error instanceof Error && error.message.startsWith("Sign in")) {
+        toast.error(error.message)
+        return
+      }
       toast.error("Couldn't create link — try again")
     } finally {
-      setSharing(false)
+      if (requestLifetime.current()) setSharing(false)
+      requestLifetime.finish()
     }
   }, [
+    sessionId,
     message.question,
     message.answer,
-    message.sources,
-    message.language,
-    message.confidence,
-    message.confidence_label,
-    agency,
+    lifetime,
   ])
 
   React.useEffect(() => {
     return () => {
+      lifetime.invalidate()
       if (highlightTimerRef.current !== null)
         clearTimeout(highlightTimerRef.current)
     }
-  }, [])
+  }, [lifetime])
 
   const { play } = useTTS()
 
@@ -438,16 +450,27 @@ export const AIMessageCard = React.memo(function AIMessageCard({
     setIsStreamed(false)
   }, [isLatest, message.cached, message.timestamp])
 
-  const evidenceState = message.sufficient_evidence
-    ? {
-        label: language === "ms" ? "Bukti kukuh" : "Strong evidence",
-        dotColor: "bg-success",
-      }
-    : {
-        label:
-          language === "ms" ? "Padanan terdekat sahaja" : "Closest match only",
-        dotColor: "bg-warning",
-      }
+  const verificationState = (() => {
+    const copy = CHAT_COPY[language]
+    const state = getVerificationLifecycleState({
+      isStreaming: message.isStreaming,
+      verifying: message.verifying,
+      verification: message.verification,
+      sources: message.sources,
+    })
+    const labels = {
+      generating: { label: copy.answerGenerating, dotColor: "bg-muted-foreground" },
+      verifying: { label: copy.answerVerifying, dotColor: "bg-warning" },
+      verified: { label: copy.answerVerified, dotColor: "bg-success" },
+      partially_supported: { label: copy.answerPartiallySupported, dotColor: "bg-warning" },
+      conflicting: { label: copy.answerConflicting, dotColor: "bg-warning" },
+      unsupported: { label: copy.answerUnsupported, dotColor: "bg-destructive" },
+      unverifiable: { label: copy.answerVerificationUnavailable, dotColor: "bg-muted-foreground" },
+    }
+    return labels[state]
+  })()
+
+  const evidenceState = verificationState
 
   return (
     <Message className="group items-start gap-2 sm:gap-3">
@@ -496,7 +519,9 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                   evidenceState.dotColor
                 )}
               />
-              <span>{evidenceState.label}</span>
+              <span aria-live={message.isStreaming ? "polite" : undefined}>
+                {evidenceState.label}
+              </span>
               {!simpleMode && message.cached ? (
                 <>
                   <span aria-hidden="true">·</span>
@@ -911,7 +936,7 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
       </MessageAvatar>
 
       <MessageContent className="w-auto max-w-[95%] min-w-0 items-end gap-1.5 sm:max-w-[80%]">
-        <div className="inline-block border border-primary bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
+        <div className="inline-block rounded-xl border border-primary/15 bg-primary px-4 py-2.5 text-primary-foreground shadow-sm sm:px-5 sm:py-3">
           <p className="text-sm leading-relaxed">{message.question}</p>
         </div>
 

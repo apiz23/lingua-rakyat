@@ -7,11 +7,18 @@ import {
   cacheHistory,
   getCachedDocuments,
   getCachedHistory,
-  offlineSearchAnswer,
 } from "@/lib/offline-cache"
 import { authHeader } from "@/lib/auth-token"
+import { consumeChatSse } from "@/lib/chat-stream"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
+
+class HistoryAuthorizationError extends Error {
+  constructor() {
+    super("Sign in to access saved chat history")
+    this.name = "HistoryAuthorizationError"
+  }
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -38,6 +45,7 @@ export type UploadDocumentResponse = {
 export type SourceChunk = {
   text: string
   document_id: string
+  source_id?: string
   score: number
   doc_name?: string
   page_start?: number | null
@@ -46,6 +54,42 @@ export type SourceChunk = {
   vector_score?: number
   rerank_score?: number
   confidence_label?: "high" | "medium" | "low"
+}
+
+export type ClaimVerificationStatus =
+  | "supported"
+  | "partially_supported"
+  | "unsupported"
+  | "conflicting"
+  | "unverifiable"
+
+export type VerificationStatus =
+  | "verified"
+  | "partially_supported"
+  | "unsupported"
+  | "conflicting"
+  | "unverifiable"
+
+export type AnswerVerification = {
+  verification_status: VerificationStatus
+  claims: Array<{
+    claim_id: string
+    text: string
+    status: ClaimVerificationStatus
+    supporting_source_ids: string[]
+    conflicting_source_ids: string[]
+  }>
+  verified_claim_count: number
+  partially_supported_claim_count: number
+  unsupported_claim_count: number
+  conflicting_claim_count: number
+  unverifiable_claim_count: number
+  verification_summary: string
+  citation_valid: boolean
+  extraction_complete: boolean
+  extraction_status: string
+  revision_attempted: boolean
+  abstained: boolean
 }
 
 export type AskResponse = {
@@ -66,6 +110,7 @@ export type AskResponse = {
   faithfulness?: number | null
   evidence_mode?: string
   confidence_explanation?: string | null
+  verification?: AnswerVerification | null
 }
 
 export type ChatHistoryMessage = {
@@ -85,6 +130,7 @@ export type ChatHistoryMessage = {
   sufficient_evidence?: boolean
   faithfulness?: number | null
   confidence_explanation?: string | null
+  verification?: AnswerVerification | null
 }
 
 // ── Evaluation Types ───────────────────────────────────────────────────────
@@ -192,12 +238,14 @@ async function apiFetch(
   const auth = await authHeader()
   const withAuth = (extra: Record<string, string>): RequestInit => ({
     ...init,
+    cache: "no-store",
     headers: { ...(init?.headers as Record<string, string> | undefined), ...extra },
   })
   let res = await fetch(input, withAuth(auth))
   if (res.status === 401) {
     // Retry once with a fresh token — covers both short-lived Clerk tokens
     // and the token getter not being registered yet on first paint.
+    if (init?.signal?.aborted) throw new DOMException("Request cancelled", "AbortError")
     res = await fetch(input, withAuth(await authHeader()))
   }
   if (res.status === 429) {
@@ -279,14 +327,15 @@ export async function waitForDocumentReady(
   }
 }
 
-export async function listDocuments(): Promise<Document[]> {
+export async function listDocuments(signal?: AbortSignal): Promise<Document[]> {
   try {
-    const res = await apiFetch(`${API_URL}/api/documents/`)
+    const res = await apiFetch(`${API_URL}/api/documents/`, { signal })
     if (!res.ok) throw new Error("Failed to fetch documents")
     const documents = await res.json()
     cacheDocuments(documents)
     return documents
   } catch (error) {
+    if (signal?.aborted) throw error
     const cached = getCachedDocuments()
     if (cached.length) return cached
     throw error
@@ -400,21 +449,24 @@ export async function getChatHistory(params: {
   signal?: AbortSignal
 }): Promise<ChatHistoryMessage[]> {
   const search = new URLSearchParams()
-  if (params.documentId) search.set("document_id", params.documentId)
-  if (params.sessionId) search.set("session_id", params.sessionId)
+  if (params.documentId) search.set("document_ref", params.documentId)
+  if (params.sessionId) search.set("conversation_ref", params.sessionId)
 
   try {
     // user_id goes in a header, not the query string — a query param ends
     // up in browser history and server access logs, a header does not.
-    const res = await apiFetch(`${API_URL}/api/chat/history?${search.toString()}`, {
-      headers: { "X-User-Id": params.userId },
+    const res = await apiFetch(`${API_URL}/api/v1/me/history?${search.toString()}`, {
       ...(params.signal ? { signal: params.signal } : {}),
     })
+    if (res.status === 401 || res.status === 403) throw new HistoryAuthorizationError()
     if (!res.ok) throw new Error("Failed to fetch chat history")
     const messages = await res.json()
     cacheHistory(messages)
     return messages
   } catch (error) {
+    // Saved history is private server data. An authorization denial must not
+    // be converted into a successful-looking response from local storage.
+    if (error instanceof HistoryAuthorizationError) throw error
     const cached = getCachedHistory({
       userId: params.userId,
       documentId: params.documentId,
@@ -429,15 +481,16 @@ export async function clearChatHistory(params: {
   documentId: string
   userId?: string
   sessionId?: string
+  signal?: AbortSignal
 }): Promise<{ success: boolean; message: string; deleted_rows: number }> {
   const search = new URLSearchParams()
-  if (params.userId) search.set("user_id", params.userId)
-  if (params.sessionId) search.set("session_id", params.sessionId)
+  search.set("document_ref", params.documentId)
+  if (params.sessionId) search.set("conversation_ref", params.sessionId)
 
   const suffix = search.toString() ? `?${search.toString()}` : ""
   const res = await apiFetch(
-    `${API_URL}/api/chat/history/${params.documentId}${suffix}`,
-    { method: "DELETE" }
+    `${API_URL}/api/v1/me/history${suffix}`,
+    { method: "DELETE", signal: params.signal }
   )
   if (!res.ok) throw new Error("Failed to clear chat history")
   return res.json()
@@ -512,6 +565,7 @@ export type ChatStreamEvent =
       top_query_variant: string
       sufficient_evidence?: boolean
     }
+  | { type: "verifying" }
   | { type: "token"; text: string }
   | { type: "sources"; sources: SourceChunk[] }
   | {
@@ -531,6 +585,7 @@ export type ChatStreamEvent =
       top_query_variant?: string
       faithfulness?: number | null
       confidence_explanation?: string | null
+      verification?: AnswerVerification | null
     }
   | { type: "suggestions"; questions: string[] }
   | { type: "error"; detail: string }
@@ -548,60 +603,15 @@ export async function askQuestionStream(
   signal?: AbortSignal,
   chatHistory?: Array<{ question: string; answer: string }>,
   documentIds?: string[],
+  uiLanguage: "en" | "ms" | "zh" = "en",
 ): Promise<void> {
   const runOfflineFallback = () => {
-    const startedAt = Date.now()
-    const result = offlineSearchAnswer({
-      question,
-      documentId,
-      documentName,
-    })
-    const complete = {
-      type: "complete" as const,
-      answer: result.answer,
-      language: "ms",
-      sources: result.sources,
-      confidence: result.confidence,
-      confidence_label: result.confidence_label,
-      latency_ms: Date.now() - startedAt,
-      model_used: "offline-cache",
-      sufficient_evidence: result.sources.length > 0,
-      cached: true,
-      retrieval_mode: "offline_cache",
-      query_variants_used: [question],
-      top_query_variant: question,
+    const messages = {
+      en: "Documents and saved answers are unavailable offline. Reconnect to continue.",
+      ms: "Dokumen dan jawapan tersimpan tidak tersedia di luar talian. Sambung semula untuk meneruskan.",
+      zh: "离线时无法访问文件和已保存的答案。请重新连接网络以继续。",
     }
-
-    onEvent({ type: "start" })
-    onEvent({
-      type: "retrieval",
-      language: complete.language,
-      retrieval_mode: complete.retrieval_mode,
-      query_variants_used: complete.query_variants_used,
-      top_query_variant: complete.top_query_variant,
-      sufficient_evidence: complete.sufficient_evidence,
-    })
-    onEvent({ type: "token", text: complete.answer })
-    onEvent({ type: "sources", sources: complete.sources })
-    onEvent(complete)
-    cacheHistory([
-      {
-        id: `${sessionId}-${new Date().toISOString()}`,
-        user_id: userId,
-        session_id: sessionId,
-        document_id: documentId,
-        question,
-        answer: complete.answer,
-        language: complete.language,
-        sources: complete.sources,
-        timestamp: new Date().toISOString(),
-        confidence: complete.confidence,
-        confidence_label: complete.confidence_label,
-        latency_ms: complete.latency_ms,
-        model_used: complete.model_used,
-        sufficient_evidence: complete.sufficient_evidence,
-      },
-    ])
+    onEvent({ type: "error", detail: messages[uiLanguage] })
   }
 
   let res: Response
@@ -643,52 +653,39 @@ export async function askQuestionStream(
     const err = await res.json().catch(() => ({ detail: "Stream failed" }))
     throw new Error(err.detail || "Stream failed")
   }
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ""
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split("\n")
-    buffer = lines.pop() ?? ""
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue
-      try {
-        const event: ChatStreamEvent = JSON.parse(line.slice(6))
-        onEvent(event)
-        if (event.type === "complete") {
-          cacheAnswerSources({
-            documentId,
-            documentName,
-            question,
-            answer: event.answer,
-            sources: event.sources ?? [],
-          })
-          cacheHistory([
-            {
-              id: `${sessionId}-${new Date().toISOString()}`,
-              user_id: userId,
-              session_id: sessionId,
-              document_id: documentId,
-              question,
-              answer: event.answer,
-              language: event.language,
-              sources: event.sources ?? [],
-              timestamp: new Date().toISOString(),
-              confidence: event.confidence,
-              confidence_label: event.confidence_label,
-              latency_ms: event.latency_ms,
-              model_used: event.model_used,
-              sufficient_evidence: event.sufficient_evidence,
-              faithfulness: event.faithfulness,
-              confidence_explanation: event.confidence_explanation,
-            },
-          ])
-        }
-      } catch {}
-    }
-  }
+  await consumeChatSse(res.body, (event) => {
+    if (signal?.aborted) return
+    onEvent(event)
+    if (event.type !== "complete") return
+    cacheAnswerSources({
+      documentId,
+      documentName,
+      question,
+      answer: event.answer,
+      sources: event.sources,
+    })
+    cacheHistory([
+      {
+        id: `${sessionId}-${new Date().toISOString()}`,
+        user_id: userId,
+        session_id: sessionId,
+        document_id: documentId,
+        question,
+        answer: event.answer,
+        language: event.language,
+        sources: event.sources,
+        timestamp: new Date().toISOString(),
+        confidence: event.confidence,
+        confidence_label: event.confidence_label,
+        latency_ms: event.latency_ms,
+        model_used: event.model_used,
+        sufficient_evidence: event.sufficient_evidence,
+        faithfulness: event.faithfulness,
+        confidence_explanation: event.confidence_explanation,
+        verification: event.verification,
+      },
+    ])
+  }, signal)
 }
 
 // ── Streaming test suite ───────────────────────────────────────────────────
@@ -826,28 +823,17 @@ export interface ConversationSummary {
   custom_title?: string
 }
 
-export async function mergeAnonHistory(anonUserId: string): Promise<boolean> {
-  try {
-    const res = await apiFetch(`${API_URL}/api/user/merge-anon`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ anon_user_id: anonUserId }),
-    })
-    return res.ok
-  } catch {
-    return false
-  }
-}
-
-export async function listConversations(userId: string): Promise<ConversationSummary[]> {
+export async function listConversations(userId: string, signal?: AbortSignal): Promise<ConversationSummary[]> {
+  void userId // Retained for caller compatibility; identity comes from Clerk.
   try {
     // user_id goes in a header, not the query string — see getChatHistory.
-    const res = await apiFetch(`${API_URL}/api/chat/conversations`, {
-      headers: { "X-User-Id": userId },
-    })
+    const res = await apiFetch(`${API_URL}/api/v1/me/conversations`, { signal })
+    if (res.status === 401 || res.status === 403) throw new HistoryAuthorizationError()
     if (!res.ok) return []
     return res.json()
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error
+    if (error instanceof HistoryAuthorizationError) throw error
     return []
   }
 }
@@ -856,11 +842,14 @@ export async function renameConversation(
   userId: string,
   sessionId: string,
   title: string,
+  signal?: AbortSignal,
 ): Promise<boolean> {
+  void userId // The API derives ownership from the verified Clerk principal.
   try {
-    const res = await apiFetch(`${API_URL}/api/chat/conversations/${sessionId}`, {
+    const res = await apiFetch(`${API_URL}/api/v1/me/conversations/${encodeURIComponent(sessionId)}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", "X-User-Id": userId },
+      signal,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     })
     return res.ok
@@ -886,33 +875,32 @@ export interface SharedAnswer {
   confidence: number
   confidence_label: string
   agency: string
+  evidence_linked: boolean
 }
 
 export async function createShare(payload: {
+  session_id: string
   question: string
   answer: string
-  sources: SourceChunk[]
-  language: string
-  confidence?: number
-  confidence_label?: string
-  agency?: string
-}): Promise<ShareResult | null> {
-  try {
-    const res = await apiFetch(`${API_URL}/api/share`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
-    return null
+}, signal?: AbortSignal): Promise<ShareResult> {
+  const res = await apiFetch(`${API_URL}/api/v1/me/shares`, {
+    method: "POST",
+    signal,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to create share link" }))
+    throw new Error(error.detail || "Failed to create share link")
   }
+  return res.json()
 }
 
 export async function getShare(slug: string): Promise<SharedAnswer | null> {
   try {
-    const res = await fetch(`${API_URL}/api/share/${encodeURIComponent(slug)}`)
+    const res = await fetch(`${API_URL}/api/v1/public/shares/${encodeURIComponent(slug)}`, {
+      cache: "no-store",
+    })
     if (!res.ok) return null
     return res.json()
   } catch {
@@ -930,7 +918,7 @@ export interface MyShare {
 
 export async function listMyShares(): Promise<MyShare[]> {
   try {
-    const res = await apiFetch(`${API_URL}/api/share/mine`)
+    const res = await apiFetch(`${API_URL}/api/v1/me/shares`)
     if (!res.ok) return []
     return await res.json()
   } catch {
@@ -940,7 +928,7 @@ export async function listMyShares(): Promise<MyShare[]> {
 
 export async function revokeShare(slug: string): Promise<boolean> {
   try {
-    const res = await apiFetch(`${API_URL}/api/share/${slug}`, {
+    const res = await apiFetch(`${API_URL}/api/v1/me/shares/${encodeURIComponent(slug)}`, {
       method: "DELETE",
     })
     return res.ok

@@ -7,36 +7,23 @@ import { useWorkspaceSession } from "@/components/workspace-session-context"
 import { useDocuments } from "@/hooks/useDocuments"
 
 export default function WorkSpacePage() {
+  const { userId, activeSessionId, actorGeneration, sessionGeneration } = useWorkspaceSession()
+  const { documents, loading } = useDocuments()
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
-  const [initialQuestion, setInitialQuestion] = useState<string | undefined>()
-  const { userId, activeSessionId } = useWorkspaceSession()
-  const { documents, readyDocs, loading } = useDocuments()
-
   useEffect(() => {
-    // Keep the current doc if it still exists; otherwise auto-anchor on the
-    // first ready doc so the citizen lands in a working multi-doc chat with
-    // no file picking. selectedDoc is only the session/history anchor — every
-    // question still spans the whole ready library (ChatPanel askAllDocs).
-    setSelectedDoc(
-      (prev) =>
-        documents.find((d) => d.id === prev?.id) ??
-        documents.find((d) => d.status === "ready") ??
-        null
-    )
+    // Preserve the selected anchor when the catalogue refreshes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedDoc((previous) => documents.find((d) => d.id === previous?.id) ?? documents.find((d) => d.status === "ready") ?? null)
   }, [documents])
-
-  useEffect(() => {
-    setInitialQuestion(undefined)
-  }, [selectedDoc?.id])
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <ChatPanel
+          key={`${actorGeneration}:${sessionGeneration}`}
           selectedDoc={selectedDoc}
           sessionId={activeSessionId}
           userId={userId}
-          initialQuestion={initialQuestion}
           composerTop={null}
           documents={documents}
           docsLoading={loading}

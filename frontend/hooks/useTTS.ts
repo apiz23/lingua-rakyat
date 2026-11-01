@@ -61,8 +61,10 @@ export function useTTS(): UseTTSReturn {
   const objectUrlRef = useRef<string | null>(null)
   const abortCtrlRef = useRef<AbortController | null>(null)
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const generationRef = useRef(0)
 
   const stop = useCallback(() => {
+    generationRef.current += 1
     // Cancel fallback timer if running
     if (fallbackTimerRef.current !== null) {
       clearTimeout(fallbackTimerRef.current)
@@ -89,18 +91,21 @@ export function useTTS(): UseTTSReturn {
 
   const play = useCallback(async (text: string, language: string) => {
     stop()  // this now also aborts previous in-flight fetch
+    const generation = generationRef.current
+    const current = () => generationRef.current === generation
     setState("loading")
 
     const ctrl = new AbortController()
     abortCtrlRef.current = ctrl
 
     try {
-      const res = await fetch(`${API_URL}/api/voice/tts`, {
+      const res = await fetch(`${API_URL}/api/v1/public/voice/speech`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, language }),
         signal: ctrl.signal,
       })
+      if (!current() || ctrl.signal.aborted) return
       abortCtrlRef.current = null
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -109,6 +114,7 @@ export function useTTS(): UseTTSReturn {
 
       if (contentType.includes("audio/mpeg")) {
         const blob = await res.blob()
+        if (!current() || ctrl.signal.aborted) return
         const url = URL.createObjectURL(blob)
         objectUrlRef.current = url
 
@@ -116,12 +122,14 @@ export function useTTS(): UseTTSReturn {
         audioRef.current = audio
 
         audio.onended = () => {
+          if (!current()) return
           URL.revokeObjectURL(url)
           objectUrlRef.current = null
           audioRef.current = null
           setState("idle")
         }
         audio.onerror = () => {
+          if (!current()) return
           URL.revokeObjectURL(url)
           objectUrlRef.current = null
           audioRef.current = null
@@ -137,11 +145,13 @@ export function useTTS(): UseTTSReturn {
         // speechSynthesis has no reliable onend — reset after estimated duration
         const estimatedMs = Math.max(2000, text.length * 60)
         fallbackTimerRef.current = setTimeout(() => {
+          if (!current()) return
           fallbackTimerRef.current = null
           setState("idle")
         }, estimatedMs)
       }
     } catch (err) {
+      if (!current() || ctrl.signal.aborted) return
       // Don't fallback if request was intentionally aborted
       if (err instanceof Error && err.name === "AbortError") {
         return
@@ -151,6 +161,7 @@ export function useTTS(): UseTTSReturn {
       setState("playing")
       const estimatedMs = Math.max(2000, text.length * 60)
       fallbackTimerRef.current = setTimeout(() => {
+        if (!current()) return
         fallbackTimerRef.current = null
         setState("idle")
       }, estimatedMs)

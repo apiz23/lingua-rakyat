@@ -2,9 +2,13 @@
 
 import { createContext, useContext, useMemo, useState } from "react"
 import { useUser } from "@clerk/nextjs"
+import { resolveIdentity } from "@/lib/identity-lifecycle"
 
 interface WorkspaceSessionContextValue {
   userId: string
+  identityState: "signed_in" | "signed_out"
+  actorGeneration: string
+  sessionGeneration: number
   activeSessionId: string | null
   setActiveSessionId: (sessionId: string | null) => void
 }
@@ -37,15 +41,26 @@ export function WorkspaceSessionProvider({
 }: {
   children: React.ReactNode
 }) {
-  const { user } = useUser()
-  const [anonId] = useState(readAnonId)
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const { user, isLoaded, isSignedIn } = useUser()
+  const identity = resolveIdentity(isLoaded, isSignedIn, user?.id)
+  // An unresolved or changing identity never renders the previous actor's tree.
+  if (!identity.key) return null
+  return <ActorWorkspace key={identity.key} actor={{ key: identity.key, userId: user?.id ?? "", state: identity.state }}>{children}</ActorWorkspace>
+}
 
-  const userId = user?.id ?? anonId
+function ActorWorkspace({ children, actor }: {
+  children: React.ReactNode
+  actor: { key: string; userId: string; state: "signed_in" | "signed_out" }
+}) {
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [anonymousId] = useState(() => actor.state === "signed_out" ? readAnonId() : "")
+  const [sessionGeneration, setSessionGeneration] = useState(0)
+  const [actorGeneration] = useState(uuidFallback)
 
   const value = useMemo(
-    () => ({ userId, activeSessionId, setActiveSessionId }),
-    [userId, activeSessionId]
+    () => ({ userId: actor.state === "signed_in" ? actor.userId : anonymousId, identityState: actor.state, actorGeneration, sessionGeneration, activeSessionId,
+      setActiveSessionId: (id: string | null) => { setSessionGeneration((n) => n + 1); setActiveSessionId(id) } }),
+    [actor, anonymousId, actorGeneration, sessionGeneration, activeSessionId]
   )
 
   return (

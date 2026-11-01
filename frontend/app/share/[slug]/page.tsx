@@ -183,6 +183,11 @@ export default async function SharePage({ params }: SharePageProps) {
               <span className="mr-2 text-primary">{copy.q}:</span>
               {data.question}
             </p>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {data.evidence_linked
+                ? "Source references are linked to a saved Lingua Rakyat answer; this is not an official verification."
+                : "Source linkage is unavailable. Treat this as shared text and verify with official sources."}
+            </p>
           </div>
 
           {/* Answer + sources (scrollable if long) */}

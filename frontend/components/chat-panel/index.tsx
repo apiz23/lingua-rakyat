@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { useLanguage } from "@/components/language-provider"
 import { CHAT_COPY } from "@/lib/i18n/chat"
 import { useLocalStorageSetting } from "@/hooks/useLocalStorageSetting"
+import { createIdentityLifecycle } from "@/lib/identity-lifecycle"
 import {
   AiChat,
   AiChatBody,
@@ -118,6 +119,7 @@ function mapHistoryRowToMessage(row: ChatHistoryMessage): Message {
     sufficient_evidence: row.sufficient_evidence ?? true,
     faithfulness: row.faithfulness ?? null,
     confidence_explanation: row.confidence_explanation,
+    verification: row.verification ?? null,
   }
 }
 
@@ -280,14 +282,16 @@ export default function ChatPanel({
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const isMountedRef = useRef(true)
   const historyAbortRef = useRef<AbortController | null>(null)
+  const [lifetime] = useState(createIdentityLifecycle)
 
 
   useEffect(() => {
     isMountedRef.current = true
     return () => {
       isMountedRef.current = false
+      lifetime.invalidate()
     }
-  }, [])
+  }, [lifetime])
 
   useEffect(() => {
     document.documentElement.setAttribute("data-text-size", textSize)
@@ -439,7 +443,7 @@ export default function ChatPanel({
       signal: controller.signal,
     })
       .then((history) => {
-        if (!active) return
+        if (!active || controller.signal.aborted) return
         setDocumentHistory(history)
         const ordered = [...history]
           .filter((row) => row.session_id === sessionId)
@@ -449,7 +453,7 @@ export default function ChatPanel({
         setExpandedSources(new Set())
       })
       .catch((error) => {
-        if (!active) return
+        if (!active || controller.signal.aborted) return
         if (error instanceof Error && error.name === "AbortError") return
         setMessages([])
         toast.error(copy.historyLoadError, {
@@ -457,7 +461,7 @@ export default function ChatPanel({
         })
       })
       .finally(() => {
-        if (active) setHistoryLoading(false)
+        if (active && !controller.signal.aborted) setHistoryLoading(false)
       })
 
     return () => {
@@ -492,6 +496,9 @@ export default function ChatPanel({
       return
     }
 
+    const requestLifetime = lifetime.begin()
+    historyAbortRef.current?.abort()
+    setHistoryLoading(false)
     setInput("")
     setMentionQuery(null)
     setLoading(true)
@@ -554,6 +561,7 @@ export default function ChatPanel({
         enableQueryAugmentation,
         false,
         (event) => {
+          if (!requestLifetime.current()) return
           if (event.type === "retrieval") {
             if (!messageAdded) {
               messageAdded = true
@@ -589,6 +597,36 @@ export default function ChatPanel({
                     event.sufficient_evidence ?? last.sufficient_evidence,
                 },
               ]
+            })
+            return
+          }
+
+          if (event.type === "verifying") {
+            if (!messageAdded) {
+              messageAdded = true
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: msgId,
+                  question,
+                  answer: "",
+                  sources: [],
+                  timestamp,
+                  language: "en",
+                  confidence: 0,
+                  latency_ms: 0,
+                  cached: false,
+                  sufficient_evidence: true,
+                  isStreaming: true,
+                  verifying: true,
+                },
+              ])
+              return
+            }
+            setMessages((prev) => {
+              const last = prev[prev.length - 1]
+              if (!last || last.id !== msgId) return prev
+              return [...prev.slice(0, -1), { ...last, verifying: true }]
             })
             return
           }
@@ -643,7 +681,9 @@ export default function ChatPanel({
               evidence_mode: event.evidence_mode,
               faithfulness: event.faithfulness ?? null,
               confidence_explanation: event.confidence_explanation,
+              verification: event.verification ?? null,
               isStreaming: false,
+              verifying: false,
             }
 
             setMessages((prev) => {
@@ -737,11 +777,13 @@ export default function ChatPanel({
             })
           }
         },
-        undefined,    // signal — not used here
+        requestLifetime.signal,
         chatHistory,  // multi-turn context
         multiDocIds,  // multi-document scope (empty = single doc)
+        language,
       )
     } catch (error) {
+      if (!requestLifetime.current()) return
       if (messageAdded) {
         setMessages((prev) => prev.filter((message) => message.id !== msgId))
       }
@@ -761,7 +803,8 @@ export default function ChatPanel({
         toast.error(copy.answerError, { description: message })
       }
     } finally {
-      setLoading(false)
+      if (requestLifetime.current()) setLoading(false)
+      requestLifetime.finish()
     }
   }
 
@@ -828,18 +871,24 @@ export default function ChatPanel({
   copiedToastRef.current = copy.copied
 
   const copyToClipboard = React.useCallback(async (text: string, id: string) => {
+    const requestLifetime = lifetime.begin()
     try {
       await navigator.clipboard.writeText(text)
+      if (!requestLifetime.current()) return
       setCopiedId(id)
-      window.setTimeout(() => setCopiedId(null), 2000)
+      window.setTimeout(() => { if (requestLifetime.current()) setCopiedId(null); requestLifetime.finish() }, 2000)
       toast.success(copiedToastRef.current)
     } catch {
+      requestLifetime.finish()
       // Clipboard denied (non-HTTPS / permissions) — nothing else to do
     }
-  }, [])
+  }, [lifetime])
 
   const handleSelectThread = (nextSessionId: string) => {
     if (!selectedDoc) return
+    lifetime.invalidate()
+    historyAbortRef.current?.abort()
+    setMessages([]); setDocumentHistory([]); setInput(""); setPdfViewerState(null); setMentionDoc(null); setLoading(false)
     persistSessionId(selectedDoc.id, nextSessionId)
     setSessionId(nextSessionId)
     setShowHistory(false)
@@ -892,6 +941,8 @@ export default function ChatPanel({
 
   const handleNewChat = () => {
     if (!selectedDoc) return
+    lifetime.invalidate()
+    historyAbortRef.current?.abort()
 
     const nextSessionId = createSessionId(selectedDoc.id)
     persistSessionId(selectedDoc.id, nextSessionId)
@@ -899,20 +950,22 @@ export default function ChatPanel({
     setMessages([])
     setExpandedSources(new Set())
     setInput("")
+    setDocumentHistory([]); setPdfViewerState(null); setMentionDoc(null); setLoading(false)
     setShowHistory(false)
     toast.success(copy.newChatStarted)
   }
 
   const clearChat = async () => {
     if (!selectedDoc || !userId || !sessionId) return
-
+    const requestLifetime = lifetime.begin()
     try {
       const result = await clearChatHistory({
         documentId: selectedDoc.id,
         userId,
         sessionId,
+        signal: requestLifetime.signal,
       })
-
+      if (!requestLifetime.current()) return
       setDocumentHistory((prev) =>
         prev.filter(
           (row) =>
@@ -929,9 +982,12 @@ export default function ChatPanel({
         result.deleted_rows > 0 ? copy.cleared : copy.nothingToClear
       )
     } catch (error) {
+      if (!requestLifetime.current()) return
       toast.error(copy.clearError, {
         description: error instanceof Error ? error.message : copy.retryLater,
       })
+    } finally {
+      requestLifetime.finish()
     }
   }
 
@@ -950,6 +1006,22 @@ export default function ChatPanel({
         className="h-full min-w-0 flex-1 font-sans"
       >
       <AiChatBody className="min-h-0">
+        {/* Thread history panel — always rendered above the scroll area so it
+            stays visible regardless of scroll position or message count. */}
+        {selectedDoc && showHistory ? (
+          <div className="mx-auto w-full max-w-5xl px-4 pt-3 sm:px-10 sm:pt-6">
+            <AnimatePresence>
+              <ThreadHistoryPanel
+                threads={threads}
+                activeSessionId={sessionId}
+                copy={copy}
+                onSelectThread={handleSelectThread}
+                onNewChat={handleNewChat}
+              />
+            </AnimatePresence>
+          </div>
+        ) : null}
+
         {selectedDoc && !historyLoading && messages.length > 0 ? (
           <MessageScrollerProvider
             autoScroll
@@ -962,20 +1034,6 @@ export default function ChatPanel({
                   aria-busy={loading}
                   className="mx-auto w-full max-w-5xl gap-3 px-4 py-3 sm:gap-4 sm:px-10 sm:py-6"
                 >
-                  {showHistory ? (
-                    <MessageScrollerItem messageId="thread-history">
-                      <AnimatePresence>
-                        <ThreadHistoryPanel
-                          threads={threads}
-                          activeSessionId={sessionId}
-                          copy={copy}
-                          onSelectThread={handleSelectThread}
-                          onNewChat={handleNewChat}
-                        />
-                      </AnimatePresence>
-                    </MessageScrollerItem>
-                  ) : null}
-
                   {messages.map((message, index) => (
                     <React.Fragment key={message.id}>
                       <MessageScrollerItem
@@ -1003,7 +1061,6 @@ export default function ChatPanel({
                           sessionId={sessionId}
                           docId={selectedDoc?.id}
                           simpleMode={simpleMode}
-                          agency={selectedDoc?.agency ?? ""}
                         />
                       </MessageScrollerItem>
                     </React.Fragment>
@@ -1022,18 +1079,6 @@ export default function ChatPanel({
         ) : (
           <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
             <div className="mx-auto max-w-5xl px-4 py-3 sm:px-10 sm:py-6">
-              <AnimatePresence>
-                {selectedDoc && showHistory ? (
-                  <ThreadHistoryPanel
-                    threads={threads}
-                    activeSessionId={sessionId}
-                    copy={copy}
-                    onSelectThread={handleSelectThread}
-                    onNewChat={handleNewChat}
-                  />
-                ) : null}
-              </AnimatePresence>
-
               {(() => {
                 const docsLoadingState = externalDocsLoading ?? false
                 if (docsLoadingState || readyDocs.length === 0 || (selectedDoc && !historyLoading)) {
@@ -1444,8 +1489,9 @@ export default function ChatPanel({
             </Popover>
 
             <VoiceMicButton
+              key={sessionId}
               disabled={loading}
-              onTranscript={(text, _language) => setInput(text)}
+              onTranscript={(text) => { if (isMountedRef.current) setInput(text) }}
               onError={(msg) => toast.error(msg)}
               titleIdle={copy.voiceStart}
               titleRecording={copy.voiceStop}

@@ -43,6 +43,10 @@ const nextConfig = {
 
   async headers() {
     return [
+      ...["/workspace", "/profile", "/shares", "/share/:path*"].map((source) => ({
+        source,
+        headers: [{ key: "Cache-Control", value: "no-store" }],
+      })),
       {
         source: "/:path*",
         headers: [

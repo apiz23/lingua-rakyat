@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
@@ -39,6 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { GithubIcon } from "./ui/github"
 import { LinkedinIcon } from "./ui/linkedin"
+import { createIdentityLifecycle } from "@/lib/identity-lifecycle"
 import {
   listConversations,
   renameConversation,
@@ -94,16 +95,34 @@ export function AppSidebar() {
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [loadingConversations, setLoadingConversations] = useState(false)
+  const [historyNeedsSignIn, setHistoryNeedsSignIn] = useState(false)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameInput, setRenameInput] = useState("")
+  const [lifetime] = useState(createIdentityLifecycle)
 
   useEffect(() => {
-    if (!userId) return
+    const requestLifetime = lifetime.begin()
+    if (!isSignedIn || !userId) {
+      // Identity changes must clear the sidebar before it can show old data.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setConversations([])
+      setHistoryNeedsSignIn(false)
+      setLoadingConversations(false)
+      return () => { lifetime.invalidate() }
+    }
     setLoadingConversations(true)
-    listConversations(userId)
-      .then(setConversations)
-      .finally(() => setLoadingConversations(false))
-  }, [userId, activeSessionId])
+    listConversations(userId, requestLifetime.signal)
+      .then((items) => { if (requestLifetime.current()) setConversations(items) })
+      .catch((error: unknown) => {
+        if (!requestLifetime.current()) return
+        setConversations([])
+        setHistoryNeedsSignIn(
+          error instanceof Error && error.name === "HistoryAuthorizationError",
+        )
+      })
+      .finally(() => { if (requestLifetime.current()) setLoadingConversations(false); requestLifetime.finish() })
+    return () => { lifetime.invalidate() }
+  }, [userId, activeSessionId, isSignedIn, lifetime])
 
   const handleStartRename = (conv: ConversationSummary) => {
     setRenamingId(conv.session_id)
@@ -121,7 +140,9 @@ export function AppSidebar() {
       handleCancelRename()
       return
     }
-    const ok = await renameConversation(userId, sessionId, trimmed)
+    const requestLifetime = lifetime.begin()
+    const ok = await renameConversation(userId, sessionId, trimmed, requestLifetime.signal)
+    if (!requestLifetime.current()) { requestLifetime.finish(); return }
     if (ok) {
       setConversations((prev) =>
         prev.map((c) =>
@@ -130,6 +151,7 @@ export function AppSidebar() {
       )
     }
     handleCancelRename()
+    requestLifetime.finish()
   }
 
   const REPO_URL = "https://github.com/apiz23/lingua-rakyat"
@@ -142,6 +164,7 @@ export function AppSidebar() {
           pages: "Halaman",
           recent: "Perbualan Terkini",
           recentEmpty: "Belum ada perbualan",
+          recentSignIn: "Log masuk untuk melihat perbualan tersimpan",
           newChat: "Perbualan baharu",
           language: "Tukar bahasa",
           shortcuts: "Ctrl/Cmd + B",
@@ -160,6 +183,7 @@ export function AppSidebar() {
           pages: "Pages",
           recent: "Recent chats",
           recentEmpty: "No chats yet",
+          recentSignIn: "Sign in to view saved conversations",
           newChat: "New chat",
           language: "Toggle language",
           shortcuts: "Ctrl/Cmd + B",
@@ -301,7 +325,7 @@ export function AppSidebar() {
               ))
             ) : conversations.length === 0 ? (
               <p className="px-2 py-4 text-center text-[11px] text-muted-foreground/50">
-                {copy.recentEmpty}
+                {!isSignedIn || historyNeedsSignIn ? copy.recentSignIn : copy.recentEmpty}
               </p>
             ) : (
               conversations.map((conv) => {

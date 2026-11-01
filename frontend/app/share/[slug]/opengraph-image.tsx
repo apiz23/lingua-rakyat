@@ -13,17 +13,17 @@ import {
 } from "@/lib/og"
 import { plainExcerpt } from "./share-text"
 
-export const alt = "Shared answer on Lingua Rakyat — grounded in the source document, with sources cited."
+export const alt = "A publicly shared answer on Lingua Rakyat. Verify public information with official sources."
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
-export const revalidate = 300
+export const revalidate = 0
 
 type ShareImageProps = { params: Promise<{ slug: string }> }
 
 const COPY = {
-  en: { kicker: "SHARED ANSWER", tag: "EN", disclaimer: "Grounded in the source document" },
-  ms: { kicker: "JAWAPAN DIKONGSI", tag: "BM", disclaimer: "Berdasarkan dokumen sumber" },
-  zh: { kicker: "SHARED ANSWER", tag: "ZH", disclaimer: "Berdasarkan dokumen sumber" },
+  en: { kicker: "SHARED ANSWER", tag: "EN", disclaimer: "Verify with official sources" },
+  ms: { kicker: "JAWAPAN DIKONGSI", tag: "BM", disclaimer: "Sahkan dengan sumber rasmi" },
+  zh: { kicker: "SHARED ANSWER", tag: "ZH", disclaimer: "Verify with official sources" },
 } as const
 
 function copyFor(language?: string) {
@@ -56,14 +56,14 @@ export default async function OpengraphImage({ params }: ShareImageProps) {
         82
       )
   const answer = cjk
-    ? "Lingua Rakyat answers from the official PDF itself and lists the sources behind the answer."
+    ? "Publicly shared information. Verify with official sources."
     : plainExcerpt(
         rawAnswer ||
-          "A plain-language answer, grounded in the official PDF and cited to its sources.",
+          "Publicly shared answer. Verify with official sources.",
         130
       )
   const docName = latinOnly(data?.sources?.[0]?.doc_name?.replace(/\.pdf$/i, ""))
-  const agency = latinOnly(data?.agency)
+  const agency = data?.evidence_linked ? latinOnly(data.agency) : null
   const confidence =
     data?.confidence_label === "high"
       ? data.language?.startsWith("ms")

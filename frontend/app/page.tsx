@@ -374,10 +374,6 @@ export default function Home() {
               values: [true, false, false, false],
             },
             {
-              label: "Mod luar talian (cache)",
-              values: [true, false, false, false],
-            },
-            {
               label: "Carian semantik multilingual",
               values: [true, true, true, true],
             },
@@ -399,7 +395,7 @@ export default function Home() {
             },
           ],
           footnote:
-            "Nota: Mod luar talian bergantung pada dokumen dan petikan yang telah dicache semasa dalam talian.",
+            "Nota: Sambungan internet diperlukan untuk mengakses dokumen dan jawapan.",
         }
       : {
           kicker: "Differentiation vs Generic RAG",
@@ -430,10 +426,6 @@ export default function Home() {
               values: [true, false, false, false],
             },
             {
-              label: "Offline mode (cache)",
-              values: [true, false, false, false],
-            },
-            {
               label: "Multilingual semantic retrieval",
               values: [true, true, true, true],
             },
@@ -455,7 +447,7 @@ export default function Home() {
             },
           ],
           footnote:
-            "Note: Offline mode depends on documents and excerpts cached earlier while online.",
+            "Note: An internet connection is required to access documents and answers.",
         }
 
   return (

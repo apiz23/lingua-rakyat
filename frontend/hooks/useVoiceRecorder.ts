@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 const MIN_DURATION_MS = 500  // reject recordings shorter than 500ms
@@ -45,6 +45,31 @@ export function useVoiceRecorder(uiLanguage = "en"): UseVoiceRecorderReturn {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const startTimeRef = useRef<number>(0)
+  const generationRef = useRef(0)
+  const streamRef = useRef<MediaStream | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const cancel = useCallback(() => {
+    generationRef.current += 1
+    abortRef.current?.abort()
+    abortRef.current = null
+    const recorder = mediaRecorderRef.current
+    mediaRecorderRef.current = null
+    if (recorder) {
+      recorder.ondataavailable = null
+      recorder.onstop = null
+      try {
+        if (recorder.state !== "inactive") recorder.stop()
+      } catch {
+        // Tracks must still be stopped if the browser already closed the recorder.
+      }
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop())
+    streamRef.current = null
+    chunksRef.current = []
+  }, [])
+
+  useEffect(() => () => { cancel() }, [cancel])
 
   const setError = (msg: string) => {
     setErrorMessage(msg)
@@ -53,30 +78,51 @@ export function useVoiceRecorder(uiLanguage = "en"): UseVoiceRecorderReturn {
 
   const startRecording = useCallback(async () => {
     if (state === "recording") return
+    cancel()
+    const generation = generationRef.current
+    const current = () => generationRef.current === generation
+    const abort = new AbortController()
+    abortRef.current = abort
 
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch {
-      setError(voiceError("micBlocked", uiLanguage))
+      if (current()) setError(voiceError("micBlocked", uiLanguage))
       return
     }
+    if (!current()) {
+      stream.getTracks().forEach((track) => track.stop())
+      return
+    }
+    streamRef.current = stream
 
     const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
       ? "audio/webm;codecs=opus"
       : "audio/webm"
 
-    const recorder = new MediaRecorder(stream, { mimeType })
+    let recorder: MediaRecorder
+    try {
+      recorder = new MediaRecorder(stream, { mimeType })
+    } catch {
+      stream.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+      if (current()) setError(voiceError("micBlocked", uiLanguage))
+      return
+    }
     chunksRef.current = []
     startTimeRef.current = Date.now()
 
     recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunksRef.current.push(e.data)
+      if (current() && e.data.size > 0) chunksRef.current.push(e.data)
     }
 
     recorder.onstop = async () => {
       // Stop all mic tracks
       stream.getTracks().forEach((t) => t.stop())
+      if (!current()) return
+      streamRef.current = null
+      mediaRecorderRef.current = null
 
       const durationMs = Date.now() - startTimeRef.current
       if (durationMs < MIN_DURATION_MS) {
@@ -91,9 +137,10 @@ export function useVoiceRecorder(uiLanguage = "en"): UseVoiceRecorderReturn {
         const formData = new FormData()
         formData.append("audio", blob, "recording.webm")
 
-        const res = await fetch(`${API_URL}/api/voice/transcribe`, {
+        const res = await fetch(`${API_URL}/api/v1/public/voice/transcriptions`, {
           method: "POST",
           body: formData,
+          signal: abort.signal,
         })
 
         if (!res.ok) {
@@ -101,18 +148,25 @@ export function useVoiceRecorder(uiLanguage = "en"): UseVoiceRecorderReturn {
         }
 
         const data = await res.json()
+        if (!current() || abort.signal.aborted) return
         setTranscript(data.transcript)
         setLanguage(data.language || "en")
         setState("done")
       } catch {
-        setError(voiceError("transcribeFailed", uiLanguage))
+        if (current() && !abort.signal.aborted) setError(voiceError("transcribeFailed", uiLanguage))
       }
     }
 
     mediaRecorderRef.current = recorder
-    recorder.start()
+    try {
+      recorder.start()
+    } catch {
+      cancel()
+      setError(voiceError("micBlocked", uiLanguage))
+      return
+    }
     setState("recording")
-  }, [state])
+  }, [state, uiLanguage, cancel])
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current?.state === "recording") {
@@ -121,11 +175,12 @@ export function useVoiceRecorder(uiLanguage = "en"): UseVoiceRecorderReturn {
   }, [])
 
   const reset = useCallback(() => {
+    cancel()
     setTranscript("")
     setLanguage("en")
     setErrorMessage("")
     setState("idle")
-  }, [])
+  }, [cancel])
 
   return { state, transcript, language, errorMessage, startRecording, stopRecording, reset }
 }

@@ -63,6 +63,13 @@ export type ChatCopy = {
   modelTitle: string
   scopeTitle: string
   scopeOneShort: string
+  answerGenerating: string
+  answerVerifying: string
+  answerVerified: string
+  answerPartiallySupported: string
+  answerConflicting: string
+  answerUnsupported: string
+  answerVerificationUnavailable: string
 }
 
 export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
@@ -130,6 +137,13 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     modelTitle: "Model AI",
     scopeTitle: "Skop carian",
     scopeOneShort: "Dokumen ini",
+    answerGenerating: "Menjana jawapan — belum disemak",
+    answerVerifying: "Mengesahkan sumber — jawapan masih sementara",
+    answerVerified: "Disahkan dengan sumber",
+    answerPartiallySupported: "Sebahagian dakwaan disokong",
+    answerConflicting: "Sumber bercanggah",
+    answerUnsupported: "Dakwaan tidak disokong sepenuhnya",
+    answerVerificationUnavailable: "Pengesahan tidak tersedia",
   },
   en: {
     historyLoadError: "Failed to load chat history",
@@ -195,6 +209,13 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     modelTitle: "AI model",
     scopeTitle: "Search scope",
     scopeOneShort: "This document",
+    answerGenerating: "Generating answer — not checked yet",
+    answerVerifying: "Verifying sources — answer is still provisional",
+    answerVerified: "Verified against sources",
+    answerPartiallySupported: "Some claims are supported",
+    answerConflicting: "Sources conflict",
+    answerUnsupported: "Claims not fully supported",
+    answerVerificationUnavailable: "Verification unavailable",
   },
   zh: {
     historyLoadError: "无法加载聊天记录",
@@ -258,5 +279,12 @@ export const CHAT_COPY: Record<"ms" | "en" | "zh", ChatCopy> = {
     modelTitle: "AI 模型",
     scopeTitle: "搜索范围",
     scopeOneShort: "此文件",
+    answerGenerating: "正在生成答案 — 尚未核实",
+    answerVerifying: "正在核实来源 — 答案仍为暂定内容",
+    answerVerified: "已根据来源核实",
+    answerPartiallySupported: "部分陈述有来源支持",
+    answerConflicting: "来源之间存在冲突",
+    answerUnsupported: "部分陈述未获充分支持",
+    answerVerificationUnavailable: "无法进行来源核实",
   },
 }

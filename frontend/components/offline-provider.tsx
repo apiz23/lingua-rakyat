@@ -15,9 +15,24 @@ export default function OfflineProvider({ children }: { children: React.ReactNod
   const clerk = useClerk()
   const { language } = useLanguage()
   const copy = {
-    en: "Offline: reconnect to access documents and saved answers",
-    ms: "Luar talian: sambung semula untuk mengakses dokumen dan jawapan tersimpan",
-    zh: "离线：请重新连接网络以访问文件和已保存的答案",
+    en: {
+      offline: "Offline: reconnect to access documents and saved answers",
+      checking: "Checking this device and your session. Private content is unavailable until verification succeeds.",
+      blocked: "This device could not be verified. Private content stays hidden until verification succeeds.",
+      retry: "Retry",
+    },
+    ms: {
+      offline: "Luar talian: sambung semula untuk mengakses dokumen dan jawapan tersimpan",
+      checking: "Menyemak peranti dan sesi anda. Kandungan peribadi tidak tersedia sehingga pengesahan berjaya.",
+      blocked: "Peranti ini tidak dapat disahkan. Kandungan peribadi kekal tersembunyi sehingga pengesahan berjaya.",
+      retry: "Cuba lagi",
+    },
+    zh: {
+      offline: "离线：请重新连接网络以访问文件和已保存的答案",
+      checking: "正在检查此设备和您的会话。验证成功前无法访问私密内容。",
+      blocked: "无法验证此设备。验证成功前私密内容将保持隐藏。",
+      retry: "重试",
+    },
   }
   const [state, setState] = useState<State>("checking")
   const [verifiedActor, setVerifiedActor] = useState<string | null>(null)
@@ -102,7 +117,13 @@ export default function OfflineProvider({ children }: { children: React.ReactNod
   }, [state, epoch, isLoaded, verify])
 
   if (state !== "ready" || !currentActor || verifiedActor !== currentActor) {
-    return <div role="status" className="p-6"><p>Checking this device and your session. Private content is unavailable until verification succeeds.</p>{state === "blocked" && <button type="button" onClick={invalidate}>Retry</button>}</div>
+    const text = copy[language]
+    return (
+      <div role="status" aria-live="polite" className="p-6">
+        <p>{state === "blocked" ? text.blocked : text.checking}</p>
+        {state === "blocked" && <button type="button" onClick={invalidate}>{text.retry}</button>}
+      </div>
+    )
   }
-  return <Fragment key={epoch}>{children}{offline && <div role="status" aria-live="polite" className="fixed right-4 bottom-4 z-[100] flex items-center gap-2 border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning-foreground"><WifiOff className="h-3.5 w-3.5" /><span>{copy[language]}</span></div>}</Fragment>
+  return <Fragment key={epoch}>{children}{offline && <div role="status" aria-live="polite" className="fixed right-4 bottom-4 z-[100] flex items-center gap-2 border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning-foreground"><WifiOff className="h-3.5 w-3.5" /><span>{copy[language].offline}</span></div>}</Fragment>
 }

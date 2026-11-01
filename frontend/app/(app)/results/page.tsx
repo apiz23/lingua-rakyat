@@ -162,7 +162,6 @@ export default function ResultsPage() {
           { title: "Papan Pemuka Penilaian", desc: "ROUGE-1/2/L, BLEU, Flesch-Kincaid, kesetiaan — dialirkan langsung daripada suite ujian beranotasi." },
           { title: "Pengehadan Kadar + BOOTH_MODE", desc: "Pengehadan kadar SlowAPI per-IP. BOOTH_MODE=true melonggarkan had untuk demo WiFi dikongsi." },
           { title: "Kebolehaksesan (Atkinson Hyperlegible)", desc: "Fon badan direka untuk pengguna penglihatan rendah. Suara I/O untuk akses utama audio." },
-          { title: "Cache Fallback Luar Talian", desc: "Petikan S&J terdahulu dicache dalam localStorage; dicetuskan secara automatik apabila rangkaian tidak tersedia." },
         ],
         // SDG
         sdgEyebrow: "Impak Sosial",
@@ -226,7 +225,6 @@ export default function ResultsPage() {
           { title: "Evaluation Dashboard", desc: "ROUGE-1/2/L, BLEU, Flesch-Kincaid, faithfulness — streamed live from annotated test suite." },
           { title: "Rate Limiting + BOOTH_MODE", desc: "SlowAPI per-IP rate limiting. BOOTH_MODE=true lifts limits for shared WiFi demo." },
           { title: "Accessibility (Atkinson Hyperlegible)", desc: "Body font designed for low-vision users. Voice I/O for audio-first access." },
-          { title: "Offline Fallback Cache", desc: "Prior Q&A excerpts cached in localStorage; auto-triggers when network is unavailable." },
         ],
         sdgEyebrow: "Social Impact",
         sdgHeading: "SDG Alignment",
