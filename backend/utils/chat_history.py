@@ -14,10 +14,15 @@ def list_chat_messages(
     session_id: Optional[str] = None,
     user_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
+    if not user_id or not user_id.strip():
+        raise ValueError("A verified history owner is required")
+    if document_id is not None and not document_id.strip():
+        raise ValueError("Document scope cannot be empty")
+    if session_id is not None and not session_id.strip():
+        raise ValueError("Session scope cannot be empty")
     try:
         query = get_supabase().table(CHAT_HISTORY_TABLE).select("*")
-        if user_id:
-            query = query.eq("user_id", user_id)
+        query = query.eq("user_id", user_id)
         if document_id:
             query = query.eq("document_id", document_id)
         if session_id:
@@ -25,10 +30,7 @@ def list_chat_messages(
 
         response = query.order("created_at", desc=True).execute()
         rows = response.data or []
-        logger.info(
-            "[ChatHistory] Loaded %d rows for user_id=%s document_id=%s session_id=%s",
-            len(rows), user_id, document_id, session_id,
-        )
+        logger.info("[ChatHistory] Loaded %d owner-scoped rows", len(rows))
         return rows
     except Exception as exc:
         logger.warning("[ChatHistory] Failed to load history: %s", exc)
@@ -81,38 +83,45 @@ def delete_chat_messages(
     session_id: Optional[str] = None,
     user_id: Optional[str] = None,
 ) -> int:
+    """Delete owner-scoped history; callers must derive user_id from verified auth."""
+    if not user_id or not user_id.strip():
+        raise ValueError("A verified history owner is required")
+    if not document_id or not document_id.strip():
+        raise ValueError("A document scope is required")
+    if session_id is not None and not session_id.strip():
+        raise ValueError("Session scope cannot be empty")
     try:
         query = get_supabase(admin=True).table(CHAT_HISTORY_TABLE).delete()
-        if user_id:
-            query = query.eq("user_id", user_id)
-        if document_id:
-            query = query.eq("document_id", document_id)
-        if session_id:
+        query = query.eq("user_id", user_id).eq("document_id", document_id)
+        if session_id is not None:
             query = query.eq("session_id", session_id)
 
         response = query.execute()
         deleted = len(response.data or [])
-        logger.info(
-            "[ChatHistory] Deleted %d rows for user_id=%s document_id=%s session_id=%s",
-            deleted,
-            user_id,
-            document_id,
-            session_id,
-        )
+        logger.info("[ChatHistory] Deleted %d owner-scoped rows", deleted)
         return deleted
     except Exception as exc:
-        logger.warning(
-            "[ChatHistory] Failed to delete history for user_id=%s document_id=%s session_id=%s: %s",
-            user_id,
-            document_id,
-            session_id,
-            exc,
+        logger.warning("[ChatHistory] Owner-scoped deletion failed")
+        raise RuntimeError("History deletion failed") from exc
+
+
+def delete_chat_messages_for_document(
+    document_id: str, *, admin_authorized: bool = False
+) -> int:
+    """Administrative cleanup only, after the caller authorizes document deletion."""
+    if admin_authorized is not True:
+        raise PermissionError("Administrative authorization is required")
+    if not document_id or not document_id.strip():
+        raise ValueError("A document scope is required")
+    try:
+        response = (
+            get_supabase(admin=True).table(CHAT_HISTORY_TABLE).delete()
+            .eq("document_id", document_id).execute()
         )
-        return 0
-
-
-def delete_chat_messages_for_document(document_id: str) -> int:
-    return delete_chat_messages(document_id=document_id)
+        return len(response.data or [])
+    except Exception as exc:
+        logger.warning("[ChatHistory] Administrative history cleanup failed")
+        raise RuntimeError("History cleanup failed") from exc
 
 
 def update_conversation_title(
@@ -120,20 +129,16 @@ def update_conversation_title(
 ) -> bool:
     """Set a custom title for a conversation session."""
     try:
+        if not user_id or not user_id.strip() or not session_id or not session_id.strip():
+            raise ValueError("A verified owner and session are required")
         payload = {"custom_title": title[:80]}
         supabase = get_supabase(admin=True)
-        supabase.table(CHAT_HISTORY_TABLE).update(payload).eq(
+        response = supabase.table(CHAT_HISTORY_TABLE).update(payload).eq(
             "session_id", session_id
-        ).eq("user_id", user_id).execute()
-        logger.info(
-            "[ChatHistory] Renamed session_id=%s to %r", session_id, title
-        )
-        return True
-    except Exception as exc:
-        logger.warning(
-            "[ChatHistory] Failed to rename session_id=%s: %s",
-            session_id, exc,
-        )
+        ).eq("user_id", user_id).select("session_id").execute()
+        return bool(response.data)
+    except Exception:
+        logger.warning("[ChatHistory] Owner-scoped rename failed")
         return False
 
 
@@ -146,6 +151,8 @@ def list_conversations(user_id: str) -> list[dict[str, Any]]:
 
     If any message in the session has a `custom_title`, that is used instead.
     """
+    if not user_id or not user_id.strip():
+        raise ValueError("A verified history owner is required")
     rows = list_chat_messages(user_id=user_id)
     sessions: dict[str, dict] = {}
     for row in rows:

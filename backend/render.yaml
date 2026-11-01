@@ -6,7 +6,7 @@ services:
     buildCommand: apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-msa tesseract-ocr-chi-sim libgl1 && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     plan: starter  # Upgrade from free: 512MB RAM is insufficient for PDF processing
-    healthCheckPath: /
+    healthCheckPath: /health/live
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0

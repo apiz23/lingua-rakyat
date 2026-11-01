@@ -14,6 +14,7 @@ from utils.voice_helpers import TranscriptionError, MAX_TTS_CHARS, text_to_speec
 logger = logging.getLogger("voice_router")
 limiter = Limiter(key_func=get_proxy_aware_remote_address)
 router = APIRouter()
+public_v1_router = APIRouter()
 
 MIN_AUDIO_BYTES = 1  # rejects zero-byte uploads; real duration check is Groq's response
 
@@ -63,3 +64,20 @@ async def tts(request: Request, body: TTSRequest):
 
     extra_headers = {"X-TTS-Truncated": "true"} if len(body.text) > MAX_TTS_CHARS else {}
     return Response(content=audio_bytes, media_type="audio/mpeg", headers=extra_headers)
+
+
+# Versioned public contract. Both routes use the same limited handlers as the
+# legacy paths so behavior and provider safeguards remain consistent during
+# client migration.
+public_v1_router.add_api_route(
+    "/transcriptions",
+    transcribe,
+    methods=["POST"],
+    name="public_transcribe_v1",
+)
+public_v1_router.add_api_route(
+    "/speech",
+    tts,
+    methods=["POST"],
+    name="public_tts_v1",
+)

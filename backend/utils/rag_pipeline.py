@@ -33,6 +33,13 @@ except Exception:
     pytesseract = None
 
 from utils.data_augmentation import QueryAugmenter
+from utils.source_verification import (
+    ENABLE_SOURCE_VERIFICATION,
+    VerificationResult,
+    build_evidence,
+    no_verification_result,
+    verify_and_recover,
+)
 
 load_dotenv()
 
@@ -75,6 +82,7 @@ OCR_MIN_CHARS = 50
 PROMPT_RETRY_CHAR_LIMITS = [2500, 1200]
 ENABLE_COHERE_RERANK = os.getenv("ENABLE_COHERE_RERANK", "true").lower() == "true"
 ENABLE_HISTORY_CONDENSE = os.getenv("ENABLE_HISTORY_CONDENSE", "true").lower() == "true"
+SOURCE_VERIFICATION_TIMEOUT = float(os.getenv("SOURCE_VERIFICATION_TIMEOUT_SECONDS", "20"))
 
 CONTEXT_CHAR_LIMIT_LARGE = 4000
 CONTEXT_CHAR_LIMIT_SMALL = 1800
@@ -1702,6 +1710,88 @@ def _generate_completion(prompt_text: str, model_name: str) -> tuple[str, str]:
             raise
 
 
+def _verification_llm_call(prompt_text: str, max_tokens: int) -> str:
+    """One deterministic Groq call for the verifier, with a single fallback.
+
+    Verification is bounded: prompts are capped by source_verification, and this
+    function never retries in a loop. Provider failures propagate so the caller
+    can mark the answer unverifiable instead of verifying it by default.
+    """
+    def _call(model_name: str) -> str:
+        response = _get_client().chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt_text}],
+            temperature=0.0,
+            stream=False,
+            max_tokens=max_tokens,
+            timeout=SOURCE_VERIFICATION_TIMEOUT,
+            **_reasoning_kwargs(model_name),
+        )
+        return response.choices[0].message.content or ""
+
+    try:
+        return _call(GROQ_MODEL)
+    except Exception as exc:
+        if not _is_retryable_llm_error(exc):
+            raise
+        fallback = _fallback_model(GROQ_MODEL)
+        logger.warning("[Verify] Primary model unavailable, retrying with %s", fallback)
+        return _call(fallback)
+
+
+def _verify_generated_answer(
+    prepared: dict[str, Any],
+    answer_text: str,
+) -> tuple[str, Optional[VerificationResult]]:
+    """Verify against the evidence retrieved for this request only.
+
+    Never retrieves more documents, never raises, and never lets a failure look
+    like success: extraction/provider/parse failures become ``unverifiable``.
+    """
+    lang = prepared["language"]
+    if not ENABLE_SOURCE_VERIFICATION:
+        return answer_text, None
+    if prepared.get("evidence_mode") == "insufficient":
+        return answer_text, no_verification_result(lang, "insufficient_evidence")
+
+    evidence = build_evidence(
+        prepared.get("filtered_matches") or [],
+        prepared.get("document_id", ""),
+    )
+    if not evidence:
+        return answer_text, no_verification_result(lang, "no_retrieved_evidence")
+
+    try:
+        revised, verification = verify_and_recover(
+            answer=answer_text,
+            evidence=evidence,
+            lang=lang,
+            llm_call=_verification_llm_call,
+        )
+    except Exception as exc:
+        logger.warning("[Verify] Unexpected verifier failure (%s)", type(exc).__name__)
+        return answer_text, no_verification_result(lang, "verification_failed")
+
+    logger.info(
+        "[Verify] status=%s claims=%d revision=%s abstained=%s",
+        verification.verification_status,
+        len(verification.claims),
+        verification.revision_attempted,
+        verification.abstained,
+    )
+    return revised, verification
+
+
+def _attach_verification(
+    result: dict[str, Any],
+    verification: Optional[VerificationResult],
+) -> dict[str, Any]:
+    result["verification"] = (
+        verification.to_public_dict() if verification is not None else None
+    )
+    return result
+
+
 def _token_chunks(text: str, size: int = 40) -> Generator[str, None, None]:
     words = text.split()
     if not words:
@@ -1777,7 +1867,11 @@ def answer_question(
         answer_text, model_used = _generate_completion(prepared["prompt_text"], prepared["model_name"])
     else:
         answer_text, model_used = _insufficient_evidence_answer(prepared["language"]), "evidence-guard"
-    result = _build_result(prepared, answer_text, model_used)
+    answer_text, verification = _verify_generated_answer(prepared, answer_text)
+    result = _attach_verification(
+        _build_result(prepared, answer_text, model_used),
+        verification,
+    )
     if not skip_cache:
         cache_set(
             question,
@@ -1853,7 +1947,19 @@ def stream_answer_question(
             yield {"type": "token", "text": piece}
 
     answer_text = "".join(pieces).strip()
-    result = _build_result(prepared, answer_text, model_used)
+    if (
+        ENABLE_SOURCE_VERIFICATION
+        and prepared.get("evidence_mode") != "insufficient"
+        and prepared.get("filtered_matches")
+    ):
+        # Explicit provisional state: tokens already shown are pre-verification.
+        # The final "complete" event is authoritative and may replace them.
+        yield {"type": "verifying"}
+    answer_text, verification = _verify_generated_answer(prepared, answer_text)
+    result = _attach_verification(
+        _build_result(prepared, answer_text, model_used),
+        verification,
+    )
     if not skip_cache:
         cache_set(
             question,

@@ -9,6 +9,7 @@ _PAYLOAD = {
     "answer": "RM200 untuk 5 tahun.",
     "sources": [{"text": "...","document_id": "doc1","score": 0.9,"doc_name":"JPN"}],
     "language": "ms",
+    "user_id": "user_abc",
 }
 
 def _mock_supabase(stored: dict | None = None):

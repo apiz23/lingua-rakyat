@@ -56,6 +56,7 @@ from routers.telegram import router as telegram_router
 from routers.feedback import router as feedback_router
 from routers.share import router as share_router
 from routers.user import router as user_router
+from api.v1.router import router as api_v1_router
 
 # ─── App instance ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -112,6 +113,8 @@ async def log_requests(request: Request, call_next):
     t0 = time.time()
     try:
         response = await call_next(request)
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
         latency_ms = round((time.time() - t0) * 1000)
         logger.info(
             "%s %s -> %d (%dms)",
@@ -141,6 +144,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
     return JSONResponse(
         status_code=500,
+        headers={"Cache-Control": "no-store"},
         content={
             "error": "internal_server_error",
             "detail": detail,
@@ -156,37 +160,19 @@ app.include_router(voice_router,     prefix="/api/voice",     tags=["Voice"])
 app.include_router(telegram_router,  prefix="/api/telegram",  tags=["Telegram"])
 app.include_router(feedback_router,  prefix="/api/feedback",  tags=["Feedback"])
 app.include_router(share_router,     prefix="/api/share",     tags=["Share"])
+app.include_router(api_v1_router,    prefix="/api/v1",         tags=["Versioned API"])
 app.include_router(user_router,      prefix="/api/user",      tags=["User"])
 
 # ─── Startup: Seed + Prewarm ──────────────────────────────────────────────────
 # ─── Health Check ─────────────────────────────────────────────────────────────
-@app.get("/", tags=["Health"])
+@app.get("/health/live", tags=["Health"])
+@app.get("/health/ready", tags=["Health"])
+@app.get("/", tags=["Health"], include_in_schema=False)
 async def health_check():
-    """Health check — returns server status, config summary, cache and eval stats."""
-    from utils.rag_pipeline import _query_cache, CACHE_MAX_SIZE
-    from routers.eval import _evaluator
+    """Minimal liveness/readiness response without internal configuration data."""
+    return {"status": "ok"}
 
-    return {
-        "status": "ok",
-        "version": "2.0.0",
-        "message": "Lingua Rakyat AI backend is running",
-        "docs": "/docs",
-        "config": {
-            "llm_model":  os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
-            "embeddings": "cohere/embed-multilingual-v3.0",
-            "vector_db":  "pinecone/" + os.getenv("PINECONE_INDEX", "docuquery"),
-            "booth_mode": BOOTH_MODE,
-        },
-        "cache": {
-            "entries":  len(_query_cache),
-            "max_size": CACHE_MAX_SIZE,
-        },
-        "evaluation": {
-            "records": len(_evaluator),
-        },
-    }
 
-# ─── CORS Preflight ───────────────────────────────────────────────────────────
 @app.options("/{full_path:path}", tags=["Health"])
 async def preflight_handler(full_path: str):
     return {"status": "ok"}

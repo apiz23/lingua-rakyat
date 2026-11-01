@@ -24,8 +24,8 @@ _jwk_client: Optional[jwt.PyJWKClient] = None
 # ─── Supabase Clients (Least Privilege) ─────────────────────────────────────
 # Public client uses SUPABASE_ANON_KEY (RLS-gated when policies are in place).
 # Admin client uses SUPABASE_KEY (service_role — bypasses RLS).
-# If only SUPABASE_KEY is configured, both fall back to the same key for
-# backwards compatibility.
+# Public operations fail closed when the anon key is missing; they never fall
+# back to the admin key.
 _supabase: Optional[Client] = None
 _supabase_admin: Optional[Client] = None
 
@@ -49,9 +49,9 @@ def get_supabase(admin: bool = False) -> Client:
 
     if _supabase is None:
         url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
+        key = os.getenv("SUPABASE_ANON_KEY")
         if not url or not key:
-            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_KEY) must be set.")
+            raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be set for public Supabase access.")
         _supabase = create_client(url, key)
     return _supabase
 

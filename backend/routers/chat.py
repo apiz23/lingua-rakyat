@@ -17,7 +17,6 @@ from routers.eval import _evaluator as evaluator
 from utils.auth import get_verified_user
 from utils.chat_history import (
     delete_chat_messages,
-    delete_chat_messages_for_document,
     insert_chat_message,
     list_chat_messages,
     list_conversations,
@@ -29,6 +28,7 @@ from utils.rag_pipeline import answer_question, stream_answer_question
 logger = logging.getLogger("chat_router")
 limiter = Limiter(key_func=get_proxy_aware_remote_address)
 router = APIRouter()
+me_v1_router = APIRouter()
 
 
 class AskRequest(BaseModel):
@@ -77,6 +77,9 @@ class AskResponse(BaseModel):
     faithfulness: Optional[float] = None
     evidence_mode: str = "strong"
     confidence_explanation: Optional[str] = None
+    # Additive, backward-compatible verification metadata. Absent on older
+    # clients/history rows; never required to render an answer.
+    verification: Optional[dict[str, Any]] = None
 
 
 class ChatMessage(BaseModel):
@@ -158,12 +161,12 @@ def _record_eval(body: AskRequest, result: dict[str, Any], answer_text: str) -> 
 def clear_chat_history(
     document_id: str,
     *,
-    user_id: Optional[str] = None,
+    verified_user_id: str,
     session_id: Optional[str] = None,
 ) -> int:
-    if user_id or session_id:
-        return delete_chat_messages(document_id=document_id, user_id=user_id, session_id=session_id)
-    return delete_chat_messages_for_document(document_id)
+    return delete_chat_messages(
+        document_id=document_id, user_id=verified_user_id, session_id=session_id
+    )
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -195,8 +198,11 @@ async def ask_question(
 
     timestamp = datetime.utcnow().isoformat() + "Z"
     answer_text = result["answer"]
-    insert_chat_message(_history_payload(body, result, timestamp, answer_text))
-    _record_eval(body, result, answer_text)
+    # Public anonymous Q&A has no secure session capability, so do not persist
+    # caller-supplied anonymous IDs or copy public prompts into evaluation data.
+    if verified:
+        insert_chat_message(_history_payload(body, result, timestamp, answer_text))
+        _record_eval(body, result, answer_text)
 
     return AskResponse(
         answer=answer_text,
@@ -215,6 +221,7 @@ async def ask_question(
         faithfulness=result.get("faithfulness"),
         evidence_mode=result.get("evidence_mode", "strong"),
         confidence_explanation=result.get("confidence_explanation"),
+        verification=result.get("verification"),
     )
 
 
@@ -258,9 +265,14 @@ async def ask_question_stream(
             if final_result is None:
                 raise RuntimeError("Streaming finished without a completion event.")
 
-            answer_text = "".join(answer_pieces).strip() or final_result.get("answer", "")
-            insert_chat_message(_history_payload(body, final_result, timestamp, answer_text))
-            _record_eval(body, final_result, answer_text)
+            # The completion event is authoritative: verification may have
+            # revised the answer after provisional tokens were streamed.
+            answer_text = (final_result.get("answer") or "").strip() or "".join(
+                answer_pieces
+            ).strip()
+            if verified:
+                insert_chat_message(_history_payload(body, final_result, timestamp, answer_text))
+                _record_eval(body, final_result, answer_text)
 
         except Exception as exc:
             logger.error("[Chat] Streaming failed: %s", exc)
@@ -297,13 +309,12 @@ async def get_conversations(
     # Anonymous IDs travel via header, not the query string — a query param
     # ends up in browser history, proxy/access logs, and Referer headers;
     # a header does not. Query param kept only as a deprecated fallback.
-    user_id = x_user_id or user_id
-    _reject_spoofed_user_id(user_id, verified)
-    if verified:
-        user_id = verified
-    if not user_id or not user_id.strip():
-        raise HTTPException(status_code=400, detail="user_id is required")
-    return list_conversations(user_id)
+    if not verified or not verified.strip():
+        raise HTTPException(status_code=401, detail="Sign-in required to access chat history")
+    supplied_user_id = x_user_id if x_user_id is not None else user_id
+    if supplied_user_id and supplied_user_id != verified:
+        raise HTTPException(status_code=403, detail="Not authorized to access this history")
+    return list_conversations(verified)
 
 
 @router.patch("/conversations/{session_id}")
@@ -313,15 +324,15 @@ async def rename_conversation(
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     verified: Optional[str] = Depends(get_verified_user),
 ):
-    user_id = x_user_id or ""
-    _reject_spoofed_user_id(user_id, verified)
-    if verified:
-        user_id = verified
-    if not user_id or not user_id.strip():
-        raise HTTPException(status_code=400, detail="user_id is required")
-    ok = update_conversation_title(user_id, session_id, body.title.strip())
+    if not verified or not verified.strip():
+        raise HTTPException(status_code=401, detail="Sign-in required to change chat history")
+    if x_user_id is not None and x_user_id != verified:
+        raise HTTPException(status_code=403, detail="Not authorized to change this history")
+    if not session_id.strip():
+        raise HTTPException(status_code=400, detail="Invalid conversation")
+    ok = update_conversation_title(verified, session_id, body.title.strip())
     if not ok:
-        raise HTTPException(status_code=500, detail="Failed to rename conversation")
+        raise HTTPException(status_code=404, detail="Conversation not found")
     return {"success": True, "session_id": session_id, "title": body.title.strip()}
 
 
@@ -334,11 +345,19 @@ async def get_chat_history(
     verified: Optional[str] = Depends(get_verified_user),
 ):
     # See get_conversations above — header preferred over query string.
-    user_id = x_user_id or user_id
-    _reject_spoofed_user_id(user_id, verified)
-    if verified:
-        user_id = verified
-    rows = list_chat_messages(document_id=document_id, session_id=session_id, user_id=user_id)
+    if not verified or not verified.strip():
+        raise HTTPException(status_code=401, detail="Sign-in required to access chat history")
+    supplied_user_id = x_user_id if x_user_id is not None else user_id
+    if supplied_user_id and supplied_user_id != verified:
+        raise HTTPException(status_code=403, detail="Not authorized to access this history")
+    if document_id is not None and not document_id.strip():
+        raise HTTPException(status_code=400, detail="Invalid history scope")
+    if session_id is not None and not session_id.strip():
+        raise HTTPException(status_code=400, detail="Invalid conversation")
+    try:
+        rows = list_chat_messages(document_id=document_id, session_id=session_id, user_id=verified)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid history scope") from exc
     messages = []
     for row in rows:
         messages.append(ChatMessage(
@@ -368,12 +387,77 @@ async def clear_document_chat_history(
     session_id: Optional[str] = None,
     verified: Optional[str] = Depends(get_verified_user),
 ):
-    _reject_spoofed_user_id(user_id, verified)
-    if verified:
-        user_id = verified
-    deleted = clear_chat_history(document_id, user_id=user_id, session_id=session_id)
+    if not verified or not verified.strip():
+        raise HTTPException(status_code=401, detail="Sign-in required to delete chat history")
+    if user_id is not None and user_id != verified:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this history")
+    if not document_id.strip() or (session_id is not None and not session_id.strip()):
+        raise HTTPException(status_code=400, detail="Invalid history scope")
+    try:
+        deleted = clear_chat_history(
+            document_id, verified_user_id=verified, session_id=session_id
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail="Failed to clear chat history") from exc
     return {
         "success": True,
         "message": "Chat history cleared",
         "deleted_rows": deleted,
     }
+
+
+# Versioned authenticated-citizen adapters. They intentionally omit caller
+# owner IDs from their schemas and delegate to the established Clerk-checked
+# handlers. History remains document-scoped; there is no unscoped list/delete.
+@me_v1_router.get("/conversations", response_model=list[ConversationSummary])
+async def get_my_conversations_v1(
+    verified: Optional[str] = Depends(get_verified_user),
+):
+    return await get_conversations(user_id="", x_user_id=None, verified=verified)
+
+
+@me_v1_router.patch("/conversations/{session_id}")
+async def rename_my_conversation_v1(
+    session_id: str,
+    body: RenameRequest,
+    verified: Optional[str] = Depends(get_verified_user),
+):
+    return await rename_conversation(
+        session_id=session_id,
+        body=body,
+        x_user_id=None,
+        verified=verified,
+    )
+
+
+@me_v1_router.get("/history", response_model=list[ChatMessage])
+async def get_my_history_v1(
+    document_ref: str,
+    conversation_ref: Optional[str] = None,
+    verified: Optional[str] = Depends(get_verified_user),
+):
+    if not document_ref.strip():
+        raise HTTPException(status_code=400, detail="Invalid history scope")
+    return await get_chat_history(
+        document_id=document_ref,
+        session_id=conversation_ref,
+        user_id=None,
+        x_user_id=None,
+        verified=verified,
+    )
+
+
+@me_v1_router.delete("/history")
+async def delete_my_history_v1(
+    document_ref: str,
+    conversation_ref: Optional[str] = None,
+    verified: Optional[str] = Depends(get_verified_user),
+):
+    if not document_ref.strip():
+        raise HTTPException(status_code=400, detail="Invalid history scope")
+    return await clear_document_chat_history(
+        document_id=document_ref,
+        user_id=None,
+        session_id=conversation_ref,
+        verified=verified,
+    )

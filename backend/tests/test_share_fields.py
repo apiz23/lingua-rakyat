@@ -52,7 +52,7 @@ def test_store_share_persists_new_fields(monkeypatch):
     fake = _with_fake(monkeypatch)
     slug = sa.store_share(
         question="Q", answer="A", sources=[], language="ms",
-        confidence=0.82, confidence_label="high", agency="PTPTN",
+        confidence=0.82, confidence_label="high", agency="PTPTN", user_id="user_abc",
     )
     row = fake.store[slug]
     assert row["confidence"] == 0.82
@@ -62,7 +62,7 @@ def test_store_share_persists_new_fields(monkeypatch):
 
 def test_store_share_defaults_for_old_callers(monkeypatch):
     fake = _with_fake(monkeypatch)
-    slug = sa.store_share(question="Q", answer="A", sources=[], language="en")
+    slug = sa.store_share(question="Q", answer="A", sources=[], language="en", user_id="user_abc")
     row = fake.store[slug]
     assert row["confidence"] == 0.0
     assert row["confidence_label"] == ""
@@ -73,7 +73,7 @@ def test_get_share_roundtrip(monkeypatch):
     fake = _with_fake(monkeypatch)
     slug = sa.store_share(
         question="Q", answer="A", sources=[{"doc_name": "KWSP.pdf", "page_start": 3}],
-        language="en", confidence=0.4, confidence_label="low", agency="KWSP",
+        language="en", confidence=0.4, confidence_label="low", agency="KWSP", user_id="user_abc",
     )
     row = sa.get_share(slug)
     assert row["agency"] == "KWSP"

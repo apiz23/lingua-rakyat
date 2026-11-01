@@ -1,23 +1,36 @@
 """routers/share.py — create and retrieve shared answer links."""
 import logging
 from typing import Any, Optional
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel, ConfigDict, Field
 from utils.auth import get_verified_user
-from utils.shared_answers import delete_share, get_share, list_shares_for_user, store_share
+from utils.shared_answers import (
+    delete_share,
+    find_owned_chat_answer,
+    get_share,
+    list_shares_for_user,
+    store_share,
+)
 
 logger = logging.getLogger("share_router")
 router = APIRouter()
+public_v1_router = APIRouter()
+me_v1_router = APIRouter()
 
 
 class ShareRequest(BaseModel):
-    question: str
-    answer: str
-    sources: list[dict] = []
-    language: str = "ms"
-    confidence: float = 0.0
-    confidence_label: str = ""
-    agency: str = ""
+    model_config = ConfigDict(extra="forbid")
+
+    # Legacy clients send evidence fields that are accepted for rollout
+    # compatibility only; creation always reloads them from chat history.
+    session_id: Optional[str] = Field(default=None, min_length=1)
+    question: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
+    sources: list[dict] = Field(default_factory=list)
+    language: Optional[str] = None
+    confidence: Optional[float] = None
+    confidence_label: Optional[str] = None
+    agency: Optional[str] = None
 
 
 class ShareResponse(BaseModel):
@@ -35,25 +48,43 @@ class SharedAnswerResponse(BaseModel):
     confidence: float = 0.0
     confidence_label: str = ""
     agency: str = ""
+    evidence_linked: bool = False
 
 
 @router.post("", response_model=ShareResponse)
 async def create_share(body: ShareRequest, verified: Optional[str] = Depends(get_verified_user)):
-    if not body.question.strip() or not body.answer.strip():
-        raise HTTPException(status_code=400, detail="question and answer are required")
+    if not verified or not verified.strip():
+        raise HTTPException(status_code=401, detail="Sign in to create a share link")
     try:
-        slug = store_share(
+        persisted = find_owned_chat_answer(
+            user_id=verified,
+            session_id=body.session_id,
             question=body.question,
             answer=body.answer,
-            sources=body.sources,
-            language=body.language,
-            confidence=body.confidence,
-            confidence_label=body.confidence_label,
-            agency=body.agency,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid share request") from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="Share service unavailable") from exc
+    if persisted is None:
+        raise HTTPException(status_code=404, detail="Saved answer not found")
+
+    sources = persisted.get("sources") or []
+    if not isinstance(sources, list):
+        sources = []
+    try:
+        slug = store_share(
+            question=persisted["question"],
+            answer=persisted["answer"],
+            sources=sources,
+            language=persisted.get("language") or "ms",
+            confidence=float(persisted.get("confidence") or 0.0),
+            confidence_label="",
+            agency="",
             user_id=verified,
         )
     except Exception as exc:
-        logger.error("[Share] Failed to store: %s", exc)
+        logger.error("[Share] Store operation failed")
         raise HTTPException(status_code=500, detail="Failed to create share link") from exc
     return ShareResponse(slug=slug, url=f"/share/{slug}")
 
@@ -84,20 +115,38 @@ def my_shares(verified: Optional[str] = Depends(get_verified_user)):
 
 
 @router.get("/{slug}", response_model=SharedAnswerResponse)
-async def fetch_share(slug: str):
+async def fetch_share(slug: str, response: Response):
+    response.headers["Cache-Control"] = "no-store, private"
     result = get_share(slug)
     if result is None:
         raise HTTPException(status_code=404, detail="Share link not found")
+    persisted = None
+    if result.get("user_id"):
+        try:
+            persisted = find_owned_chat_answer(
+                user_id=result["user_id"],
+                question=result.get("question", ""),
+                answer=result.get("answer", ""),
+            )
+        except ValueError:
+            # Malformed legacy rows remain viewable as user-shared text only.
+            persisted = None
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail="Share service unavailable") from exc
+    sources = persisted.get("sources") if persisted else []
+    if not isinstance(sources, list):
+        sources = []
     return SharedAnswerResponse(
         slug=result["slug"],
         question=result["question"],
         answer=result["answer"],
-        sources=result.get("sources", []),
-        language=result.get("language", "ms"),
+        sources=sources,
+        language=(persisted.get("language") if persisted else result.get("language")) or "ms",
         created_at=result.get("created_at", ""),
-        confidence=float(result.get("confidence", 0.0) or 0.0),
-        confidence_label=result.get("confidence_label", "") or "",
-        agency=result.get("agency", "") or "",
+        confidence=float(persisted.get("confidence", 0.0) or 0.0) if persisted else 0.0,
+        confidence_label="",
+        agency="",
+        evidence_linked=bool(persisted is not None and sources),
     )
 
 
@@ -111,6 +160,40 @@ def revoke_share(slug: str, verified: Optional[str] = Depends(get_verified_user)
     if not row.get("user_id") or row["user_id"] != verified:
         # Anonymous/legacy shares have no owner and can never be revoked.
         raise HTTPException(status_code=403, detail="Not your share")
-    delete_share(slug)
-    logger.info("[Share] %s revoked slug=%s", verified, slug)
+    try:
+        deleted = delete_share(slug, user_id=verified)
+    except Exception as exc:
+        logger.error("[Share] Revocation operation failed")
+        raise HTTPException(status_code=500, detail="Failed to revoke share") from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Share link not found")
+    logger.info("[Share] Owner revoked a share slug=%s", slug)
     return {"success": True}
+
+
+# Versioned adapters retain the existing public-slug and Clerk-owner semantics.
+@public_v1_router.get("/{slug}", response_model=SharedAnswerResponse)
+async def fetch_public_share_v1(slug: str, response: Response):
+    return await fetch_share(slug, response)
+
+
+@me_v1_router.get("/shares", response_model=list[MyShareItem])
+def list_my_shares_v1(verified: Optional[str] = Depends(get_verified_user)):
+    return my_shares(verified)
+
+
+@me_v1_router.post("/shares", response_model=ShareResponse)
+async def create_my_share_v1(
+    body: ShareRequest,
+    verified: Optional[str] = Depends(get_verified_user),
+):
+    # The current message persistence contract does not return a stable
+    # message_ref to clients. Preserve the secured lookup behavior until that
+    # contract is implemented; caller content is still matched to an owned
+    # persisted answer before anything is stored.
+    return await create_share(body, verified)
+
+
+@me_v1_router.delete("/shares/{slug}")
+def revoke_my_share_v1(slug: str, verified: Optional[str] = Depends(get_verified_user)):
+    return revoke_share(slug, verified)

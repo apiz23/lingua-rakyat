@@ -31,6 +31,14 @@ from utils.data_augmentation import QueryAugmenter, generate_data_quality_report
 from utils.rag_pipeline import answer_question, GROQ_MODEL_FAST, _get_augmenter, _compute_semantic_similarity
 
 router = APIRouter()
+
+
+def _require_internal_authorization() -> None:
+    """Fail closed until a trusted server-side operator role is available."""
+    raise HTTPException(
+        status_code=503,
+        detail="Evaluation operations are temporarily unavailable.",
+    )
 logger = logging.getLogger("eval_router")
 
 
@@ -111,7 +119,7 @@ async def get_eval_report():
           ...
         }
     """
-    return _evaluator.report()
+    _require_internal_authorization()
 
 
 @router.post("/record")
@@ -121,6 +129,8 @@ async def record_interaction(req: RecordRequest):
 
     Call this after every /api/chat/ask response to build up the evaluation dataset.
     """
+    _ = req
+    _require_internal_authorization()
     metrics = _evaluator.record(
         question=req.question,
         answer=req.answer,
@@ -155,6 +165,7 @@ async def run_test_suite(req: TestSuiteRequest):
         POST /api/eval/run-test-suite
         { "document_id": "abc-123-..." }
     """
+    _require_internal_authorization()
     if not req.document_id:
         raise HTTPException(status_code=400, detail="document_id is required")
 
@@ -277,6 +288,8 @@ async def run_test_suite(req: TestSuiteRequest):
 @router.delete("/clear")
 async def clear_eval_records(upload_token: str = ""):
     """Clear all evaluation records (useful for resetting between demo runs)."""
+    _ = upload_token
+    _require_internal_authorization()
     if not upload_token or not _verify_eval_token(upload_token):
         raise HTTPException(status_code=401, detail="Valid upload token required.")
     _evaluator.clear()
@@ -296,6 +309,7 @@ def _verify_eval_token(token: str) -> bool:
 @router.get("/health")
 async def eval_health():
     """Quick check that the evaluation module is loaded and working."""
+    _require_internal_authorization()
     # Smoke-test the metrics on a trivial example
     r1  = rouge_n("hello world", "hello world", 1)
     fk  = flesch_kincaid_grade("The cat sat on the mat. It is a nice day.")
@@ -331,6 +345,7 @@ async def get_data_quality():
       - Empty page rate (indicator of scanned/image PDFs)
       - Overall data quality score (%)
     """
+    _require_internal_authorization()
     from utils.data_augmentation import generate_data_quality_report
     return generate_data_quality_report(_data_quality_log)
 
@@ -357,6 +372,8 @@ async def augment_query(req: AugmentRequest):
         POST /api/eval/augment-query
         { "query": "What documents are required for a first-time passport application?", "source_lang": "en" }
     """
+    _ = req
+    _require_internal_authorization()
     augmenter = _get_augmenter()
     variants = augmenter.expand_query(
         query=req.query,
@@ -379,6 +396,7 @@ async def simplify_demo():
     with plain language equivalents. Shows judges the text simplification
     feature working without needing to call the full RAG pipeline.
     """
+    _require_internal_authorization()
     examples = [
         {
             "original": "Applicants must submit supporting documentation prior to approval.",
@@ -432,6 +450,7 @@ async def run_test_suite_stream(req: TestSuiteRequest):
 
     Frontend connects with EventSource / fetch + ReadableStream.
     """
+    _require_internal_authorization()
     if not req.document_id:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="document_id is required")

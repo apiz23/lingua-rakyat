@@ -63,6 +63,7 @@ class FakeQuery:
 class FakeSupabase:
     def __init__(self):
         self.store = {}
+        self.client_accesses = []
 
     def table(self, _name):
         return FakeQuery(self.store)
@@ -70,7 +71,10 @@ class FakeSupabase:
 
 def _with_fake(monkeypatch):
     fake = FakeSupabase()
-    monkeypatch.setattr(sa, "get_supabase", lambda: fake)
+    def get_client(*, admin=False):
+        fake.client_accesses.append(admin)
+        return fake
+    monkeypatch.setattr(sa, "get_supabase", get_client)
     return fake
 
 
@@ -82,26 +86,28 @@ def test_store_share_stamps_owner(monkeypatch):
     assert fake.store[slug]["user_id"] == "user_abc"
 
 
-def test_store_share_anonymous_has_no_owner_key(monkeypatch):
+def test_store_share_requires_verified_owner(monkeypatch):
     fake = _with_fake(monkeypatch)
-    slug = sa.store_share(question="Q", answer="A", sources=[], language="ms")
-    assert "user_id" not in fake.store[slug]
+    with pytest.raises(ValueError):
+        sa.store_share(question="Q", answer="A", sources=[], language="ms", user_id="")
+    assert fake.client_accesses == []
 
 
-def test_store_share_retries_without_user_id_pre_migration(monkeypatch):
+def test_store_share_does_not_retry_without_owner_when_column_missing(monkeypatch):
     fake = _with_fake(monkeypatch)
     fake.store["_reject_user_id_column"] = True
-    slug = sa.store_share(
-        question="Q", answer="A", sources=[], language="ms", user_id="user_abc"
-    )
-    assert "user_id" not in fake.store[slug]  # stored, minus the unknown column
+    with pytest.raises(RuntimeError, match="column lr_shared_answers.user_id does not exist"):
+        sa.store_share(
+            question="Q", answer="A", sources=[], language="ms", user_id="user_abc"
+        )
+    assert fake.client_accesses == [False]
+    assert not any(isinstance(row, dict) and "slug" in row for row in fake.store.values())
 
 
 def test_list_shares_for_user_only_owner_rows(monkeypatch):
     fake = _with_fake(monkeypatch)
     sa.store_share(question="mine", answer="A", sources=[], language="ms", user_id="user_abc")
     sa.store_share(question="theirs", answer="A", sources=[], language="ms", user_id="user_other")
-    sa.store_share(question="anon", answer="A", sources=[], language="ms")
     rows = sa.list_shares_for_user("user_abc")
     assert [r["question"] for r in rows] == ["mine"]
 
@@ -109,12 +115,13 @@ def test_list_shares_for_user_only_owner_rows(monkeypatch):
 def test_delete_share_removes_row(monkeypatch):
     fake = _with_fake(monkeypatch)
     slug = sa.store_share(question="Q", answer="A", sources=[], language="ms", user_id="user_abc")
-    assert sa.delete_share(slug) is True
+    assert sa.delete_share(slug, user_id="user_abc") is True
+    assert fake.client_accesses == [False, True]
     assert sa.get_share(slug) is None
 
 
 def test_revoke_endpoint_owner_only(monkeypatch):
-    _with_fake(monkeypatch)
+    fake = _with_fake(monkeypatch)
     from routers.share import revoke_share
     slug = sa.store_share(question="Q", answer="A", sources=[], language="ms", user_id="user_abc")
 
@@ -129,18 +136,22 @@ def test_revoke_endpoint_owner_only(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         revoke_share(slug, verified=None)
     assert exc.value.status_code == 401
+    assert True not in fake.client_accesses
 
     result = revoke_share(slug, verified="user_abc")
     assert result == {"success": True}
+    assert fake.client_accesses[-1] is True
 
 
 def test_revoke_anonymous_share_forbidden(monkeypatch):
-    _with_fake(monkeypatch)
+    fake = _with_fake(monkeypatch)
     from routers.share import revoke_share
-    slug = sa.store_share(question="Q", answer="A", sources=[], language="ms")
+    slug = sa.store_share(question="Q", answer="A", sources=[], language="ms", user_id="user_abc")
+    fake.store[slug].pop("user_id")  # legacy ownerless public share
     with pytest.raises(HTTPException) as exc:
         revoke_share(slug, verified="user_abc")
     assert exc.value.status_code == 403
+    assert True not in fake.client_accesses
 
 
 def test_mine_endpoint_requires_auth():

@@ -36,6 +36,41 @@ from utils.auth import get_supabase
 
 logger = logging.getLogger("shared_answers")
 TABLE = "lr_shared_answers"
+CHAT_TABLE = os.getenv("CHAT_HISTORY_TABLE", "lr_chat_messages")
+
+
+def find_owned_chat_answer(
+    *, user_id: str, question: str, answer: str, session_id: Optional[str] = None
+) -> Optional[dict[str, Any]]:
+    """Resolve share content only from an answer persisted for this owner/session."""
+    if not user_id or not user_id.strip():
+        raise ValueError("Verified owner is required")
+    if session_id is not None and not session_id.strip():
+        raise ValueError("Session cannot be empty")
+    if not question or not question.strip() or not answer or not answer.strip():
+        raise ValueError("Question and answer are required")
+    try:
+        query = (
+            get_supabase().table(CHAT_TABLE)
+            .select("user_id, session_id, question, answer, language, sources, confidence, created_at")
+            .eq("user_id", user_id)
+            .eq("question", question)
+        )
+        if session_id is not None:
+            query = query.eq("session_id", session_id)
+        response = query.order("created_at", desc=True).limit(20).execute()
+        for row in response.data or []:
+            if (
+                row.get("user_id") == user_id
+                and (session_id is None or row.get("session_id") == session_id)
+                and row.get("question") == question
+                and row.get("answer") == answer
+            ):
+                return row
+        return None
+    except Exception as exc:
+        logger.warning("[Share] Could not resolve persisted answer")
+        raise RuntimeError("Persisted answer lookup failed") from exc
 
 
 def store_share(
@@ -43,11 +78,13 @@ def store_share(
     answer: str,
     sources: list[dict],
     language: str,
+    user_id: str,
     confidence: float = 0.0,
     confidence_label: str = "",
     agency: str = "",
-    user_id: Optional[str] = None,
 ) -> str:
+    if not user_id or not user_id.strip():
+        raise ValueError("Verified share owner is required")
     slug = secrets.token_urlsafe(12)  # 72-bit entropy — negligible collision risk
     payload = {
         "slug": slug,
@@ -59,17 +96,8 @@ def store_share(
         "confidence_label": confidence_label,
         "agency": agency,
     }
-    if user_id:
-        payload["user_id"] = user_id
-    try:
-        res = get_supabase().table(TABLE).insert(payload).execute()
-    except Exception as exc:
-        if "user_id" not in payload:
-            raise
-        # Pre-migration tolerance: retry without the ownership column.
-        logger.warning("[Share] Insert with user_id failed (%s); retrying without owner", exc)
-        payload.pop("user_id")
-        res = get_supabase().table(TABLE).insert(payload).execute()
+    payload["user_id"] = user_id
+    res = get_supabase().table(TABLE).insert(payload).execute()
     if not res.data:
         raise RuntimeError(f"[Share] Insert returned no data for slug={slug}")
     logger.info("[Share] Stored slug=%s", slug)
@@ -102,6 +130,16 @@ def list_shares_for_user(user_id: str) -> list[dict[str, Any]]:
         return []
 
 
-def delete_share(slug: str) -> bool:
-    res = get_supabase(admin=True).table(TABLE).delete().eq("slug", slug).execute()
+def delete_share(slug: str, *, user_id: str) -> bool:
+    if not user_id or not user_id.strip() or not slug or not slug.strip():
+        raise ValueError("Share owner and slug are required")
+    res = (
+        get_supabase(admin=True)
+        .table(TABLE)
+        .delete()
+        .eq("slug", slug)
+        .eq("user_id", user_id)
+        .select("slug")
+        .execute()
+    )
     return bool(res.data)

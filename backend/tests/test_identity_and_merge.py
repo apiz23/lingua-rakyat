@@ -3,7 +3,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.dirname(__file__))
 
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
 
 from auth_helpers import install_fake_jwks, make_keypair, mint_token
 
@@ -56,6 +57,13 @@ class FakeSupabase:
         return FakeQuery(self.store, name)
 
 
+def _admin_client(client):
+    def get_client(*, admin=False):
+        assert admin is True, "Identity reassignment must explicitly use the admin client"
+        return client
+    return get_client
+
+
 def _verified(monkeypatch, sub="user_abc"):
     install_fake_jwks(monkeypatch, PUBLIC_KEY)
     token = mint_token(PRIVATE_KEY, sub=sub)
@@ -63,7 +71,7 @@ def _verified(monkeypatch, sub="user_abc"):
     return get_verified_user(FakeRequest(f"Bearer {token}"))
 
 
-def test_merge_moves_rows_in_both_tables(monkeypatch):
+def test_merge_fails_closed_without_source_ownership_proof(monkeypatch):
     from routers import user as user_router
     store = {
         "lr_chat_messages": [
@@ -73,23 +81,25 @@ def test_merge_moves_rows_in_both_tables(monkeypatch):
         ],
         "lr_shared_answers": [{"user_id": "anon-1", "slug": "s1"}],
     }
-    monkeypatch.setattr(user_router, "get_supabase", lambda: FakeSupabase(store))
+    client_calls = []
+    monkeypatch.setattr(user_router, "get_supabase", lambda **kwargs: client_calls.append(kwargs), raising=False)
     body = user_router.MergeRequest(anon_user_id="anon-1")
-    resp = user_router.merge_anon(body, verified=_verified(monkeypatch))
-    assert resp.chat_rows == 2
-    assert resp.share_rows == 1
-    assert store["lr_chat_messages"][0]["user_id"] == "user_abc"
-    assert store["lr_chat_messages"][2]["user_id"] == "other"
+    with pytest.raises(HTTPException) as exc:
+        user_router.merge_anon(body, verified=_verified(monkeypatch))
+    assert exc.value.status_code == 503
+    assert store["lr_chat_messages"][0]["user_id"] == "anon-1"
+    assert client_calls == []
 
 
-def test_merge_is_idempotent(monkeypatch):
+def test_merge_does_not_acquire_admin_client_for_unverified_source(monkeypatch):
     from routers import user as user_router
-    store = {"lr_chat_messages": [], "lr_shared_answers": []}
-    monkeypatch.setattr(user_router, "get_supabase", lambda: FakeSupabase(store))
+    client_calls = []
+    monkeypatch.setattr(user_router, "get_supabase", lambda **kwargs: client_calls.append(kwargs), raising=False)
     body = user_router.MergeRequest(anon_user_id="anon-gone")
-    resp = user_router.merge_anon(body, verified=_verified(monkeypatch))
-    assert resp.chat_rows == 0
-    assert resp.share_rows == 0
+    with pytest.raises(HTTPException) as exc:
+        user_router.merge_anon(body, verified=_verified(monkeypatch))
+    assert exc.value.status_code == 503
+    assert client_calls == []
 
 
 def test_merge_requires_auth():
@@ -100,42 +110,56 @@ def test_merge_requires_auth():
     assert exc.value.status_code == 401
 
 
-def test_merge_rejects_clerk_id_as_anon(monkeypatch):
+def test_merge_http_route_fails_closed_without_acquiring_admin_client(monkeypatch):
+    from routers import user as user_router
+
+    install_fake_jwks(monkeypatch, PUBLIC_KEY)
+    monkeypatch.setattr(
+        user_router,
+        "get_supabase",
+        lambda **_kwargs: pytest.fail("admin client must not be acquired"),
+        raising=False,
+    )
+    app = FastAPI()
+    app.include_router(user_router.router, prefix="/api/user")
+    token = mint_token(PRIVATE_KEY, sub="user_destination")
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/user/merge-anon",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"anon_user_id": "browser-controlled-source"},
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Anonymous history linking is temporarily unavailable."
+
+
+def test_merge_does_not_attempt_to_classify_caller_supplied_source_id(monkeypatch):
     from routers import user as user_router
     body = user_router.MergeRequest(anon_user_id="user_victim")
     with pytest.raises(HTTPException) as exc:
         user_router.merge_anon(body, verified=_verified(monkeypatch))
-    assert exc.value.status_code == 400
+    assert exc.value.status_code == 503
 
 
-def test_merge_tolerates_missing_share_column(monkeypatch):
+def test_merge_does_not_partially_reassign_rows(monkeypatch):
     from routers import user as user_router
-
-    class ExplodingShareSupabase(FakeSupabase):
-        def table(self, name):
-            if name == "lr_shared_answers":
-                raise RuntimeError("column lr_shared_answers.user_id does not exist")
-            return super().table(name)
-
     store = {"lr_chat_messages": [{"user_id": "anon-1"}]}
-    monkeypatch.setattr(user_router, "get_supabase", lambda: ExplodingShareSupabase(store))
+    monkeypatch.setattr(user_router, "get_supabase", lambda **kwargs: pytest.fail("admin client acquired"), raising=False)
     body = user_router.MergeRequest(anon_user_id="anon-1")
-    resp = user_router.merge_anon(body, verified=_verified(monkeypatch))
-    assert resp.chat_rows == 1
-    assert resp.share_rows == 0
+    with pytest.raises(HTTPException) as exc:
+        user_router.merge_anon(body, verified=_verified(monkeypatch))
+    assert exc.value.status_code == 503
+    assert store["lr_chat_messages"][0]["user_id"] == "anon-1"
 
 
-def test_conversations_token_overrides_query_user(monkeypatch):
+def test_conversations_rejects_user_id_that_disagrees_with_verified_subject(monkeypatch):
     import routers.chat as chat
-    captured = {}
-    def fake_list(uid):
-        captured["uid"] = uid
-        return []
-
-    monkeypatch.setattr(chat, "list_conversations", fake_list)
     import asyncio
-    asyncio.run(chat.get_conversations(user_id="spoofed-id", x_user_id=None, verified="user_abc"))
-    assert captured["uid"] == "user_abc"
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(chat.get_conversations(user_id="spoofed-id", x_user_id=None, verified="user_abc"))
+    assert exc.value.status_code == 403
 
 
 def test_conversations_rejects_spoofed_clerk_id_without_token():
@@ -146,19 +170,13 @@ def test_conversations_rejects_spoofed_clerk_id_without_token():
     assert exc.value.status_code == 401
 
 
-def test_conversations_reads_anon_id_from_header_not_query(monkeypatch):
-    # The X-User-Id header — not the query string — is now the source of the
-    # anonymous id, so it never lands in a URL that gets logged/kept in history.
+def test_conversations_rejects_anonymous_id_from_header(monkeypatch):
+    # Browser-generated IDs are not proof of anonymous history ownership.
     import routers.chat as chat
-    captured = {}
-    def fake_list(uid):
-        captured["uid"] = uid
-        return []
-
-    monkeypatch.setattr(chat, "list_conversations", fake_list)
     import asyncio
-    asyncio.run(chat.get_conversations(user_id="", x_user_id="anon-header-id", verified=None))
-    assert captured["uid"] == "anon-header-id"
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(chat.get_conversations(user_id="", x_user_id="anon-header-id", verified=None))
+    assert exc.value.status_code == 401
 
 
 def test_conversations_rejects_spoofed_clerk_id_via_header():

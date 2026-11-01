@@ -16,7 +16,6 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from pypdf import PdfReader
 from slowapi import Limiter
-from pinecone import Pinecone
 
 from rate_limits import DOC_LIMIT, PDF_URL_LIMIT, SEED_LIMIT, get_proxy_aware_remote_address
 from utils.auth import get_supabase
@@ -201,7 +200,12 @@ def list_storage_documents() -> list[dict[str, Any]]:
         if now - _storage_cache_at < _STORAGE_CACHE_TTL:
             return _storage_cache
 
-    sb = get_supabase()
+    # Storage object listing is restricted to the service role when the bucket
+    # is private (Supabase applies RLS to storage.objects). The public anon key
+    # then returns an empty list even though the files exist. Listing metadata
+    # here is safe: only the backend uses it to reconcile the public document
+    # catalogue, and file contents are never read in this path.
+    sb = get_supabase(admin=True)
     bucket = get_bucket()
     entries = sb.storage.from_(bucket).list()
     docs: list[dict[str, Any]] = []
@@ -253,8 +257,11 @@ def list_storage_documents() -> list[dict[str, Any]]:
 
 def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
-    Reconcile the lr_documents table against the storage bucket.
-    This keeps manual bucket uploads visible in the API.
+    Reconcile the lr_documents table against storage.
+
+    This helper performs privileged writes and is intentionally not called by
+    public catalogue reads. It must only be used by an explicitly authorized
+    maintenance workflow; no such HTTP workflow is currently enabled.
     """
     try:
         storage_docs = list_storage_documents()
@@ -323,6 +330,14 @@ def _validate_upload_token(token: str) -> None:
         raise HTTPException(status_code=401, detail="Valid upload token required.")
 
 
+def _require_admin_authorization() -> None:
+    """Fail closed until a trusted server-side operator role is configured."""
+    raise HTTPException(
+        status_code=503,
+        detail="Document administration is temporarily unavailable.",
+    )
+
+
 def verify_upload_token(token: str) -> bool:
     try:
         now = utc_now_iso()
@@ -371,12 +386,8 @@ class RenameDocumentRequest(BaseModel):
 @limiter.limit(DOC_LIMIT)
 async def verify_token(request: Request, token: str):
     _ = request
-    if not token or len(token) > 256:
-        raise HTTPException(status_code=400, detail="Invalid token.")
-    valid = verify_upload_token(token)
-    if not valid:
-        raise HTTPException(status_code=401, detail="Invalid or expired token.")
-    return {"valid": True}
+    _ = token
+    _require_admin_authorization()
 
 
 def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filename: str) -> None:
@@ -434,10 +445,8 @@ async def upload_document(
     file: UploadFile = File(...),
     upload_token: str = "",
 ):
-    _ = request
-
-    if not upload_token or not verify_upload_token(upload_token):
-        raise HTTPException(status_code=401, detail="Valid upload token required.")
+    _ = request, background_tasks, file, upload_token
+    _require_admin_authorization()
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
@@ -520,18 +529,18 @@ async def get_document_status(document_id: str):
 
 @router.get("/", response_model=list[DocumentResponse])
 async def list_documents():
+    # Public read path: use only the registered catalogue. Storage
+    # reconciliation can write/delete rows with the service role and belongs
+    # in a separately authorized maintenance workflow.
     documents = load_documents()
-    documents = sync_documents_with_storage(documents)
     return [DocumentResponse(**doc) for doc in documents]
 
 
 @router.patch("/{document_id}/rename", response_model=DocumentResponse)
 @limiter.limit(DOC_LIMIT)
 async def rename_document(request: Request, document_id: str, body: RenameDocumentRequest):
-    _ = request
-
-    if not body.upload_token or not verify_upload_token(body.upload_token):
-        raise HTTPException(status_code=401, detail="Valid upload token required.")
+    _ = request, document_id, body
+    _require_admin_authorization()
 
     new_name = os.path.basename(body.name.strip())
     if not new_name:
@@ -586,7 +595,8 @@ async def register_document(
     public_url: Optional[str] = None,
     upload_token: str = "",
 ):
-    _validate_upload_token(upload_token)
+    _ = id, name, size_bytes, chunk_count, storage_path, public_url, upload_token
+    _require_admin_authorization()
     documents = load_documents()
     if any(doc["id"] == id for doc in documents):
         raise HTTPException(status_code=409, detail=f"Document '{id}' is already registered.")
@@ -614,46 +624,13 @@ async def register_document(
 
 @router.post("/refresh-chunks")
 async def refresh_chunk_counts():
-
-    try:
-        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-        index = pc.Index(os.getenv("PINECONE_INDEX", "docuquery"))
-
-        documents = load_documents()
-        updated = 0
-
-        for doc in documents:
-            try:
-                results = index.query(
-                    vector=[0] * 384,
-                    top_k=10000,
-                    namespace=doc["id"],
-                    include_metadata=False,
-                )
-                actual_chunk_count = len(results.get("matches", []))
-                if actual_chunk_count > 0 and doc["chunk_count"] != actual_chunk_count:
-                    doc["chunk_count"] = actual_chunk_count
-                    updated += 1
-                    logger.info("[Refresh] Updated %s: %d chunks", doc["name"], actual_chunk_count)
-            except Exception as exc:
-                logger.warning("[Refresh] Warning querying %s: %s", doc["id"], exc)
-
-        if updated > 0:
-            upsert_documents(documents)
-
-        return {
-            "updated": updated,
-            "total": len(documents),
-            "message": f"Updated chunk counts for {updated}/{len(documents)} documents",
-        }
-    except Exception as exc:
-        logger.error("[Refresh] Error: %s", exc)
-        raise HTTPException(status_code=500, detail="Failed to refresh chunk counts.") from exc
+    _require_admin_authorization()
 
 
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, upload_token: str = ""):
-    _validate_upload_token(upload_token)
+    _ = document_id, upload_token
+    _require_admin_authorization()
     documents = load_documents()
     doc_to_delete = next((doc for doc in documents if doc["id"] == document_id), None)
     if not doc_to_delete:
@@ -668,7 +645,7 @@ async def delete_document(document_id: str, upload_token: str = ""):
             logger.warning("[Delete] Could not remove %s from storage: %s", storage_path, exc)
 
     delete_document_from_vectorstore(document_id)
-    delete_chat_messages_for_document(document_id)
+    delete_chat_messages_for_document(document_id, admin_authorized=True)
     delete_document_record(document_id)
     _invalidate_storage_cache()
 
@@ -731,7 +708,7 @@ def proxy_pdf(request: Request, document_id: str):
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'inline; filename="{safe_name}.pdf"',
-            "Cache-Control": "private, max-age=3600",
+            "Cache-Control": "no-store",
             "ETag": f'"{etag}"',
         },
     )
@@ -747,9 +724,8 @@ class ReindexResponse(BaseModel):
 @limiter.limit(DOC_LIMIT)
 async def reindex_document(request: Request, document_id: str, upload_token: str = ""):
     """Re-ingest an existing document to refresh Pinecone vectors (e.g. pick up page_start metadata)."""
-    _ = request
-    if not upload_token or not verify_upload_token(upload_token):
-        raise HTTPException(status_code=401, detail="Valid upload token required.")
+    _ = request, document_id, upload_token
+    _require_admin_authorization()
 
     sb = get_supabase(admin=True)
     rows = (
@@ -938,9 +914,8 @@ async def _do_seed() -> dict:
 @router.post("/seed")
 @limiter.limit(SEED_LIMIT)
 async def seed_featured_documents(request: Request, upload_token: str = ""):
-    _ = request
-    _validate_upload_token(upload_token)
-    return await _do_seed()
+    _ = request, upload_token
+    _require_admin_authorization()
 
 
 async def _prewarm_featured_docs():

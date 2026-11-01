@@ -26,6 +26,19 @@ def test_transcribe_returns_transcript():
     assert data["language"] == "ms"
 
 
+def test_v1_public_transcription_uses_existing_voice_handler():
+    fake_result = {"transcript": "Syarat bantuan?", "language": "ms", "duration_s": 1.2}
+    with patch("routers.voice.transcribe_audio", return_value=fake_result):
+        client = _make_client()
+        resp = client.post(
+            "/api/v1/public/voice/transcriptions",
+            files={"audio": ("recording.webm", b"fake_audio", "audio/webm")},
+        )
+
+    assert resp.status_code == 200
+    assert resp.json() == fake_result
+
+
 def test_transcribe_rejects_empty_file():
     client = _make_client()
     resp = client.post(
@@ -44,6 +57,20 @@ def test_tts_returns_audio_bytes():
             "/api/voice/tts",
             json={"text": "Anda perlu berumur 55 tahun.", "language": "ms"},
         )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "audio/mpeg"
+    assert resp.content == fake_audio
+
+
+def test_v1_public_speech_uses_existing_tts_handler():
+    fake_audio = b"\xff\xfbfake_mp3_data"
+    with patch("routers.voice.text_to_speech", return_value=fake_audio):
+        client = _make_client()
+        resp = client.post(
+            "/api/v1/public/voice/speech",
+            json={"text": "Bantuan tersedia.", "language": "ms"},
+        )
+
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "audio/mpeg"
     assert resp.content == fake_audio

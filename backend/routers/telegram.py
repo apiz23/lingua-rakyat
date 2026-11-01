@@ -4,8 +4,7 @@ routers/telegram.py — Telegram Bot via Webhook (works on Vercel serverless)
 Setup (one-time):
   1. Add BOT_TOKEN to backend env vars
   2. Deploy backend
-  3. GET https://<your-backend>/api/telegram/setup  ← registers webhook with Telegram
-
+  3. Webhook setup is disabled pending operator authorization and a canonical URL
 Commands:
   /start  — welcome
   /docs   — list documents
@@ -21,12 +20,13 @@ import uuid
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from routers.documents import load_documents, sync_documents_with_storage, upsert_documents
+from routers.documents import load_documents, upsert_documents
 from utils.rag_pipeline import answer_question, ingest_document
 from utils.voice_helpers import transcribe_audio
 
 logger = logging.getLogger("telegram_router")
 router = APIRouter()
+machine_v1_router = APIRouter()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
@@ -99,8 +99,9 @@ def _save_session(chat_id: str, session: dict) -> None:
 
 def _get_docs() -> list:
     try:
-        docs = load_documents()
-        return sync_documents_with_storage(docs)
+        # /docs is a webhook read operation. It must not trigger privileged
+        # storage reconciliation or catalogue writes.
+        return load_documents()
     except Exception as exc:
         logger.error("Failed to fetch docs: %s", exc)
         return []
@@ -330,21 +331,24 @@ async def telegram_webhook(request: Request):
     return JSONResponse({"ok": True})
 
 
+# Versioned callback alias. It uses the exact same machine-secret validation
+# and is inert until Telegram is explicitly configured to call this path.
+machine_v1_router.add_api_route(
+    "/telegram/webhook",
+    telegram_webhook,
+    methods=["POST"],
+    name="telegram_webhook_v1",
+)
+
+
 # ── Setup endpoint (call once after deploy) ───────────────────────────────────
 
 @router.get("/setup")
 async def setup_webhook(request: Request):
-    if not BOT_TOKEN:
-        return JSONResponse({"error": "BOT_TOKEN not set"}, status_code=500)
-
-    base_url = str(request.base_url).rstrip("/")
-    webhook_url = f"{base_url}/api/telegram/webhook"
-
-    bot = _bot()
-    secret = _get_webhook_secret()
-    kwargs = {"url": webhook_url}
-    if secret:
-        kwargs["secret_token"] = secret
-    await bot.set_webhook(**kwargs)
-
-    return JSONResponse({"ok": True, "webhook_url": webhook_url})
+    _ = request
+    # No trusted operator authorization or canonical configured webhook URL
+    # exists yet. Keep machine callback handling separate and fail closed here.
+    raise HTTPException(
+        status_code=503,
+        detail="Telegram webhook setup is temporarily unavailable.",
+    )
