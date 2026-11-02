@@ -11,14 +11,14 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  Download,
   FileX,
   Loader2,
   X,
 } from "lucide-react"
+import { API_URL } from "@/lib/config"
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 export interface PdfPanelProps {
   open: boolean
@@ -247,9 +247,13 @@ function PdfViewer({
 
 function PanelHeader({
   docName,
+  documentId,
+  language,
   onClose,
 }: {
   docName: string
+  documentId: string
+  language: string
   onClose: () => void
 }) {
   return (
@@ -257,6 +261,15 @@ function PanelHeader({
       <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
         {docName}
       </span>
+      <a
+        href={`${API_URL}/api/documents/${documentId}/pdf?download=1`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={language === "ms" ? "Muat turun PDF" : "Download PDF"}
+        className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Download className="h-4 w-4" />
+      </a>
       <button
         onClick={onClose}
         aria-label="Close PDF viewer"
@@ -300,7 +313,7 @@ export default function PdfPanel({
           style={{ width: "min(680px, 92vw)", maxWidth: "min(680px, 92vw)" }}
         >
           <SheetTitle className="sr-only">{docName}</SheetTitle>
-          <PanelHeader docName={docName} onClose={onClose} />
+          <PanelHeader docName={docName} documentId={documentId} language={language} onClose={onClose} />
           <div className="min-h-0 flex-1">{viewer}</div>
         </SheetContent>
       </Sheet>
@@ -316,7 +329,7 @@ export default function PdfPanel({
         className="max-w-[min(95vw,540px)] gap-0 overflow-hidden p-0"
       >
         <div className="flex flex-col" style={{ height: "80vh" }}>
-          <PanelHeader docName={docName} onClose={onClose} />
+          <PanelHeader docName={docName} documentId={documentId} language={language} onClose={onClose} />
           <div className="min-h-0 flex-1">{viewer}</div>
         </div>
       </SmoothDialog>
@@ -327,7 +340,7 @@ export default function PdfPanel({
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
       <DrawerContent className="flex max-h-[80vh] flex-col gap-0 p-0">
         <DrawerTitle className="sr-only">{docName}</DrawerTitle>
-        <PanelHeader docName={docName} onClose={onClose} />
+        <PanelHeader docName={docName} documentId={documentId} language={language} onClose={onClose} />
         <div className="min-h-0 flex-1">{viewer}</div>
       </DrawerContent>
     </Drawer>

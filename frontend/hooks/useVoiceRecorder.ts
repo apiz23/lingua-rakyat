@@ -1,8 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+import { API_URL } from "@/lib/config"
 const MIN_DURATION_MS = 500  // reject recordings shorter than 500ms
 
 export type RecorderState = "idle" | "recording" | "transcribing" | "done" | "error"

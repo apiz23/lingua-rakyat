@@ -84,7 +84,9 @@ test("mounted voice control stops late microphone permission after unmount", asy
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: {
     mediaDevices: { getUserMedia: () => new Promise((resolve) => { resolvePermission = resolve }) },
   } })
-  const hook = load("../hooks/useVoiceRecorder.ts")
+  const hook = load("../hooks/useVoiceRecorder.ts", {
+    "@/lib/config": { API_URL: "http://localhost:8000" },
+  })
   const icon = () => React.createElement("i")
   const voice = load("../components/chat-panel/voice-mic-button.tsx", {
     "@/hooks/useVoiceRecorder": hook,
@@ -127,7 +129,9 @@ test("mounted voice control aborts transcription and ignores a late response", a
   }
   Date.now = () => now
   globalThis.fetch = (_url, init) => { signal = init.signal; return new Promise((resolve) => { resolveFetch = resolve }) }
-  const hook = load("../hooks/useVoiceRecorder.ts")
+  const hook = load("../hooks/useVoiceRecorder.ts", {
+    "@/lib/config": { API_URL: "http://localhost:8000" },
+  })
   const icon = () => React.createElement("i")
   const voice = load("../components/chat-panel/voice-mic-button.tsx", {
     "@/hooks/useVoiceRecorder": hook,

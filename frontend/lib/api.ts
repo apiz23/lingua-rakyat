@@ -10,8 +10,7 @@ import {
 } from "@/lib/offline-cache"
 import { authHeader } from "@/lib/auth-token"
 import { consumeChatSse } from "@/lib/chat-stream"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
+import { API_URL } from "@/lib/config"
 
 class HistoryAuthorizationError extends Error {
   constructor() {
