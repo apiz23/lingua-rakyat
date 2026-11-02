@@ -172,6 +172,18 @@ async def liveness_check():
     return {"status": "ok"}
 
 
+def _anon_key_shape() -> str:
+    """Describe the configured anon credential without revealing it."""
+    raw = (os.getenv("SUPABASE_ANON_KEY") or "").strip().strip('"').strip("'")
+    if not raw:
+        return "missing"
+    if raw.startswith("eyJ"):
+        return "jwt"
+    if raw.startswith("sb_publishable_"):
+        return "publishable"
+    return "unknown"
+
+
 @app.get("/health/ready", tags=["Health"])
 async def readiness_check():
     """Readiness: the public catalogue client can reach the database.
@@ -191,6 +203,12 @@ async def readiness_check():
         return {"status": "ok", "checks": {"database": "ok", "catalogue": "anon"}}
     except Exception as anon_error:
         logger.error("[Health] Anon readiness check failed: %s", anon_error)
+        anon_diagnostic = {
+            "database": "ok",
+            "catalogue": "service-fallback",
+            "anon_key": _anon_key_shape(),
+            "anon_error": type(anon_error).__name__,
+        }
 
     try:
         (
@@ -204,15 +222,15 @@ async def readiness_check():
             "[Health] Catalogue is reachable only through the service-role fallback; "
             "configure a valid SUPABASE_ANON_KEY."
         )
-        return {
-            "status": "ok",
-            "checks": {"database": "ok", "catalogue": "service-fallback"},
-        }
+        return {"status": "ok", "checks": anon_diagnostic}
     except Exception as admin_error:
         logger.error("[Health] Readiness check failed: %s", admin_error)
         return JSONResponse(
             status_code=503,
-            content={"status": "unavailable", "checks": {"database": "unavailable"}},
+            content={
+                "status": "unavailable",
+                "checks": {**anon_diagnostic, "database": "unavailable"},
+            },
         )
 
 

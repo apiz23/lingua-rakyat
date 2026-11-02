@@ -58,10 +58,12 @@ def test_readiness_reports_service_fallback_when_anon_key_is_unusable(monkeypatc
     with TestClient(main.app) as client:
         response = client.get("/health/ready")
     assert response.status_code == 200
-    assert response.json() == {
-        "status": "ok",
-        "checks": {"database": "ok", "catalogue": "service-fallback"},
-    }
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["checks"]["database"] == "ok"
+    assert body["checks"]["catalogue"] == "service-fallback"
+    assert body["checks"]["anon_key"] in {"jwt", "publishable", "unknown", "missing"}
+    assert body["checks"]["anon_error"] == "ValueError"
 
 
 def test_readiness_fails_closed_without_leaking_configuration(monkeypatch):
@@ -73,10 +75,12 @@ def test_readiness_fails_closed_without_leaking_configuration(monkeypatch):
     with TestClient(main.app) as client:
         response = client.get("/health/ready")
     assert response.status_code == 503
-    assert response.json() == {
-        "status": "unavailable",
-        "checks": {"database": "unavailable"},
-    }
+    body = response.json()
+    assert body["status"] == "unavailable"
+    assert body["checks"]["database"] == "unavailable"
+    assert body["checks"]["catalogue"] == "service-fallback"
+    assert body["checks"]["anon_key"] in {"jwt", "publishable", "unknown", "missing"}
+    assert body["checks"]["anon_error"] == "ValueError"
     assert "SUPABASE_ANON_KEY" not in response.text
 
 
