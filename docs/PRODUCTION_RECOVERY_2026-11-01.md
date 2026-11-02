@@ -106,24 +106,19 @@ Automated totals: backend **353 passed**; frontend **33 passed**.
 
 ## F. Production readiness
 
-**Not ready for a full claim of recovery until one environment change is made.** The code hotfix is ready to deploy, but document listing will remain unavailable (now as a visible `503`, not a silent empty list) unless the Vercel backend project has a valid `SUPABASE_ANON_KEY`.
+**Deployed and verified on 2026-11-02 at `e06d816`** (frontend project `lingua-rakyat`, backend project `lingua-rakyat-ai`, both Production).
 
-Required before deployment:
+Verified against production:
 
-1. In Vercel → project `lingua-rakyat-ai` → Settings → Environment Variables → Production, set:
-   - `SUPABASE_ANON_KEY` = the project's anon/public key (same Supabase project as `SUPABASE_URL`).
-2. Confirm `SUPABASE_URL` points at `https://otmlfmgyscrohtbpqqoi.supabase.co` (the project containing the ten documents).
-3. Do **not** replace `SUPABASE_KEY`; it must remain the service-role key. It is used only for privileged operations and PDF byte reads.
-4. Redeploy the backend so the new environment is picked up.
+- Homepage renders the landing page in a clean browser; no device-verification gate.
+- `/workspace` renders and lists all **10** documents.
+- `GET /health/ready` → `200 {"status":"ok","checks":{"database":"ok","catalogue":"service-fallback"}}`.
+- `GET /api/documents/` → `200`, 10 rows.
+- `GET /api/documents/{id}/status` → `200`.
+- `GET /api/documents/{id}/pdf` → `200 application/pdf`, 21,844 bytes.
+- `GET /api/documents/{id}/pdf?download=1` → `200`, `Content-Disposition: attachment`.
 
-After deployment, verify:
-
-```bash
-curl -i https://lingua-rakyat-ai.vercel.app/health/ready          # 200, checks.database=ok
-curl -i https://lingua-rakyat-ai.vercel.app/api/documents/        # 200, 10 documents
-curl -i -o /dev/null -w '%{http_code} %{content_type}\n' \
-  https://lingua-rakyat-ai.vercel.app/api/documents/3b047292-4592-571b-9426-982bab584a21/pdf
-```
+**Outstanding configuration issue:** the Production `SUPABASE_ANON_KEY` is still not usable (missing, malformed, wrong project, or the new `sb_publishable_…` key instead of the legacy anon JWT). The backend therefore serves the public catalogue through the service-role fallback and reports `catalogue: "service-fallback"`. This is a least-privilege regression, not an outage. Fix it by setting the **legacy anon JWT** (starts `eyJ…`) from Supabase → Project Settings → API → `anon public` in Vercel project `lingua-rakyat-ai` → Production, then redeploy. Readiness should change to `catalogue: "anon"`.
 
 ## G. Deployment and rollback
 
