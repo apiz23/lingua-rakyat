@@ -139,6 +139,23 @@ def test_expired_or_revoked_public_rows_are_hidden(client, monkeypatch):
     assert response.json() == []
 
 
+def test_catalogue_falls_back_to_service_client_when_anon_key_is_unusable(client, monkeypatch):
+    calls = []
+
+    def factory(admin=False):
+        if not admin:
+            raise ValueError("invalid SUPABASE_ANON_KEY")
+        return FakeClient([LEGACY_ROW], calls, admin)
+
+    monkeypatch.setattr(documents, "get_supabase", factory)
+
+    response = client.get("/api/documents/")
+
+    assert response.status_code == 200
+    assert [doc["id"] for doc in response.json()] == ["legacy-doc"]
+    assert any(call[0] == "table" and call[2] is True for call in calls)
+
+
 def test_catalogue_unavailable_is_503_not_empty_library(client, monkeypatch):
     monkeypatch.setattr(
         documents,

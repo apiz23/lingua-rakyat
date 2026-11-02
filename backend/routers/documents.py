@@ -223,26 +223,45 @@ def normalize_document_row(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _query_catalogue(client: Any, document_id: Optional[str] = None):
+    query = client.table(get_documents_table()).select("*")
+    if document_id is None:
+        query = query.order("uploaded_at", desc=True)
+    else:
+        query = query.eq("id", document_id).limit(1)
+    return query.execute()
+
+
 def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
-    try:
-        response = (
-            get_supabase()
-            .table(get_documents_table())
-            .select("*")
-            .order("uploaded_at", desc=True)
-            .execute()
-        )
-        rows = [row for row in (response.data or []) if is_catalogue_visible(row)]
-        logger.info("[Documents] Loaded %d rows from %s", len(rows), get_documents_table())
-        return [normalize_document_row(row) for row in rows]
-    except Exception as exc:
-        # Public reads must distinguish "empty catalogue" from "catalogue
-        # unreachable". The non-strict form keeps maintenance callers working;
-        # the HTTP read path passes strict=True and returns 503.
-        logger.error("[Documents] Failed to load %s: %s", get_documents_table(), exc)
-        if strict:
-            raise DocumentCatalogueUnavailable("Document catalogue unavailable") from exc
-        return []
+    last_error: Optional[Exception] = None
+    # Public reads use the anon client first. During the 2026-11-01 recovery the
+    # production anon key was missing/unusable while the service key worked, so
+    # the public catalogue (already filtered to publicly visible rows) falls
+    # back to the service client rather than showing a permanently empty site.
+    # Private/user-scoped tables never use this fallback.
+    for admin in (False, True):
+        try:
+            response = _query_catalogue(get_supabase(admin=admin))
+            rows = [row for row in (response.data or []) if is_catalogue_visible(row)]
+            if admin:
+                logger.warning(
+                    "[Documents] Public catalogue served via service-role fallback; "
+                    "set a valid SUPABASE_ANON_KEY to restore least-privilege reads."
+                )
+            logger.info("[Documents] Loaded %d rows from %s", len(rows), get_documents_table())
+            return [normalize_document_row(row) for row in rows]
+        except Exception as exc:
+            last_error = exc
+            logger.error(
+                "[Documents] Catalogue read failed (service_client=%s): %s", admin, exc
+            )
+
+    # Public reads must distinguish "empty catalogue" from "catalogue
+    # unreachable". The non-strict form keeps maintenance callers working;
+    # the HTTP read path passes strict=True and returns 503.
+    if strict:
+        raise DocumentCatalogueUnavailable("Document catalogue unavailable") from last_error
+    return []
 
 
 def upsert_documents(documents: list[dict[str, Any]]) -> None:
@@ -573,24 +592,7 @@ class DocumentStatusResponse(BaseModel):
 @router.get("/{document_id}/status", response_model=DocumentStatusResponse)
 async def get_document_status(document_id: str):
     """Lightweight status poll for the upload flow — no storage sync, one row read."""
-    try:
-        rows = (
-            get_supabase()
-            .table(get_documents_table())
-            .select("id, status, chunk_count, error_message")
-            .eq("id", document_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception as exc:
-        logger.error("[Documents] Status read failed for %s: %s", document_id, exc)
-        raise HTTPException(
-            status_code=503,
-            detail="Document service is temporarily unavailable.",
-        ) from exc
-    if not rows.data:
-        raise HTTPException(status_code=404, detail="Document not found")
-    row = rows.data[0]
+    row = _read_catalogue_row(document_id)
     return DocumentStatusResponse(
         id=str(row.get("id", document_id)),
         status=row.get("status", "processing"),
@@ -732,28 +734,40 @@ async def delete_document(document_id: str, upload_token: str = ""):
 
 def _read_catalogue_row(document_id: str) -> dict[str, Any]:
     """Read one publicly servable catalogue row, or raise a safe HTTP error."""
-    try:
-        rows = (
-            get_supabase()
-            .table(get_documents_table())
-            .select("*")
-            .eq("id", document_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception as exc:
-        logger.error("[Documents] Catalogue read failed for %s: %s", document_id, exc)
-        raise HTTPException(
-            status_code=503,
-            detail="Document service is temporarily unavailable.",
-        ) from exc
-    if not rows.data:
-        raise HTTPException(status_code=404, detail="Document not found")
-    row = rows.data[0]
-    if not is_catalogue_visible(row):
-        # Do not reveal whether a private/draft document exists.
-        raise HTTPException(status_code=404, detail="Document not found")
-    return row
+    last_error: Optional[Exception] = None
+    for admin in (False, True):
+        try:
+            rows = _query_catalogue(get_supabase(admin=admin), document_id)
+        except Exception as exc:
+            last_error = exc
+            logger.error(
+                "[Documents] Catalogue row read failed for %s (service_client=%s): %s",
+                document_id,
+                admin,
+                exc,
+            )
+            continue
+
+        if not rows.data:
+            # A successful read with no row is a real 404; only a failed read
+            # falls through to the service client.
+            raise HTTPException(status_code=404, detail="Document not found")
+        row = rows.data[0]
+        if not is_catalogue_visible(row):
+            # Do not reveal whether a private/draft document exists.
+            raise HTTPException(status_code=404, detail="Document not found")
+        if admin:
+            logger.warning(
+                "[Documents] Catalogue row %s served via service-role fallback; "
+                "set a valid SUPABASE_ANON_KEY to restore least-privilege reads.",
+                document_id,
+            )
+        return row
+
+    raise HTTPException(
+        status_code=503,
+        detail="Document service is temporarily unavailable.",
+    ) from last_error
 
 
 @router.get("/{document_id}/pdf-url")

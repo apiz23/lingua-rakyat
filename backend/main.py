@@ -188,13 +188,32 @@ async def readiness_check():
             .limit(1)
             .execute()
         )
-    except Exception as exc:
-        logger.error("[Health] Readiness check failed: %s", exc)
+        return {"status": "ok", "checks": {"database": "ok", "catalogue": "anon"}}
+    except Exception as anon_error:
+        logger.error("[Health] Anon readiness check failed: %s", anon_error)
+
+    try:
+        (
+            get_supabase(admin=True)
+            .table(os.getenv("DOCUMENTS_TABLE", "lr_documents"))
+            .select("id")
+            .limit(1)
+            .execute()
+        )
+        logger.warning(
+            "[Health] Catalogue is reachable only through the service-role fallback; "
+            "configure a valid SUPABASE_ANON_KEY."
+        )
+        return {
+            "status": "ok",
+            "checks": {"database": "ok", "catalogue": "service-fallback"},
+        }
+    except Exception as admin_error:
+        logger.error("[Health] Readiness check failed: %s", admin_error)
         return JSONResponse(
             status_code=503,
             content={"status": "unavailable", "checks": {"database": "unavailable"}},
         )
-    return {"status": "ok", "checks": {"database": "ok"}}
 
 
 @app.get("/", tags=["Health"], include_in_schema=False)

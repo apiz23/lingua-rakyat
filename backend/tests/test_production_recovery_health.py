@@ -42,7 +42,26 @@ def test_readiness_reports_ok_when_catalogue_is_reachable(monkeypatch):
     with TestClient(main.app) as client:
         response = client.get("/health/ready")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "checks": {"database": "ok"}}
+    assert response.json() == {
+        "status": "ok",
+        "checks": {"database": "ok", "catalogue": "anon"},
+    }
+
+
+def test_readiness_reports_service_fallback_when_anon_key_is_unusable(monkeypatch):
+    def factory(admin=False):
+        if not admin:
+            raise ValueError("invalid SUPABASE_ANON_KEY")
+        return OkQuery()
+
+    monkeypatch.setattr(main, "get_supabase", factory)
+    with TestClient(main.app) as client:
+        response = client.get("/health/ready")
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "checks": {"database": "ok", "catalogue": "service-fallback"},
+    }
 
 
 def test_readiness_fails_closed_without_leaking_configuration(monkeypatch):
