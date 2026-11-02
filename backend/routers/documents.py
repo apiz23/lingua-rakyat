@@ -10,6 +10,7 @@ import tempfile
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
 from fastapi.responses import Response
@@ -89,6 +90,65 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+class DocumentCatalogueUnavailable(RuntimeError):
+    """The public document catalogue cannot be read right now."""
+
+
+def _parse_iso_timestamp(value: Any) -> Optional[datetime]:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value.strip():
+        normalized = value.strip()
+        if normalized.endswith("Z"):
+            normalized = f"{normalized[:-1]}+00:00"
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+    else:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def is_catalogue_visible(row: dict[str, Any]) -> bool:
+    """Whether a document row may appear in the public catalogue.
+
+    Legacy rows predate the publication columns and carry no scope or
+    publication status. They remain part of the public catalogue, preserving
+    the deployed contract. Once a row carries the newer markers it must be
+    explicitly public, published, ready and unexpired; anything else is hidden.
+    This keeps private/draft revisions unreachable without requiring the
+    unapplied publication migration.
+    """
+    if not isinstance(row, dict):
+        return False
+
+    scope = row.get("visibility_scope")
+    if scope is not None and scope != "public":
+        return False
+
+    publication_status = row.get("publication_status")
+    if publication_status is not None and publication_status != "published":
+        return False
+
+    status = row.get("status")
+    if status is not None and status != "ready":
+        return False
+
+    if row.get("revoked_at") or row.get("superseded_by"):
+        return False
+
+    expires_at = row.get("expires_at")
+    if expires_at is not None:
+        parsed = _parse_iso_timestamp(expires_at)
+        if parsed is None or parsed <= datetime.now(timezone.utc):
+            return False
+
+    return True
+
+
 # Cache for list_storage_documents() — avoids repeated storage API calls.
 # TTL: 60 seconds. Fresh enough to detect new uploads, cheap enough to skip
 # redundant Supabase storage list() calls on every request.
@@ -163,7 +223,7 @@ def normalize_document_row(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def load_documents() -> list[dict[str, Any]]:
+def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
     try:
         response = (
             get_supabase()
@@ -172,11 +232,16 @@ def load_documents() -> list[dict[str, Any]]:
             .order("uploaded_at", desc=True)
             .execute()
         )
-        rows = response.data or []
+        rows = [row for row in (response.data or []) if is_catalogue_visible(row)]
         logger.info("[Documents] Loaded %d rows from %s", len(rows), get_documents_table())
         return [normalize_document_row(row) for row in rows]
     except Exception as exc:
-        logger.warning("[Documents] Failed to load %s: %s", get_documents_table(), exc)
+        # Public reads must distinguish "empty catalogue" from "catalogue
+        # unreachable". The non-strict form keeps maintenance callers working;
+        # the HTTP read path passes strict=True and returns 503.
+        logger.error("[Documents] Failed to load %s: %s", get_documents_table(), exc)
+        if strict:
+            raise DocumentCatalogueUnavailable("Document catalogue unavailable") from exc
         return []
 
 
@@ -508,14 +573,21 @@ class DocumentStatusResponse(BaseModel):
 @router.get("/{document_id}/status", response_model=DocumentStatusResponse)
 async def get_document_status(document_id: str):
     """Lightweight status poll for the upload flow — no storage sync, one row read."""
-    rows = (
-        get_supabase()
-        .table(get_documents_table())
-        .select("id, status, chunk_count, error_message")
-        .eq("id", document_id)
-        .limit(1)
-        .execute()
-    )
+    try:
+        rows = (
+            get_supabase()
+            .table(get_documents_table())
+            .select("id, status, chunk_count, error_message")
+            .eq("id", document_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("[Documents] Status read failed for %s: %s", document_id, exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Document service is temporarily unavailable.",
+        ) from exc
     if not rows.data:
         raise HTTPException(status_code=404, detail="Document not found")
     row = rows.data[0]
@@ -532,7 +604,13 @@ async def list_documents():
     # Public read path: use only the registered catalogue. Storage
     # reconciliation can write/delete rows with the service role and belongs
     # in a separately authorized maintenance workflow.
-    documents = load_documents()
+    try:
+        documents = load_documents(strict=True)
+    except DocumentCatalogueUnavailable as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Document catalogue is temporarily unavailable.",
+        ) from exc
     return [DocumentResponse(**doc) for doc in documents]
 
 
@@ -652,49 +730,75 @@ async def delete_document(document_id: str, upload_token: str = ""):
     return {"success": True, "message": f"Document '{doc_to_delete['name']}' deleted"}
 
 
+def _read_catalogue_row(document_id: str) -> dict[str, Any]:
+    """Read one publicly servable catalogue row, or raise a safe HTTP error."""
+    try:
+        rows = (
+            get_supabase()
+            .table(get_documents_table())
+            .select("*")
+            .eq("id", document_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("[Documents] Catalogue read failed for %s: %s", document_id, exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Document service is temporarily unavailable.",
+        ) from exc
+    if not rows.data:
+        raise HTTPException(status_code=404, detail="Document not found")
+    row = rows.data[0]
+    if not is_catalogue_visible(row):
+        # Do not reveal whether a private/draft document exists.
+        raise HTTPException(status_code=404, detail="Document not found")
+    return row
+
+
 @router.get("/{document_id}/pdf-url")
 @limiter.limit(PDF_URL_LIMIT)
 def get_pdf_signed_url(request: Request, document_id: str):
+    """Return a 1-hour signed URL for a publicly servable document PDF."""
     _ = request
-    """Return a 1-hour signed URL for the document PDF. Fallback for private buckets."""
-    sb = get_supabase()
-    rows = (
-        sb.table(get_documents_table())
-        .select("storage_path")
-        .eq("id", document_id)
-        .limit(1)
-        .execute()
-    )
-    if not rows.data:
-        raise HTTPException(status_code=404, detail="Document not found")
-    storage_path = rows.data[0].get("storage_path")
+    row = _read_catalogue_row(document_id)
+    storage_path = row.get("storage_path")
     if not storage_path:
         raise HTTPException(status_code=404, detail="No storage path for this document")
-    result = sb.storage.from_(get_bucket()).create_signed_url(storage_path, 3600)
+    try:
+        # The documents bucket is private. The backend has already checked the
+        # catalogue visibility above, so it is the trusted mediator that mints
+        # the short-lived URL.
+        result = (
+            get_supabase(admin=True)
+            .storage.from_(get_bucket())
+            .create_signed_url(storage_path, 3600)
+        )
+    except Exception as exc:
+        logger.error("[PDF] Signed URL failed for %s (%s): %s", document_id, storage_path, exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Document storage is temporarily unavailable.",
+        ) from exc
     return {"url": result["signedURL"], "expires_in": 3600}
 
 
 @router.get("/{document_id}/pdf")
 @limiter.limit(PDF_URL_LIMIT)
-def proxy_pdf(request: Request, document_id: str):
+def proxy_pdf(request: Request, document_id: str, download: bool = False):
     """Stream PDF bytes through backend — avoids CORS and private-bucket 400s."""
     _ = request
-    sb = get_supabase()
-    rows = (
-        sb.table(get_documents_table())
-        .select("storage_path, name")
-        .eq("id", document_id)
-        .limit(1)
-        .execute()
-    )
-    if not rows.data:
-        raise HTTPException(status_code=404, detail="Document not found")
-    row = rows.data[0]
+    row = _read_catalogue_row(document_id)
     storage_path = row.get("storage_path")
     if not storage_path:
         raise HTTPException(status_code=404, detail="No storage path for this document")
     try:
-        data: bytes = sb.storage.from_(get_bucket()).download(storage_path)
+        # The bucket is private: anon storage reads are denied by storage RLS.
+        # Catalogue visibility was enforced above, so the service client is
+        # only used to fetch bytes for an already-authorized document.
+        data: bytes = (
+            get_supabase(admin=True).storage.from_(get_bucket()).download(storage_path)
+        )
     except Exception as exc:
         # Raise HTTPException instead of letting the storage error bubble up:
         # an unhandled exception bypasses CORSMiddleware, so the browser sees
@@ -702,12 +806,18 @@ def proxy_pdf(request: Request, document_id: str):
         logger.warning("[PDF] Storage download failed for %s (%s): %s", document_id, storage_path, exc)
         raise HTTPException(status_code=404, detail="PDF file not found in storage") from exc
     safe_name = (row.get("name") or "document").replace('"', "").replace("\\", "")
+    if not safe_name.lower().endswith(".pdf"):
+        safe_name = f"{safe_name}.pdf"
     etag = hashlib.md5(data).hexdigest()
+    disposition = "attachment" if download else "inline"
     return Response(
         content=data,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="{safe_name}.pdf"',
+            "Content-Disposition": (
+                f'{disposition}; filename="{safe_name}"; '
+                f"filename*=UTF-8''{quote(safe_name)}"
+            ),
             "Cache-Control": "no-store",
             "ETag": f'"{etag}"',
         },

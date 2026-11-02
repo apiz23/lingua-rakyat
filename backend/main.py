@@ -57,6 +57,7 @@ from routers.feedback import router as feedback_router
 from routers.share import router as share_router
 from routers.user import router as user_router
 from api.v1.router import router as api_v1_router
+from utils.auth import get_supabase
 
 # ─── App instance ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -166,10 +167,39 @@ app.include_router(user_router,      prefix="/api/user",      tags=["User"])
 # ─── Startup: Seed + Prewarm ──────────────────────────────────────────────────
 # ─── Health Check ─────────────────────────────────────────────────────────────
 @app.get("/health/live", tags=["Health"])
+async def liveness_check():
+    """Liveness only: the process can answer HTTP."""
+    return {"status": "ok"}
+
+
 @app.get("/health/ready", tags=["Health"])
+async def readiness_check():
+    """Readiness: the public catalogue client can reach the database.
+
+    This catches the failure mode that made production return an empty
+    catalogue: the process was live while SUPABASE_ANON_KEY was missing or
+    invalid. The response never includes credentials or raw errors.
+    """
+    try:
+        (
+            get_supabase()
+            .table(os.getenv("DOCUMENTS_TABLE", "lr_documents"))
+            .select("id")
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("[Health] Readiness check failed: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "checks": {"database": "unavailable"}},
+        )
+    return {"status": "ok", "checks": {"database": "ok"}}
+
+
 @app.get("/", tags=["Health"], include_in_schema=False)
 async def health_check():
-    """Minimal liveness/readiness response without internal configuration data."""
+    """Backward-compatible minimal health response."""
     return {"status": "ok"}
 
 

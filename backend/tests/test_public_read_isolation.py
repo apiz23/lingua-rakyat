@@ -98,7 +98,7 @@ def test_public_document_catalogue_is_read_only_and_does_not_reconcile(client, m
     assert operations == ["select", "order", "execute"]
 
 
-def test_public_document_catalogue_fails_safely_when_database_unavailable(client, monkeypatch):
+def test_public_document_catalogue_reports_unavailable_database(client, monkeypatch):
     monkeypatch.setattr(
         documents,
         "get_supabase",
@@ -112,8 +112,11 @@ def test_public_document_catalogue_fails_safely_when_database_unavailable(client
 
     response = client.get("/api/documents/")
 
-    assert response.status_code == 200
-    assert response.json() == []
+    # An empty library and an unreachable catalogue must not look identical to
+    # the client. 503 lets the UI show an outage instead of "upload your first
+    # PDF" while production documents exist.
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Document catalogue is temporarily unavailable."
 
 
 def test_refresh_chunks_is_disabled_before_database_or_pinecone_access(client, monkeypatch):
