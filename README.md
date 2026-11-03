@@ -1,301 +1,33 @@
 # Lingua Rakyat
 
-Lingua Rakyat is a multilingual Retrieval-Augmented Generation (RAG) assistant for government service documents. A user uploads an official PDF, asks a question in plain language, and receives a source-grounded answer in English, Bahasa Melayu, or Simplified Chinese.
+Multilingual document Q&A for Malaysian public-service information. The web and mobile clients use a FastAPI backend, with Supabase for PostgreSQL and file storage, Pinecone for vector search, and hosted AI services for retrieval and generation.
 
-This repository contains:
+## Development
 
-- `backend/`: FastAPI API for ingestion, retrieval, chat, and evaluation
-- `frontend/`: Next.js web app for document management, chat, and model evaluation
-- `Lingua-Rakyat-Link.pdf` and `Lingua-Rakyat-Link.docx`: competition handoff materials and project links
+Requirements: Python 3.11+, Node.js, and pnpm. Configure backend credentials in `backend/.env` from the local environment template and set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `frontend/.env.local`.
 
-## Problem
-
-Government documents are often difficult for ordinary citizens to understand because they are:
-
-- written in formal or legal language
-- published as long PDFs
-- not equally accessible across languages
-- hard to search for exact eligibility, process, or supporting documents
-
-Lingua Rakyat addresses this by combining document retrieval, multilingual prompting, and plain-language answer generation.
-
-## What The Current System Does
-
-- Uploads text-based PDF documents and chunks them for retrieval
-- Stores document files in Supabase and vectors in Pinecone
-- Uses Cohere multilingual embeddings for semantic search
-- Answers questions with Groq-hosted LLMs using retrieved document context
-- Detects user language and routes inputs to supported answer languages
-- Supports summary-style questions such as "summarize" and "ringkaskan"
-- Offers optional query augmentation for broader multilingual retrieval
-- Stores chat history in Supabase
-- Tracks evaluation metrics such as ROUGE, BLEU, readability, latency, and confidence
-- Provides a browser-based evaluation dashboard with streaming test-suite results
-
-## Core User Flow
-
-1. Upload a government PDF.
-2. The backend validates the PDF, extracts text, chunks it, embeds it, and stores vectors under the document namespace.
-3. The user opens the workspace and selects a document.
-4. The user asks a question in English, Malay, or Chinese.
-5. The backend detects language, retrieves relevant chunks, builds a prompt, and generates a grounded answer.
-6. The UI shows the answer, retrieval confidence, latency, and source excerpts.
-
-## Repository Structure
-
-```text
-lingua-rakyat/
-|-- backend/
-|   |-- main.py
-|   |-- requirements.txt
-|   |-- render.yaml
-|   |-- routers/
-|   |   |-- chat.py
-|   |   |-- documents.py
-|   |   `-- eval.py
-|   `-- utils/
-|       |-- rag_pipeline.py
-|       |-- evaluation.py
-|       |-- data_augmentation.py
-|       `-- chat_history.py
-|-- frontend/
-|   |-- app/
-|   |   |-- page.tsx
-|   |   |-- workspace/page.tsx
-|   |   |-- manage/page.tsx
-|   |   |-- eval/page.tsx
-|   |   `-- results/page.tsx
-|   |-- components/
-|   |-- hooks/
-|   `-- lib/api.ts
-|-- Lingua-Rakyat-Link.docx
-|-- Lingua-Rakyat-Link.pdf
-`-- README.md
-```
-
-## Tech Stack
-
-### Backend
-
-- FastAPI
-- SlowAPI
-- PyPDF
-- Groq API
-- Cohere embeddings API
-- Pinecone
-- Supabase
-
-### Frontend
-
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- Framer Motion
-- Sonner
-
-## Main Pages
-
-- `/`: landing page
-- `/workspace`: chat experience for asking questions about a selected document
-- `/manage`: upload, list, and delete documents
-- `/eval`: evaluation dashboard and streamed test suite
-- `/results`: static project showcase page (not user-specific results)
-
-## Backend API Overview
-
-### Health
-
-- `GET /`: backend health summary
-- `GET /docs`: Swagger UI
-
-### Documents
-
-- `POST /api/documents/upload`
-- `GET /api/documents/`
-- `POST /api/documents/register`
-- `POST /api/documents/refresh-chunks`
-- `DELETE /api/documents/{document_id}`
-
-### Chat
-
-- `POST /api/chat/ask`
-- `POST /api/chat/ask-stream`
-- `GET /api/chat/history`
-- `DELETE /api/chat/history/{document_id}`
-
-### Evaluation
-
-- `GET /api/eval/report`
-- `POST /api/eval/run-test-suite`
-- `POST /api/eval/run-test-suite-stream`
-- `GET /api/eval/simplify-demo`
-- `POST /api/eval/augment-query`
-- `GET /api/eval/data-quality`
-- `DELETE /api/eval/clear`
-
-### Voice
-
-- `POST /api/voice/transcribe` — speech-to-text (Groq Whisper)
-- `POST /api/voice/tts` — text-to-speech (ElevenLabs, falls back to browser speechSynthesis)
-
-## Local Setup
-
-### 1. Backend
-
-Requirements:
-
-- Python 3.11+
-- `pip`
-
-Commands:
-
-```bash
+```powershell
+# Terminal 1
 cd backend
-python -m venv venv
-venv\Scripts\activate
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env
 uvicorn main:app --reload --port 8000
-```
 
-Backend will run at `http://localhost:8000`.
-
-### 2. Frontend
-
-Requirements:
-
-- Node.js 18+
-- `pnpm`
-
-Commands:
-
-```bash
+# Terminal 2
 cd frontend
 pnpm install
-```
-
-Create `frontend/.env.local` with:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-Then run:
-
-```bash
 pnpm dev
 ```
 
-Frontend will run at `http://localhost:3000`.
+The web app runs at `http://localhost:3000`; the backend API is at `http://localhost:8000` and its local OpenAPI UI at `/docs`.
 
-## Required Backend Environment Variables
+For mobile development, see `mobile/AGENTS.md` and the scripts in `mobile/package.json`. Do not use client-controlled identifiers as authorization.
 
-The current codebase depends on the following values:
+## Maintained documentation
 
-```env
-GROQ_API_KEY=
-GROQ_MODEL=
-GROQ_MODEL_FAST=
-COHERE_API_KEY=
-PINECONE_API_KEY=
-PINECONE_INDEX=
-SUPABASE_URL=
-SUPABASE_KEY=
-SUPABASE_BUCKET=documents
-CHAT_HISTORY_TABLE=lr_chat_messages
-ENABLE_QUERY_AUGMENTATION=true
-AUGMENTATION_MAX_VARIANTS=4
-AUGMENTATION_INCLUDE_PARAPHRASE=true
-```
+- [Architecture and API compatibility](docs/ARCHITECTURE.md)
+- [Security requirements and release gates](docs/SECURITY.md)
+- [Demo booth rate limits](docs/BOOTH_MODE.md)
 
-Optional runtime values used by middleware or deployment logic:
-
-```env
-DEBUG=false
-VERCEL_URL=
-FRONTEND_URL=
-BACKEND_URL=
-```
-
-## Architecture Summary
-
-### Ingestion
-
-- PDF validation checks file type, encryption, size, and page count
-- text extraction uses `pypdf`, with a per-page OCR fallback (PyMuPDF + Tesseract) for low-text/scanned pages
-- chunking is section-aware (detects headers, splits long sections with word overlap)
-- embeddings are generated with Cohere
-- vectors are stored in Pinecone under the document namespace
-- metadata and source files are stored in Supabase
-
-### Question Answering
-
-- language is detected with keyword matching, CJK heuristics, and `langdetect`
-- optional query augmentation expands the question into multilingual variants
-- semantic retrieval pulls relevant chunks from Pinecone, then a Cohere cross-encoder reranks them
-- an evidence guard refuses to answer (rather than hallucinate) when no retrieved chunk clears the confidence threshold
-- the prompt is built in the detected output language; answers stream token-by-token via `POST /api/chat/ask-stream`
-- Groq models generate a short, grounded answer from retrieved context only
-- a faithfulness score (answer vs. sources) is computed per answer via the Cohere reranker
-
-### Evaluation
-
-- every interaction can contribute latency, readability, and confidence data
-- the test suite compares generated answers with built-in reference answers
-- metrics include ROUGE-1, ROUGE-2, ROUGE-L, BLEU, exact match, and Flesch-Kincaid grade
-
-## What Is Strong About This Repository
-
-- clear separation between frontend and backend
-- practical end-to-end prototype, not just a concept deck
-- working upload -> retrieval -> answer loop
-- multilingual prompting and retrieval strategy
-- built-in evaluation dashboard for demos and judging
-- explicit rate limiting and document validation
-
-## Current Limitations
-
-These are the main limitations visible from the current code:
-
-- Text-based PDFs are the primary path. Scanned/image-only pages fall back to OCR (PyMuPDF + Tesseract) when Tesseract is installed and `TESSERACT_CMD` is configured; without it, scanned PDFs are rejected.
-- The primary supported answer languages are English, Bahasa Melayu, and Simplified Chinese. Some other language codes are mapped into those outputs, but full direct support is not implemented for every language mentioned in UI copy.
-- The data-quality log is in-memory and resets on backend restart (per-process, not persisted).
-- Some competition-facing content in the UI is static or promotional, so this README should be treated as the more reliable technical reference.
-
-## Demo / Booth Mode
-
-All API routes are rate-limited per client IP. At a booth, every visitor shares
-one public WiFi IP and therefore one rate-limit bucket, which can trigger
-`HTTP 429` mid-demo. Set `BOOTH_MODE=true` to switch to generous limits for the
-event, then `false` afterward. Full instructions and the limit table:
-[`docs/BOOTH_MODE.md`](docs/BOOTH_MODE.md).
-
-## Suggested Demo Flow
-
-For a presentation or judging demo:
-
-1. Open `/manage` and upload an official PDF.
-2. Open `/workspace`, select the uploaded document, and ask:
-   - "Summarize this document"
-   - "Siapa yang layak memohon?"
-   - "How do I apply?"
-3. Show the answer, confidence, and source excerpts.
-4. Open `/eval` and run the streamed test suite on the same document.
-5. Show the simplification demo and multilingual query augmentation panel.
-
-## Competition Relevance
-
-Lingua Rakyat is a strong competition project because it is:
-
-- socially relevant: it improves access to public-service information
-- technically credible: it uses grounded retrieval rather than unrestricted generation
-- measurable: it includes evaluation metrics and a test suite
-- demo-friendly: judges can see upload, retrieval, multilingual Q&A, and metrics in one flow
-- scalable: the architecture already separates storage, retrieval, inference, and UI
-
-## Submission Notes
-
-- Use `Lingua-Rakyat-Link.pdf` or `Lingua-Rakyat-Link.docx` for the prepared project links and submission materials.
-- If you plan to submit this repository externally, review tracked local files and generated folders before packaging the final source snapshot.
+Supabase schema and migrations under `supabase/` and backend route models are the implementation-level references for database and API details. Documentation describes intended constraints; verify status labels against source and deployment evidence.

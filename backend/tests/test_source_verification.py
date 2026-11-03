@@ -951,6 +951,7 @@ def test_verification_loop_terminates_after_bounded_calls():
 def _chat_client(monkeypatch, result):
     monkeypatch.setattr(chat, "answer_question", lambda **kwargs: result)
     monkeypatch.setattr(chat, "insert_chat_message", lambda payload: True)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
     monkeypatch.setattr(chat.evaluator, "record", lambda **kwargs: None)
     app = FastAPI()
     app.state.limiter = chat.limiter
@@ -1269,6 +1270,7 @@ def test_sse_complete_event_replaces_provisional_and_history(monkeypatch):
         }
 
     monkeypatch.setattr(chat, "stream_answer_question", fake_stream)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
     app = FastAPI()
     app.state.limiter = chat.limiter
     app.include_router(chat.router, prefix="/api/chat")

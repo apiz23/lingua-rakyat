@@ -226,6 +226,24 @@
     @apply border-border outline-ring/50;
   }
 
+  table {
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+  }
+
+  thead {
+    border-bottom: 2px solid var(--border);
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);

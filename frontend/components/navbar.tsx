@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Globe,
   LayoutDashboard,
@@ -36,8 +36,16 @@ type CommandEntry = {
 
 const OPEN_COMMAND_EVENT = "lingua-rakyat:open-command-palette"
 
+const VISIBLE_COMMAND_IDS: Record<"public" | "citizen" | "admin" | "research", ReadonlySet<string>> = {
+  public: new Set(["home", "results"]),
+  citizen: new Set(["home", "workspace", "results"]),
+  admin: new Set(["home", "manage"]),
+  research: new Set(["home", "results"]),
+}
+
 export default function CommandPaletteTopRight() {
   const router = useRouter()
+  const pathname = usePathname()
   const { language, setLanguage } = useLanguage()
   const isMobile = useMobile()
 
@@ -110,8 +118,23 @@ export default function CommandPaletteTopRight() {
           toggleLanguage: "Toggle language",
         }
 
+  // Navigation is audience-scoped. Route groups are presentation, not
+  // authorization: the backend still enforces every privileged call.
+  const audience: "public" | "citizen" | "admin" | "research" = (
+    pathname?.startsWith("/manage")
+      ? "admin"
+      : pathname?.startsWith("/eval") || pathname?.startsWith("/benchmark")
+        ? "research"
+        : pathname?.startsWith("/workspace") ||
+            pathname?.startsWith("/profile") ||
+            pathname?.startsWith("/shares")
+          ? "citizen"
+          : "public"
+  )
+  const visibleCommandIds = VISIBLE_COMMAND_IDS[audience]
+
   const pageItems = React.useMemo<CommandEntry[]>(
-    () => [
+    () => ([
       {
         id: "home",
         label: copy.home,
@@ -140,13 +163,14 @@ export default function CommandPaletteTopRight() {
         icon: TrendingUp,
         action: () => router.push("/results"),
       },
-    ],
+    ] satisfies CommandEntry[]).filter((item) => visibleCommandIds.has(item.id)),
     [
       copy.home,
       copy.manage,
       copy.results,
       copy.workspace,
       router,
+      visibleCommandIds,
     ]
   )
 

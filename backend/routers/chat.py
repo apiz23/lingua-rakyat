@@ -14,7 +14,9 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter
 
 from routers.eval import _evaluator as evaluator
-from utils.auth import get_verified_user
+from utils import eligibility, idempotency
+from utils.auth import get_supabase, get_verified_user
+from utils.authorization import ANONYMOUS, Actor, ActorKind
 from utils.chat_history import (
     delete_chat_messages,
     insert_chat_message,
@@ -45,6 +47,8 @@ class AskRequest(BaseModel):
     # Optional multi-document scope. When non-empty, retrieval spans every doc
     # in this list (citizen asks across their whole library, no file picking).
     document_ids: list[str] = Field(default_factory=list)
+    # Authenticated retries reuse this key so provider work is not repeated.
+    idempotency_key: Optional[str] = Field(default=None, max_length=200)
 
 
 class SourceChunk(BaseModel):
@@ -121,6 +125,117 @@ def _validate_ask_request(body: AskRequest) -> None:
         raise HTTPException(status_code=400, detail="Provide a document_id or document_ids")
 
 
+def _actor_for(verified: Optional[str]) -> Actor:
+    return Actor(ActorKind.CITIZEN, verified) if verified else ANONYMOUS
+
+
+def _requested_document_ids(body: AskRequest) -> list[str]:
+    ids: list[str] = []
+    if body.document_id.strip():
+        ids.append(body.document_id.strip())
+    for document_id in body.document_ids:
+        if document_id.strip() and document_id.strip() not in ids:
+            ids.append(document_id.strip())
+    return ids
+
+
+def _authorize_ask_documents(verified: Optional[str], body: AskRequest) -> None:
+    """Require public eligibility or verified ownership for every document."""
+    ids = _requested_document_ids(body)
+    try:
+        rows, snapshot = eligibility.load_documents_for_authorization(
+            get_supabase(admin=True), ids
+        )
+        eligibility.authorize_document_rows(
+            _actor_for(verified), rows, snapshot, requested_ids=ids
+        )
+    except eligibility.EligibilityUnavailable as exc:
+        logger.error("[Chat] Document eligibility unavailable: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Document service is temporarily unavailable."
+        ) from exc
+
+
+def _idempotency_fingerprint(body: AskRequest) -> dict[str, Any]:
+    return {
+        "question": body.question,
+        "document_id": body.document_id,
+        "document_name": body.document_name,
+        "session_id": body.session_id,
+        "model_override": body.model_override,
+        "enable_query_augmentation": body.enable_query_augmentation,
+        "bypass_cache": body.bypass_cache,
+        "chat_history": body.chat_history,
+        "document_ids": body.document_ids,
+    }
+
+
+def _claim_idempotent_run(verified: Optional[str], body: AskRequest):
+    key = (body.idempotency_key or "").strip()
+    if not key:
+        return None
+    if not verified:
+        # Anonymous callers have no verified actor; a client-supplied key could
+        # collide across devices and reveal another caller's answer.
+        raise HTTPException(
+            status_code=400, detail="idempotency_key requires a signed-in account"
+        )
+    fingerprint = idempotency.request_fingerprint(_idempotency_fingerprint(body))
+    try:
+        claim = idempotency.claim_run(
+            get_supabase(admin=True),
+            actor_id=verified,
+            idempotency_key=key,
+            fingerprint=fingerprint,
+        )
+    except idempotency.IdempotencyUnavailable as exc:
+        logger.error("[Chat] Idempotency store unavailable: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Answer service is temporarily unavailable."
+        ) from exc
+    if claim.state == "conflict":
+        raise HTTPException(
+            status_code=409, detail="Idempotency key was already used for a different request"
+        )
+    if claim.state == "in_progress":
+        raise HTTPException(status_code=409, detail="This request is already being processed")
+    return claim
+
+
+def _complete_idempotent_run(verified: Optional[str], body: AskRequest, response: dict) -> None:
+    key = (body.idempotency_key or "").strip()
+    if not key:
+        return
+    if not verified:
+        return
+    try:
+        completed = idempotency.complete_run(
+            get_supabase(admin=True),
+            actor_id=verified,
+            idempotency_key=key,
+            response=response,
+        )
+    except idempotency.IdempotencyUnavailable as exc:
+        logger.error("[Chat] Could not commit answer run: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="Answer service is temporarily unavailable."
+        ) from exc
+    if not completed:
+        raise HTTPException(status_code=503, detail="Answer service is temporarily unavailable.")
+
+
+def _fail_idempotent_run(verified: Optional[str], body: AskRequest) -> None:
+    key = (body.idempotency_key or "").strip()
+    if not key or not verified:
+        return
+    try:
+        idempotency.fail_run(
+            get_supabase(admin=True), actor_id=verified, idempotency_key=key
+        )
+    except idempotency.IdempotencyUnavailable as exc:
+        logger.error("[Chat] Could not mark answer run failed: %s", exc)
+
+
 def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, answer_text: str) -> dict[str, Any]:
     return {
         "user_id": body.user_id,
@@ -181,6 +296,10 @@ async def ask_question(
     if verified:
         body.user_id = verified
     _validate_ask_request(body)
+    _authorize_ask_documents(verified, body)
+    claim = _claim_idempotent_run(verified, body)
+    if claim is not None and claim.state == "replay" and claim.response is not None:
+        return AskResponse(**claim.response)
 
     try:
         result = answer_question(
@@ -193,6 +312,7 @@ async def ask_question(
             document_ids=body.document_ids or None,
         )
     except Exception as exc:
+        _fail_idempotent_run(verified, body)
         logger.error("[Chat] Q&A failed: %s", exc)
         raise HTTPException(status_code=500, detail="Failed to generate answer. Please try again later.") from exc
 
@@ -201,10 +321,12 @@ async def ask_question(
     # Public anonymous Q&A has no secure session capability, so do not persist
     # caller-supplied anonymous IDs or copy public prompts into evaluation data.
     if verified:
-        insert_chat_message(_history_payload(body, result, timestamp, answer_text))
+        if not insert_chat_message(_history_payload(body, result, timestamp, answer_text)):
+            _fail_idempotent_run(verified, body)
+            raise HTTPException(status_code=500, detail="Failed to save the answer.")
         _record_eval(body, result, answer_text)
 
-    return AskResponse(
+    response = AskResponse(
         answer=answer_text,
         sources=[SourceChunk(**source) for source in result["sources"]],
         language=result["language"],
@@ -223,6 +345,8 @@ async def ask_question(
         confidence_explanation=result.get("confidence_explanation"),
         verification=result.get("verification"),
     )
+    _complete_idempotent_run(verified, body, response.model_dump(mode="json"))
+    return response
 
 
 @router.post("/ask-stream")
@@ -237,6 +361,8 @@ async def ask_question_stream(
     if verified:
         body.user_id = verified
     _validate_ask_request(body)
+    _authorize_ask_documents(verified, body)
+    claim = _claim_idempotent_run(verified, body)
 
     async def event_stream():
         timestamp = datetime.utcnow().isoformat() + "Z"
@@ -246,6 +372,10 @@ async def ask_question_stream(
         yield f"data: {json.dumps({'type': 'start'})}\n\n"
 
         try:
+            if claim is not None and claim.state == "replay" and claim.response is not None:
+                yield f"data: {json.dumps({'type': 'complete', **claim.response})}\n\n"
+                return
+
             for event in stream_answer_question(
                 question=body.question,
                 document_id=body.document_id or None,
@@ -257,10 +387,13 @@ async def ask_question_stream(
             ):
                 if event["type"] == "token":
                     answer_pieces.append(event["text"])
+                    yield f"data: {json.dumps(event)}\n\n"
                 elif event["type"] == "complete":
+                    # Hold completion until persistence and idempotency commit
+                    # succeed, so the client never sees a false success.
                     final_result = event
-
-                yield f"data: {json.dumps(event)}\n\n"
+                else:
+                    yield f"data: {json.dumps(event)}\n\n"
 
             if final_result is None:
                 raise RuntimeError("Streaming finished without a completion event.")
@@ -271,10 +404,23 @@ async def ask_question_stream(
                 answer_pieces
             ).strip()
             if verified:
-                insert_chat_message(_history_payload(body, final_result, timestamp, answer_text))
+                if not insert_chat_message(
+                    _history_payload(body, final_result, timestamp, answer_text)
+                ):
+                    raise RuntimeError("History persistence failed.")
                 _record_eval(body, final_result, answer_text)
 
+            if claim is not None:
+                _complete_idempotent_run(verified, body, final_result)
+
+            yield f"data: {json.dumps(final_result)}\n\n"
+
+        except HTTPException as exc:
+            _fail_idempotent_run(verified, body)
+            logger.error("[Chat] Streaming authorization failed: %s", exc.detail)
+            yield f"data: {json.dumps({'type': 'error', 'detail': 'An error occurred during generation.'})}\n\n"
         except Exception as exc:
+            _fail_idempotent_run(verified, body)
             logger.error("[Chat] Streaming failed: %s", exc)
             yield f"data: {json.dumps({'type': 'error', 'detail': 'An error occurred during generation.'})}\n\n"
 

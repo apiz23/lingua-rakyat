@@ -165,6 +165,13 @@ def detect_language(text: str) -> str:
 _query_cache: dict[tuple, dict[str, Any]] = {}
 CACHE_MAX_SIZE = 200
 
+# Release gate: answer caching stays disabled until keys carry document scope,
+# revision, source, policy epoch, model and prompt versions and hits re-check
+# every cited revision. Until then a cache hit could outlive a withdrawal.
+ENABLE_ANSWER_CACHE = (
+    os.getenv("ENABLE_ANSWER_CACHE", "false").strip().lower() == "true"
+)
+
 _augmenter: Optional[QueryAugmenter] = None
 
 
@@ -207,6 +214,8 @@ def cache_get(
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
 ) -> dict[str, Any] | None:
+    if not ENABLE_ANSWER_CACHE:
+        return None
     entry = _query_cache.get(
         _cache_key(
             question,
@@ -228,6 +237,8 @@ def cache_set(
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
 ) -> None:
+    if not ENABLE_ANSWER_CACHE:
+        return
     global _query_cache
     if len(_query_cache) >= CACHE_MAX_SIZE:
         evict_n = max(1, CACHE_MAX_SIZE // 5)

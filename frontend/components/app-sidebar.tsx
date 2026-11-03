@@ -6,16 +6,12 @@ import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import {
-  FolderOpen,
   Target,
   Command,
   MessageSquare,
-  Languages,
   BookOpen,
   Plus,
   User,
-  LogOut,
-  Share2,
   Check,
   X,
 } from "lucide-react"
@@ -30,7 +26,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  sidebarMenuButtonVariants,
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useLanguage } from "@/components/language-provider"
@@ -59,11 +54,6 @@ const navItems: NavItem[] = [
     icon: MessageSquare,
   },
   {
-    href: "/manage",
-    label: "Documents",
-    icon: FolderOpen,
-  },
-  {
     href: "/results",
     label: "Showcase",
     icon: Target,
@@ -89,7 +79,7 @@ export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { language } = useLanguage()
-  const { setOpenMobile, isMobile } = useSidebar()
+  const { setOpenMobile } = useSidebar()
   const { userId, activeSessionId, setActiveSessionId } = useWorkspaceSession()
   const { user, isSignedIn } = useUser()
 

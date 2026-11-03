@@ -19,6 +19,7 @@ from pypdf import PdfReader
 from slowapi import Limiter
 
 from rate_limits import DOC_LIMIT, PDF_URL_LIMIT, SEED_LIMIT, get_proxy_aware_remote_address
+from utils import eligibility
 from utils.auth import get_supabase
 from utils.chat_history import delete_chat_messages_for_document
 from utils.rag_pipeline import (
@@ -94,61 +95,6 @@ class DocumentCatalogueUnavailable(RuntimeError):
     """The public document catalogue cannot be read right now."""
 
 
-def _parse_iso_timestamp(value: Any) -> Optional[datetime]:
-    if isinstance(value, datetime):
-        parsed = value
-    elif isinstance(value, str) and value.strip():
-        normalized = value.strip()
-        if normalized.endswith("Z"):
-            normalized = f"{normalized[:-1]}+00:00"
-        try:
-            parsed = datetime.fromisoformat(normalized)
-        except ValueError:
-            return None
-    else:
-        return None
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        return None
-    return parsed.astimezone(timezone.utc)
-
-
-def is_catalogue_visible(row: dict[str, Any]) -> bool:
-    """Whether a document row may appear in the public catalogue.
-
-    Legacy rows predate the publication columns and carry no scope or
-    publication status. They remain part of the public catalogue, preserving
-    the deployed contract. Once a row carries the newer markers it must be
-    explicitly public, published, ready and unexpired; anything else is hidden.
-    This keeps private/draft revisions unreachable without requiring the
-    unapplied publication migration.
-    """
-    if not isinstance(row, dict):
-        return False
-
-    scope = row.get("visibility_scope")
-    if scope is not None and scope != "public":
-        return False
-
-    publication_status = row.get("publication_status")
-    if publication_status is not None and publication_status != "published":
-        return False
-
-    status = row.get("status")
-    if status is not None and status != "ready":
-        return False
-
-    if row.get("revoked_at") or row.get("superseded_by"):
-        return False
-
-    expires_at = row.get("expires_at")
-    if expires_at is not None:
-        parsed = _parse_iso_timestamp(expires_at)
-        if parsed is None or parsed <= datetime.now(timezone.utc):
-            return False
-
-    return True
-
-
 # Cache for list_storage_documents() — avoids repeated storage API calls.
 # TTL: 60 seconds. Fresh enough to detect new uploads, cheap enough to skip
 # redundant Supabase storage list() calls on every request.
@@ -196,7 +142,8 @@ def build_public_url(storage_path: Optional[str]) -> Optional[str]:
         return None
 
 
-def normalize_document_row(row: dict[str, Any]) -> dict[str, Any]:
+def normalize_document_row(row: dict[str, Any], *, build_urls: bool = True) -> dict[str, Any]:
+    """Internal row shape used for persistence and maintenance flows."""
     uploaded_at = row.get("uploaded_at")
     if isinstance(uploaded_at, datetime):
         uploaded_at = uploaded_at.isoformat()
@@ -206,7 +153,9 @@ def normalize_document_row(row: dict[str, Any]) -> dict[str, Any]:
         uploaded_at = str(uploaded_at)
 
     storage_path = row.get("storage_path")
-    public_url = row.get("public_url") or build_public_url(storage_path)
+    public_url = None
+    if build_urls:
+        public_url = row.get("public_url") or build_public_url(storage_path)
 
     return {
         "id": str(row.get("id", "")),
@@ -223,6 +172,16 @@ def normalize_document_row(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def to_public_document(row: dict[str, Any]) -> dict[str, Any]:
+    """Public catalogue shape: no storage paths, signed URLs or service detail."""
+    document = normalize_document_row(row, build_urls=False)
+    document_id = document["id"]
+    document["storage_path"] = None
+    document["public_url"] = None
+    document["pdf_url"] = f"/api/documents/{quote(document_id, safe='')}/pdf"
+    return document
+
+
 def _query_catalogue(client: Any, document_id: Optional[str] = None):
     query = client.table(get_documents_table()).select("*")
     if document_id is None:
@@ -232,24 +191,37 @@ def _query_catalogue(client: Any, document_id: Optional[str] = None):
     return query.execute()
 
 
+def _snapshot_for_rows(rows: list[dict[str, Any]]) -> eligibility.EligibilitySnapshot:
+    try:
+        return eligibility.snapshot_for_rows(get_supabase(admin=True), rows)
+    except eligibility.EligibilityUnavailable as exc:
+        raise DocumentCatalogueUnavailable("Publication registry unavailable") from exc
+
+
 def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
     last_error: Optional[Exception] = None
     # Public reads use the anon client first. During the 2026-11-01 recovery the
     # production anon key was missing/unusable while the service key worked, so
-    # the public catalogue (already filtered to publicly visible rows) falls
-    # back to the service client rather than showing a permanently empty site.
-    # Private/user-scoped tables never use this fallback.
+    # the public catalogue (already filtered to eligible rows) falls back to the
+    # service client rather than showing a permanently empty site. Private/
+    # user-scoped tables never use this fallback.
     for admin in (False, True):
         try:
             response = _query_catalogue(get_supabase(admin=admin))
-            rows = [row for row in (response.data or []) if is_catalogue_visible(row)]
+            rows = [row for row in (response.data or []) if isinstance(row, dict)]
+            snapshot = _snapshot_for_rows(rows)
+            visible = eligibility.filter_public_rows(rows, snapshot)
             if admin:
                 logger.warning(
                     "[Documents] Public catalogue served via service-role fallback; "
                     "set a valid SUPABASE_ANON_KEY to restore least-privilege reads."
                 )
-            logger.info("[Documents] Loaded %d rows from %s", len(rows), get_documents_table())
-            return [normalize_document_row(row) for row in rows]
+            logger.info(
+                "[Documents] Loaded %d eligible rows from %s",
+                len(visible),
+                get_documents_table(),
+            )
+            return [to_public_document(row) for row in visible]
         except Exception as exc:
             last_error = exc
             logger.error(
@@ -450,6 +422,7 @@ class DocumentResponse(BaseModel):
     uploaded_at: str
     storage_path: Optional[str] = None
     public_url: Optional[str] = None
+    pdf_url: Optional[str] = None
     error_message: Optional[str] = None
     is_featured: bool = False
     agency: Optional[str] = None
@@ -592,7 +565,7 @@ class DocumentStatusResponse(BaseModel):
 @router.get("/{document_id}/status", response_model=DocumentStatusResponse)
 async def get_document_status(document_id: str):
     """Lightweight status poll for the upload flow — no storage sync, one row read."""
-    row = _read_catalogue_row(document_id)
+    row, _snapshot = _read_catalogue_row(document_id)
     return DocumentStatusResponse(
         id=str(row.get("id", document_id)),
         status=row.get("status", "processing"),
@@ -732,8 +705,10 @@ async def delete_document(document_id: str, upload_token: str = ""):
     return {"success": True, "message": f"Document '{doc_to_delete['name']}' deleted"}
 
 
-def _read_catalogue_row(document_id: str) -> dict[str, Any]:
-    """Read one publicly servable catalogue row, or raise a safe HTTP error."""
+def _read_catalogue_row(
+    document_id: str,
+) -> tuple[dict[str, Any], eligibility.EligibilitySnapshot]:
+    """Read one publicly eligible catalogue row plus its eligibility snapshot."""
     last_error: Optional[Exception] = None
     for admin in (False, True):
         try:
@@ -753,7 +728,10 @@ def _read_catalogue_row(document_id: str) -> dict[str, Any]:
             # falls through to the service client.
             raise HTTPException(status_code=404, detail="Document not found")
         row = rows.data[0]
-        if not is_catalogue_visible(row):
+        if not isinstance(row, dict):
+            raise HTTPException(status_code=404, detail="Document not found")
+        snapshot = _snapshot_for_rows([row])
+        if not eligibility.is_document_public(row, snapshot):
             # Do not reveal whether a private/draft document exists.
             raise HTTPException(status_code=404, detail="Document not found")
         if admin:
@@ -762,7 +740,7 @@ def _read_catalogue_row(document_id: str) -> dict[str, Any]:
                 "set a valid SUPABASE_ANON_KEY to restore least-privilege reads.",
                 document_id,
             )
-        return row
+        return row, snapshot
 
     raise HTTPException(
         status_code=503,
@@ -773,28 +751,13 @@ def _read_catalogue_row(document_id: str) -> dict[str, Any]:
 @router.get("/{document_id}/pdf-url")
 @limiter.limit(PDF_URL_LIMIT)
 def get_pdf_signed_url(request: Request, document_id: str):
-    """Return a 1-hour signed URL for a publicly servable document PDF."""
+    """Signed storage URLs are disabled; bytes are served by the PDF proxy."""
     _ = request
-    row = _read_catalogue_row(document_id)
-    storage_path = row.get("storage_path")
-    if not storage_path:
-        raise HTTPException(status_code=404, detail="No storage path for this document")
-    try:
-        # The documents bucket is private. The backend has already checked the
-        # catalogue visibility above, so it is the trusted mediator that mints
-        # the short-lived URL.
-        result = (
-            get_supabase(admin=True)
-            .storage.from_(get_bucket())
-            .create_signed_url(storage_path, 3600)
-        )
-    except Exception as exc:
-        logger.error("[PDF] Signed URL failed for %s (%s): %s", document_id, storage_path, exc)
-        raise HTTPException(
-            status_code=503,
-            detail="Document storage is temporarily unavailable.",
-        ) from exc
-    return {"url": result["signedURL"], "expires_in": 3600}
+    _read_catalogue_row(document_id)
+    raise HTTPException(
+        status_code=410,
+        detail="Direct storage URLs are no longer issued. Use the PDF proxy.",
+    )
 
 
 @router.get("/{document_id}/pdf")
@@ -802,14 +765,14 @@ def get_pdf_signed_url(request: Request, document_id: str):
 def proxy_pdf(request: Request, document_id: str, download: bool = False):
     """Stream PDF bytes through backend — avoids CORS and private-bucket 400s."""
     _ = request
-    row = _read_catalogue_row(document_id)
-    storage_path = row.get("storage_path")
+    row, snapshot = _read_catalogue_row(document_id)
+    storage_path = eligibility.public_pdf_storage_path(row, snapshot)
     if not storage_path:
         raise HTTPException(status_code=404, detail="No storage path for this document")
     try:
         # The bucket is private: anon storage reads are denied by storage RLS.
-        # Catalogue visibility was enforced above, so the service client is
-        # only used to fetch bytes for an already-authorized document.
+        # Eligibility and the current approved revision were resolved above, so
+        # the service client is only used to fetch bytes for that revision.
         data: bytes = (
             get_supabase(admin=True).storage.from_(get_bucket()).download(storage_path)
         )

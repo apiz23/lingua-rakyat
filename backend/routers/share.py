@@ -3,7 +3,8 @@ import logging
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
-from utils.auth import get_verified_user
+from utils.auth import get_supabase, get_verified_user
+from utils import eligibility
 from utils.shared_answers import (
     delete_share,
     find_owned_chat_answer,
@@ -16,6 +17,46 @@ logger = logging.getLogger("share_router")
 router = APIRouter()
 public_v1_router = APIRouter()
 me_v1_router = APIRouter()
+
+
+def _eligible_share_sources(sources: list[dict]) -> Optional[list[dict]]:
+    """Return only citations whose current revisions are publicly eligible.
+
+    Returns ``None`` when any cited document is missing or ineligible, so the
+    caller suppresses the whole share instead of exposing stale evidence.
+    Sources without a document id are dropped because they cannot be
+    revalidated.
+    """
+    cited_ids = []
+    for source in sources:
+        document_id = source.get("document_id") if isinstance(source, dict) else None
+        if isinstance(document_id, str) and document_id.strip():
+            if document_id.strip() not in cited_ids:
+                cited_ids.append(document_id.strip())
+    if not cited_ids:
+        # No citation can be revalidated; keep the share text but no evidence.
+        return []
+
+    try:
+        rows, snapshot = eligibility.load_documents_for_authorization(
+            get_supabase(admin=True), cited_ids
+        )
+    except eligibility.EligibilityUnavailable as exc:
+        logger.error("[Share] Eligibility unavailable: %s", exc)
+        raise HTTPException(status_code=503, detail="Share service unavailable") from exc
+
+    for document_id in cited_ids:
+        row = rows.get(document_id)
+        if row is None or not eligibility.is_document_public(row, snapshot):
+            return None
+
+    return [
+        source
+        for source in sources
+        if isinstance(source, dict)
+        and isinstance(source.get("document_id"), str)
+        and source.get("document_id", "").strip() in cited_ids
+    ]
 
 
 class ShareRequest(BaseModel):
@@ -136,6 +177,11 @@ async def fetch_share(slug: str, response: Response):
     sources = persisted.get("sources") if persisted else []
     if not isinstance(sources, list):
         sources = []
+    sources = _eligible_share_sources(sources)
+    if sources is None:
+        # A cited revision is no longer public: suppress the whole share rather
+        # than leaking stale evidence or a partially redacted answer.
+        raise HTTPException(status_code=404, detail="Share link not found")
     return SharedAnswerResponse(
         slug=result["slug"],
         question=result["question"],

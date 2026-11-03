@@ -8,9 +8,12 @@ import {
   getCachedDocuments,
   getCachedHistory,
 } from "@/lib/offline-cache"
-import { authHeader } from "@/lib/auth-token"
 import { consumeChatSse } from "@/lib/chat-stream"
-import { API_URL } from "@/lib/config"
+import { authorizedFetch, publicFetch, resolveApiUrl } from "@/lib/http"
+
+function apiBase(): string {
+  return resolveApiUrl("")
+}
 
 class HistoryAuthorizationError extends Error {
   constructor() {
@@ -234,26 +237,9 @@ async function apiFetch(
   input: RequestInfo,
   init?: RequestInit
 ): Promise<Response> {
-  const auth = await authHeader()
-  const withAuth = (extra: Record<string, string>): RequestInit => ({
-    ...init,
-    cache: "no-store",
-    headers: { ...(init?.headers as Record<string, string> | undefined), ...extra },
-  })
-  let res = await fetch(input, withAuth(auth))
-  if (res.status === 401) {
-    // Retry once with a fresh token — covers both short-lived Clerk tokens
-    // and the token getter not being registered yet on first paint.
-    if (init?.signal?.aborted) throw new DOMException("Request cancelled", "AbortError")
-    res = await fetch(input, withAuth(await authHeader()))
-  }
-  if (res.status === 429) {
-    const retryAfter = res.headers.get("Retry-After") ?? "60"
-    throw new Error(
-      `Too many requests — please wait ${retryAfter} seconds and try again.`
-    )
-  }
-  return res
+  // The shared transport owns URL resolution, bearer injection, the single
+  // safe 401 retry, 429 handling and no-store defaults.
+  return authorizedFetch(String(input), init)
 }
 
 // ── Document API ───────────────────────────────────────────────────────────
@@ -261,7 +247,7 @@ async function apiFetch(
 export async function verifyUploadToken(token: string): Promise<void> {
   const params = new URLSearchParams({ token })
   const res = await apiFetch(
-    `${API_URL}/api/documents/verify-token?${params}`,
+    `${apiBase()}/api/documents/verify-token?${params}`,
     {
       method: "POST",
     }
@@ -279,7 +265,7 @@ export async function uploadDocument(
   const formData = new FormData()
   formData.append("file", file)
   const params = new URLSearchParams({ upload_token: uploadToken })
-  const res = await apiFetch(`${API_URL}/api/documents/upload?${params}`, {
+  const res = await apiFetch(`${apiBase()}/api/documents/upload?${params}`, {
     method: "POST",
     body: formData,
   })
@@ -302,7 +288,7 @@ export type DocumentStatus = {
 export async function getDocumentStatus(
   documentId: string
 ): Promise<DocumentStatus> {
-  const res = await apiFetch(`${API_URL}/api/documents/${documentId}/status`)
+  const res = await apiFetch(`${apiBase()}/api/documents/${documentId}/status`)
   if (!res.ok) throw new Error("Failed to fetch document status")
   return res.json()
 }
@@ -328,7 +314,7 @@ export async function waitForDocumentReady(
 
 export async function listDocuments(signal?: AbortSignal): Promise<Document[]> {
   try {
-    const res = await apiFetch(`${API_URL}/api/documents/`, { signal })
+    const res = await apiFetch(`${apiBase()}/api/documents/`, { signal })
     if (!res.ok) throw new Error("Failed to fetch documents")
     const documents = await res.json()
     cacheDocuments(documents)
@@ -343,7 +329,7 @@ export async function listDocuments(signal?: AbortSignal): Promise<Document[]> {
 
 export async function deleteDocument(documentId: string, uploadToken?: string): Promise<void> {
   const params = uploadToken ? `?upload_token=${encodeURIComponent(uploadToken)}` : ""
-  const res = await apiFetch(`${API_URL}/api/documents/${documentId}${params}`, {
+  const res = await apiFetch(`${apiBase()}/api/documents/${documentId}${params}`, {
     method: "DELETE",
   })
   if (!res.ok) {
@@ -357,7 +343,7 @@ export async function renameDocument(
   name: string,
   uploadToken: string
 ): Promise<Document> {
-  const res = await apiFetch(`${API_URL}/api/documents/${documentId}/rename`, {
+  const res = await apiFetch(`${apiBase()}/api/documents/${documentId}/rename`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, upload_token: uploadToken }),
@@ -378,7 +364,7 @@ export async function reindexDocument(
   uploadToken: string
 ): Promise<{ success: boolean; chunk_count: number; message: string }> {
   const res = await apiFetch(
-    `${API_URL}/api/documents/${documentId}/reindex?upload_token=${encodeURIComponent(uploadToken)}`,
+    `${apiBase()}/api/documents/${documentId}/reindex?upload_token=${encodeURIComponent(uploadToken)}`,
     { method: "POST" }
   )
   if (!res.ok) {
@@ -396,7 +382,7 @@ export async function refreshChunkCounts(): Promise<{
   total: number
   message: string
 }> {
-  const res = await apiFetch(`${API_URL}/api/documents/refresh-chunks`, {
+  const res = await apiFetch(`${apiBase()}/api/documents/refresh-chunks`, {
     method: "POST",
   })
   if (!res.ok) {
@@ -419,7 +405,7 @@ export async function askQuestion(
   bypassCache: boolean = false,
   documentIds: string[] = []
 ): Promise<AskResponse> {
-  const res = await apiFetch(`${API_URL}/api/chat/ask`, {
+  const res = await apiFetch(`${apiBase()}/api/chat/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -454,7 +440,7 @@ export async function getChatHistory(params: {
   try {
     // user_id goes in a header, not the query string — a query param ends
     // up in browser history and server access logs, a header does not.
-    const res = await apiFetch(`${API_URL}/api/v1/me/history?${search.toString()}`, {
+    const res = await apiFetch(`${apiBase()}/api/v1/me/history?${search.toString()}`, {
       ...(params.signal ? { signal: params.signal } : {}),
     })
     if (res.status === 401 || res.status === 403) throw new HistoryAuthorizationError()
@@ -488,7 +474,7 @@ export async function clearChatHistory(params: {
 
   const suffix = search.toString() ? `?${search.toString()}` : ""
   const res = await apiFetch(
-    `${API_URL}/api/v1/me/history${suffix}`,
+    `${apiBase()}/api/v1/me/history${suffix}`,
     { method: "DELETE", signal: params.signal }
   )
   if (!res.ok) throw new Error("Failed to clear chat history")
@@ -498,7 +484,7 @@ export async function clearChatHistory(params: {
 // ── Evaluation API ─────────────────────────────────────────────────────────
 
 export async function getEvalReport(): Promise<EvalReport> {
-  const res = await apiFetch(`${API_URL}/api/eval/report`)
+  const res = await apiFetch(`${apiBase()}/api/eval/report`)
   if (!res.ok) throw new Error("Failed to fetch evaluation report")
   return res.json()
 }
@@ -508,7 +494,7 @@ export async function runTestSuite(
   docName: string = "",
   modelOverride: string = ""
 ): Promise<TestSuiteResult> {
-  const res = await apiFetch(`${API_URL}/api/eval/run-test-suite`, {
+  const res = await apiFetch(`${apiBase()}/api/eval/run-test-suite`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -525,7 +511,7 @@ export async function runTestSuite(
 }
 
 export async function getSimplifyDemo(): Promise<SimplifyDemo> {
-  const res = await apiFetch(`${API_URL}/api/eval/simplify-demo`)
+  const res = await apiFetch(`${apiBase()}/api/eval/simplify-demo`)
   if (!res.ok) throw new Error("Failed to fetch simplify demo")
   return res.json()
 }
@@ -534,7 +520,7 @@ export async function augmentQuery(
   query: string,
   sourceLang: string = "en"
 ): Promise<AugmentResult> {
-  const res = await apiFetch(`${API_URL}/api/eval/augment-query`, {
+  const res = await apiFetch(`${apiBase()}/api/eval/augment-query`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, source_lang: sourceLang }),
@@ -545,7 +531,7 @@ export async function augmentQuery(
 
 export async function clearEvalRecords(uploadToken?: string): Promise<void> {
   const params = uploadToken ? `?upload_token=${encodeURIComponent(uploadToken)}` : ""
-  const res = await apiFetch(`${API_URL}/api/eval/clear${params}`, { method: "DELETE" })
+  const res = await apiFetch(`${apiBase()}/api/eval/clear${params}`, { method: "DELETE" })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Failed to clear eval records" }))
     throw new Error(err.detail || "Failed to clear eval records")
@@ -615,9 +601,9 @@ export async function askQuestionStream(
 
   let res: Response
   try {
-    res = await fetch(`${API_URL}/api/chat/ask-stream`, {
+    res = await authorizedFetch(`${apiBase()}/api/chat/ask-stream`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         user_id: userId,
         document_id: documentId,
@@ -638,12 +624,6 @@ export async function askQuestionStream(
     return
   }
 
-  if (res.status === 429) {
-    const retryAfter = res.headers.get("Retry-After") ?? "60"
-    throw new Error(
-      `Too many requests — please wait ${retryAfter} seconds and try again.`
-    )
-  }
   if (!res.ok || !res.body) {
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       runOfflineFallback()
@@ -728,7 +708,7 @@ export async function runTestSuiteStream(
   onEvent: (event: StreamEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/api/eval/run-test-suite-stream`, {
+  const res = await authorizedFetch(`${apiBase()}/api/eval/run-test-suite-stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -826,7 +806,7 @@ export async function listConversations(userId: string, signal?: AbortSignal): P
   void userId // Retained for caller compatibility; identity comes from Clerk.
   try {
     // user_id goes in a header, not the query string — see getChatHistory.
-    const res = await apiFetch(`${API_URL}/api/v1/me/conversations`, { signal })
+    const res = await apiFetch(`${apiBase()}/api/v1/me/conversations`, { signal })
     if (res.status === 401 || res.status === 403) throw new HistoryAuthorizationError()
     if (!res.ok) return []
     return res.json()
@@ -845,7 +825,7 @@ export async function renameConversation(
 ): Promise<boolean> {
   void userId // The API derives ownership from the verified Clerk principal.
   try {
-    const res = await apiFetch(`${API_URL}/api/v1/me/conversations/${encodeURIComponent(sessionId)}`, {
+    const res = await apiFetch(`${apiBase()}/api/v1/me/conversations/${encodeURIComponent(sessionId)}`, {
       method: "PATCH",
       signal,
       headers: { "Content-Type": "application/json" },
@@ -882,7 +862,7 @@ export async function createShare(payload: {
   question: string
   answer: string
 }, signal?: AbortSignal): Promise<ShareResult> {
-  const res = await apiFetch(`${API_URL}/api/v1/me/shares`, {
+  const res = await apiFetch(`${apiBase()}/api/v1/me/shares`, {
     method: "POST",
     signal,
     headers: { "Content-Type": "application/json" },
@@ -897,9 +877,7 @@ export async function createShare(payload: {
 
 export async function getShare(slug: string): Promise<SharedAnswer | null> {
   try {
-    const res = await fetch(`${API_URL}/api/v1/public/shares/${encodeURIComponent(slug)}`, {
-      cache: "no-store",
-    })
+    const res = await publicFetch(`${apiBase()}/api/v1/public/shares/${encodeURIComponent(slug)}`)
     if (!res.ok) return null
     return res.json()
   } catch {
@@ -917,7 +895,7 @@ export interface MyShare {
 
 export async function listMyShares(): Promise<MyShare[]> {
   try {
-    const res = await apiFetch(`${API_URL}/api/v1/me/shares`)
+    const res = await apiFetch(`${apiBase()}/api/v1/me/shares`)
     if (!res.ok) return []
     return await res.json()
   } catch {
@@ -927,7 +905,7 @@ export async function listMyShares(): Promise<MyShare[]> {
 
 export async function revokeShare(slug: string): Promise<boolean> {
   try {
-    const res = await apiFetch(`${API_URL}/api/v1/me/shares/${encodeURIComponent(slug)}`, {
+    const res = await apiFetch(`${apiBase()}/api/v1/me/shares/${encodeURIComponent(slug)}`, {
       method: "DELETE",
     })
     return res.ok
