@@ -101,6 +101,24 @@ unchanged; nothing was committed, pushed or deployed.
 5. Run `python -m scripts.expire_documents` from a trusted scheduler if
    available; otherwise expiry is still enforced at read time.
 
+## Temporary legacy catalogue override (owner decision 2026-11-04)
+
+The ten pre-publication uploads are `unclassified/draft` and had no approved
+source or revision, so the strict catalogue hid them. The owner asked to see
+them again before completing publication approvals.
+
+- `ALLOW_LEGACY_PUBLIC_DOCUMENTS=true` in `backend/.env` (gitignored, local
+  only) enables the old-catalogue path for rows that are `ready`,
+  `unclassified/draft` and carry no approval/source markers.
+- The override covers catalogue, status, PDF proxy (document `storage_path`),
+  chat document authorization and share citation checks. Explicitly private,
+  processing, expired, revoked or partially approved rows stay denied.
+- Default is **false** (`backend/.env.example`). Enabling it bypasses trusted
+  source verification and human approval. Set it back to `false` after running
+  the publication migration and approving/publishing documents.
+- Verified locally: `/api/documents/` returned all 10 rows and the first PDF
+  proxy request returned `200 application/pdf` (402,717 bytes).
+
 ## Remaining production blockers
 
 - No approved server-side role/grant provider: admin, researcher and internal

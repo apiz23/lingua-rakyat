@@ -25,6 +25,12 @@ OLDER = (NOW - timedelta(days=10)).isoformat()
 FUTURE = (NOW + timedelta(days=1)).isoformat()
 
 
+@pytest.fixture(autouse=True)
+def _legacy_override_off(monkeypatch):
+    """Denial tests must not inherit the local owner override from .env."""
+    monkeypatch.delenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", raising=False)
+
+
 class Query:
     def __init__(self, rows):
         self._rows = rows
@@ -226,6 +232,60 @@ def test_missing_registry_tables_degrade_to_no_approved_rows():
     assert snap.approved_sources == {}
     assert snap.revisions_by_document == {}
     assert not eligibility.is_document_public(document(), snap, now=NOW)
+
+
+def _legacy_document(**overrides):
+    row = {
+        "id": "legacy-doc",
+        "name": "Old upload.pdf",
+        "status": "ready",
+        "visibility_scope": "unclassified",
+        "publication_status": "draft",
+        "storage_path": "legacy-doc/file.pdf",
+        "expires_at": None,
+    }
+    row.update(overrides)
+    return row
+
+
+def test_legacy_compatibility_is_off_by_default(monkeypatch):
+    monkeypatch.delenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", raising=False)
+    snap = eligibility.EligibilitySnapshot(approved_sources={}, revisions_by_document={})
+    assert not eligibility.is_document_public(_legacy_document(), snap, now=NOW)
+    assert eligibility.public_pdf_storage_path(_legacy_document(), snap, now=NOW) is None
+
+
+def test_legacy_compatibility_serves_old_ready_uploads_when_opted_in(monkeypatch):
+    monkeypatch.setenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", "true")
+    snap = eligibility.EligibilitySnapshot(approved_sources={}, revisions_by_document={})
+    doc = _legacy_document()
+    assert eligibility.is_document_public(doc, snap, now=NOW)
+    assert eligibility.public_pdf_storage_path(doc, snap, now=NOW) == "legacy-doc/file.pdf"
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        _legacy_document(visibility_scope="private"),
+        _legacy_document(publication_status="published", approved_by="operator-1"),
+        _legacy_document(status="processing"),
+        _legacy_document(revoked_at="2026-11-01T00:00:00Z"),
+        _legacy_document(expires_at="2026-11-02T00:00:00Z"),
+        _legacy_document(approved_by="operator-1"),
+        _legacy_document(source_id="src-1"),
+        _legacy_document(published_at="2026-11-01T00:00:00Z"),
+        _legacy_document(storage_path=None),
+    ],
+)
+def test_legacy_compatibility_never_widens_explicit_or_broken_rows(monkeypatch, row):
+    monkeypatch.setenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", "true")
+    snap = eligibility.EligibilitySnapshot(approved_sources={}, revisions_by_document={})
+    if row.get("storage_path") is None:
+        # Catalogue eligibility still matches old behaviour; the PDF path is absent.
+        assert eligibility.is_document_public(row, snap, now=NOW)
+        assert eligibility.public_pdf_storage_path(row, snap, now=NOW) is None
+    else:
+        assert not eligibility.is_document_public(row, snap, now=NOW)
 
 
 def test_public_catalogue_filters_ineligible_rows():

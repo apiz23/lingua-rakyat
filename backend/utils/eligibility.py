@@ -9,14 +9,15 @@ denies access.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping, Optional
 
 from fastapi import HTTPException
 
 from utils.authorization import Actor, ActorKind
-from utils.document_publication import is_publicly_eligible
+from utils.document_publication import _parse_aware_datetime, is_publicly_eligible
 from utils.publication_store import (
     PublicationStoreUnavailable,
     fetch_approved_sources,
@@ -29,6 +30,17 @@ logger = logging.getLogger("eligibility")
 # Owner kinds whose rows may be read by the verified owner even when private.
 _CITIZEN_OWNER_TYPES = {"citizen", "user"}
 
+# Temporary, explicitly opt-in compatibility switch for documents uploaded
+# before the publication model existed. Default is off. Enabling it lets
+# unclassified/draft rows be served exactly as the old catalogue did, which
+# bypasses trusted-source verification and human approval. Use only to recover
+# a local/demo library while the migration and approvals are completed.
+_LEGACY_FLAG = "ALLOW_LEGACY_PUBLIC_DOCUMENTS"
+
+
+def legacy_public_documents_allowed() -> bool:
+    return (os.getenv(_LEGACY_FLAG, "false") or "").strip().lower() == "true"
+
 
 class EligibilityUnavailable(RuntimeError):
     """The authoritative eligibility inputs cannot be read right now."""
@@ -40,6 +52,40 @@ class EligibilitySnapshot:
 
     approved_sources: Mapping[str, Mapping[str, Any]]
     revisions_by_document: Mapping[str, tuple[Mapping[str, Any], ...]]
+
+
+def is_legacy_public_document(
+    document: Mapping[str, Any] | None,
+    *,
+    now: Optional[datetime] = None,
+) -> bool:
+    """Old-catalogue eligibility, only when the operator opts in.
+
+    Matches rows that predate publication metadata: an unclassified/draft,
+    ready document with no approval or source markers, not revoked or expired.
+    Anything explicitly private or partially approved is never eligible here.
+    """
+    if not isinstance(document, Mapping):
+        return False
+    if not legacy_public_documents_allowed():
+        return False
+    if document.get("status") != "ready":
+        return False
+    if document.get("visibility_scope") not in (None, "unclassified"):
+        return False
+    if document.get("publication_status") not in (None, "draft"):
+        return False
+    if document.get("source_id") or document.get("approved_by") or document.get("published_at"):
+        return False
+    if document.get("revoked_at") or document.get("superseded_by"):
+        return False
+
+    current_time = now or datetime.now(timezone.utc)
+    expires_at = _parse_aware_datetime(document.get("expires_at"))
+    if document.get("expires_at") is not None:
+        if expires_at is None or current_time >= expires_at:
+            return False
+    return True
 
 
 def revision_number(document: Mapping[str, Any]) -> Optional[int]:
@@ -112,6 +158,8 @@ def is_document_public(
     """Public eligibility for one catalogue row, fail closed."""
     if not isinstance(document, Mapping):
         return False
+    if is_legacy_public_document(document, now=now):
+        return True
     if current_approved_revision(document, snapshot) is None:
         return False
     return is_publicly_eligible(
@@ -140,9 +188,13 @@ def public_pdf_storage_path(
     if not is_document_public(document, snapshot, now=now):
         return None
     revision = current_approved_revision(document, snapshot)
-    if revision is None:
-        return None
-    return str(revision["storage_path"]).strip()
+    if revision is not None:
+        return str(revision["storage_path"]).strip()
+    if is_legacy_public_document(document, now=now):
+        storage_path = document.get("storage_path")
+        if isinstance(storage_path, str) and storage_path.strip():
+            return storage_path.strip()
+    return None
 
 
 def _citizen_owns(document: Mapping[str, Any], actor: Actor) -> bool:

@@ -143,6 +143,12 @@ def client():
         yield test_client
 
 
+@pytest.fixture(autouse=True)
+def _legacy_override_off(monkeypatch):
+    """Denial tests must not inherit the local owner override from .env."""
+    monkeypatch.delenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", raising=False)
+
+
 def install_rows(monkeypatch, document_rows, *, sources=SOURCES, revisions=(REVISION_ROW,)):
     calls = []
     tables = {
@@ -355,6 +361,56 @@ def test_signed_url_endpoint_still_hides_ineligible_documents(client, monkeypatc
 
     assert response.status_code == 404
     assert not any(kind == "signed" for kind, *_rest in calls)
+
+
+def test_catalogue_legacy_compatibility_when_operator_opts_in(client, monkeypatch):
+    monkeypatch.setenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", "true")
+    legacy = {
+        **LEGACY_ROW,
+        "visibility_scope": "unclassified",
+        "publication_status": "draft",
+        "status": "ready",
+    }
+    calls = install_rows(monkeypatch, [legacy], sources=[], revisions=())
+
+    response = client.get("/api/documents/")
+
+    assert response.status_code == 200
+    assert [doc["id"] for doc in response.json()] == ["legacy-doc"]
+    assert response.json()[0]["pdf_url"] == "/api/documents/legacy-doc/pdf"
+    assert any(call[0] == "table" for call in calls)
+
+
+def test_catalogue_legacy_compatibility_stays_off_by_default(client, monkeypatch):
+    monkeypatch.delenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", raising=False)
+    legacy = {
+        **LEGACY_ROW,
+        "visibility_scope": "unclassified",
+        "publication_status": "draft",
+        "status": "ready",
+    }
+    install_rows(monkeypatch, [legacy], sources=[], revisions=())
+
+    response = client.get("/api/documents/")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_legacy_pdf_proxy_uses_document_storage_path_when_opted_in(client, monkeypatch):
+    monkeypatch.setenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", "true")
+    legacy = {
+        **LEGACY_ROW,
+        "visibility_scope": "unclassified",
+        "publication_status": "draft",
+        "status": "ready",
+    }
+    calls = install_rows(monkeypatch, [legacy], sources=[], revisions=())
+
+    response = client.get("/api/documents/legacy-doc/pdf")
+
+    assert response.status_code == 200
+    assert ("download", "legacy-doc/file.pdf", True) in calls
 
 
 def test_document_status_returns_503_when_catalogue_unavailable(client, monkeypatch):
