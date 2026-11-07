@@ -12,7 +12,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import CommandPaletteTopRight from "@/components/navbar"
 import AuthSync from "@/components/auth-sync"
 import OfflineProvider from "@/components/offline-provider"
-import { TopoPattern } from "@/components/ui/topo-pattern"
+
 
 import {
   Atkinson_Hyperlegible,
@@ -112,7 +112,7 @@ export default function RootLayout({
               aria-hidden="true"
               className="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-70"
             >
-              <TopoPattern />
+
               <div className="bg-noise absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" />
             </div>
             <LanguageProvider>

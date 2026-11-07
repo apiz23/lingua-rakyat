@@ -6,10 +6,10 @@ import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { useUser } from "@clerk/nextjs"
 import {
-  Target,
+
   Command,
   MessageSquare,
-  BookOpen,
+
   Plus,
   User,
   Check,
@@ -54,14 +54,10 @@ const navItems: NavItem[] = [
     icon: MessageSquare,
   },
   {
-    href: "/results",
-    label: "Showcase",
-    icon: Target,
+    href: "/shares", label: "Shared conversations", icon: MessageSquare,
   },
   {
-    href: "/about",
-    label: "About",
-    icon: BookOpen,
+    href: "/profile", label: "Profile", icon: User,
   },
 ] as const
 

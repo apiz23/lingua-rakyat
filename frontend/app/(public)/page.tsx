@@ -1,12 +1,12 @@
-﻿"use client"
+"use client"
 
 import dynamic from "next/dynamic"
 import {
   motion,
-  useScroll,
-  useTransform,
+
+
   useReducedMotion,
-  type Variants,
+
 } from "framer-motion"
 import {
   ArrowRight,
@@ -19,22 +19,19 @@ import {
   FileSearch,
   Languages,
   BarChart3,
-  Play,
-  Sparkles,
+
+
   Zap,
   Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 import Link from "next/link"
-import Image from "next/image"
+import { Instrument_Serif } from "next/font/google"
 import Footer from "@/components/footer"
 import { useLanguage } from "@/components/language-provider"
-import logo from "@/public/icons/android-chrome-512x512.png"
-import {
-  ScrollVelocityContainer,
-  ScrollVelocityRow,
-} from "@/components/ui/scroll-based-velocity"
+
+
 import {
   Terminal,
   AnimatedSpan,
@@ -49,12 +46,10 @@ const TechStackLogos = dynamic(
   () => import("@/components/tech-stack-logos").then((m) => m.TechStackLogos),
   { ssr: false }
 )
-import bgNew from "@/public/assets/background-new3.webp"
-import mykadImg from "@/public/assets/MyKad.webp"
-import passportImg from "@/public/assets/passport.webp"
-import personImg from "@/public/assets/person.webp"
 
-const ease = [0.16, 1, 0.3, 1] as const
+const editorialSerif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], display: "swap" })
+
+
 
 const DEMO_VIDEO_SRC =
   "https://otmlfmgyscrohtbpqqoi.supabase.co/storage/v1/object/public/videos/lv_0_20260609134554.mp4"
@@ -153,42 +148,19 @@ function ScaleIn({
 }
 
 export default function Home() {
-  const { language, setLanguage } = useLanguage()
+  const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
-  const { scrollYProgress } = useScroll()
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0.8])
-  const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.98])
-  const surfaceClass = "neo-card bg-card"
+
+
   const mutedTextClass = "text-muted-foreground"
-  const faintTextClass = "text-muted-foreground"
-
-  const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.07,
-        delayChildren: 0.1,
-      },
-    },
-  }
-
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 16 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] },
-    },
-  }
 
   const copy =
     language === "ms"
       ? {
           kicker: "AI Multilingual untuk Dokumen Kerajaan",
-          headline1: "Dokumen kerajaan, diterangkan dalam",
-          headline2: "bahasa anda.",
-        
+          headline1: "Dokumen kerajaan.",
+          headline2: "Dalam bahasa anda.",
+
           subhead:
             "Sistem soal jawab dokumen kerajaan berasaskan AI yang menggunakan Cohere multilingual embeddings, penyusunan semula neural Cohere, dan LLM. Jawapan bersumberkan dokumen dengan skor ketepatan, dalam Bahasa Melayu, English, dan Mandarin.",
 
@@ -208,19 +180,19 @@ export default function Home() {
             {
               n: "01",
               title: "Ingestion",
-              desc: "PDF → pengekstrakan teks → pembahagian bahagian-sedar (360 patah perkataan, overlap 45) → embedding Cohere multilingual-v3 → Pinecone.",
+              desc: "PDF ? pengekstrakan teks ? pembahagian bahagian-sedar (360 patah perkataan, overlap 45) ? embedding Cohere multilingual-v3 ? Pinecone.",
               icon: FileText,
             },
             {
               n: "02",
               title: "Retrieval",
-              desc: "Pengesanan bahasa → augmentasi pertanyaan (×4 varian) → embedding Cohere → carian vektor Pinecone → penyusunan semula neural Cohere → top-k chunks.",
+              desc: "Pengesanan bahasa ? augmentasi pertanyaan (×4 varian) ? embedding Cohere ? carian vektor Pinecone ? penyusunan semula neural Cohere ? top-k chunks.",
               icon: Languages,
             },
             {
               n: "03",
               title: "Generation",
-              desc: "Pengawal bukti → prompt berasaskan konteks → LLM → jawapan beranak + petikan sumber + skor keyakinan + skor ketepatan.",
+              desc: "Pengawal bukti ? prompt berasaskan konteks ? LLM ? jawapan beranak + petikan sumber + skor keyakinan + skor ketepatan.",
               icon: FileSearch,
             },
           ],
@@ -260,14 +232,14 @@ export default function Home() {
 
           previewQ: "Soalan: Siapakah yang layak memohon bantuan ini?",
           previewA:
-            "Berdasarkan Seksyen 2.1, pemohon mestilah warganegara Malaysia berumur 18 tahun ke atas dengan pendapatan isi rumah ≤ RM4,000.",
+            "Berdasarkan Seksyen 2.1, pemohon mestilah warganegara Malaysia berumur 18 tahun ke atas dengan pendapatan isi rumah = RM4,000.",
           previewSrc: "Chunk ID: doc_001_chunk_42 | Similarity: 0.89",
         }
       : {
           kicker: "Multilingual AI for Government Documents",
 
-          headline1: "Government documents, explained in",
-          headline2: "your language.",
+          headline1: "Government documents.",
+          headline2: "In your language.",
 
           subhead:
             "An AI-powered government document Q&A system using Cohere multilingual embeddings, Cohere neural reranking, and LLM. Source-cited answers with faithfulness scoring in Malay, English, and Chinese.",
@@ -288,19 +260,19 @@ export default function Home() {
             {
               n: "01",
               title: "Ingestion",
-              desc: "PDF → text extraction → section-aware chunking (360-word window, 45-word overlap) → Cohere embed-multilingual-v3 → Pinecone.",
+              desc: "PDF ? text extraction ? section-aware chunking (360-word window, 45-word overlap) ? Cohere embed-multilingual-v3 ? Pinecone.",
               icon: FileText,
             },
             {
               n: "02",
               title: "Retrieval",
-              desc: "Language detection → multi-query augmentation (×4 variants) → Cohere embedding → Pinecone vector search → Cohere neural reranking → top-k chunks.",
+              desc: "Language detection ? multi-query augmentation (×4 variants) ? Cohere embedding ? Pinecone vector search ? Cohere neural reranking ? top-k chunks.",
               icon: Languages,
             },
             {
               n: "03",
               title: "Generation",
-              desc: "Evidence guard → context-aware prompt → LLM → streamed answer + source citations + confidence + faithfulness score.",
+              desc: "Evidence guard ? context-aware prompt ? LLM ? streamed answer + source citations + confidence + faithfulness score.",
               icon: FileSearch,
             },
           ],
@@ -340,7 +312,7 @@ export default function Home() {
 
           previewQ: "Query: Who is eligible to apply for this benefit?",
           previewA:
-            "According to Section 2.1, applicants must be Malaysian citizens aged 18 and above with a household income ≤ RM4,000.",
+            "According to Section 2.1, applicants must be Malaysian citizens aged 18 and above with a household income = RM4,000.",
           previewSrc: "Chunk ID: doc_001_chunk_42 | Similarity: 0.89",
         }
   const comparison =
@@ -452,244 +424,65 @@ export default function Home() {
 
   return (
     <div className="relative min-h-dvh overflow-x-clip bg-background">
-      {/* Background Image */}
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url(${bgNew.src})`,
-        }}
-      />
-
-      {/* Overlay for text readability */}
-      <div className="absolute inset-0 z-1 bg-background/45 dark:bg-background/75" />
-
-      <main className="relative z-10 mx-auto w-full max-w-full px-5 sm:px-8 lg:max-w-[70%] lg:px-10 xl:px-14">
-        <motion.section
-          style={{ opacity: heroOpacity, scale: heroScale }}
-          className="relative flex items-center pt-10 pb-12 sm:pt-8 sm:pb-16 lg:pt-6 lg:pb-14"
+      <main className="landing-service relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10">
+        <section className="editorial-hero mx-auto flex min-h-[560px] max-w-4xl flex-col items-center justify-center py-12 text-center sm:min-h-[620px]">
+          <p className="mb-7 flex flex-wrap justify-center gap-x-3 text-[10px] font-semibold uppercase tracking-[.25em] text-muted-foreground">{(language === "ms" ? ["Dokumen", "Bahasa", "Kefahaman"] : ["Documents", "Language", "Understanding"]).map((word, i) => <span className="editorial-rise" style={{ animationDelay: i * 400 + "ms" }} key={word}>{word}</span>)}</p>
+          <h1 aria-label={copy.headline1 + " " + copy.headline2} className={editorialSerif.className + " max-w-[18ch] text-[clamp(3.25rem,6.8vw,6rem)] font-normal leading-[1.05] tracking-[-.015em] text-balance"}>
+            <span aria-hidden="true">{copy.headline1.split(" ").map((word, i) => <span key={word + i} className="editorial-word" style={{ animationDelay: 300 + i * 140 + "ms" }}>{word}&nbsp;</span>)}</span>{" "}
+            <span aria-hidden="true" className="relative inline-block italic">{copy.headline2.split(" ").map((word, i) => <span key={word + i} className="editorial-word" style={{ animationDelay: 860 + i * 140 + "ms" }}>{word}&nbsp;</span>)}<svg aria-hidden="true" viewBox="0 0 300 12" preserveAspectRatio="none" className="absolute -bottom-[.1em] left-0 h-[.14em] w-full"><path className="editorial-draw" d="M2 7 C 80 2, 180 11, 298 5" fill="none" stroke="currentColor" strokeWidth="1.25" vectorEffect="non-scaling-stroke" pathLength="1" /></svg></span>
+          </h1>
+          <div aria-hidden="true" className="editorial-rule mt-8 h-px w-20 bg-foreground/20" />
+          <p className="editorial-rise mx-auto mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-[17px]" style={{ animationDelay: "1500ms" }}>{copy.subhead}</p>
+          <div className="editorial-rise mt-9 flex flex-col items-center gap-5 sm:flex-row sm:gap-8" style={{ animationDelay: "1700ms" }}><Button asChild className="rounded-sm px-7 py-6"><Link href="/workspace">{copy.cta}<ArrowRight className="ml-2 size-4" /></Link></Button><a href="#demo-section" className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">{language === "ms" ? "Lihat cara ia berfungsi" : "See how it works"} ?</a></div>
+        </section>
+        <section
+          aria-label={
+            language === "ms"
+              ? "Cara menggunakan Lingua Rakyat"
+              : "How Lingua Rakyat works"
+          }
+          className="service-guide my-10 grid gap-6 border-y border-border bg-transparent py-6 sm:my-16 md:grid-cols-[1.2fr_1fr_1fr] md:gap-8"
         >
-          <div className="relative z-10 w-full">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="mb-12 flex items-center justify-between gap-3 sm:mb-10"
-            >
-              <div className="flex items-center gap-3">
-                <Image
-                  src={logo}
-                  alt="Lingua Rakyat"
-                  width={32}
-                  height={32}
-                  className="rounded-full object-cover"
-                />
-                <span className="font-heading text-xs font-semibold tracking-[0.35em] text-foreground uppercase">
-                  Lingua Rakyat
-                </span>
+          {[
+            [
+              "01",
+              language === "ms"
+                ? "Tanya dalam bahasa anda"
+                : "Ask in your language",
+              language === "ms"
+                ? "Mulakan dengan soalan tentang dokumen awam."
+                : "Start with a question about public documents.",
+            ],
+            [
+              "02",
+              language === "ms" ? "Fahami jawapan" : "Understand the answer",
+              language === "ms"
+                ? "Dapatkan penerangan yang jelas dan mudah dibaca."
+                : "Get a clear explanation you can follow.",
+            ],
+            [
+              "03",
+              language === "ms" ? "Semak sumber" : "Check the source",
+              language === "ms"
+                ? "Rujuk petikan dan sahkan dengan sumber rasmi."
+                : "Follow citations and verify with official sources.",
+            ],
+          ].map(([step, title, description]) => (
+            <div key={step} className="flex gap-3">
+              <span className="font-mono text-xs text-primary">{step}</span>
+              <div>
+                <h2 className="text-sm font-semibold">{title}</h2>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {description}
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setLanguage(language === "ms" ? "en" : "ms")}
-                  aria-label={
-                    language === "ms"
-                      ? "Switch to English"
-                      : "Tukar ke Bahasa Melayu"
-                  }
-                  className="neo-btn bg-background px-4 py-1.5 text-xs font-semibold tracking-[0.18em] text-foreground uppercase hover:text-primary"
-                >
-                  {language === "ms" ? "EN" : "MS"}
-                </button>
-              </div>
-            </motion.div>
-
-            <div className="flex flex-col items-center gap-8 lg:flex-row-reverse lg:justify-between lg:gap-12">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.55, delay: 0.15, ease }}
-                className="relative h-[280px] w-full overflow-visible sm:h-[360px] lg:h-[440px] lg:w-5/12 xl:h-[520px]"
-              >
-                <div
-                  className={`relative h-full overflow-hidden ${surfaceClass}`}
-                >
-                  <div className="absolute top-4 left-4 z-20 max-w-[42%] border-2 border-foreground bg-background/95 px-3 py-2 text-left shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)] sm:top-6 sm:left-6 sm:px-4">
-                    <p className="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase">
-                      {language === "ms" ? "Panduan" : "Guidance"}
-                    </p>
-                    <p
-                      className={`mt-1 text-xs leading-relaxed sm:text-sm ${mutedTextClass}`}
-                    >
-                      {language === "ms"
-                        ? "Baca dokumen rasmi dalam bahasa yang lebih jelas."
-                        : "Read official documents in language that feels clearer."}
-                    </p>
-                  </div>
-                  <motion.div
-                    initial={{
-                      opacity: 0,
-                      y: shouldReduce ? 0 : -14,
-                      rotate: -6,
-                    }}
-                    animate={{ opacity: 1, y: 0, rotate: -6 }}
-                    transition={{ duration: 0.5, delay: 0.7, ease }}
-                    className="absolute top-[44%] left-[5%] z-20 w-[108px] sm:w-[132px] lg:w-[150px]"
-                  >
-                    <Image
-                      src={mykadImg}
-                      alt="Malaysian MyKad identity card"
-                      width={150}
-                      height={96}
-                      className="h-auto w-full object-contain"
-                    />
-                  </motion.div>
-                  <motion.div
-                    initial={{
-                      opacity: 0,
-                      x: shouldReduce ? 0 : 14,
-                      rotate: 8,
-                    }}
-                    animate={{ opacity: 1, x: 0, rotate: 8 }}
-                    transition={{ duration: 0.5, delay: 0.92, ease }}
-                    className="absolute right-[4%] bottom-[10%] z-20 w-[84px] sm:w-[102px] lg:w-[112px]"
-                  >
-                    <Image
-                      src={passportImg}
-                      alt="Malaysian passport"
-                      width={112}
-                      height={148}
-                      className="h-auto w-full object-contain"
-                    />
-                  </motion.div>
-                  <div className="absolute right-[4%] bottom-0 z-10 h-[96%] w-[78%] sm:right-[6%] sm:w-[72%] lg:w-[80%]">
-                    <Image
-                      src={personImg}
-                      alt="Malaysian civic guide helping users understand official documents"
-                      fill
-                      priority
-                      className="object-contain object-bottom"
-                    />
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="w-full text-center lg:w-7/12 lg:text-left"
-              >
-                <motion.div
-                  variants={itemVariants}
-                  className="neo-btn relative z-10 mb-4 inline-flex items-center gap-1.5 bg-background px-3 py-1.5 text-[11px] font-semibold text-secondary-foreground sm:mb-6 sm:gap-2 sm:px-4 sm:py-2 sm:text-xs lg:mb-8"
-                >
-                  <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-4 lg:w-4" />
-                  <span className="tracking-wide">{copy.kicker}</span>
-                </motion.div>
-
-                <motion.h1
-                  initial={{
-                    opacity: 0,
-                    y: shouldReduce ? 0 : 20,
-                    filter: shouldReduce ? "blur(0px)" : "blur(8px)",
-                  }}
-                  whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  viewport={{ once: false, amount: 0.1 }}
-                  transition={{
-                    duration: shouldReduce ? 0.01 : 0.6,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  }}
-                  className="relative z-10 mb-4 text-3xl font-black tracking-tight uppercase sm:mb-6 sm:text-4xl md:text-5xl lg:mb-8 lg:text-6xl xl:text-7xl"
-                >
-                  <span className="block py-0 font-heading text-[1.65rem] leading-tight text-foreground uppercase sm:text-4xl md:text-5xl lg:text-6xl xl:text-4xl">
-                    {copy.headline1}
-                  </span>
-                  <span className="mt-1 block py-0 font-heading text-[1.65rem] leading-tight text-primary uppercase sm:mt-2 sm:text-4xl md:text-5xl lg:text-6xl xl:text-4xl">
-                    {copy.headline2}
-                  </span>
-                </motion.h1>
-
-                <motion.p
-                  variants={itemVariants}
-                  className={`relative z-10 mx-auto mb-6 max-w-2xl text-sm leading-relaxed sm:mb-8 sm:text-base lg:mx-0 lg:text-lg xl:text-xl ${mutedTextClass}`}
-                >
-                  {copy.subhead}
-                </motion.p>
-
-                <motion.div
-                  variants={itemVariants}
-                  className="relative z-10 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center sm:gap-4 lg:justify-start"
-                >
-                  <motion.div
-                    className="w-full sm:w-auto"
-                    whileHover={shouldReduce ? {} : { scale: 1.02 }}
-                    whileTap={shouldReduce ? {} : { scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  >
-                    <Link href="/workspace">
-                      <Button
-                        size="default"
-                        className="group w-full gap-2 bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/85 sm:px-6 sm:py-2.5 sm:text-base lg:px-7 lg:py-3"
-                      >
-                        {copy.cta}
-                        <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1 sm:h-4 sm:w-4" />
-                      </Button>
-                    </Link>
-                  </motion.div>
-
-                  <motion.div
-                    className="w-full sm:w-auto"
-                    whileHover={shouldReduce ? {} : { scale: 1.02 }}
-                    whileTap={shouldReduce ? {} : { scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  >
-                    <Button
-                      size="default"
-                      variant="outline"
-                      className="group w-full gap-2 px-5 py-2.5 text-sm font-semibold hover:bg-primary/5 sm:px-6 sm:py-2.5 sm:text-base lg:px-7 lg:py-3"
-                      onClick={() =>
-                        document
-                          .getElementById("demo-section")
-                          ?.scrollIntoView({ behavior: "smooth" })
-                      }
-                    >
-                      <Play className="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110 sm:h-4 sm:w-4" />
-                      {copy.ctaSecondary}
-                    </Button>
-                  </motion.div>
-                </motion.div>
-
-                <div
-                  className={`relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3 pt-2 text-xs sm:mt-10 sm:gap-4 lg:mt-12 lg:justify-start lg:gap-4 lg:text-sm ${mutedTextClass}`}
-                >
-                  {copy.strip.map((item, i) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center gap-1.5 border-2 border-foreground bg-card px-2.5 py-1 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.6)]"
-                    >
-                      <item.icon className="h-3 w-3 shrink-0 text-primary/70 sm:h-3.5 sm:w-3.5" />
-                      <span className="font-semibold">{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
             </div>
-          </div>
-        </motion.section>
-
-        <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2 border-y-4 border-foreground bg-primary py-4 text-primary-foreground sm:mb-20">
-          <ScrollVelocityContainer className="text-3xl font-bold tracking-tight uppercase sm:text-4xl lg:text-5xl">
-            <ScrollVelocityRow baseVelocity={3} direction={1}>
-              <span className="mx-6">Bahasa Melayu • English • 中文 •</span>
-            </ScrollVelocityRow>
-            <ScrollVelocityRow baseVelocity={3} direction={-1}>
-              <span className="mx-6">Multilingual RAG • Civic AI •</span>
-            </ScrollVelocityRow>
-          </ScrollVelocityContainer>
-        </div>
+          ))}
+        </section>
 
         <FadeInUp>
           <section className="pb-16 sm:pb-24 lg:pb-32">
-            <Terminal className="max-h-none max-w-none border-2 border-foreground bg-black text-zinc-100 shadow-[8px_8px_0_0_hsl(var(--shadow-color)/0.85)]">
+            <Terminal className="max-h-none max-w-none rounded-2xl border border-border bg-zinc-950 text-zinc-100 shadow-sm">
               <AnimatedSpan className="flex items-center gap-2 text-xs text-zinc-400 sm:text-sm">
                 <FileText className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
                 <span className="font-mono text-xs tracking-[0.12em] uppercase sm:text-sm">
@@ -731,7 +524,7 @@ export default function Home() {
         </FadeInUp>
 
         {/* Comparison */}
-        <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
+        <section className="border-t border-border pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
             <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
               <span className="mr-2 text-secondary-foreground/60">01</span>
@@ -740,7 +533,7 @@ export default function Home() {
           </FadeInLeft>
 
           <FadeInLeft delay={0.05}>
-            <h2 className="mt-4 max-w-[32ch] font-heading text-2xl font-black tracking-tight text-foreground uppercase sm:mt-5 sm:text-3xl lg:text-4xl">
+            <h2 className="mt-4 max-w-[32ch] font-heading text-2xl font-semibold tracking-tight text-foreground sm:mt-5 sm:text-3xl lg:text-4xl">
               {comparison.title}
             </h2>
           </FadeInLeft>
@@ -754,22 +547,22 @@ export default function Home() {
           </FadeInLeft>
 
           <FadeInUp>
-            <div className="mt-8 max-h-[360px] overflow-auto border-2 shadow-2xl bg-card shadow-[6px_6px_0_0_hsl(var(--shadow-color)/0.85)] sm:max-h-none">
-              <table className="w-full border-collapse text-sm sm:min-w-[860px] shadow-2xl">
+            <div className="mt-8 overflow-x-auto rounded-xl border border-border bg-card">
+              <table className="w-full min-w-[760px] border-collapse text-sm">
                 <thead>
-                  <tr className="border-b-2 border-foreground bg-muted/60">
-                    <th className="border-r border-foreground px-4 py-3.5 text-left text-[11px] font-bold tracking-[0.2em] text-muted-foreground uppercase sm:w-[320px]">
+                  <tr className="border-b border-border bg-muted/60">
+                    <th className="border-r border-border px-4 py-3.5 text-left text-[11px] font-bold tracking-[0.2em] text-muted-foreground uppercase sm:w-[320px]">
                       Feature
                     </th>
                     {comparison.columns.map((col, colIdx) => (
                       <th
                         key={col}
                         className={[
-                          "border-r border-foreground px-4 py-3.5 text-left text-[11px] font-bold tracking-[0.2em] uppercase last:border-r-0",
+                          "border-r border-border px-4 py-3.5 text-left text-[11px] font-bold tracking-[0.2em] uppercase last:border-r-0",
                           colIdx === 0
                             ? "bg-primary/10 text-primary"
                             : "text-muted-foreground",
-                          colIdx >= 2 ? "hidden sm:table-cell" : "",
+
                         ].join(" ")}
                       >
                         {col}
@@ -782,20 +575,20 @@ export default function Home() {
                     <tr
                       key={row.label}
                       className={[
-                        "border-b border-foreground transition-colors hover:bg-muted/30",
+                        "border-b border-border transition-colors hover:bg-muted/30",
                         rowIdx === comparison.rows.length - 1 && "border-b-0",
                       ].join(" ")}
                     >
-                      <td className="border-r border-foreground px-4 py-3 font-medium text-foreground/90 sm:px-4">
+                      <td className="border-r border-border px-4 py-3 font-medium text-foreground/90 sm:px-4">
                         {row.label}
                       </td>
                       {row.values.map((value: boolean, idx: number) => (
                         <td
                           key={idx}
                           className={[
-                            "border-r border-foreground px-4 py-3 text-center last:border-r-0 sm:px-4",
+                            "border-r border-border px-4 py-3 text-center last:border-r-0 sm:px-4",
                             idx === 0 ? "bg-primary/5" : "",
-                            idx >= 2 ? "hidden sm:table-cell" : "",
+
                           ].join(" ")}
                         >
                           {value ? (
@@ -821,7 +614,7 @@ export default function Home() {
           </FadeInUp>
         </section>
 
-        <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
+        <section className="border-t border-border pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
             <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
               <span className="mr-2 text-secondary-foreground/60">02</span>
@@ -829,16 +622,16 @@ export default function Home() {
             </p>
           </FadeInLeft>
 
-          <div className="mt-8 grid gap-6 sm:mt-12 sm:gap-8 md:grid-cols-3">
+          <div className="mt-8 grid gap-0 border-t border-border sm:mt-12">
             {copy.steps.map((step, i) => (
               <FadeInUp key={step.n} delay={i * 0.1}>
                 <motion.div
-                  className={`group relative min-h-60 overflow-hidden border-2 border-foreground bg-card p-5 shadow-[6px_6px_0_0_hsl(var(--shadow-color)/0.85)] transition-all sm:p-6`}
+                  className={`group relative overflow-hidden border-b border-border py-8 pr-12 sm:pl-20`}
                   whileHover={shouldReduce ? {} : { y: -4, scale: 1.012 }}
                   whileTap={shouldReduce ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 280, damping: 22 }}
                 >
-                  <span className="absolute top-3 right-3 border-2 border-foreground bg-primary px-2 py-0.5 font-heading text-sm leading-none font-black text-primary-foreground shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.85)] select-none">
+                  <span className="absolute top-8 right-1 font-mono text-sm text-muted-foreground sm:left-0 sm:right-auto">
                     {step.n}
                   </span>
                   <step.icon className="relative mb-4 h-5 w-5 text-primary/70 transition-all group-hover:scale-110 group-hover:text-primary sm:h-6 sm:w-6" />
@@ -856,7 +649,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
+        <section className="border-t border-border pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
             <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
               <span className="mr-2 text-secondary-foreground/60">03</span>
@@ -865,17 +658,17 @@ export default function Home() {
           </FadeInLeft>
 
           <FadeInLeft delay={0.05}>
-            <h2 className="mt-4 max-w-[42ch] font-heading text-xl leading-snug font-black tracking-tight text-foreground uppercase sm:mt-6 sm:text-2xl md:text-3xl lg:text-4xl">
+            <h2 className="mt-4 max-w-[42ch] font-heading text-xl leading-snug font-semibold tracking-tight text-foreground sm:mt-6 sm:text-2xl md:text-3xl lg:text-4xl">
               {copy.builtFor}
             </h2>
           </FadeInLeft>
 
-          <div className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-2">
             {copy.features.map((f, i) => (
               <FadeInUp key={f.label} delay={i * 0.07}>
-                <div className="neo-card group flex h-full flex-col bg-card p-5 transition-all hover:bg-card sm:p-6">
+                <div className="group flex h-full flex-col border-t border-border py-6 sm:pr-8">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-foreground bg-primary/10 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.6)] transition-colors group-hover:bg-primary/15">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
                       <f.icon className="h-4 w-4 text-primary/70 transition-colors group-hover:text-primary" />
                     </div>
                     <h4 className="text-sm font-semibold text-foreground sm:text-base">
@@ -896,7 +689,7 @@ export default function Home() {
         {/* Video demo section with responsive media player */}
         <section
           id="demo-section"
-          className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32"
+          className="border-t border-border pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32"
         >
           <FadeInLeft>
             <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
@@ -905,7 +698,7 @@ export default function Home() {
             </p>
           </FadeInLeft>
           <FadeInLeft delay={0.05}>
-            <h2 className="mt-2 font-heading text-2xl font-black tracking-tight text-foreground uppercase sm:mt-3 sm:text-3xl">
+            <h2 className="mt-2 font-heading text-2xl font-semibold tracking-tight text-foreground sm:mt-3 sm:text-3xl">
               {copy.seeItWork}
             </h2>
           </FadeInLeft>
@@ -918,12 +711,14 @@ export default function Home() {
         </section>
 
         {/* Tech stack section with responsive logo carousel */}
-        <section className="border-t-4 border-foreground pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
-          <FadeInLeft className="flex justify-center">
+        <section className="border-t border-border pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
+          <FadeInLeft className="block">
             <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
               <span className="mr-2 text-secondary-foreground/60">05</span>
               {copy.builtWith}
             </p>
+            <h2 className="mt-4 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">{language === "ms" ? "Di sebalik setiap jawapan." : "Behind every answer."}</h2>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">{language === "ms" ? "Daripada dokumen kepada carian dan jawapan: kenali teknologi yang menyokong platform ini." : "From documents to retrieval and answers: explore the tools that support the platform."}</p>
           </FadeInLeft>
           <FadeInLeft delay={0.05}>
             <TechStackLogos

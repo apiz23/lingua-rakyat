@@ -3,7 +3,7 @@
 import type { ComponentType } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
+
 import { Separator } from "@/components/ui/separator"
 import {
   FileText,
@@ -38,9 +38,13 @@ import {
   KEY_FEATURES_MS,
 } from "./data"
 import { useLanguage } from "@/components/language-provider"
+import { Instrument_Serif } from "next/font/google"
 import PageIntro from "@/components/page-intro"
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+const editorialFont = Instrument_Serif({ subsets: ["latin"], weight: "400", display: "swap" })
+
 
 function SectionAnchor({ id }: { id: string }) {
   return <span id={id} className="-mt-20 block pt-20" aria-hidden />
@@ -289,31 +293,32 @@ export default function AboutPage() {
   const keyFeatures     = isMalay ? KEY_FEATURES_MS     : KEY_FEATURES
 
   return (
-    <ScrollArea className="h-full">
+    <>
       <div className="min-h-screen bg-background">
-        <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+        <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
 
           {/* ── Page header ── */}
           <PageIntro
             eyebrow={copy.badge}
-            badge="v2.0.0"
+            className={"rounded-none border-x-0 border-t-0 bg-transparent px-0 sm:px-0 border-b border-border pb-8 [&_h1]:font-[inherit] [&_p]:font-sans [&_h1]:font-normal [&_h1]:tracking-tight [&_h1]:text-5xl sm:[&_h1]:text-6xl " + editorialFont.className}
             title={copy.heading}
             description={copy.subtitle}
           />
 
+          <nav aria-label={isMalay ? "Kandungan halaman" : "On this page"} className="flex flex-wrap gap-x-6 gap-y-3 border-b border-border pb-6 text-sm text-muted-foreground">{[{id:"overview",label:copy.overviewLabel},{id:"ingestion",label:copy.ingestionLabel},{id:"qa-pipeline",label:copy.qaLabel},{id:"api",label:copy.apiLabel},{id:"tech-stack",label:copy.techLabel}].map(item => <a key={item.id} href={"#" + item.id} className="underline-offset-4 hover:text-primary hover:underline">{item.label}</a>)}</nav>
           {/* ── 2-column body ── */}
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid gap-10 lg:gap-14 xl:grid-cols-[minmax(0,1.7fr)_minmax(260px,1fr)]">
 
             {/* ── LEFT COLUMN ── */}
-            <div className="space-y-6">
+            <div className="space-y-10">
 
               {/* Overview */}
-              <section className="overflow-hidden rounded-lg border border-border bg-card">
+              <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="overview" />
-                <div className="border-b border-border px-5 py-4">
+                <div className="pt-6 pb-2">
                   <SectionHeader icon={BookOpen} label={copy.overviewLabel} />
                 </div>
-                <div className="p-5 space-y-4">
+                <div className="space-y-6 py-4">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Card className="bg-card/40">
                       <CardContent className="pb-4 pt-4">
@@ -364,9 +369,9 @@ export default function AboutPage() {
               </section>
 
               {/* Ingestion Pipeline */}
-              <section className="overflow-hidden rounded-lg border border-border bg-card">
+              <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="ingestion" />
-                <div className="border-b border-border px-5 py-4">
+                <div className="pt-6 pb-2">
                   <SectionHeader icon={Upload} label={copy.ingestionLabel} badge={copy.ingestionBadge} />
                   <p className="text-xs text-muted-foreground">
                     {copy.ingestionDesc}
@@ -387,9 +392,9 @@ export default function AboutPage() {
               </section>
 
               {/* Q&A Pipeline */}
-              <section className="overflow-hidden rounded-lg border border-border bg-card">
+              <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="qa-pipeline" />
-                <div className="border-b border-border px-5 py-4">
+                <div className="pt-6 pb-2">
                   <SectionHeader icon={MessageSquare} label={copy.qaLabel} badge={copy.qaBadge} />
                   <p className="text-xs text-muted-foreground">
                     {copy.qaDesc}
@@ -410,9 +415,9 @@ export default function AboutPage() {
               </section>
 
               {/* API Reference */}
-              <section className="overflow-hidden rounded-lg border border-border bg-card">
+              <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="api" />
-                <div className="border-b border-border px-5 py-4">
+                <div className="pt-6 pb-2">
                   <SectionHeader icon={Server} label={copy.apiLabel} />
                   <p className="text-xs text-muted-foreground">
                     {copy.apiDesc}{" "}
@@ -421,12 +426,12 @@ export default function AboutPage() {
                   </p>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-[640px] text-sm">
                     <thead>
                       <tr className="border-b border-border/50 bg-muted/20">
                         <th className="w-16 px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{copy.colMethod}</th>
                         <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{copy.colPath}</th>
-                        <th className="hidden px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:table-cell">{copy.colDesc}</th>
+                        <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{copy.colDesc}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/40">
@@ -440,7 +445,7 @@ export default function AboutPage() {
                           <td className="px-4 py-2.5">
                             <code className="font-mono text-xs text-foreground/80">{ep.path}</code>
                           </td>
-                          <td className="hidden px-4 py-2.5 text-xs text-muted-foreground sm:table-cell">
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
                             {ep.desc}
                           </td>
                         </tr>
@@ -453,15 +458,15 @@ export default function AboutPage() {
             </div>
 
             {/* ── RIGHT COLUMN ── */}
-            <div className="space-y-6">
+            <div className="space-y-10">
 
               {/* Tech Stack */}
-              <section className="overflow-hidden rounded-lg border border-border bg-card">
+              <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="tech-stack" />
-                <div className="border-b border-border px-5 py-4">
+                <div className="pt-6 pb-2">
                   <SectionHeader icon={Layers} label={copy.techLabel} />
                 </div>
-                <div className="p-5 space-y-5">
+                <div className="space-y-6 py-4">
                   <div>
                     <h3 className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                       <Server className="h-3.5 w-3.5" />
@@ -492,12 +497,12 @@ export default function AboutPage() {
           </div>
 
           {/* ── Key Features + Eval Metrics side by side ── */}
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid gap-10 lg:gap-14 xl:grid-cols-[minmax(0,1.7fr)_minmax(260px,1fr)]">
 
             {/* Key Features */}
-            <section className="overflow-hidden rounded-lg border border-border bg-card">
+            <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
               <SectionAnchor id="features" />
-              <div className="border-b border-border px-5 py-4">
+              <div className="pt-6 pb-2">
                 <SectionHeader icon={Zap} label={copy.featuresLabel} />
               </div>
               <div className="p-5 space-y-3">
@@ -525,9 +530,9 @@ export default function AboutPage() {
             </section>
 
             {/* Eval Metrics */}
-            <section className="overflow-hidden rounded-lg border border-border bg-card">
+            <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
               <SectionAnchor id="metrics" />
-              <div className="border-b border-border px-5 py-4">
+              <div className="pt-6 pb-2">
                 <SectionHeader icon={BarChart3} label={copy.metricsLabel} />
                 <p className="text-xs text-muted-foreground">
                   {copy.metricsDesc}{" "}
@@ -555,6 +560,6 @@ export default function AboutPage() {
 
         </main>
       </div>
-    </ScrollArea>
+    </>
   )
 }

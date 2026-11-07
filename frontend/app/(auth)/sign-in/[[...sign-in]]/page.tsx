@@ -23,7 +23,7 @@ export default function SignInPage() {
       await signIn.authenticateWithRedirect({
         strategy,
         redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/workspace",
+        redirectUrlComplete: new URLSearchParams(window.location.search).get("redirect_url") === "/manage" ? "/manage" : "/workspace",
       })
     } catch (err) {
       console.error("[SignIn] OAuth redirect threw:", err)

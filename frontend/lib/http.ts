@@ -99,6 +99,16 @@ function aborted(signal?: AbortSignal | null): boolean {
   return Boolean(signal?.aborted)
 }
 
+// On a hard page load the Clerk token getter is registered in an effect that
+// can run after a page's own data effect. A 401 without a credential is
+// therefore retried once after this short wait so a signed-in session is not
+// misreported as anonymous. A genuinely anonymous request still stays denied.
+const TOKEN_REGISTRATION_WAIT_MS = 250
+
+function waitForTokenRegistration(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, TOKEN_REGISTRATION_WAIT_MS))
+}
+
 /**
  * Perform an authenticated request. The returned Response body is never
  * consumed, so callers may stream it.
@@ -119,9 +129,20 @@ export async function authorizedFetch(
   throwIfRateLimited(response)
 
   if (response.status === 401) {
-    // Only a request that actually carried a credential is retried, and only
-    // when a new credential is available. Missing refresh = stay denied.
-    if (!firstToken) return response
+    // Only a request that carried a credential is retried with a refreshed
+    // one. A first-paint request that raced token registration gets one short
+    // wait, then retries only if a credential now exists.
+    if (!firstToken) {
+      await waitForTokenRegistration()
+      if (aborted(init?.signal)) {
+        throw new DOMException("Request cancelled", "AbortError")
+      }
+      const late = await authHeader()
+      if (!late.Authorization) return response
+      response = await fetch(url, requestInit(init, late))
+      throwIfRateLimited(response)
+      return response
+    }
     if (aborted(init?.signal)) {
       throw new DOMException("Request cancelled", "AbortError")
     }

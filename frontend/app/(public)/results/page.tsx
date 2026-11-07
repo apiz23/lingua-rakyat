@@ -20,7 +20,11 @@ import {
 } from "lucide-react"
 import { getEvalReport, type EvalReport } from "@/lib/api"
 import { useLanguage } from "@/components/language-provider"
+import { Instrument_Serif } from "next/font/google"
 import PageIntro from "@/components/page-intro"
+
+const editorialFont = Instrument_Serif({ subsets: ["latin"], weight: "400", display: "swap" })
+
 
 function pct(v: number) { return `${Math.round(v * 100)}%` }
 
@@ -31,7 +35,7 @@ function MetricCard({
   icon: React.ReactNode; live?: boolean
 }) {
   return (
-    <div className="neo-card bg-card p-5">
+    <div className="flex flex-col rounded-xl border border-border bg-card/60 p-6">
       <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
         {icon} {title}
         {live && (
@@ -48,7 +52,7 @@ function MetricCard({
 
 function ResultsMetricsFixture() {
   return (
-    <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="mb-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
       <MetricCard title="ROUGE-1 F1" value="0.152" description="Word overlap vs ground truth answers. Normal RAG range: 0.10–0.30." icon={<BookOpen className="h-4 w-4" />} live />
       <MetricCard title="BLEU Score" value="0.092" description="N-gram precision vs reference answers." icon={<Globe2 className="h-4 w-4" />} live />
       <MetricCard title="Readability" value="5.3 (target ≤ 6)" description="Flesch-Kincaid grade level. Lower = easier to read." icon={<BookOpen className="h-4 w-4" />} live />
@@ -61,9 +65,9 @@ function ResultsMetricsFixture() {
 
 function MetricsFallback() {
   return (
-    <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="mb-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="neo-card bg-card p-5">
+        <div key={i} className="flex flex-col rounded-xl border border-border bg-card/60 p-6">
           <div className="mb-3 h-3 w-24 rounded-sm bg-muted" />
           <div className="mb-1 h-7 w-32 rounded-sm bg-muted" />
           <div className="h-3 w-full rounded-sm bg-muted/70" />
@@ -261,13 +265,13 @@ export default function ResultsPage() {
     : "Target < 3s"
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
       {/* Header */}
       <PageIntro
         eyebrow={copy.eyebrow}
         title={copy.heading}
         description={copy.subtitle}
-        className="mb-8 sm:mb-10"
+        className={"mb-10 rounded-none border-x-0 border-t-0 bg-transparent px-0 sm:px-0 border-b border-border pb-8 [&_h1]:font-[inherit] [&_p]:font-sans [&_h1]:font-normal [&_h1]:tracking-tight [&_h1]:text-5xl sm:[&_h1]:text-6xl " + editorialFont.className}
       >
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -282,35 +286,36 @@ export default function ResultsPage() {
         ) : null}
       </PageIntro>
 
+      <nav aria-label="On this page" className="mb-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground"><a href="#performance" className="hover:text-primary">{copy.qualityMetricsHeading}</a><a href="#capabilities" className="hover:text-primary">{copy.featuresHeading}</a><a href="#impact" className="hover:text-primary">{copy.sdgHeading}</a></nav>
       {/* Quick Links */}
-      <div className="mb-10 grid gap-4 md:grid-cols-3">
-        <div className="neo-card border border-primary/20 bg-primary/5 p-5">
+      <div className="mb-12 grid gap-5 md:grid-cols-[1.3fr_1fr_1fr]">
+        <div className="flex flex-col rounded-xl border border-primary/20 bg-primary/5 p-6">
           <div className="mb-2 flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-primary" />
             <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksWorkspaceTitle}</h3>
           </div>
           <p className="mb-4 text-sm text-muted-foreground">{copy.quickLinksWorkspaceDesc}</p>
-          <Button asChild className="w-full">
+          <Button asChild className="mt-auto w-full">
             <Link href="/workspace">{copy.quickLinksWorkspaceBtn} <ArrowRight className="ml-1 h-4 w-4" /></Link>
           </Button>
         </div>
-        <div className="neo-card bg-card p-5">
+        <div className="flex flex-col rounded-xl border border-border bg-card/60 p-6">
           <div className="mb-2 flex items-center gap-2">
             <FolderOpen className="h-5 w-5 text-primary" />
             <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksDocsTitle}</h3>
           </div>
           <p className="mb-4 text-sm text-muted-foreground">{copy.quickLinksDocsDesc}</p>
-          <Button asChild variant="outline" className="w-full">
+          <Button asChild variant="outline" className="mt-auto w-full">
             <Link href="/manage">{copy.quickLinksDocsBtn} <ArrowRight className="ml-1 h-4 w-4" /></Link>
           </Button>
         </div>
-        <div className="neo-card bg-card p-5">
+        <div className="flex flex-col rounded-xl border border-border bg-card/60 p-6">
           <div className="mb-2 flex items-center gap-2">
             <FlaskConical className="h-5 w-5 text-primary" />
             <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksEvalTitle}</h3>
           </div>
           <p className="mb-4 text-sm text-muted-foreground">{copy.quickLinksEvalDesc}</p>
-          <Button asChild variant="outline" className="w-full">
+          <Button asChild variant="outline" className="mt-auto w-full">
             <Link href="/eval">{copy.quickLinksEvalBtn} <ArrowRight className="ml-1 h-4 w-4" /></Link>
           </Button>
         </div>
@@ -322,12 +327,12 @@ export default function ResultsPage() {
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.qualityMetricsEyebrow}
       </p>
-      <h2 className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
+      <h2 id="performance" tabIndex={-1} style={{ scrollMarginTop: "6rem" }} className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
         <Target className="mr-2 h-5 w-5 text-primary" />
         {copy.qualityMetricsHeading}
       </h2>
       {loading ? <MetricsFallback /> : (
-        <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           <MetricCard title={copy.metricRougeTitle} value={rougeVal} description={copy.metricRougeDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
           <MetricCard title={copy.metricBleuTitle} value={bleuVal} description={copy.metricBleuDesc} icon={<Globe2 className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
           <MetricCard title={copy.metricReadabilityTitle} value={readabilityVal} description={copy.metricReadabilityDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics} />
@@ -343,11 +348,11 @@ export default function ResultsPage() {
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.featuresEyebrow}
       </p>
-      <h2 className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
+      <h2 id="capabilities" tabIndex={-1} style={{ scrollMarginTop: "6rem" }} className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
         <CheckCircle2 className="mr-2 h-5 w-5 text-primary" />
         {copy.featuresHeading}
       </h2>
-      <div className="neo-card mb-10 bg-card">
+      <div className="mb-12 border-y border-border bg-transparent">
         <div className="divide-y divide-border">
           {copy.features.map((f) => (
             <ComplianceRow key={f.title} title={f.title} description={f.desc} status={copy.fulfilled} />
@@ -361,13 +366,13 @@ export default function ResultsPage() {
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.sdgEyebrow}
       </p>
-      <h2 className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
+      <h2 id="impact" tabIndex={-1} style={{ scrollMarginTop: "6rem" }} className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
         <Globe2 className="mr-2 h-5 w-5 text-primary" />
         {copy.sdgHeading}
       </h2>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-0 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {copy.sdgs.map(({ sdg, label, desc }) => (
-          <div key={sdg} className="neo-card border border-primary/40 bg-primary/5 p-5">
+          <div key={sdg} className="bg-transparent p-5 sm:p-6">
             <div className="mb-3 flex items-center gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-primary/30 bg-primary text-primary-foreground">
                 <span className="font-heading text-xl font-bold">{sdg}</span>
@@ -379,7 +384,7 @@ export default function ResultsPage() {
         ))}
       </div>
 
-      <div className="neo-card mt-10 grid grid-cols-2 gap-6 bg-card p-6 sm:grid-cols-4">
+      <div className="mt-12 grid grid-cols-2 gap-6 border-y border-border py-8 sm:grid-cols-4">
         {[
           { value: "33M+", label: copy.statMalaysians },
           { value: "3", label: copy.statLanguages },

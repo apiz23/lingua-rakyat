@@ -111,6 +111,24 @@ describe("authorizedFetch", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it("retries once when token registration lands after the first request", async () => {
+    const { http, auth } = await loadHttp({ apiUrl: "", browser: true })
+    const tokens: Array<string | null> = [null, "token-late"]
+    auth.setAuthTokenGetter(async () => tokens.shift() ?? null)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(401))
+      .mockResolvedValueOnce(jsonResponse(200))
+    globalThis.fetch = fetchMock
+
+    const response = await http.authorizedFetch("/api/v1/admin/dashboard")
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const second = fetchMock.mock.calls[1][1] as RequestInit
+    expect(new Headers(second.headers).get("Authorization")).toBe("Bearer token-late")
+  })
+
   it("does not refresh on 403", async () => {
     const { http, auth } = await loadHttp({ apiUrl: "", browser: true })
     const getter = vi.fn(async () => "token-1")

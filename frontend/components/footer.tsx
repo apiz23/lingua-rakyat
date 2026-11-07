@@ -130,6 +130,7 @@ export default function Footer() {
           ))}
         </div>
       </div>
+    <div className="mx-auto max-w-7xl border-t border-border px-5 py-4 text-xs text-muted-foreground"><Link href="/manage" className="underline underline-offset-4 hover:text-primary">Staff administration</Link><span className="ml-3">Authorized staff accounts only</span></div>
     </footer>
   )
 }
