@@ -1,8 +1,10 @@
 "use client"
 
+import { useTranslations } from "@/components/i18n"
 import { useCallback, useEffect, useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { LocalizedLink as Link } from "@/components/i18n"
+import { useRouter } from "@/components/i18n"
+
 import { useClerk, useUser } from "@clerk/nextjs"
 import { toast } from "sonner"
 import {
@@ -31,8 +33,7 @@ const COPY = {
     shares: "Perkongsian Saya",
     sharesDesc: "Jawapan yang telah anda kongsi sebagai pautan awam.",
     noShares: "Belum ada perkongsian.",
-    noSharesDesc:
-      "Kongsi jawapan dari ruang kerja dan ia akan muncul di sini.",
+    noSharesDesc: "Kongsi jawapan dari ruang kerja dan ia akan muncul di sini.",
     open: "Buka",
     revoke: "Padam",
     confirmRevoke: "Pasti padam?",
@@ -99,24 +100,26 @@ function formatDate(iso: string, language: string) {
 }
 
 function ConfidenceBadge({ label }: { label: string }) {
+  const t = useTranslations()
+
   if (!label) return null
   const high = label === "high"
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-sm",
-        high
-          ? "bg-success/10 text-success"
-          : "bg-warning/10 text-warning"
+        "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-[11px] font-medium",
+        high ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
       )}
     >
       <ShieldCheck className="h-3 w-3" />
-      {high ? "High" : label === "low" ? "Verify" : "Medium"}
+      {high ? t("High") : label === "low" ? t("Verify") : t("Medium")}
     </span>
   )
 }
 
 export default function ProfilePage() {
+  const t = useTranslations()
+
   const { language } = useLanguage()
   const copy = COPY[language] ?? COPY.en
   const { user, isLoaded, isSignedIn } = useUser()
@@ -125,14 +128,21 @@ export default function ProfilePage() {
 
   const [shares, setShares] = useState<MyShare[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [confirmingSlug, setConfirmingSlug] = useState<string | null>(null)
 
   const loadShares = useCallback(async () => {
     if (!isSignedIn) return
     setLoading(true)
-    const rows = await listMyShares()
-    setShares(rows)
-    setLoading(false)
+    setLoadFailed(false)
+    try {
+      const rows = await listMyShares()
+      setShares(rows)
+    } catch {
+      setLoadFailed(true)
+    } finally {
+      setLoading(false)
+    }
   }, [isSignedIn])
 
   useEffect(() => {
@@ -141,7 +151,6 @@ export default function ProfilePage() {
       router.replace("/sign-in")
       return
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadShares()
   }, [isLoaded, isSignedIn, router, loadShares])
 
@@ -151,10 +160,17 @@ export default function ProfilePage() {
       return
     }
     setConfirmingSlug(null)
-    const ok = await revokeShare(slug)
-    if (ok) {
+    try {
+      const ok = await revokeShare(slug)
+      if (!ok) throw new Error("Revoke failed")
       setShares((prev) => prev.filter((s) => s.slug !== slug))
       toast.success(copy.revoked)
+    } catch {
+      toast.error(
+        language === "ms"
+          ? t("Perkongsian tidak dapat dipadam. Cuba lagi.")
+          : t("Could not revoke this share. Please try again.")
+      )
     }
   }
 
@@ -172,7 +188,10 @@ export default function ProfilePage() {
     )
   }
 
-  const email = user.primaryEmailAddress?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? null
+  const email =
+    user.primaryEmailAddress?.emailAddress ??
+    user.emailAddresses[0]?.emailAddress ??
+    null
   const displayName = user.fullName || user.username || copy.anonymous
 
   return (
@@ -212,13 +231,13 @@ export default function ProfilePage() {
               </div>
 
               <div className="min-w-0">
-                <p className="truncate font-heading text-lg font-semibold text-foreground">
+                <p className="font-heading text-lg font-semibold break-words text-foreground">
                   {displayName}
                 </p>
                 {email ? (
-                  <p className="mt-0.5 flex items-center justify-center gap-1.5 truncate text-xs text-muted-foreground">
+                  <p className="mt-0.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                     <Mail className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{email}</span>
+                    <span className="min-w-0 break-all">{email}</span>
                   </p>
                 ) : (
                   <p className="mt-0.5 text-xs text-muted-foreground">
@@ -262,10 +281,20 @@ export default function ProfilePage() {
             </div>
 
             <div className="p-5">
-              {loading ? (
+              {loadFailed ? (
+                <div role="alert" className="space-y-3 py-6">
+                  <p className="text-sm text-destructive">{copy.failed}</p>
+                  <button
+                    type="button"
+                    onClick={() => void loadShares()}
+                    className="neo-btn px-3 py-2 text-sm"
+                  >
+                    {language === "ms" ? t("Cuba lagi") : t("Try again")}
+                  </button>
+                </div>
+              ) : loading ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-xs text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  …
+                  <Loader2 className="h-4 w-4 animate-spin" />…
                 </div>
               ) : shares.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-12 text-center">

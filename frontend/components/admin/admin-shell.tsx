@@ -1,7 +1,11 @@
 "use client"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+
+import { UiText, useTranslations } from "@/components/i18n"
+import { LocalizedLink as Link } from "@/components/i18n"
+import { usePathname } from "@/components/i18n"
+
 import { useAuth, UserButton } from "@clerk/nextjs"
+import Image from "next/image"
 import {
   Activity,
   ArrowUpRight,
@@ -18,6 +22,7 @@ import {
 import { AdminLoading } from "@/components/admin/admin-state"
 import { Button } from "@/components/ui/button"
 import { ADMIN_NAV } from "@/lib/admin-nav"
+import LanguageToggle from "@/components/language-toggle"
 import {
   Sidebar,
   SidebarProvider,
@@ -54,6 +59,8 @@ const GROUPS = [
   { label: "System", items: ADMIN_NAV.slice(8) },
 ]
 function AdminNavigation() {
+  const t = useTranslations()
+
   const pathname = usePathname()
   const { setOpenMobile } = useSidebar()
   return (
@@ -64,18 +71,24 @@ function AdminNavigation() {
             <SidebarMenuButton
               size="lg"
               asChild
-              tooltip="Lingua Rakyat administration"
+              tooltip={t("Lingua Rakyat administration")}
             >
               <Link href="/manage">
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary font-bold text-primary-foreground">
-                  LR
-                </span>
+                <Image
+                  src="/icons/android-chrome-512x512.png"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="size-8 shrink-0 rounded-lg object-contain"
+                />
                 <span className="grid text-left">
                   <span className="font-heading font-semibold">
-                    Lingua Rakyat
+                    {" "}
+                    <UiText text="Lingua Rakyat" />{" "}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Administration
+                    {" "}
+                    <UiText text="Administration" />{" "}
                   </span>
                 </span>
               </Link>
@@ -84,10 +97,12 @@ function AdminNavigation() {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <nav aria-label="Administration navigation">
+        <nav aria-label={t("Administration navigation")}>
           {GROUPS.map((group) => (
             <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupLabel>
+                {<UiText text={group.label} />}
+              </SidebarGroupLabel>
               <SidebarMenu>
                 {group.items.map((item) => {
                   const Icon = ICONS[item.icon]
@@ -109,7 +124,7 @@ function AdminNavigation() {
                           onClick={() => setOpenMobile(false)}
                         >
                           <Icon aria-hidden="true" />
-                          <span>{item.label}</span>
+                          <span>{<UiText text={item.label} />}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -123,16 +138,19 @@ function AdminNavigation() {
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Public portal">
+            <SidebarMenuButton asChild tooltip={t("Public portal")}>
               <Link href="/">
                 <ArrowUpRight aria-hidden="true" />
-                <span>Public portal</span>
+                <span>
+                  <UiText text="Public portal" />
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
         <p className="px-2 pb-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-          Authorized staff workspace
+          {" "}
+          <UiText text="Authorized staff workspace" />{" "}
         </p>
       </SidebarFooter>
       <SidebarRail />
@@ -140,6 +158,8 @@ function AdminNavigation() {
   )
 }
 export function AdminShell({ children }: { children: React.ReactNode }) {
+  const t = useTranslations()
+
   const pathname = usePathname()
   const { isLoaded, isSignedIn } = useAuth()
   const current = ADMIN_NAV.find(
@@ -152,16 +172,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <AdminNavigation />
       <SidebarInset className="min-w-0">
         <header className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
-          <SidebarTrigger aria-label="Toggle administration sidebar" />
+          <SidebarTrigger aria-label={t("Toggle administration sidebar")} />
           <span aria-hidden="true" className="h-5 border-l border-border" />
-          <nav aria-label="Breadcrumb" className="min-w-0 flex-1 text-sm">
+          <nav aria-label={t("Breadcrumb")} className="min-w-0 flex-1 text-sm">
             <ol className="flex flex-wrap items-center gap-2">
               <li>
                 <Link
                   href="/manage"
                   className="text-muted-foreground hover:text-primary"
                 >
-                  Administration
+                  {" "}
+                  <UiText text="Administration" />{" "}
                 </Link>
               </li>
               {current && (
@@ -170,12 +191,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     /
                   </li>
                   <li aria-current="page" className="font-medium">
-                    {current.label}
+                    {<UiText text={current.label} />}
                   </li>
                 </>
               )}
             </ol>
           </nav>
+          <LanguageToggle />
           <UserButton />
         </header>
         <div
@@ -183,20 +205,24 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
         >
           {!isLoaded ? (
-            <AdminLoading label="Loading your session?" />
+            <AdminLoading label={t("Loading your session?")} />
           ) : !isSignedIn ? (
             <section className="mx-auto mt-8 max-w-xl rounded-xl border border-border bg-card p-6 sm:p-8">
-              <p className="admin-kicker">Staff access</p>
+              <p className="admin-kicker">
+                <UiText text="Staff access" />
+              </p>
               <h1 className="mt-3 font-heading text-2xl font-semibold">
-                Sign in to administration
+                {" "}
+                <UiText text="Sign in to administration" />{" "}
               </h1>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Use your Lingua Rakyat account. Access requires an existing
-                administrator role.
+                {" "}
+                <UiText text="Use your Lingua Rakyat account. Access requires an existing administrator role." />{" "}
               </p>
               <Button asChild className="mt-6">
                 <Link href="/sign-in?redirect_url=%2Fmanage">
-                  Continue to sign in
+                  {" "}
+                  <UiText text="Continue to sign in" />{" "}
                 </Link>
               </Button>
             </section>
@@ -223,11 +249,13 @@ export function AdminPageHeader({
     <header className="mb-6 border-b border-border pb-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          {kicker ? <p className="admin-kicker mb-3">{kicker}</p> : null}
-          <h1 className="admin-title">{title}</h1>
+          {kicker ? (
+            <p className="admin-kicker mb-3">{<UiText text={kicker} />}</p>
+          ) : null}
+          <h1 className="admin-title">{<UiText text={title} />}</h1>
           {description ? (
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              {description}
+              {<UiText text={description} />}
             </p>
           ) : null}
         </div>

@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import React, { useEffect, useRef, useState } from "react"
 import { AnimatePresence } from "framer-motion"
 import {
@@ -93,13 +94,13 @@ function shortModelLabel(modelId: string): string {
 
 interface ChatPanelProps {
   selectedDoc: Document | null
-  sessionId?: string | null        // externally controlled session
-  userId?: string                  // passed from workspace
+  sessionId?: string | null // externally controlled session
+  userId?: string // passed from workspace
   onBack?: () => void
   composerTop?: React.ReactNode
   emptyState?: React.ReactNode
   initialQuestion?: string
-  documents?: Document[]           // shared list from parent's useDocuments — skips internal fetch when provided
+  documents?: Document[] // shared list from parent's useDocuments — skips internal fetch when provided
   docsLoading?: boolean
 }
 
@@ -175,6 +176,8 @@ export default function ChatPanel({
   documents: externalDocuments,
   docsLoading: externalDocsLoading,
 }: ChatPanelProps) {
+  const t = useTranslations()
+
   const { language, toggleLanguage } = useLanguage()
 
   const createSessionId = (documentId: string) =>
@@ -259,12 +262,19 @@ export default function ChatPanel({
     true
   )
 
-  const [pdfViewerState, setPdfViewerState] = useState<PdfViewerState | null>(null)
+  const [pdfViewerState, setPdfViewerState] = useState<PdfViewerState | null>(
+    null
+  )
 
   const toggleAutoSpeak = () => setAutoSpeak((prev) => !prev)
 
   const handleOpenPdf = React.useCallback(
-    (page: number, text: string | null, documentId?: string, docName?: string) => {
+    (
+      page: number,
+      text: string | null,
+      documentId?: string,
+      docName?: string
+    ) => {
       setPdfViewerState({ page, highlightText: text, documentId, docName })
     },
     []
@@ -283,7 +293,6 @@ export default function ChatPanel({
   const isMountedRef = useRef(true)
   const historyAbortRef = useRef<AbortController | null>(null)
   const [lifetime] = useState(createIdentityLifecycle)
-
 
   useEffect(() => {
     isMountedRef.current = true
@@ -342,7 +351,6 @@ export default function ChatPanel({
     }
   }, [input])
 
-
   useEffect(() => {
     // Only self-manage userId when workspace doesn't provide one externally.
     if (externalUserId) return
@@ -371,7 +379,7 @@ export default function ChatPanel({
   }, [externalUserId])
 
   useEffect(() => {
-    setPdfViewerState(null)   // Close PDF panel when document changes
+    setPdfViewerState(null) // Close PDF panel when document changes
 
     if (externalSessionId !== undefined) {
       if (externalSessionId) {
@@ -423,7 +431,10 @@ export default function ChatPanel({
     if (!initialQuestion || !selectedDoc || !userId || !sessionId) return
     if (initialQuestionFiredRef.current) return
     initialQuestionFiredRef.current = true
-    const timer = window.setTimeout(() => submitQuestionRef.current(initialQuestion), 300)
+    const timer = window.setTimeout(
+      () => submitQuestionRef.current(initialQuestion),
+      300
+    )
     return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuestion, selectedDoc, userId, sessionId])
@@ -538,9 +549,9 @@ export default function ChatPanel({
     try {
       // Last 3 completed turns as multi-turn context
       const chatHistory = messages
-        .filter(m => !m.isStreaming && m.answer)
+        .filter((m) => !m.isStreaming && m.answer)
         .slice(-3)
-        .map(m => ({ question: m.question, answer: m.answer.slice(0, 400) }))
+        .map((m) => ({ question: m.question, answer: m.answer.slice(0, 400) }))
 
       // Multi-doc: span every ready doc (plus the selected one) when the user
       // opts into "ask all". Empty list = single-doc behaviour on the backend.
@@ -734,7 +745,10 @@ export default function ChatPanel({
             setMessages((prev) => {
               let idx = -1
               for (let i = prev.length - 1; i >= 0; i -= 1) {
-                if (prev[i].id === msgId) { idx = i; break }
+                if (prev[i].id === msgId) {
+                  idx = i
+                  break
+                }
               }
               if (idx === -1) return prev
               return [
@@ -778,9 +792,9 @@ export default function ChatPanel({
           }
         },
         requestLifetime.signal,
-        chatHistory,  // multi-turn context
-        multiDocIds,  // multi-document scope (empty = single doc)
-        language,
+        chatHistory, // multi-turn context
+        multiDocIds, // multi-document scope (empty = single doc)
+        language
       )
     } catch (error) {
       if (!requestLifetime.current()) return
@@ -831,7 +845,6 @@ export default function ChatPanel({
     })
   }, [])
 
-
   const exportChatHistory = () => {
     if (!messages.length) return
     const lines: string[] = [
@@ -870,25 +883,36 @@ export default function ChatPanel({
   const copiedToastRef = useRef(copy.copied)
   copiedToastRef.current = copy.copied
 
-  const copyToClipboard = React.useCallback(async (text: string, id: string) => {
-    const requestLifetime = lifetime.begin()
-    try {
-      await navigator.clipboard.writeText(text)
-      if (!requestLifetime.current()) return
-      setCopiedId(id)
-      window.setTimeout(() => { if (requestLifetime.current()) setCopiedId(null); requestLifetime.finish() }, 2000)
-      toast.success(copiedToastRef.current)
-    } catch {
-      requestLifetime.finish()
-      // Clipboard denied (non-HTTPS / permissions) — nothing else to do
-    }
-  }, [lifetime])
+  const copyToClipboard = React.useCallback(
+    async (text: string, id: string) => {
+      const requestLifetime = lifetime.begin()
+      try {
+        await navigator.clipboard.writeText(text)
+        if (!requestLifetime.current()) return
+        setCopiedId(id)
+        window.setTimeout(() => {
+          if (requestLifetime.current()) setCopiedId(null)
+          requestLifetime.finish()
+        }, 2000)
+        toast.success(copiedToastRef.current)
+      } catch {
+        requestLifetime.finish()
+        // Clipboard denied (non-HTTPS / permissions) — nothing else to do
+      }
+    },
+    [lifetime]
+  )
 
   const handleSelectThread = (nextSessionId: string) => {
     if (!selectedDoc) return
     lifetime.invalidate()
     historyAbortRef.current?.abort()
-    setMessages([]); setDocumentHistory([]); setInput(""); setPdfViewerState(null); setMentionDoc(null); setLoading(false)
+    setMessages([])
+    setDocumentHistory([])
+    setInput("")
+    setPdfViewerState(null)
+    setMentionDoc(null)
+    setLoading(false)
     persistSessionId(selectedDoc.id, nextSessionId)
     setSessionId(nextSessionId)
     setShowHistory(false)
@@ -931,7 +955,9 @@ export default function ChatPanel({
     } else if (e.key === "ArrowUp") {
       e.preventDefault()
       e.stopPropagation()
-      setMentionIndex((i) => (i - 1 + mentionMatches.length) % mentionMatches.length)
+      setMentionIndex(
+        (i) => (i - 1 + mentionMatches.length) % mentionMatches.length
+      )
     } else if (e.key === "Enter" || e.key === "Tab") {
       e.preventDefault()
       e.stopPropagation()
@@ -950,7 +976,10 @@ export default function ChatPanel({
     setMessages([])
     setExpandedSources(new Set())
     setInput("")
-    setDocumentHistory([]); setPdfViewerState(null); setMentionDoc(null); setLoading(false)
+    setDocumentHistory([])
+    setPdfViewerState(null)
+    setMentionDoc(null)
+    setLoading(false)
     setShowHistory(false)
     toast.success(copy.newChatStarted)
   }
@@ -1001,261 +1030,509 @@ export default function ChatPanel({
   return (
     <div className="flex h-full min-h-0 bg-background">
       {/* Chat column */}
-      <AiChat
-        status={chatStatus}
-        className="h-full min-w-0 flex-1 font-sans"
-      >
-      <AiChatBody className="min-h-0">
-        {/* Thread history panel — always rendered above the scroll area so it
+      <AiChat status={chatStatus} className="h-full min-w-0 flex-1 font-sans">
+        <AiChatBody className="min-h-0">
+          {/* Thread history panel — always rendered above the scroll area so it
             stays visible regardless of scroll position or message count. */}
-        {selectedDoc && showHistory ? (
-          <div className="mx-auto w-full max-w-5xl px-4 pt-3 sm:px-10 sm:pt-6">
-            <AnimatePresence>
-              <ThreadHistoryPanel
-                threads={threads}
-                activeSessionId={sessionId}
-                copy={copy}
-                onSelectThread={handleSelectThread}
-                onNewChat={handleNewChat}
-              />
-            </AnimatePresence>
-          </div>
-        ) : null}
-
-        {selectedDoc && !historyLoading && messages.length > 0 ? (
-          <MessageScrollerProvider
-            autoScroll
-            defaultScrollPosition="last-anchor"
-            scrollPreviousItemPeek={64}
-          >
-            <MessageScroller>
-              <MessageScrollerViewport className="scrollbar-thumb-muted scrollbar-track-transparent">
-                <MessageScrollerContent
-                  aria-busy={loading}
-                  className="mx-auto w-full max-w-5xl gap-3 px-4 py-3 sm:gap-4 sm:px-10 sm:py-6"
-                >
-                  {messages.map((message, index) => (
-                    <React.Fragment key={message.id}>
-                      <MessageScrollerItem
-                        messageId={`${message.id}-q`}
-                        scrollAnchor
-                      >
-                        <UserMessageBubble
-                          message={message}
-                          copiedId={copiedId}
-                          copyToClipboard={copyToClipboard}
-                        />
-                      </MessageScrollerItem>
-                      <MessageScrollerItem messageId={message.id}>
-                        <AIMessageCard
-                          message={message}
-                          isLatest={index === messages.length - 1}
-                          expandedSources={expandedSources}
-                          toggleSources={toggleSources}
-                          copiedId={copiedId}
-                          copyToClipboard={copyToClipboard}
-                          docPublicUrl={selectedDoc?.public_url ?? undefined}
-                          autoSpeak={autoSpeak}
-                          onOpenPdf={handleOpenPdf}
-                          onSuggestionClick={handleSuggestionClick}
-                          sessionId={sessionId}
-                          docId={selectedDoc?.id}
-                          simpleMode={simpleMode}
-                        />
-                      </MessageScrollerItem>
-                    </React.Fragment>
-                  ))}
-
-                  {loading && !messages.some((message) => message.isStreaming) ? (
-                    <MessageScrollerItem messageId="typing-indicator">
-                      <TypingIndicator />
-                    </MessageScrollerItem>
-                  ) : null}
-                </MessageScrollerContent>
-              </MessageScrollerViewport>
-              <MessageScrollerButton />
-            </MessageScroller>
-          </MessageScrollerProvider>
-        ) : (
-          <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
-            <div className="mx-auto max-w-5xl px-4 py-3 sm:px-10 sm:py-6">
-              {(() => {
-                const docsLoadingState = externalDocsLoading ?? false
-                if (docsLoadingState || readyDocs.length === 0 || (selectedDoc && !historyLoading)) {
-                  return (
-                    <EmptyState
-                      onChipClick={(q) => submitQuestion(q)}
-                      readyDocs={readyDocs}
-                      docsLoading={docsLoadingState}
-                    />
-                  )
-                }
-                if (!selectedDoc) {
-                  return (
-                    emptyState ?? (
-                      <div className="flex min-h-[60vh] flex-col items-center justify-center">
-                        <div className="max-w-md p-8 text-center">
-                          <div className="mx-auto mb-6 inline-flex">
-                            <div className="neo-card p-8">
-                              <FileText className="mx-auto h-16 w-16 text-primary/60" />
-                            </div>
-                          </div>
-                          <h3 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
-                            {copy.noDoc}
-                          </h3>
-                          <p className="text-muted-foreground">{copy.noDocDesc}</p>
-                        </div>
-                      </div>
-                    )
-                  )
-                }
-                return (
-                  <div className="flex min-h-[40vh] items-center justify-center">
-                    <TypingIndicator />
-                  </div>
-                )
-              })()}
+          {selectedDoc && showHistory ? (
+            <div className="mx-auto w-full max-w-5xl px-4 pt-3 sm:px-10 sm:pt-6">
+              <AnimatePresence>
+                <ThreadHistoryPanel
+                  threads={threads}
+                  activeSessionId={sessionId}
+                  copy={copy}
+                  onSelectThread={handleSelectThread}
+                  onNewChat={handleNewChat}
+                />
+              </AnimatePresence>
             </div>
-          </div>
-        )}
-      </AiChatBody>
+          ) : null}
 
-      <AiChatFooter className="bg-background">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
-            <div className="flex min-w-0 items-center gap-2">
-              {onBack ? (
+          {selectedDoc && !historyLoading && messages.length > 0 ? (
+            <MessageScrollerProvider
+              autoScroll
+              defaultScrollPosition="last-anchor"
+              scrollPreviousItemPeek={64}
+            >
+              <MessageScroller>
+                <MessageScrollerViewport className="scrollbar-thumb-muted scrollbar-track-transparent">
+                  <MessageScrollerContent
+                    aria-busy={loading}
+                    className="mx-auto w-full max-w-5xl gap-3 px-4 py-3 sm:gap-4 sm:px-10 sm:py-6"
+                  >
+                    {messages.map((message, index) => (
+                      <React.Fragment key={message.id}>
+                        <MessageScrollerItem
+                          messageId={`${message.id}-q`}
+                          scrollAnchor
+                        >
+                          <UserMessageBubble
+                            message={message}
+                            copiedId={copiedId}
+                            copyToClipboard={copyToClipboard}
+                          />
+                        </MessageScrollerItem>
+                        <MessageScrollerItem messageId={message.id}>
+                          <AIMessageCard
+                            message={message}
+                            isLatest={index === messages.length - 1}
+                            expandedSources={expandedSources}
+                            toggleSources={toggleSources}
+                            copiedId={copiedId}
+                            copyToClipboard={copyToClipboard}
+                            docPublicUrl={selectedDoc?.public_url ?? undefined}
+                            autoSpeak={autoSpeak}
+                            onOpenPdf={handleOpenPdf}
+                            onSuggestionClick={handleSuggestionClick}
+                            sessionId={sessionId}
+                            docId={selectedDoc?.id}
+                            simpleMode={simpleMode}
+                          />
+                        </MessageScrollerItem>
+                      </React.Fragment>
+                    ))}
+
+                    {loading &&
+                    !messages.some((message) => message.isStreaming) ? (
+                      <MessageScrollerItem messageId="typing-indicator">
+                        <TypingIndicator />
+                      </MessageScrollerItem>
+                    ) : null}
+                  </MessageScrollerContent>
+                </MessageScrollerViewport>
+                <MessageScrollerButton />
+              </MessageScroller>
+            </MessageScrollerProvider>
+          ) : (
+            <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto overscroll-contain">
+              <div className="mx-auto max-w-5xl px-4 py-3 sm:px-10 sm:py-6">
+                {(() => {
+                  const docsLoadingState = externalDocsLoading ?? false
+                  if (
+                    docsLoadingState ||
+                    readyDocs.length === 0 ||
+                    (selectedDoc && !historyLoading)
+                  ) {
+                    return (
+                      <EmptyState
+                        onChipClick={(q) => submitQuestion(q)}
+                        readyDocs={readyDocs}
+                        docsLoading={docsLoadingState}
+                      />
+                    )
+                  }
+                  if (!selectedDoc) {
+                    return (
+                      emptyState ?? (
+                        <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                          <div className="max-w-md p-8 text-center">
+                            <div className="mx-auto mb-6 inline-flex">
+                              <div className="neo-card p-8">
+                                <FileText className="mx-auto h-16 w-16 text-primary/60" />
+                              </div>
+                            </div>
+                            <h3 className="mb-3 text-2xl font-semibold tracking-tight text-foreground">
+                              {copy.noDoc}
+                            </h3>
+                            <p className="text-muted-foreground">
+                              {copy.noDocDesc}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    )
+                  }
+                  return (
+                    <div className="flex min-h-[40vh] items-center justify-center">
+                      <TypingIndicator />
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
+        </AiChatBody>
+
+        <AiChatFooter className="bg-background">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+              <div className="flex min-w-0 items-center gap-2">
+                {onBack ? (
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="neo-btn shrink-0 p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    title={copy.back}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                ) : null}
+
+                <Attachment
+                  size="xs"
+                  state={selectedDoc ? "done" : "idle"}
+                  className="min-w-0"
+                >
+                  <AttachmentMedia>
+                    {askAllDocs && readyDocIds.length > 1 && selectedDoc ? (
+                      <Library className="text-primary" />
+                    ) : (
+                      <FileText className="text-primary" />
+                    )}
+                  </AttachmentMedia>
+                  <AttachmentContent>
+                    <AttachmentTitle className="max-w-[120px] sm:max-w-[280px]">
+                      {selectedDoc?.name ?? copy.noDoc}
+                    </AttachmentTitle>
+                    <AttachmentDescription className="text-[11px]">
+                      {selectedDoc
+                        ? askAllDocs && readyDocIds.length > 1
+                          ? t("PDF · {value0} · {value1} ({value2})", {
+                              value0: copy.ready,
+                              value1: copy.allDocsBadge,
+                              value2: readyDocIds.length,
+                            })
+                          : t("PDF · {value0}", { value0: copy.ready })
+                        : copy.noDocDesc}
+                    </AttachmentDescription>
+                  </AttachmentContent>
+                </Attachment>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1">
+                {selectedDoc && readyDocIds.length > 1 ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        title={copy.scopeTitle}
+                        aria-label={copy.scopeTitle}
+                        className="neo-btn flex items-center gap-1.5 bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
+                      >
+                        {mentionDoc ? (
+                          <FileText className="h-3 w-3 shrink-0" />
+                        ) : askAllDocs ? (
+                          <Library className="h-3 w-3 shrink-0" />
+                        ) : (
+                          <FileText className="h-3 w-3 shrink-0" />
+                        )}
+                        <span className="max-w-[100px] truncate sm:inline sm:max-w-[140px]">
+                          {mentionDoc
+                            ? `@${mentionDoc.name}`
+                            : askAllDocs
+                              ? `${copy.allDocsBadge} · ${readyDocIds.length}`
+                              : copy.scopeOneShort}
+                        </span>
+                        <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+                      </button>
+                    </PopoverTrigger>
+
+                    <PopoverContent align="end" className="w-72 p-1">
+                      <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                        {copy.scopeTitle}
+                      </div>
+                      <div className="space-y-0.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMentionDoc(null)
+                            setAskAllDocs(true)
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                            !mentionDoc && askAllDocs && "bg-muted"
+                          )}
+                        >
+                          <Library className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span className="flex-1">
+                            {copy.askAll} ({readyDocIds.length})
+                          </span>
+                          {!mentionDoc && askAllDocs ? (
+                            <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          ) : null}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMentionDoc(null)
+                            setAskAllDocs(false)
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                            !mentionDoc && !askAllDocs && "bg-muted"
+                          )}
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate">
+                              {copy.askOne}
+                            </span>
+                            <span className="block truncate text-[11px] text-muted-foreground">
+                              {selectedDoc.name}
+                            </span>
+                          </span>
+                          {!mentionDoc && !askAllDocs ? (
+                            <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          ) : null}
+                        </button>
+                      </div>
+
+                      <div className="mt-1 border-t border-border/40 pt-1">
+                        <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                          {copy.mentionListTitle}
+                        </div>
+                        {readyDocs.slice(0, 6).map((doc) => (
+                          <button
+                            key={doc.id}
+                            type="button"
+                            onClick={() => setMentionDoc(doc)}
+                            className={cn(
+                              "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                              mentionDoc?.id === doc.id && "bg-muted"
+                            )}
+                          >
+                            <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                            <span className="flex-1 truncate">{doc.name}</span>
+                            {mentionDoc?.id === doc.id ? (
+                              <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                            ) : null}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ) : null}
+
                 <button
                   type="button"
-                  onClick={onBack}
-                  className="neo-btn shrink-0 p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  title={copy.back}
+                  onClick={() =>
+                    setTextSize((p) => (p === "large" ? "normal" : "large"))
+                  }
+                  aria-label={
+                    largeText ? copy.textSizeNormal : copy.textSizeLarge
+                  }
+                  aria-pressed={largeText}
+                  className="neo-btn bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  {largeText ? "A" : "A⁺"}
                 </button>
-              ) : null}
 
-              <Attachment
-                size="xs"
-                state={selectedDoc ? "done" : "idle"}
-                className="min-w-0"
-              >
-                <AttachmentMedia>
-                  {askAllDocs && readyDocIds.length > 1 && selectedDoc ? (
-                    <Library className="text-primary" />
-                  ) : (
-                    <FileText className="text-primary" />
-                  )}
-                </AttachmentMedia>
-                <AttachmentContent>
-                  <AttachmentTitle className="max-w-[120px] sm:max-w-[280px]">
-                    {selectedDoc?.name ?? copy.noDoc}
-                  </AttachmentTitle>
-                  <AttachmentDescription className="text-[11px]">
-                    {selectedDoc
-                      ? askAllDocs && readyDocIds.length > 1
-                        ? `PDF · ${copy.ready} · ${copy.allDocsBadge} (${readyDocIds.length})`
-                        : `PDF · ${copy.ready}`
-                      : copy.noDocDesc}
-                  </AttachmentDescription>
-                </AttachmentContent>
-              </Attachment>
+                <button
+                  type="button"
+                  onClick={toggleLanguage}
+                  className="neo-btn bg-background px-2.5 py-1.5 text-[11px] tracking-[0.18em] text-muted-foreground uppercase hover:border-primary hover:text-primary"
+                  title={copy.language}
+                >
+                  {language === "ms"
+                    ? t("EN")
+                    : language === "en"
+                      ? "中文"
+                      : t("BM")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNewChat}
+                  className="neo-btn p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  title={copy.newChat}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="neo-btn p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      title={copy.options}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>{copy.options}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => setShowHistory((prev) => !prev)}
+                    >
+                      <History className="mr-2 h-4 w-4" />
+                      {showHistory ? copy.hideHistory : copy.history}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => setSimpleMode((prev) => !prev)}
+                    >
+                      <SlidersHorizontal className="mr-2 h-4 w-4" />
+                      {simpleMode ? copy.simpleViewOff : copy.simpleViewOn}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      onClick={() =>
+                        setEnableQueryAugmentation((prev) => !prev)
+                      }
+                    >
+                      <Languages className="mr-2 h-4 w-4" />
+                      {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
+                    </DropdownMenuItem>
+
+                    {messages.length > 0 ? (
+                      <DropdownMenuItem onClick={exportChatHistory}>
+                        <Download className="mr-2 h-4 w-4" />
+                        {copy.exportHistory}
+                      </DropdownMenuItem>
+                    ) : null}
+
+                    {messages.length > 0 ? (
+                      <DropdownMenuItem
+                        onClick={clearChat}
+                        variant="destructive"
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        {copy.clearThread}
+                      </DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-1">
-              {selectedDoc && readyDocIds.length > 1 ? (
+            {composerTop ? <div className="mb-1.5">{composerTop}</div> : null}
+
+            {mentionDoc ? (
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <span
+                  title={copy.mentionOnlyTitle}
+                  className="neo-btn inline-flex max-w-full items-center gap-1.5 bg-secondary px-2.5 py-1 text-[11px] text-secondary-foreground"
+                >
+                  <FileText className="h-3 w-3 shrink-0" />
+                  <span className="truncate">@{mentionDoc.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setMentionDoc(null)}
+                    aria-label={copy.askAll}
+                    className="ml-0.5 transition-colors hover:text-primary/70"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              </div>
+            ) : null}
+
+            <div className="relative" onKeyDownCapture={handleMentionKeyDown}>
+              {mentionQuery !== null ? (
+                <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+                  <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                    {copy.mentionListTitle}
+                  </div>
+                  {mentionMatches.length === 0 ? (
+                    <div className="px-3 pb-2 text-xs text-muted-foreground">
+                      {copy.mentionNoMatch}
+                    </div>
+                  ) : (
+                    mentionMatches.map((doc, i) => (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onMouseDown={(e) => {
+                          // preventDefault keeps focus in the textarea
+                          e.preventDefault()
+                          selectMention(doc)
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
+                          i === mentionIndex && "bg-muted"
+                        )}
+                      >
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span className="truncate">{doc.name}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+
+              <ChatInput
+                value={input}
+                onChange={handleInputChange}
+                ref={inputRef}
+                onSubmit={submitQuestion}
+                loading={loading}
+                disabled={
+                  !selectedDoc ||
+                  !sessionId ||
+                  !userId ||
+                  rateLimitedUntil !== null
+                }
+                placeholder={
+                  rateLimitedUntil !== null
+                    ? `${copy.waitAgain} ${rateLimitSecondsLeft}s...`
+                    : selectedDoc
+                      ? copy.askPlaceholder
+                      : copy.selectDocPlaceholder
+                }
+                className="bg-card"
+              >
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      title={copy.scopeTitle}
-                      aria-label={copy.scopeTitle}
-                      className="neo-btn flex items-center gap-1.5 bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
+                      title={copy.modelTitle}
+                      aria-label={copy.modelTitle}
+                      className="neo-btn flex h-8 w-fit items-center gap-1 bg-background px-3 text-xs text-muted-foreground hover:bg-muted"
                     >
-                      {mentionDoc ? (
-                        <FileText className="h-3 w-3 shrink-0" />
-                      ) : askAllDocs ? (
-                        <Library className="h-3 w-3 shrink-0" />
-                      ) : (
-                        <FileText className="h-3 w-3 shrink-0" />
-                      )}
-                      <span className="max-w-[100px] truncate sm:max-w-[140px] sm:inline">
-                        {mentionDoc
-                          ? `@${mentionDoc.name}`
-                          : askAllDocs
-                            ? `${copy.allDocsBadge} · ${readyDocIds.length}`
-                            : copy.scopeOneShort}
+                      <Cpu className="h-3 w-3 shrink-0" />
+                      <span className="max-w-[110px] truncate sm:max-w-[160px]">
+                        {shortModelLabel(selectedPopoverModel)}
                       </span>
                       <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
                     </button>
                   </PopoverTrigger>
 
-                  <PopoverContent align="end" className="w-72 p-1">
+                  <PopoverContent align="start" className="w-72 p-1">
                     <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                      {copy.scopeTitle}
+                      {copy.modelTitle}
                     </div>
                     <div className="space-y-0.5">
                       <button
                         type="button"
-                        onClick={() => {
-                          setMentionDoc(null)
-                          setAskAllDocs(true)
-                        }}
+                        onClick={() => setSelectedPopoverModel("")}
                         className={cn(
                           "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
-                          !mentionDoc && askAllDocs && "bg-muted"
+                          !selectedPopoverModel && "bg-muted"
                         )}
                       >
-                        <Library className="h-3.5 w-3.5 shrink-0 text-primary" />
-                        <span className="flex-1">
-                          {copy.askAll} ({readyDocIds.length})
-                        </span>
-                        {!mentionDoc && askAllDocs ? (
+                        <span className="flex-1">{copy.autoServer}</span>
+                        {!selectedPopoverModel ? (
                           <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
                         ) : null}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMentionDoc(null)
-                          setAskAllDocs(false)
-                        }}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
-                          !mentionDoc && !askAllDocs && "bg-muted"
-                        )}
-                      >
-                        <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate">{copy.askOne}</span>
-                          <span className="block truncate text-[11px] text-muted-foreground">
-                            {selectedDoc.name}
-                          </span>
-                        </span>
-                        {!mentionDoc && !askAllDocs ? (
-                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
-                        ) : null}
-                      </button>
-                    </div>
-
-                    <div className="mt-1 border-t border-border/40 pt-1">
-                      <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                        {copy.mentionListTitle}
-                      </div>
-                      {readyDocs.slice(0, 6).map((doc) => (
+                      {GROQ_MODELS.map((model) => (
                         <button
-                          key={doc.id}
+                          key={model.id}
                           type="button"
-                          onClick={() => setMentionDoc(doc)}
+                          onClick={() => setSelectedPopoverModel(model.id)}
                           className={cn(
-                            "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
-                            mentionDoc?.id === doc.id && "bg-muted"
+                            "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted",
+                            selectedPopoverModel === model.id && "bg-muted"
                           )}
                         >
-                          <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          <span className="flex-1 truncate">{doc.name}</span>
-                          {mentionDoc?.id === doc.id ? (
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm">
+                              {<UiText text={model.label} />}
+                            </span>
+                            {model.tag ? (
+                              <span className="block truncate text-[11px] text-muted-foreground">
+                                {model.tag}
+                              </span>
+                            ) : null}
+                          </span>
+                          {selectedPopoverModel === model.id ? (
                             <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
                           ) : null}
                         </button>
@@ -1263,265 +1540,49 @@ export default function ChatPanel({
                     </div>
                   </PopoverContent>
                 </Popover>
-              ) : null}
 
-              <button
-                type="button"
-                onClick={() =>
-                  setTextSize((p) => (p === "large" ? "normal" : "large"))
-                }
-                aria-label={largeText ? copy.textSizeNormal : copy.textSizeLarge}
-                aria-pressed={largeText}
-                className="neo-btn bg-background px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
-              >
-                {largeText ? "A" : "A⁺"}
-              </button>
+                <VoiceMicButton
+                  key={sessionId}
+                  disabled={loading}
+                  onTranscript={(text) => {
+                    if (isMountedRef.current) setInput(text)
+                  }}
+                  onError={(msg) => toast.error(msg)}
+                  titleIdle={copy.voiceStart}
+                  titleRecording={copy.voiceStop}
+                  uiLanguage={language}
+                />
 
-              <button
-                type="button"
-                onClick={toggleLanguage}
-                className="neo-btn bg-background px-2.5 py-1.5 text-[11px] tracking-[0.18em] text-muted-foreground uppercase hover:border-primary hover:text-primary"
-                title={copy.language}
-              >
-                {language === "ms" ? "EN" : language === "en" ? "中文" : "BM"}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNewChat}
-                className="neo-btn p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                title={copy.newChat}
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="neo-btn p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    title={copy.options}
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>{copy.options}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem
-                    onClick={() => setShowHistory((prev) => !prev)}
-                  >
-                    <History className="mr-2 h-4 w-4" />
-                    {showHistory ? copy.hideHistory : copy.history}
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem
-                    onClick={() => setSimpleMode((prev) => !prev)}
-                  >
-                    <SlidersHorizontal className="mr-2 h-4 w-4" />
-                    {simpleMode ? copy.simpleViewOff : copy.simpleViewOn}
-                  </DropdownMenuItem>
-
-                  <DropdownMenuItem
-                    onClick={() => setEnableQueryAugmentation((prev) => !prev)}
-                  >
-                    <Languages className="mr-2 h-4 w-4" />
-                    {enableQueryAugmentation ? copy.smartOff : copy.smartOn}
-                  </DropdownMenuItem>
-
-                  {messages.length > 0 ? (
-                    <DropdownMenuItem onClick={exportChatHistory}>
-                      <Download className="mr-2 h-4 w-4" />
-                      {copy.exportHistory}
-                    </DropdownMenuItem>
-                  ) : null}
-
-                  {messages.length > 0 ? (
-                    <DropdownMenuItem onClick={clearChat} variant="destructive">
-                      <X className="mr-2 h-4 w-4" />
-                      {copy.clearThread}
-                    </DropdownMenuItem>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          {composerTop ? <div className="mb-1.5">{composerTop}</div> : null}
-
-          {mentionDoc ? (
-            <div className="mb-1.5 flex items-center gap-1.5">
-              <span
-                title={copy.mentionOnlyTitle}
-                className="neo-btn inline-flex max-w-full items-center gap-1.5 bg-secondary px-2.5 py-1 text-[11px] text-secondary-foreground"
-              >
-                <FileText className="h-3 w-3 shrink-0" />
-                <span className="truncate">@{mentionDoc.name}</span>
                 <button
                   type="button"
-                  onClick={() => setMentionDoc(null)}
-                  aria-label={copy.askAll}
-                  className="ml-0.5 transition-colors hover:text-primary/70"
+                  onClick={toggleAutoSpeak}
+                  className={cn(
+                    "neo-btn flex items-center gap-1 bg-background px-2.5 py-1 text-[10px]",
+                    autoSpeak
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                  title={copy.autoSpeakTitle}
+                  aria-label={copy.autoSpeakTitle}
+                  aria-pressed={autoSpeak}
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            </div>
-          ) : null}
-
-          <div className="relative" onKeyDownCapture={handleMentionKeyDown}>
-            {mentionQuery !== null ? (
-              <div className="absolute bottom-full left-0 z-20 mb-2 w-full max-w-sm overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-                <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                  {copy.mentionListTitle}
-                </div>
-                {mentionMatches.length === 0 ? (
-                  <div className="px-3 pb-2 text-xs text-muted-foreground">
-                    {copy.mentionNoMatch}
-                  </div>
-                ) : (
-                  mentionMatches.map((doc, i) => (
-                    <button
-                      key={doc.id}
-                      type="button"
-                      onMouseDown={(e) => {
-                        // preventDefault keeps focus in the textarea
-                        e.preventDefault()
-                        selectMention(doc)
-                      }}
-                      className={cn(
-                        "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
-                        i === mentionIndex && "bg-muted"
-                      )}
-                    >
-                      <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      <span className="truncate">{doc.name}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-            ) : null}
-
-          <ChatInput
-            value={input}
-            onChange={handleInputChange}
-            ref={inputRef}
-            onSubmit={submitQuestion}
-            loading={loading}
-            disabled={
-              !selectedDoc || !sessionId || !userId || rateLimitedUntil !== null
-            }
-            placeholder={
-              rateLimitedUntil !== null
-                ? `${copy.waitAgain} ${rateLimitSecondsLeft}s...`
-                : selectedDoc
-                  ? copy.askPlaceholder
-                  : copy.selectDocPlaceholder
-            }
-            className="bg-card"
-          >
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  title={copy.modelTitle}
-                  aria-label={copy.modelTitle}
-                  className="neo-btn flex h-8 w-fit items-center gap-1 bg-background px-3 text-xs text-muted-foreground hover:bg-muted"
-                >
-                  <Cpu className="h-3 w-3 shrink-0" />
-                  <span className="max-w-[110px] truncate sm:max-w-[160px]">
-                    {shortModelLabel(selectedPopoverModel)}
+                  <Volume2
+                    className={cn("h-3 w-3", autoSpeak && "fill-current")}
+                  />
+                  <span className="hidden sm:inline">
+                    {copy.autoSpeakShort}
                   </span>
-                  <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
                 </button>
-              </PopoverTrigger>
+              </ChatInput>
+            </div>
 
-              <PopoverContent align="start" className="w-72 p-1">
-                <div className="px-3 py-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-                  {copy.modelTitle}
-                </div>
-                <div className="space-y-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPopoverModel("")}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
-                      !selectedPopoverModel && "bg-muted"
-                    )}
-                  >
-                    <span className="flex-1">{copy.autoServer}</span>
-                    {!selectedPopoverModel ? (
-                      <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
-                    ) : null}
-                  </button>
-
-                  {GROQ_MODELS.map((model) => (
-                    <button
-                      key={model.id}
-                      type="button"
-                      onClick={() => setSelectedPopoverModel(model.id)}
-                      className={cn(
-                        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted",
-                        selectedPopoverModel === model.id && "bg-muted"
-                      )}
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm">
-                          {model.label}
-                        </span>
-                        {model.tag ? (
-                          <span className="block truncate text-[11px] text-muted-foreground">
-                            {model.tag}
-                          </span>
-                        ) : null}
-                      </span>
-                      {selectedPopoverModel === model.id ? (
-                        <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <VoiceMicButton
-              key={sessionId}
-              disabled={loading}
-              onTranscript={(text) => { if (isMountedRef.current) setInput(text) }}
-              onError={(msg) => toast.error(msg)}
-              titleIdle={copy.voiceStart}
-              titleRecording={copy.voiceStop}
-              uiLanguage={language}
-            />
-
-            <button
-              type="button"
-              onClick={toggleAutoSpeak}
-              className={cn(
-                "neo-btn flex items-center gap-1 bg-background px-2.5 py-1 text-[10px]",
-                autoSpeak
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-              title={copy.autoSpeakTitle}
-              aria-label={copy.autoSpeakTitle}
-              aria-pressed={autoSpeak}
-            >
-              <Volume2 className={cn("h-3 w-3", autoSpeak && "fill-current")} />
-              <span className="hidden sm:inline">{copy.autoSpeakShort}</span>
-            </button>
-          </ChatInput>
+            <p className="mt-1.5 hidden px-1 text-[10px] text-muted-foreground sm:block">
+              {" "}
+              <UiText text="Enter →" /> {copy.send}{" "}
+              <UiText text="· Shift+Enter →" /> {copy.newLine}
+            </p>
           </div>
-
-          <p className="mt-1.5 hidden px-1 text-[10px] text-muted-foreground sm:block">
-            Enter → {copy.send} · Shift+Enter → {copy.newLine}
-          </p>
-        </div>
-      </AiChatFooter>
+        </AiChatFooter>
       </AiChat>
 
       {/* PDF panel — Sheet on desktop, Drawer on mobile. Opens the cited

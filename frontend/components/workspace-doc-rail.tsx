@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText } from "@/components/i18n"
 import { useState } from "react"
 import {
   CheckCircle,
@@ -149,7 +150,9 @@ function DocList({
               {doc.name}
             </span>
             {doc.agency && (
-              <span className="text-[10px] text-muted-foreground">{doc.agency}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {doc.agency}
+              </span>
             )}
           </span>
         </button>
@@ -168,7 +171,10 @@ export default function WorkspaceDocRail({
   const { language } = useLanguage()
   const copy = COPY[language] ?? COPY.ms
   const isMobile = useIsMobile()
-  const [open, setOpen] = useLocalStorageSetting<boolean>("lr-doc-rail-open", true)
+  const [open, setOpen] = useLocalStorageSetting<boolean>(
+    "lr-doc-rail-open",
+    true
+  )
   const [search, setSearch] = useState("")
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -222,7 +228,9 @@ export default function WorkspaceDocRail({
     <>
       <div className="hidden w-72 shrink-0 flex-col border-r border-border/50 bg-background md:flex">
         <div className="flex items-center justify-between gap-2 border-b border-border/50 p-3">
-          <span className="text-sm font-semibold text-foreground">{copy.title}</span>
+          <span className="text-sm font-semibold text-foreground">
+            {<UiText text={copy.title} />}
+          </span>
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -327,7 +335,14 @@ function MobileDocSheet({
   onSelectDoc: (doc: Document) => void
   search: string
   setSearch: (search: string) => void
-  copy: { title: string; search: string; upload: string; empty: string; emptySearch: string; loading: string }
+  copy: {
+    title: string
+    search: string
+    upload: string
+    empty: string
+    emptySearch: string
+    loading: string
+  }
   onReload: () => void
 }) {
   const [sheetUploadOpen, setSheetUploadOpen] = useState(false)
@@ -336,12 +351,14 @@ function MobileDocSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="sr-only">
-          <SheetTitle>{copy.title}</SheetTitle>
+          <SheetTitle>{<UiText text={copy.title} />}</SheetTitle>
           <SheetDescription>{copy.search}</SheetDescription>
         </SheetHeader>
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between gap-2 border-b border-border/50 p-3">
-            <span className="text-sm font-semibold text-foreground">{copy.title}</span>
+            <span className="text-sm font-semibold text-foreground">
+              {<UiText text={copy.title} />}
+            </span>
             <button
               type="button"
               onClick={() => setSheetUploadOpen(true)}

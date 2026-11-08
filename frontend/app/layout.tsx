@@ -1,4 +1,7 @@
+import { localizeMetadata } from "@/lib/i18n/metadata"
 import { ClerkProvider } from "@clerk/nextjs"
+import { enUS, msMY } from "@clerk/localizations"
+import { localizeHref } from "@/lib/i18n/routing"
 import type { Metadata } from "next"
 import { Toaster } from "@/components/ui/sonner"
 
@@ -12,7 +15,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import CommandPaletteTopRight from "@/components/navbar"
 import AuthSync from "@/components/auth-sync"
 import OfflineProvider from "@/components/offline-provider"
-
+import { getLocale } from "@/lib/i18n/server"
 
 import {
   Atkinson_Hyperlegible,
@@ -40,7 +43,7 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 })
 
-export const metadata: Metadata = {
+const pageMetadata: Metadata = {
   metadataBase: new URL("https://lingua-rakyat.my"),
   title: {
     template: "%s – Lingua Rakyat",
@@ -89,14 +92,15 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const locale = await getLocale()
   return (
     <html
-      lang="en"
+      lang={locale}
       suppressHydrationWarning
       className={cn(
         "antialiased",
@@ -106,16 +110,20 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-screen overflow-x-hidden bg-background text-foreground">
-        <ClerkProvider afterSignOutUrl="/workspace">
+        <ClerkProvider
+          localization={locale === "ms" ? msMY : enUS}
+          afterSignOutUrl={localizeHref("/workspace", locale)}
+          signInUrl={localizeHref("/sign-in", locale)}
+          signUpUrl={localizeHref("/sign-up", locale)}
+        >
           <ThemeProvider>
             <div
               aria-hidden="true"
               className="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-70"
             >
-
               <div className="bg-noise absolute inset-0 opacity-[0.035] dark:opacity-[0.05]" />
             </div>
-            <LanguageProvider>
+            <LanguageProvider initialLocale={locale}>
               <TooltipProvider>
                 <OfflineProvider>
                   <Toaster richColors expand={true} position="top-center" />
@@ -132,4 +140,8 @@ export default function RootLayout({
       </body>
     </html>
   )
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return localizeMetadata(pageMetadata)
 }

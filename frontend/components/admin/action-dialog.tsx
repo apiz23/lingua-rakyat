@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
 
@@ -35,10 +36,13 @@ export function ActionDialog({
   busy?: boolean
   onConfirm: (reason: string) => Promise<void> | void
 }) {
+  const t = useTranslations()
+
   const [reason, setReason] = useState("")
   const [touched, setTouched] = useState(false)
 
   const changeOpen = (next: boolean) => {
+    if (busy) return
     if (!next) {
       setReason("")
       setTouched(false)
@@ -50,15 +54,19 @@ export function ActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
-      <DialogContent>
+      <DialogContent aria-busy={busy}>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description ? <DialogDescription>{description}</DialogDescription> : null}
+          <DialogTitle>{<UiText text={title} />}</DialogTitle>
+          {description ? (
+            <DialogDescription>
+              {<UiText text={description} />}
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
 
         <div className="space-y-2">
           <label htmlFor="action-reason" className="text-sm font-medium">
-            {requireReason ? "Reason (required)" : "Reason (optional)"}
+            {requireReason ? t("Reason (required)") : t("Reason (optional)")}
           </label>
           <Textarea
             id="action-reason"
@@ -67,15 +75,30 @@ export function ActionDialog({
               setReason(event.target.value)
               setTouched(true)
             }}
-            placeholder="Recorded in the audit log and publication events."
+            placeholder={t("Recorded in the audit log and publication events.")}
             maxLength={2000}
+            disabled={busy}
+            aria-required={requireReason}
+            aria-describedby={
+              touched && blocked ? "action-reason-error" : undefined
+            }
             aria-invalid={touched && blocked}
           />
+          {touched && blocked ? (
+            <p id="action-reason-error" className="text-xs text-destructive">
+              <UiText text="Enter a reason before confirming." />
+            </p>
+          ) : null}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => changeOpen(false)} disabled={busy}>
-            Cancel
+          <Button
+            variant="outline"
+            onClick={() => changeOpen(false)}
+            disabled={busy}
+          >
+            {" "}
+            <UiText text="Cancel" />{" "}
           </Button>
           <Button
             variant={destructive ? "destructive" : "default"}
@@ -83,7 +106,7 @@ export function ActionDialog({
             onClick={() => void onConfirm(reason.trim())}
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {confirmLabel}
+            {<UiText text={confirmLabel} />}
           </Button>
         </DialogFooter>
       </DialogContent>

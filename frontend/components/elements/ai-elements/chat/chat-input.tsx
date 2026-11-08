@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "@/components/i18n"
 import { Paperclip, Send, Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -38,142 +39,140 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     },
     forwardedRef
   ) => {
-  const [internalValue, setInternalValue] = React.useState("")
-  const inputValue = value ?? internalValue
+    const t = useTranslations()
+    const [internalValue, setInternalValue] = React.useState("")
+    const inputValue = value ?? internalValue
 
-  const localTextareaRef = React.useRef<HTMLTextAreaElement | null>(null)
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
+    const localTextareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+    const fileInputRef = React.useRef<HTMLInputElement | null>(null)
 
-  React.useImperativeHandle(
-    forwardedRef,
-    () => localTextareaRef.current as HTMLTextAreaElement,
-    []
-  )
+    React.useImperativeHandle(
+      forwardedRef,
+      () => localTextareaRef.current as HTMLTextAreaElement,
+      []
+    )
 
-  const setValue = React.useCallback(
-    (next: string) => {
-      if (onChange) onChange(next)
-      else setInternalValue(next)
-    },
-    [onChange]
-  )
+    const setValue = React.useCallback(
+      (next: string) => {
+        if (onChange) onChange(next)
+        else setInternalValue(next)
+      },
+      [onChange]
+    )
 
-  const syncTextareaHeight = React.useCallback(() => {
-    const el = localTextareaRef.current
-    if (!el) return
-    el.style.height = "auto"
-    el.style.height = `${el.scrollHeight}px`
-  }, [])
+    const syncTextareaHeight = React.useCallback(() => {
+      const el = localTextareaRef.current
+      if (!el) return
+      el.style.height = "auto"
+      el.style.height = `${el.scrollHeight}px`
+    }, [])
 
-  React.useEffect(() => {
-    syncTextareaHeight()
-  }, [inputValue, syncTextareaHeight])
+    React.useEffect(() => {
+      syncTextareaHeight()
+    }, [inputValue, syncTextareaHeight])
 
-  const doSubmit = React.useCallback(async () => {
-    const message = inputValue.trim()
-    if (!message) return
-    if (disabled || loading) return
+    const doSubmit = React.useCallback(async () => {
+      const message = inputValue.trim()
+      if (!message) return
+      if (disabled || loading) return
 
-    await onSubmit(message)
+      await onSubmit(message)
 
-    if (clearOnSubmit) {
-      setValue("")
-      requestAnimationFrame(() => syncTextareaHeight())
+      if (clearOnSubmit) {
+        setValue("")
+        requestAnimationFrame(() => syncTextareaHeight())
+      }
+    }, [
+      clearOnSubmit,
+      disabled,
+      inputValue,
+      loading,
+      onSubmit,
+      setValue,
+      syncTextareaHeight,
+    ])
+
+    const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key !== "Enter") return
+
+      if (e.shiftKey) return
+
+      // ChatGPT/Claude style: Enter submits. Also allow Cmd/Ctrl+Enter.
+      e.preventDefault()
+      void doSubmit()
     }
-  }, [
-    clearOnSubmit,
-    disabled,
-    inputValue,
-    loading,
-    onSubmit,
-    setValue,
-    syncTextareaHeight,
-  ])
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key !== "Enter") return
+    const handlePickAttachment = () => {
+      fileInputRef.current?.click()
+    }
 
-    if (e.shiftKey) return
+    const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? [])
+      if (files.length === 0) return
+      onAttachments?.(files)
+      e.target.value = ""
+    }
 
-    // ChatGPT/Claude style: Enter submits. Also allow Cmd/Ctrl+Enter.
-    e.preventDefault()
-    void doSubmit()
-  }
+    return (
+      <div
+        data-slot="chat-input"
+        className={cn("neo-input bg-background", className)}
+      >
+        <textarea
+          ref={localTextareaRef}
+          value={inputValue}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={t(placeholder)}
+          rows={1}
+          disabled={disabled || loading}
+          className="max-h-28 w-full resize-none bg-transparent px-3 py-2.5 text-sm focus:outline-none sm:px-4"
+        />
 
-  const handlePickAttachment = () => {
-    fileInputRef.current?.click()
-  }
+        <div className="flex items-center justify-between gap-2 px-2 pb-2 sm:px-3 sm:pb-2.5">
+          <div className="flex min-w-0 items-center gap-2">
+            {allowAttachments && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleAttachmentChange}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={handlePickAttachment}
+                  disabled={disabled || loading}
+                  className="shrink-0 rounded-md"
+                  title={t("Attach files")}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+              </>
+            )}
 
-  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? [])
-    if (files.length === 0) return
-    onAttachments?.(files)
-    e.target.value = ""
-  }
+            {children}
+          </div>
 
-  return (
-    <div
-      data-slot="chat-input"
-      className={cn(
-        "neo-input bg-background",
-        className
-      )}
-    >
-      <textarea
-        ref={localTextareaRef}
-        value={inputValue}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={onKeyDown}
-        placeholder={placeholder}
-        rows={1}
-        disabled={disabled || loading}
-        className="max-h-28 w-full resize-none bg-transparent px-3 py-2.5 text-sm focus:outline-none sm:px-4"
-      />
-
-      <div className="flex items-center justify-between gap-2 px-2 pb-2 sm:px-3 sm:pb-2.5">
-        <div className="flex min-w-0 items-center gap-2">
-          {allowAttachments && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleAttachmentChange}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={handlePickAttachment}
-                disabled={disabled || loading}
-                className="shrink-0 rounded-md"
-                title="Attach files"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-
-          {children}
+          <Button
+            type="button"
+            onClick={() => void doSubmit()}
+            disabled={disabled || loading || !inputValue.trim()}
+            className="shrink-0 rounded-md"
+            size="icon-sm"
+            title={t("Send")}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
         </div>
-
-        <Button
-          type="button"
-          onClick={() => void doSubmit()}
-          disabled={disabled || loading || !inputValue.trim()}
-          className="shrink-0 rounded-md"
-          size="icon-sm"
-          title="Send"
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
       </div>
-    </div>
-  )
+    )
   }
 )
 

@@ -1,9 +1,12 @@
 "use client"
 
-import { usePathname } from "next/navigation"
+import { UiText, useTranslations } from "@/components/i18n"
+import { usePathname } from "@/components/i18n"
+
 import { useAuth, UserButton } from "@clerk/nextjs"
+import Image from "next/image"
 import { useLanguage } from "@/components/language-provider"
-import Link from "next/link"
+import { LocalizedLink as Link } from "@/components/i18n"
 
 type Item = { href: string; label: string }
 
@@ -14,6 +17,8 @@ export function ExperienceNav({
   label: string
   items: Item[]
 }) {
+  const t = useTranslations()
+
   const { language, setLanguage } = useLanguage()
   const pathname = usePathname()
   const { isLoaded, isSignedIn } = useAuth()
@@ -22,17 +27,29 @@ export function ExperienceNav({
       <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link
           href="/"
-          className="font-heading text-lg font-bold tracking-tight text-primary"
+          className="inline-flex min-w-0 shrink-0 items-center gap-2.5 rounded-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
-          Lingua Rakyat
+          <Image
+            src="/icons/android-chrome-512x512.png"
+            alt=""
+            width={36}
+            height={36}
+            className="size-9 shrink-0 rounded-lg object-contain"
+            priority
+          />
+          <span className="truncate font-heading text-base font-bold tracking-tight sm:text-lg">
+            <UiText text="Lingua Rakyat" />
+          </span>
         </Link>
         <nav
-          aria-label={`${label} navigation`}
-          className="order-3 flex w-full items-center gap-x-5 gap-y-2 border-t border-border pt-2 text-sm sm:order-none sm:w-auto sm:border-0 sm:pt-0"
+          aria-label={t("{value0} navigation", { value0: t(label) })}
+          className="order-3 flex w-full flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-2 text-sm sm:order-none sm:w-auto sm:border-0 sm:pt-0"
         >
-          <span className="hidden text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase lg:inline">
-            {label}
-          </span>
+          {label !== "Public portal" && label !== "Portal awam" ? (
+            <span className="hidden text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase lg:inline">
+              <UiText text={label} />
+            </span>
+          ) : null}
           {items.map((item) => (
             <Link
               key={item.href}
@@ -40,37 +57,37 @@ export function ExperienceNav({
               aria-current={pathname === item.href ? "page" : undefined}
               className="text-foreground/75 underline-offset-8 transition-colors hover:text-primary aria-[current=page]:text-primary aria-[current=page]:underline"
             >
-              {item.label}
+              {<UiText text={item.label} />}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
           <button
             type="button"
             onClick={() => setLanguage(language === "ms" ? "en" : "ms")}
             aria-label={
-              language === "ms" ? "Switch to English" : "Tukar ke Bahasa Melayu"
+              language === "ms"
+                ? t("Switch to English")
+                : t("Tukar ke Bahasa Melayu")
             }
             className="rounded-md border border-border px-2 py-1 text-xs font-medium"
           >
-            {language === "ms" ? "EN" : "BM"}
+            {language === "ms" ? t("EN") : t("BM")}
           </button>
           {isLoaded &&
             (isSignedIn ? (
               <>
-                {label === "Public portal" && (
-                  <Link href="/workspace">My workspace</Link>
+                {(label === "Public portal" || label === "Portal awam") && (
+                  <Link href="/workspace">
+                    <UiText text="My workspace" />
+                  </Link>
                 )}
-                <Link
-                  href="/manage"
-                  className="text-xs font-medium hover:text-primary"
-                >
-                  Administration
-                </Link>
                 <UserButton />
               </>
             ) : (
-              <Link href="/sign-in">Sign in</Link>
+              <Link href="/sign-in">
+                <UiText text="Sign in" />
+              </Link>
             ))}
         </div>
       </div>

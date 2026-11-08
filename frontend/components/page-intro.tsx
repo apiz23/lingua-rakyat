@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText } from "@/components/i18n"
 import { cn } from "@/lib/utils"
 
 export default function PageIntro({
@@ -24,7 +25,7 @@ export default function PageIntro({
   return (
     <section
       className={cn(
-        "border border-border bg-card rounded-lg px-6 py-8 sm:px-8",
+        "rounded-lg border border-border bg-card px-6 py-8 sm:px-8",
         className
       )}
     >
@@ -39,7 +40,7 @@ export default function PageIntro({
               )}
               {eyebrow && (
                 <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
-                  {eyebrow}
+                  {<UiText text={eyebrow} />}
                 </p>
               )}
               {badge && (
@@ -51,11 +52,11 @@ export default function PageIntro({
           )}
           <div className="space-y-2">
             <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              {title}
+              {<UiText text={title} />}
             </h1>
             {description && (
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-                {description}
+                {<UiText text={description} />}
               </p>
             )}
           </div>

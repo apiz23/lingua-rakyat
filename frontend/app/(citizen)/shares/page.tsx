@@ -1,7 +1,8 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import { useEffect, useState } from "react"
-import Link from "next/link"
+import { LocalizedLink as Link } from "@/components/i18n"
 import { Show, useUser } from "@clerk/nextjs"
 import { Copy, Share2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -16,17 +17,19 @@ const CHIP_STYLES: Record<string, string> = {
 }
 
 export default function MySharesPage() {
+  const t = useTranslations()
+
   const { isSignedIn } = useUser()
   const [loadError, setLoadError] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [shares, setShares] = useState<MyShare[]>([])
   const [loading, setLoading] = useState(true)
+  const [revoking, setRevoking] = useState<string | null>(null)
   const [confirmSlug, setConfirmSlug] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isSignedIn) {
       // Reset request state when the account signs out.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false)
       return
     }
@@ -38,51 +41,86 @@ export default function MySharesPage() {
       .finally(() => setLoading(false))
   }, [isSignedIn, attempt])
 
-  const copyLink = (slug: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/share/${slug}`)
-    toast.success("Link copied")
+  const copyLink = async (slug: string) => {
+    try {
+      await navigator.clipboard.writeText(
+        window.location.origin + "/share/" + slug
+      )
+      toast.success(t("Link copied"))
+    } catch {
+      toast.error(
+        t("Could not copy the link. Open the share and copy its address.")
+      )
+    }
   }
 
   const onRevoke = async (slug: string) => {
-    const ok = await revokeShare(slug)
-    if (ok) {
-      setShares((prev) => prev.filter((s) => s.slug !== slug))
-      toast.success("Share revoked — the public link no longer works")
-    } else {
-      toast.error("Could not revoke this share")
+    if (revoking) return
+    setRevoking(slug)
+    try {
+      const ok = await revokeShare(slug)
+      if (!ok) throw new Error("Revoke failed")
+      setShares((previous) => previous.filter((share) => share.slug !== slug))
+      toast.success(t("Share revoked. The public link no longer works."))
+      setConfirmSlug(null)
+    } catch {
+      toast.error(t("Could not revoke this share. Please try again."))
+    } finally {
+      setRevoking(null)
     }
-    setConfirmSlug(null)
   }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
-      <h1 className="font-heading text-2xl font-bold">My shares</h1>
+      <h1 className="font-heading text-2xl font-bold">
+        <UiText text="My shares" />
+      </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Answers you have shared publicly. Revoking a share makes its link stop
-        working.
+        {" "}
+        <UiText text="Answers you have shared publicly. Revoking a share makes its link stop working." />{" "}
       </p>
 
       <Show when="signed-out">
         <div className="mt-8 border border-dashed border-border p-8 text-center">
           <Share2 className="mx-auto h-8 w-8 text-muted-foreground/50" />
           <p className="mt-3 text-sm text-muted-foreground">
-            Sign in to see and manage the answers you have shared.
+            {" "}
+            <UiText text="Sign in to see and manage the answers you have shared." />{" "}
           </p>
           <Button className="mt-4" size="sm" asChild>
-            <Link href="/sign-in">Sign in</Link>
+            <Link href="/sign-in">
+              <UiText text="Sign in" />
+            </Link>
           </Button>
         </div>
       </Show>
 
       <Show when="signed-in">
-        <div className="mt-6 flex flex-col gap-3">
-          {loadError ? <div role="alert" className="rounded-lg border border-destructive/30 p-4"><p className="text-sm">Your shares could not load.</p><Button variant="outline" className="mt-3" onClick={() => setAttempt(value => value + 1)}>Try again</Button></div> : loading ? (
+        <div aria-busy={loading} className="mt-6 flex flex-col gap-3">
+          {loadError ? (
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/30 p-4"
+            >
+              <p className="text-sm">
+                <UiText text="Your shares could not load." />
+              </p>
+              <Button
+                variant="outline"
+                className="mt-3"
+                onClick={() => setAttempt((value) => value + 1)}
+              >
+                <UiText text="Try again" />
+              </Button>
+            </div>
+          ) : loading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-20 bg-muted/40" />
             ))
           ) : shares.length === 0 ? (
             <p className="border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              No shares yet — use the share button on any answer.
+              {" "}
+              <UiText text="No shares yet — use the share button on any answer." />{" "}
             </p>
           ) : (
             shares.map((share) => (
@@ -93,7 +131,7 @@ export default function MySharesPage() {
                 <div className="flex items-start justify-between gap-3">
                   <Link
                     href={`/share/${share.slug}`}
-                    className="min-w-0 flex-1 break-words text-base font-medium hover:text-primary"
+                    className="min-w-0 flex-1 text-base font-medium break-words hover:text-primary"
                   >
                     {share.question}
                   </Link>
@@ -102,7 +140,7 @@ export default function MySharesPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => copyLink(share.slug)}
-                      aria-label="Copy link"
+                      aria-label={t("Copy link")}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -110,7 +148,7 @@ export default function MySharesPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => setConfirmSlug(share.slug)}
-                      aria-label="Revoke share"
+                      aria-label={t("Revoke share")}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -126,27 +164,34 @@ export default function MySharesPage() {
                   )}
                   {share.agency && <span>{share.agency}</span>}
                   {share.created_at && (
-                    <span>{new Date(share.created_at).toLocaleDateString()}</span>
+                    <span>
+                      {new Date(share.created_at).toLocaleDateString(t.locale)}
+                    </span>
                   )}
                 </div>
                 {confirmSlug === share.slug && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 bg-destructive/10 p-2 text-xs">
                     <span className="flex-1">
-                      Revoke this share? The public link stops working.
+                      {" "}
+                      <UiText text="Revoke this share? The public link stops working." />{" "}
                     </span>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => onRevoke(share.slug)}
+                      disabled={revoking !== null}
+                      onClick={() => void onRevoke(share.slug)}
                     >
-                      Revoke
+                      {" "}
+                      <UiText text="Revoke" />{" "}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={revoking !== null}
                       onClick={() => setConfirmSlug(null)}
                     >
-                      Cancel
+                      {" "}
+                      <UiText text="Cancel" />{" "}
                     </Button>
                   </div>
                 )}

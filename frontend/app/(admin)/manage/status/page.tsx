@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import { Button } from "@/components/ui/button"
 import { AdminPageHeader } from "@/components/admin/admin-shell"
 import { AdminErrorState, AdminLoading } from "@/components/admin/admin-state"
@@ -8,18 +9,27 @@ import { getAdminStatus } from "@/lib/admin-api"
 import { useAdminResource } from "@/hooks/useAdminResource"
 
 export default function AdminStatusPage() {
+  const t = useTranslations()
+
   const { data, error, loading, reload } = useAdminResource(getAdminStatus, [])
 
   return (
     <div>
       <AdminPageHeader
-        kicker="System / 10"
-        title="System status"
-        actions={<Button variant="outline" disabled={loading} onClick={reload}>Refresh status</Button>}
-        description="Admin data-store availability. No credentials, hosts or infrastructure details are exposed."
+        kicker={t("System / 10")}
+        title={t("System status")}
+        actions={
+          <Button variant="outline" disabled={loading} onClick={reload}>
+            {" "}
+            <UiText text="Refresh status" />{" "}
+          </Button>
+        }
+        description={t(
+          "Admin data-store availability. No credentials, hosts or infrastructure details are exposed."
+        )}
       />
 
-      {loading ? <AdminLoading label="Checking admin services…" /> : null}
+      {loading ? <AdminLoading label={t("Checking admin services…")} /> : null}
       {error ? <AdminErrorState error={error} onRetry={reload} /> : null}
 
       {data ? (
@@ -28,22 +38,35 @@ export default function AdminStatusPage() {
             {Object.entries(data.checks).map(([name, state], index) => (
               <div key={name} className="admin-ledger__cell">
                 <span className="admin-ledger__label">
-                  <span className="capitalize">{name.replaceAll("_", " ")}</span>
-                  <span className="admin-index">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="capitalize">
+                    {t(name.replaceAll("_", " "))}
+                  </span>
+                  <span className="admin-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                 </span>
                 <span className="mt-1">
-                  <StatusBadge value={state === "ok" ? "verified" : "revoked"} label={state} />
+                  <StatusBadge
+                    value={state === "ok" ? "verified" : "revoked"}
+                    label={state}
+                  />
                 </span>
               </div>
             ))}
             <div className="admin-ledger__cell">
               <span className="admin-ledger__label">
-                <span>Role provider</span>
-                <span className="admin-index">RP</span>
+                <span>
+                  <UiText text="Role provider" />
+                </span>
+                <span className="admin-index">
+                  <UiText text="RP" />
+                </span>
               </span>
               <span className="mt-1">
                 <StatusBadge
-                  value={data.role_provider === "ok" ? "verified" : "unavailable"}
+                  value={
+                    data.role_provider === "ok" ? "verified" : "unavailable"
+                  }
                   label={data.role_provider}
                 />
               </span>
@@ -51,7 +74,9 @@ export default function AdminStatusPage() {
           </div>
 
           <p className="admin-kicker mt-4">
-            Generated {new Date(data.generated_at).toLocaleString()}
+            {" "}
+            <UiText text="Generated" />{" "}
+            {new Date(data.generated_at).toLocaleString(t.locale)}
           </p>
         </>
       ) : null}

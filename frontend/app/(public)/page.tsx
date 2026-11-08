@@ -1,13 +1,8 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import dynamic from "next/dynamic"
-import {
-  motion,
-
-
-  useReducedMotion,
-
-} from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import {
   ArrowRight,
   BookOpen,
@@ -19,18 +14,15 @@ import {
   FileSearch,
   Languages,
   BarChart3,
-
-
   Zap,
   Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-import Link from "next/link"
+import { LocalizedLink as Link } from "@/components/i18n"
 import { Instrument_Serif } from "next/font/google"
 import Footer from "@/components/footer"
 import { useLanguage } from "@/components/language-provider"
-
 
 import {
   Terminal,
@@ -47,9 +39,12 @@ const TechStackLogos = dynamic(
   { ssr: false }
 )
 
-const editorialSerif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["normal", "italic"], display: "swap" })
-
-
+const editorialSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  display: "swap",
+})
 
 const DEMO_VIDEO_SRC =
   "https://otmlfmgyscrohtbpqqoi.supabase.co/storage/v1/object/public/videos/lv_0_20260609134554.mp4"
@@ -148,9 +143,10 @@ function ScaleIn({
 }
 
 export default function Home() {
+  const t = useTranslations()
+
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
-
 
   const mutedTextClass = "text-muted-foreground"
 
@@ -233,7 +229,11 @@ export default function Home() {
           previewQ: "Soalan: Siapakah yang layak memohon bantuan ini?",
           previewA:
             "Berdasarkan Seksyen 2.1, pemohon mestilah warganegara Malaysia berumur 18 tahun ke atas dengan pendapatan isi rumah = RM4,000.",
-          previewSrc: "Chunk ID: doc_001_chunk_42 | Similarity: 0.89",
+          sampleTitle: "Lihat contoh jawapan",
+          sampleDescription: "Jawapan dipadankan dengan petikan sumber supaya anda boleh menyemaknya.",
+          sampleCta: "Tanya soalan anda",
+          sampleNote: "Pratonton contoh — bukan nasihat rasmi",
+          previewSrc: "Petikan sumber · Pratonton",
         }
       : {
           kicker: "Multilingual AI for Government Documents",
@@ -313,7 +313,11 @@ export default function Home() {
           previewQ: "Query: Who is eligible to apply for this benefit?",
           previewA:
             "According to Section 2.1, applicants must be Malaysian citizens aged 18 and above with a household income = RM4,000.",
-          previewSrc: "Chunk ID: doc_001_chunk_42 | Similarity: 0.89",
+          sampleTitle: "See a sample answer",
+          sampleDescription: "Answers stay connected to a source passage so you can check the information.",
+          sampleCta: "Ask your own question",
+          sampleNote: "Example preview — not official guidance",
+          previewSrc: "Source excerpt · Preview",
         }
   const comparison =
     language === "ms"
@@ -426,20 +430,104 @@ export default function Home() {
     <div className="relative min-h-dvh overflow-x-clip bg-background">
       <main className="landing-service relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10">
         <section className="editorial-hero mx-auto flex min-h-[560px] max-w-4xl flex-col items-center justify-center py-12 text-center sm:min-h-[620px]">
-          <p className="mb-7 flex flex-wrap justify-center gap-x-3 text-[10px] font-semibold uppercase tracking-[.25em] text-muted-foreground">{(language === "ms" ? ["Dokumen", "Bahasa", "Kefahaman"] : ["Documents", "Language", "Understanding"]).map((word, i) => <span className="editorial-rise" style={{ animationDelay: i * 400 + "ms" }} key={word}>{word}</span>)}</p>
-          <h1 aria-label={copy.headline1 + " " + copy.headline2} className={editorialSerif.className + " max-w-[18ch] text-[clamp(3.25rem,6.8vw,6rem)] font-normal leading-[1.05] tracking-[-.015em] text-balance"}>
-            <span aria-hidden="true">{copy.headline1.split(" ").map((word, i) => <span key={word + i} className="editorial-word" style={{ animationDelay: 300 + i * 140 + "ms" }}>{word}&nbsp;</span>)}</span>{" "}
-            <span aria-hidden="true" className="relative inline-block italic">{copy.headline2.split(" ").map((word, i) => <span key={word + i} className="editorial-word" style={{ animationDelay: 860 + i * 140 + "ms" }}>{word}&nbsp;</span>)}<svg aria-hidden="true" viewBox="0 0 300 12" preserveAspectRatio="none" className="absolute -bottom-[.1em] left-0 h-[.14em] w-full"><path className="editorial-draw" d="M2 7 C 80 2, 180 11, 298 5" fill="none" stroke="currentColor" strokeWidth="1.25" vectorEffect="non-scaling-stroke" pathLength="1" /></svg></span>
+          <p className="mb-7 flex flex-wrap justify-center gap-x-3 text-[10px] font-semibold tracking-[.25em] text-muted-foreground uppercase">
+            {(language === "ms"
+              ? ["Dokumen", "Bahasa", "Kefahaman"]
+              : ["Documents", "Language", "Understanding"]
+            ).map((word, i) => (
+              <span
+                className="editorial-rise"
+                style={{ animationDelay: i * 400 + "ms" }}
+                key={word}
+              >
+                {word}
+              </span>
+            ))}
+          </p>
+          <h1
+            aria-label={copy.headline1 + " " + copy.headline2}
+            className={
+              editorialSerif.className +
+              " max-w-[18ch] text-[clamp(3.25rem,6.8vw,6rem)] leading-[1.05] font-normal tracking-[-.015em] text-balance"
+            }
+          >
+            <span aria-hidden="true">
+              {copy.headline1.split(" ").map((word, i, words) => (
+                <span
+                  key={word + i}
+                  className="editorial-word"
+                  style={{ animationDelay: 300 + i * 140 + "ms" }}
+                >
+                  {word}
+                  {i < words.length - 1 ? "\u00a0" : null}
+                </span>
+              ))}
+            </span>{" "}
+            <span aria-hidden="true" className="relative inline-block italic">
+              {copy.headline2.split(" ").map((word, i, words) => (
+                <span
+                  key={word + i}
+                  className="editorial-word"
+                  style={{ animationDelay: 860 + i * 140 + "ms" }}
+                >
+                  {word}
+                  {i < words.length - 1 ? "\u00a0" : null}
+                </span>
+              ))}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 300 12"
+                preserveAspectRatio="none"
+                className="absolute -bottom-[.1em] left-0 h-[.14em] w-full"
+              >
+                <path
+                  className="editorial-draw"
+                  d="M2 7 C 80 2, 180 11, 298 5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.25"
+                  vectorEffect="non-scaling-stroke"
+                  pathLength="1"
+                />
+              </svg>
+            </span>
           </h1>
-          <div aria-hidden="true" className="editorial-rule mt-8 h-px w-20 bg-foreground/20" />
-          <p className="editorial-rise mx-auto mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-[17px]" style={{ animationDelay: "1500ms" }}>{copy.subhead}</p>
-          <div className="editorial-rise mt-9 flex flex-col items-center gap-5 sm:flex-row sm:gap-8" style={{ animationDelay: "1700ms" }}><Button asChild className="rounded-sm px-7 py-6"><Link href="/workspace">{copy.cta}<ArrowRight className="ml-2 size-4" /></Link></Button><a href="#demo-section" className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">{language === "ms" ? "Lihat cara ia berfungsi" : "See how it works"} ?</a></div>
+          <div
+            aria-hidden="true"
+            className="editorial-rule mt-8 h-px w-20 bg-foreground/20"
+          />
+          <p
+            className="editorial-rise mx-auto mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-[17px]"
+            style={{ animationDelay: "1500ms" }}
+          >
+            {copy.subhead}
+          </p>
+          <div
+            className="editorial-rise mt-9 flex flex-col items-center gap-5 sm:flex-row sm:gap-8"
+            style={{ animationDelay: "1700ms" }}
+          >
+            <Button asChild className="rounded-sm px-7 py-6">
+              <Link href="/workspace">
+                {copy.cta}
+                <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+            <a
+              href="#demo-section"
+              className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              {language === "ms"
+                ? t("Lihat cara ia berfungsi")
+                : t("See how it works")}{" "}
+              ?
+            </a>
+          </div>
         </section>
         <section
           aria-label={
             language === "ms"
-              ? "Cara menggunakan Lingua Rakyat"
-              : "How Lingua Rakyat works"
+              ? t("Cara menggunakan Lingua Rakyat")
+              : t("How Lingua Rakyat works")
           }
           className="service-guide my-10 grid gap-6 border-y border-border bg-transparent py-6 sm:my-16 md:grid-cols-[1.2fr_1fr_1fr] md:gap-8"
         >
@@ -471,9 +559,11 @@ export default function Home() {
             <div key={step} className="flex gap-3">
               <span className="font-mono text-xs text-primary">{step}</span>
               <div>
-                <h2 className="text-sm font-semibold">{title}</h2>
+                <h2 className="text-sm font-semibold">
+                  {<UiText text={title} />}
+                </h2>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {description}
+                  {<UiText text={description} />}
                 </p>
               </div>
             </div>
@@ -481,45 +571,55 @@ export default function Home() {
         </section>
 
         <FadeInUp>
-          <section className="pb-16 sm:pb-24 lg:pb-32">
-            <Terminal className="max-h-none max-w-none rounded-2xl border border-border bg-zinc-950 text-zinc-100 shadow-sm">
-              <AnimatedSpan className="flex items-center gap-2 text-xs text-zinc-400 sm:text-sm">
-                <FileText className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
-                <span className="font-mono text-xs tracking-[0.12em] uppercase sm:text-sm">
-                  BANTUAN_RAKYAT_1MALAYSIA_2024.PDF
-                </span>
-              </AnimatedSpan>
+          <section className="mx-auto grid max-w-5xl items-center gap-6 py-10 sm:py-14 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-12 lg:py-16">
+            <div className="max-w-md">
+              <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
+                {language === "ms" ? "Jawapan bersumber" : "Source-grounded answers"}
+              </p>
+              <h2 className="mt-3 font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                {copy.sampleTitle}
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                {copy.sampleDescription}
+              </p>
+              <Button asChild className="mt-6 rounded-md">
+                <Link href="/workspace">
+                  {copy.sampleCta}
+                  <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+            </div>
 
-              <div className="font-mono text-xs sm:text-sm">
-                <span className="font-bold text-zinc-300">{">"} </span>
-                <TypingAnimation className="text-zinc-100">
-                  {copy.previewQ}
-                </TypingAnimation>
-              </div>
+            <div className="min-w-0">
+              <Terminal className="rounded-xl border-border bg-zinc-950 text-zinc-100 shadow-sm">
+                <AnimatedSpan className="flex items-center gap-2 text-xs text-zinc-400">
+                  <FileText className="size-3.5 shrink-0" />
+                  <span className="font-medium tracking-wide">
+                    {language === "ms" ? "Pratonton jawapan" : "Answer preview"}
+                  </span>
+                </AnimatedSpan>
 
-              <AnimatedSpan className="bg-zinc-900 px-3 py-2 text-zinc-100 sm:px-4 sm:py-3">
-                <p className="font-mono text-xs leading-relaxed sm:text-sm">
-                  {copy.previewA}
-                </p>
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-zinc-400 sm:mt-3">
-                  <BookOpen className="h-2.5 w-2.5 shrink-0 sm:h-3 sm:w-3" />
-                  <span>&mdash; {copy.previewSrc}</span>
+                <div className="font-mono text-xs leading-relaxed">
+                  <span className="mr-2 font-bold text-primary">›</span>
+                  <TypingAnimation className="text-zinc-100">
+                    {copy.previewQ}
+                  </TypingAnimation>
                 </div>
-              </AnimatedSpan>
 
-              <AnimatedSpan className="flex items-center gap-1 font-mono text-xs sm:text-sm">
-                <span className="font-bold text-zinc-300">{">"}</span>
-                <motion.span
-                  animate={{ opacity: [1, 1, 0, 0] }}
-                  transition={{
-                    duration: 0.9,
-                    repeat: Infinity,
-                    times: [0, 0.45, 0.5, 1],
-                  }}
-                  className="ml-1 inline-block h-[1em] w-1.5 bg-zinc-300 align-middle sm:w-2"
-                />
-              </AnimatedSpan>
-            </Terminal>
+                <AnimatedSpan className="rounded-md bg-zinc-900 px-3 py-3 text-zinc-100">
+                  <p className="text-xs leading-relaxed sm:text-sm">{copy.previewA}</p>
+                  <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[11px] text-zinc-400">
+                    <BookOpen className="size-3 shrink-0" />
+                    <span>{copy.previewSrc}</span>
+                  </div>
+                </AnimatedSpan>
+
+                <AnimatedSpan className="flex items-center gap-2 text-[11px] text-zinc-500">
+                  <span className="size-1.5 rounded-full bg-primary" />
+                  {copy.sampleNote}
+                </AnimatedSpan>
+              </Terminal>
+            </div>
           </section>
         </FadeInUp>
 
@@ -534,7 +634,7 @@ export default function Home() {
 
           <FadeInLeft delay={0.05}>
             <h2 className="mt-4 max-w-[32ch] font-heading text-2xl font-semibold tracking-tight text-foreground sm:mt-5 sm:text-3xl lg:text-4xl">
-              {comparison.title}
+              {<UiText text={comparison.title} />}
             </h2>
           </FadeInLeft>
 
@@ -552,7 +652,8 @@ export default function Home() {
                 <thead>
                   <tr className="border-b border-border bg-muted/60">
                     <th className="border-r border-border px-4 py-3.5 text-left text-[11px] font-bold tracking-[0.2em] text-muted-foreground uppercase sm:w-[320px]">
-                      Feature
+                      {" "}
+                      <UiText text="Feature" />{" "}
                     </th>
                     {comparison.columns.map((col, colIdx) => (
                       <th
@@ -562,7 +663,6 @@ export default function Home() {
                           colIdx === 0
                             ? "bg-primary/10 text-primary"
                             : "text-muted-foreground",
-
                         ].join(" ")}
                       >
                         {col}
@@ -580,7 +680,7 @@ export default function Home() {
                       ].join(" ")}
                     >
                       <td className="border-r border-border px-4 py-3 font-medium text-foreground/90 sm:px-4">
-                        {row.label}
+                        {<UiText text={row.label} />}
                       </td>
                       {row.values.map((value: boolean, idx: number) => (
                         <td
@@ -588,17 +688,19 @@ export default function Home() {
                           className={[
                             "border-r border-border px-4 py-3 text-center last:border-r-0 sm:px-4",
                             idx === 0 ? "bg-primary/5" : "",
-
                           ].join(" ")}
                         >
                           {value ? (
                             <span className="inline-flex items-center justify-center font-bold text-primary">
                               <Check className="h-4 w-4" strokeWidth={2.5} />
-                              <span className="sr-only">yes</span>
+                              <span className="sr-only">
+                                <UiText text="yes" />
+                              </span>
                             </span>
                           ) : (
                             <span className="text-muted-foreground/40">
-                              &mdash;
+                              {" "}
+                              <UiText text="—" />{" "}
                             </span>
                           )}
                         </td>
@@ -631,12 +733,12 @@ export default function Home() {
                   whileTap={shouldReduce ? {} : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 280, damping: 22 }}
                 >
-                  <span className="absolute top-8 right-1 font-mono text-sm text-muted-foreground sm:left-0 sm:right-auto">
+                  <span className="absolute top-8 right-1 font-mono text-sm text-muted-foreground sm:right-auto sm:left-0">
                     {step.n}
                   </span>
                   <step.icon className="relative mb-4 h-5 w-5 text-primary/70 transition-all group-hover:scale-110 group-hover:text-primary sm:h-6 sm:w-6" />
                   <h3 className="relative font-heading text-lg font-semibold text-foreground sm:text-xl">
-                    {step.title}
+                    {<UiText text={step.title} />}
                   </h3>
                   <p
                     className={`relative mt-2 text-xs leading-relaxed sm:mt-3 sm:text-sm ${mutedTextClass}`}
@@ -672,7 +774,7 @@ export default function Home() {
                       <f.icon className="h-4 w-4 text-primary/70 transition-colors group-hover:text-primary" />
                     </div>
                     <h4 className="text-sm font-semibold text-foreground sm:text-base">
-                      {f.label}
+                      {<UiText text={f.label} />}
                     </h4>
                   </div>
                   <p
@@ -717,8 +819,20 @@ export default function Home() {
               <span className="mr-2 text-secondary-foreground/60">05</span>
               {copy.builtWith}
             </p>
-            <h2 className="mt-4 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">{language === "ms" ? "Di sebalik setiap jawapan." : "Behind every answer."}</h2>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">{language === "ms" ? "Daripada dokumen kepada carian dan jawapan: kenali teknologi yang menyokong platform ini." : "From documents to retrieval and answers: explore the tools that support the platform."}</p>
+            <h2 className="mt-4 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+              {language === "ms"
+                ? t("Di sebalik setiap jawapan.")
+                : t("Behind every answer.")}
+            </h2>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              {language === "ms"
+                ? t(
+                    "Daripada dokumen kepada carian dan jawapan: kenali teknologi yang menyokong platform ini."
+                  )
+                : t(
+                    "From documents to retrieval and answers: explore the tools that support the platform."
+                  )}
+            </p>
           </FadeInLeft>
           <FadeInLeft delay={0.05}>
             <TechStackLogos

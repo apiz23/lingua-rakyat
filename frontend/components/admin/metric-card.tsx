@@ -1,4 +1,5 @@
-import Link from "next/link"
+import { UiText } from "@/components/i18n"
+import { LocalizedLink as Link } from "@/components/i18n"
 
 export function MetricCell({
   index,
@@ -38,13 +39,18 @@ export function MetricCell({
   return (
     <Link href={href} className={`admin-ledger__cell ${spanClass} group`}>
       <span className="admin-ledger__label">
-        <span>{label}</span>
+        <span>{<UiText text={label} />}</span>
         <span className="admin-index">{String(index).padStart(2, "0")}</span>
       </span>
       <span className={`admin-ledger__value ${toneClass}`}>{value}</span>
-      {hint ? <span className="text-[11px] leading-snug text-muted-foreground">{hint}</span> : null}
+      {hint ? (
+        <span className="text-[11px] leading-snug text-muted-foreground">
+          {<UiText text={hint} />}
+        </span>
+      ) : null}
       <span className="mt-auto inline-flex items-center gap-1 pt-2 text-[11px] font-medium text-muted-foreground group-hover:text-primary">
-        Open <span aria-hidden>→</span>
+        {" "}
+        <UiText text="Open" /> <span aria-hidden>→</span>
       </span>
     </Link>
   )

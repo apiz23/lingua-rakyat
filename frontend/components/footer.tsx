@@ -1,126 +1,108 @@
 "use client"
 
-import Link from "next/link"
 import Image from "next/image"
-import { ArrowUpRight, FolderOpen, LayoutDashboard, Sparkles, TrendingUp } from "lucide-react"
+import { ArrowUpRight } from "lucide-react"
+
+import { LocalizedLink as Link } from "@/components/i18n"
+import { useLanguage } from "./language-provider"
 import { GithubIcon } from "./ui/github"
 import { LinkedinIcon } from "./ui/linkedin"
-import { useLanguage } from "./language-provider"
 import logo from "@/public/icons/android-chrome-512x512.png"
+
+const socialLinks = [
+  {
+    label: "GitHub",
+    href: "https://github.com/apiz23/lingua-rakyat",
+    Icon: GithubIcon,
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/muh-hafizuddin/",
+    Icon: LinkedinIcon,
+  },
+]
 
 export default function Footer() {
   const { language } = useLanguage()
-
   const ms = language === "ms"
-
   const copy = {
-    brand: "Lingua Rakyat",
     tagline: ms
-      ? "AI berbilang bahasa untuk memahami dokumen kerajaan."
-      : "Multilingual AI for understanding government documents.",
-    product: ms ? "Produk" : "Product",
-    resources: ms ? "Sumber" : "Resources",
+      ? "Fahami maklumat awam dalam bahasa anda."
+      : "Understand public information in your language.",
+    product: ms ? "Teroka" : "Explore",
+    resources: ms ? "Tentang kami" : "About",
     home: ms ? "Utama" : "Home",
-    workspace: "Workspace",
-    manage: ms ? "Urus Dokumen" : "Manage Documents",
-    results: ms ? "Pameran" : "Results",
-    about: ms ? "Tentang" : "About",
-    github: "GitHub",
-    linkedin: "LinkedIn",
+    workspace: ms ? "Ruang kerja" : "Workspace",
+    results: ms ? "Keputusan" : "Results",
+    about: ms ? "Tentang Lingua Rakyat" : "About Lingua Rakyat",
+    copyright: ms ? "Hak cipta terpelihara." : "All rights reserved.",
+    note: ms ? "Dibina untuk akses maklumat berbilang bahasa." : "Built for multilingual access to information.",
   }
 
   const columns = [
     {
       title: copy.product,
       items: [
-        { label: copy.home, href: "/", icon: LayoutDashboard },
-        { label: copy.workspace, href: "/workspace", icon: FolderOpen },
-        { label: copy.manage, href: "/manage", icon: Sparkles },
-        { label: copy.results, href: "/results", icon: TrendingUp },
+        { label: copy.home, href: "/" },
+        { label: copy.workspace, href: "/workspace" },
+        { label: copy.results, href: "/results" },
       ],
     },
     {
       title: copy.resources,
-      items: [
-        { label: copy.about, href: "/about", icon: ArrowUpRight },
-        {
-          label: copy.github,
-          href: "https://github.com/apiz23/lingua-rakyat",
-          icon: ArrowUpRight,
-          external: true,
-        },
-        {
-          label: copy.linkedin,
-          href: "https://www.linkedin.com/in/muh-hafizuddin/",
-          icon: ArrowUpRight,
-          external: true,
-        },
-      ],
+      items: [{ label: copy.about, href: "/about" }],
     },
   ]
 
   return (
-    <footer className="w-full border-t-2 border-foreground bg-background/50 text-foreground backdrop-blur-sm">
-      <div className="mx-auto w-full max-w-full px-5 py-10 sm:px-8 lg:max-w-[70%] lg:px-10">
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-3">
-          <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-3">
+    <footer className="w-full border-t border-border bg-background text-foreground">
+      <div className="mx-auto w-full max-w-7xl px-4 py-9 sm:px-6 sm:py-11 lg:px-8">
+        <div className="grid gap-9 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(9rem,0.6fr))] lg:gap-12">
+          <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+            <Link href="/" className="inline-flex items-center gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
               <Image
                 src={logo}
-                alt="Lingua Rakyat"
-                width={32}
-                height={32}
-                priority
-                className="h-8 w-8 shrink-0"
+                alt=""
+                width={36}
+                height={36}
+                className="size-9 shrink-0"
               />
-              <div className="flex flex-col gap-0.5">
-                <span className="font-heading text-sm leading-none font-bold tracking-[0.22em] uppercase">
-                  {copy.brand}
-                </span>
-              </div>
-            </div>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+              <span className="font-heading text-base font-bold tracking-tight">
+                Lingua Rakyat
+              </span>
+            </Link>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
               {copy.tagline}
             </p>
-            <div className="mt-5 flex items-center gap-2.5">
-              <Link
-                href="https://github.com/apiz23/lingua-rakyat"
-                aria-label="GitHub"
-                className="flex h-10 w-10 items-center justify-center border-2 border-foreground/70 text-foreground transition-all duration-150 hover:border-foreground hover:bg-foreground hover:text-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-              >
-                <GithubIcon size={18} />
-              </Link>
-              <Link
-                href="https://www.linkedin.com/in/muh-hafizuddin/"
-                aria-label="LinkedIn"
-                className="flex h-10 w-10 items-center justify-center border-2 border-foreground/70 text-foreground transition-all duration-150 hover:border-foreground hover:bg-foreground hover:text-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-              >
-                <LinkedinIcon size={18} />
-              </Link>
-              <span aria-hidden="true" className="mx-1 hidden text-muted-foreground/60 sm:inline">
-                /
-              </span>
-              <span className="hidden text-xs text-muted-foreground sm:inline">
-                {copy.tagline}
-              </span>
-            </div>
+            <ul className="mt-5 flex flex-wrap gap-2">
+              {socialLinks.map(({ label, href, Icon }) => (
+                <li key={label}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    className="inline-flex size-10 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:bg-secondary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <Icon size={17} />
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {columns.map((col) => (
-            <nav key={col.title} aria-label={col.title} className="justify-self-end">
-              <p className="font-heading text-xs font-bold tracking-[0.22em] text-muted-foreground uppercase">
-                {col.title}
-              </p>
+          {columns.map((column) => (
+            <nav key={column.title} aria-label={column.title} className="min-w-0">
+              <h2 className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                {column.title}
+              </h2>
               <ul className="mt-3 space-y-2">
-                {col.items.map((item) => (
-                  <li key={item.label}>
+                {column.items.map((item) => (
+                  <li key={item.href}>
                     <Link
                       href={item.href}
-                      target={item.external ? "_blank" : undefined}
-                      rel={item.external ? "noopener noreferrer" : undefined}
-                      className="group inline-flex items-center gap-1.5 text-sm text-foreground/85 transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                      className="inline-flex min-h-8 items-center rounded-sm py-1 text-sm text-foreground/80 transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
-                      <item.icon className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                       {item.label}
                     </Link>
                   </li>
@@ -129,8 +111,15 @@ export default function Footer() {
             </nav>
           ))}
         </div>
+
+        <div className="mt-8 flex flex-col gap-2 border-t border-border pt-4 text-xs text-muted-foreground sm:mt-10 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Lingua Rakyat. {copy.copyright}</p>
+          <p className="flex items-center gap-1">
+            {copy.note}
+            <ArrowUpRight aria-hidden="true" className="size-3.5 shrink-0" />
+          </p>
+        </div>
       </div>
-    <div className="mx-auto max-w-7xl border-t border-border px-5 py-4 text-xs text-muted-foreground"><Link href="/manage" className="underline underline-offset-4 hover:text-primary">Staff administration</Link><span className="ml-3">Authorized staff accounts only</span></div>
     </footer>
   )
 }

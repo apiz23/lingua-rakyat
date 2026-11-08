@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import { useState, useCallback } from "react"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { X, Loader2 } from "lucide-react"
@@ -8,6 +9,8 @@ import type { SourceChunk } from "@/lib/api"
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 export function ShareSources({ sources }: { sources: SourceChunk[] }) {
+  const t = useTranslations()
+
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
@@ -40,29 +43,36 @@ export function ShareSources({ sources }: { sources: SourceChunk[] }) {
           <button
             key={s.document_id}
             onClick={() => openPdf(s.document_id)}
-            className="cursor-pointer rounded-md border border-border bg-muted/50 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+            type="button"
+            className="max-w-full cursor-pointer rounded-md border border-border bg-muted/50 px-3 py-1 text-left text-xs break-words text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
           >
             {s.doc_name || s.document_id}
-            {s.page_start ? ` · p.${s.page_start}` : ""}
+            {s.page_start ? ` · ${t("Page")} ${s.page_start}` : ""}
           </button>
         ))}
       </div>
 
-      <Sheet open={!!pdfUrl || loading} onOpenChange={(o) => !o && closePdf()}>
+      <Sheet
+        open={!!pdfUrl || loading || error}
+        onOpenChange={(o) => !o && closePdf()}
+      >
         <SheetContent
           side="right"
           showCloseButton={false}
           className="flex flex-col gap-0 p-0"
           style={{ width: "min(680px, 92vw)", maxWidth: "min(680px, 92vw)" }}
         >
-          <SheetTitle className="sr-only">PDF</SheetTitle>
+          <SheetTitle className="sr-only">
+            <UiText text="PDF" />
+          </SheetTitle>
           <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3">
             <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-              PDF
+              {" "}
+              <UiText text="PDF" />{" "}
             </span>
             <button
               onClick={closePdf}
-              aria-label="Close"
+              aria-label={t("Close")}
               className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="h-4 w-4" />
@@ -72,12 +82,14 @@ export function ShareSources({ sources }: { sources: SourceChunk[] }) {
             {loading ? (
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             ) : error ? (
-              <p className="text-sm text-muted-foreground">Failed to load PDF.</p>
+              <p role="alert" className="p-4 text-sm text-muted-foreground">
+                <UiText text="Failed to load PDF. Close this preview and select the source to try again." />
+              </p>
             ) : pdfUrl ? (
               <iframe
                 src={pdfUrl}
                 className="h-full w-full border-0"
-                title="PDF"
+                title={t("PDF")}
               />
             ) : null}
           </div>

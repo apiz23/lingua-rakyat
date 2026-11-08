@@ -1,5 +1,8 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
+import { useLanguage } from "@/components/language-provider"
+import { authReturnPath, localizeHref } from "@/lib/i18n/routing"
 import { useState } from "react"
 import { useSignIn } from "@clerk/nextjs/legacy"
 import { Github, Loader2 } from "lucide-react"
@@ -11,6 +14,10 @@ import { AuthShell, AuthGlobalError } from "@/components/auth-shell"
 type Provider = "oauth_google" | "oauth_github"
 
 export default function SignInPage() {
+  const t = useTranslations()
+  const { language } = useLanguage()
+  const locale = language === "ms" ? "ms" : "en"
+
   const { isLoaded, signIn } = useSignIn()
   const [pending, setPending] = useState<Provider | null>(null)
   const [globalError, setGlobalError] = useState<string>()
@@ -22,21 +29,24 @@ export default function SignInPage() {
     try {
       await signIn.authenticateWithRedirect({
         strategy,
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: new URLSearchParams(window.location.search).get("redirect_url") === "/manage" ? "/manage" : "/workspace",
+        redirectUrl: localizeHref("/sso-callback", locale),
+        redirectUrlComplete: authReturnPath(
+          new URLSearchParams(window.location.search).get("redirect_url"),
+          locale
+        ),
       })
     } catch (err) {
       console.error("[SignIn] OAuth redirect threw:", err)
-      setGlobalError("Couldn't start sign-in. Please try again.")
+      setGlobalError(t("Couldn't start sign-in. Please try again."))
       setPending(null)
     }
   }
 
   return (
     <AuthShell
-      eyebrow="Sign in"
-      title="Continue to your workspace"
-      subtitle="Sync your chat history and shared answers across devices."
+      eyebrow={t("Sign in")}
+      title={t("Continue to your workspace")}
+      subtitle={t("Sync your chat history and shared answers across devices.")}
     >
       <AuthGlobalError message={globalError} />
 
@@ -52,8 +62,8 @@ export default function SignInPage() {
             <Loader2 className="animate-spin" />
           ) : (
             <GoogleIcon />
-          )}
-          Continue with Google
+          )}{" "}
+          <UiText text="Continue with Google" />{" "}
         </Button>
 
         <Button
@@ -67,13 +77,14 @@ export default function SignInPage() {
             <Loader2 className="animate-spin" />
           ) : (
             <Github className="h-4 w-4" />
-          )}
-          Continue with GitHub
+          )}{" "}
+          <UiText text="Continue with GitHub" />{" "}
         </Button>
       </div>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Signing in creates your account automatically — no separate sign-up.
+        {" "}
+        <UiText text="Signing in creates your account automatically — no separate sign-up." />{" "}
       </p>
     </AuthShell>
   )

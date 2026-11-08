@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge"
+import { UiText } from "@/components/i18n"
 
 const TONES: Record<string, string> = {
   ready: "border-primary/40 bg-primary/10 text-primary",
@@ -20,11 +21,17 @@ const TONES: Record<string, string> = {
   revoked: "border-destructive/40 bg-destructive/10 text-destructive",
 }
 
-export function StatusBadge({ value, label }: { value: string; label?: string }) {
+export function StatusBadge({
+  value,
+  label,
+}: {
+  value: string
+  label?: string
+}) {
   const tone = TONES[value] ?? "border-border bg-muted text-muted-foreground"
   return (
     <Badge variant="outline" className={`capitalize ${tone}`}>
-      {(label ?? value).replaceAll("_", " ")}
+      <UiText text={(label ?? value).replaceAll("_", " ")} />
     </Badge>
   )
 }

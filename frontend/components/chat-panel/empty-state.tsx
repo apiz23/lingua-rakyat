@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText } from "@/components/i18n"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { LucideIcon } from "lucide-react"
 import { FileQuestion, Landmark, Sparkles, Upload } from "lucide-react"
@@ -87,7 +88,11 @@ function buildChips(readyDocs: Document[], lang: Lang): Chip[] {
   return chips
 }
 
-export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStateProps) {
+export function EmptyState({
+  onChipClick,
+  readyDocs,
+  docsLoading,
+}: EmptyStateProps) {
   const { language } = useLanguage()
   const lang: Lang = language === "zh" ? "zh" : language === "en" ? "en" : "ms"
   const greeting = GREETING[lang]
@@ -97,7 +102,10 @@ export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStatePr
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
         <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[62px] rounded-xl border border-border bg-card" />
+            <Skeleton
+              key={i}
+              className="h-[62px] rounded-xl border border-border bg-card"
+            />
           ))}
         </div>
       </div>
@@ -111,8 +119,8 @@ export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStatePr
         <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
           <Upload className="h-5 w-5" />
         </span>
-        <h1 className="mb-1 font-display text-2xl font-bold tracking-tight text-foreground">
-          {empty.title}
+        <h1 className="font-display mb-1 text-2xl font-bold tracking-tight text-foreground">
+          {<UiText text={empty.title} />}
         </h1>
         <p className="text-sm text-muted-foreground">{empty.sub}</p>
       </div>
@@ -123,11 +131,13 @@ export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStatePr
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
-      <h1 className="mb-1 font-display text-3xl font-bold tracking-tight text-foreground">
-        {greeting.title}
+      <h1 className="font-display mb-1 text-3xl font-bold tracking-tight text-foreground">
+        {<UiText text={greeting.title} />}
       </h1>
       <p className="mb-2 text-muted-foreground">{greeting.sub}</p>
-      <p className="mb-8 text-sm text-muted-foreground/70">{greeting.hint}</p>
+      <p className="mb-8 text-sm text-muted-foreground/70">
+        {<UiText text={greeting.hint} />}
+      </p>
 
       <div className="grid w-full max-w-xl gap-2 sm:grid-cols-2">
         {chips.map(({ icon: Icon, question }, idx) => (
@@ -135,7 +145,7 @@ export function EmptyState({ onChipClick, readyDocs, docsLoading }: EmptyStatePr
             key={`${question}-${idx}`}
             type="button"
             onClick={() => onChipClick(question)}
-            className="neo-btn flex items-center gap-3 rounded-xl bg-card px-4 py-3.5 text-left hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="neo-btn flex items-center gap-3 rounded-xl bg-card px-4 py-3.5 text-left hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
               <Icon className="h-4.5 w-4.5" />

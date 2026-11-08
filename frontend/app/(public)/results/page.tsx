@@ -1,7 +1,8 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import { useEffect, useState } from "react"
-import Link from "next/link"
+import { LocalizedLink as Link } from "@/components/i18n"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
@@ -23,42 +24,46 @@ import { useLanguage } from "@/components/language-provider"
 import { Instrument_Serif } from "next/font/google"
 import PageIntro from "@/components/page-intro"
 
-const editorialFont = Instrument_Serif({ subsets: ["latin"], weight: "400", display: "swap" })
+const editorialFont = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+})
 
-
-function pct(v: number) { return `${Math.round(v * 100)}%` }
+function pct(v: number) {
+  return `${Math.round(v * 100)}%`
+}
 
 function MetricCard({
-  title, value, description, icon, live = false,
+  title,
+  value,
+  description,
+  icon,
+  live = false,
 }: {
-  title: string; value: string; description: string
-  icon: React.ReactNode; live?: boolean
+  title: string
+  value: string
+  description: string
+  icon: React.ReactNode
+  live?: boolean
 }) {
   return (
     <div className="flex flex-col rounded-xl border border-border bg-card/60 p-6">
       <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-        {icon} {title}
+        {icon} {<UiText text={title} />}
         {live && (
           <span className="ml-auto inline-flex items-center gap-1 border border-success/20 bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold text-success">
-            LIVE
+            {" "}
+            <UiText text="LIVE" />{" "}
           </span>
         )}
       </p>
-      <div className="mb-1 font-heading text-2xl font-bold text-foreground">{value}</div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-    </div>
-  )
-}
-
-function ResultsMetricsFixture() {
-  return (
-    <div className="mb-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-      <MetricCard title="ROUGE-1 F1" value="0.152" description="Word overlap vs ground truth answers. Normal RAG range: 0.10–0.30." icon={<BookOpen className="h-4 w-4" />} live />
-      <MetricCard title="BLEU Score" value="0.092" description="N-gram precision vs reference answers." icon={<Globe2 className="h-4 w-4" />} live />
-      <MetricCard title="Readability" value="5.3 (target ≤ 6)" description="Flesch-Kincaid grade level. Lower = easier to read." icon={<BookOpen className="h-4 w-4" />} live />
-      <MetricCard title="Retrieval Confidence" value="68% (target ≥ 50%)" description="Mean reranked score across all queries." icon={<ShieldCheck className="h-4 w-4" />} live />
-      <MetricCard title="Faithfulness" value="91% (342 scored)" description="How grounded answers are in the source document (Cohere reranker)." icon={<ShieldCheck className="h-4 w-4" />} live />
-      <MetricCard title="Latency" value="p50 1.8s · p95 2.4s" description="End-to-end response latency (retrieval + reranking + generation)." icon={<Zap className="h-4 w-4" />} live />
+      <div className="mb-1 font-heading text-2xl font-bold text-foreground">
+        {value}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {<UiText text={description} />}
+      </p>
     </div>
   )
 }
@@ -67,7 +72,10 @@ function MetricsFallback() {
   return (
     <div className="mb-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex flex-col rounded-xl border border-border bg-card/60 p-6">
+        <div
+          key={i}
+          className="flex flex-col rounded-xl border border-border bg-card/60 p-6"
+        >
           <div className="mb-3 h-3 w-24 rounded-sm bg-muted" />
           <div className="mb-1 h-7 w-32 rounded-sm bg-muted" />
           <div className="h-3 w-full rounded-sm bg-muted/70" />
@@ -78,22 +86,34 @@ function MetricsFallback() {
 }
 
 function ComplianceRow({
-  title, description, status, variant = "success",
+  title,
+  description,
+  status,
+  variant = "success",
 }: {
-  title: string; description: string; status: string; variant?: "success" | "warning"
+  title: string
+  description: string
+  status: string
+  variant?: "success" | "warning"
 }) {
   return (
     <div className="flex flex-col justify-between gap-4 p-4 sm:flex-row sm:items-center">
       <div>
-        <div className="font-medium text-foreground">{title}</div>
-        <div className="text-sm text-muted-foreground">{description}</div>
+        <div className="font-medium text-foreground">
+          {<UiText text={title} />}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {<UiText text={description} />}
+        </div>
       </div>
-      <span className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 border px-2.5 py-1 text-xs font-medium",
-        variant === "success"
-          ? "border-primary/20 bg-primary/10 text-primary"
-          : "border-border bg-muted/30 text-muted-foreground"
-      )}>
+      <span
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1.5 border px-2.5 py-1 text-xs font-medium",
+          variant === "success"
+            ? "border-primary/20 bg-primary/10 text-primary"
+            : "border-border bg-muted/30 text-muted-foreground"
+        )}
+      >
         {variant === "success" && <CheckCircle2 className="h-3 w-3" />}
         {variant === "warning" && <AlertCircle className="h-3 w-3" />}
         {status}
@@ -103,166 +123,300 @@ function ComplianceRow({
 }
 
 export default function ResultsPage() {
+  const t = useTranslations()
+
   const { language } = useLanguage()
   const [report, setReport] = useState<EvalReport | null>(null)
+  const [requestFailed, setRequestFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     getEvalReport()
       .then(setReport)
-      .catch(() => {})
+      .catch(() => setRequestFailed(true))
       .finally(() => setLoading(false))
-  }, [])
+  }, [attempt])
 
-  const copy = language === "ms"
-    ? {
-        eyebrow: "Lingua Rakyat · RISE 2026",
-        heading: "Pameran Projek",
-        subtitle: "Memperluas Akses kepada Perkhidmatan Kerajaan Melalui AI Pelbagai Bahasa. Metrik langsung diambil daripada sistem penilaian secara masa nyata.",
-        loadingMetrics: "Memuatkan metrik langsung…",
-        liveQueries: (n: number) => `Langsung — ${n} pertanyaan direkodkan`,
-        // Quick links
-        quickLinksWorkspaceTitle: "Ruang Kerja",
-        quickLinksWorkspaceDesc: "Muat naik PDF dan tanya soalan dalam Bahasa Melayu, Inggeris, atau Cina.",
-        quickLinksWorkspaceBtn: "Buka Ruang Kerja",
-        quickLinksDocsTitle: "Dokumen",
-        quickLinksDocsDesc: "Muat naik, namakan semula, atau padam dokumen PDF kerajaan.",
-        quickLinksDocsBtn: "Urus Dokumen",
-        quickLinksEvalTitle: "Penilaian",
-        quickLinksEvalDesc: "Jalankan suite ujian ROUGE/BLEU dan lihat skor penanda aras langsung.",
-        quickLinksEvalBtn: "Papan Pemuka Penilaian",
-        // Metrics section
-        qualityMetricsEyebrow: "Metrik Kualiti",
-        qualityMetricsHeading: "Metrik Prestasi Langsung",
-        metricRougeTitle: "ROUGE-1 F1",
-        metricRougeDesc: "Pertindihan perkataan berbanding jawapan rujukan. Julat RAG biasa: 0.10–0.30.",
-        metricBleuTitle: "Skor BLEU",
-        metricBleuDesc: "Ketepatan n-gram berbanding jawapan rujukan.",
-        metricReadabilityTitle: "Kebolehbacaan",
-        metricReadabilityDesc: "Tahap gred Flesch-Kincaid. Lebih rendah = lebih mudah dibaca.",
-        metricConfidenceTitle: "Keyakinan Carian",
-        metricConfidenceDesc: "Skor purata selepas pemeringkatan semula merentas semua pertanyaan.",
-        metricFaithfulTitle: "Kesetiaan Sumber",
-        metricFaithfulDesc: "Sejauh mana jawapan berpunca daripada dokumen sumber (pemeringkat semula Cohere).",
-        metricLatencyTitle: "Kependaman",
-        metricLatencyDesc: "Kependaman respons hujung ke hujung (carian + pemeringkatan + penjanaan).",
-        runBenchmark: "Jalankan penanda aras →",
-        askQuestions: "Tanya soalan untuk markah →",
-        // Feature checklist
-        featuresEyebrow: "Senarai Semak Ciri",
-        featuresHeading: "Keupayaan Sistem",
-        fulfilled: "TERPENUHI",
-        features: [
-          { title: "RAG Pelbagai Bahasa", desc: "Cohere embed-multilingual-v3 — carian pada tahap pembenaman, bukan melalui terjemahan. EN / MS / ZH." },
-          { title: "Pemeringkatan Semula Neural", desc: "Cohere rerank-multilingual-v3 pemeringkatan silang menilai semula k-chunk teratas sebelum penjanaan." },
-          { title: "Pengembangan Multi-Pertanyaan", desc: "Soalan dikembangkan kepada ×4 varian bahasa sebelum carian untuk meningkatkan penarikan silang bahasa." },
-          { title: "Penjaga Bukti (anti-halusinasi)", desc: "Menolak untuk menjana apabila bukti yang diambil semula di bawah ambang keyakinan." },
-          { title: "Pemarkahan Kesetiaan", desc: "Skor pengikatan setiap jawapan (pemeringkat semula Cohere: jawapan vs chunk sumber). Ditunjukkan dalam UI sembang." },
-          { title: "Pemotongan Peka Bahagian", desc: "Chunk 360 patah perkataan dengan pertindihan 45 patah; mengesan pengepala bahagian untuk memelihara struktur dokumen." },
-          { title: "Suara I/O", desc: "Groq Whisper STT untuk input suara. ElevenLabs TTS + fallback speechSynthesis pelayar untuk output audio." },
-          { title: "Konteks Berbilang Giliran", desc: "3 giliran S&J terakhir dihantar sebagai konteks supaya soalan susulan (cth. 'ceritakan lagi') berfungsi dengan betul." },
-          { title: "Cadangan Susulan", desc: "Selepas setiap jawapan, 3 soalan susulan kontekstual dicadangkan dan boleh diklik." },
-          { title: "Penonton PDF + Pautan Petikan", desc: "Klik mana-mana pil sumber → menyerlahkan petikan dalam panel PDF dalam aplikasi." },
-          { title: "Papan Pemuka Penilaian", desc: "ROUGE-1/2/L, BLEU, Flesch-Kincaid, kesetiaan — dialirkan langsung daripada suite ujian beranotasi." },
-          { title: "Pengehadan Kadar + BOOTH_MODE", desc: "Pengehadan kadar SlowAPI per-IP. BOOTH_MODE=true melonggarkan had untuk demo WiFi dikongsi." },
-          { title: "Kebolehaksesan (Atkinson Hyperlegible)", desc: "Fon badan direka untuk pengguna penglihatan rendah. Suara I/O untuk akses utama audio." },
-        ],
-        // SDG
-        sdgEyebrow: "Impak Sosial",
-        sdgHeading: "Penjajaran SDG",
-        sdgs: [
-          { sdg: "16", label: "Keamanan, Keadilan & Institusi Kukuh", desc: "Maklumat kerajaan yang telus dan boleh disahkan untuk setiap warganegara tanpa mengira bahasa, latar belakang, atau tahap literasi." },
-          { sdg: "10", label: "Pengurangan Ketidaksamaan", desc: "Akses pelbagai bahasa menghapuskan halangan untuk penutur Melayu, Cina, dan Inggeris dalam satu platform bersatu." },
-          { sdg: "4",  label: "Pendidikan Berkualiti", desc: "Memperkasakan warganegara untuk memahami hak undang-undang, hak, dan kewajipan sivik melalui jawapan yang berasas dalam bahasa mudah." },
-        ],
-        // Footer stats
-        statMalaysians: "warganegara Malaysia boleh dicapai",
-        statLanguages: "bahasa disokong",
-        statCost: "Kos kepada warganegara",
-        statReading: "Sasaran tahap bacaan",
-      }
-    : {
-        eyebrow: "Lingua Rakyat · RISE 2026",
-        heading: "Project Showcase",
-        subtitle: "Democratizing Access to Government Services Through Multilingual AI. Live metrics pull from the evaluation backend in real time.",
-        loadingMetrics: "Loading live metrics…",
-        liveQueries: (n: number) => `Live — ${n} queries recorded`,
-        quickLinksWorkspaceTitle: "Workspace",
-        quickLinksWorkspaceDesc: "Upload a PDF and ask questions in Malay, English, or Chinese.",
-        quickLinksWorkspaceBtn: "Open Workspace",
-        quickLinksDocsTitle: "Documents",
-        quickLinksDocsDesc: "Upload, rename, or delete government PDF documents.",
-        quickLinksDocsBtn: "Manage Documents",
-        quickLinksEvalTitle: "Evaluation",
-        quickLinksEvalDesc: "Run ROUGE/BLEU test suite and view live benchmark scores.",
-        quickLinksEvalBtn: "Evaluation Dashboard",
-        qualityMetricsEyebrow: "Quality Metrics",
-        qualityMetricsHeading: "Live Performance Metrics",
-        metricRougeTitle: "ROUGE-1 F1",
-        metricRougeDesc: "Word overlap vs ground truth answers. Normal RAG range: 0.10–0.30.",
-        metricBleuTitle: "BLEU Score",
-        metricBleuDesc: "N-gram precision vs reference answers.",
-        metricReadabilityTitle: "Readability",
-        metricReadabilityDesc: "Flesch-Kincaid grade level. Lower = easier to read.",
-        metricConfidenceTitle: "Retrieval Confidence",
-        metricConfidenceDesc: "Mean reranked score across all queries.",
-        metricFaithfulTitle: "Faithfulness",
-        metricFaithfulDesc: "How grounded answers are in the source document (Cohere reranker).",
-        metricLatencyTitle: "Latency",
-        metricLatencyDesc: "End-to-end response latency (retrieval + reranking + generation).",
-        runBenchmark: "Run benchmark →",
-        askQuestions: "Ask questions to score →",
-        featuresEyebrow: "Feature Checklist",
-        featuresHeading: "System Capabilities",
-        fulfilled: "FULFILLED",
-        features: [
-          { title: "Multilingual RAG", desc: "Cohere embed-multilingual-v3 — retrieval at embedding level, not via translation. EN / MS / ZH." },
-          { title: "Neural Reranking", desc: "Cohere rerank-multilingual-v3 cross-encoder re-scores top-k chunks before generation." },
-          { title: "Multi-Query Augmentation", desc: "Question expanded to ×4 language variants before retrieval to improve cross-lingual recall." },
-          { title: "Evidence Guard (anti-hallucination)", desc: "Refuses to generate when retrieved evidence is below the confidence threshold." },
-          { title: "Faithfulness Scoring", desc: "Per-answer grounding score (Cohere reranker: answer vs source chunks). Shown in chat UI." },
-          { title: "Section-Aware Chunking", desc: "360-word chunks with 45-word overlap; detects section headers to preserve document structure." },
-          { title: "Voice I/O", desc: "Groq Whisper STT for voice input. ElevenLabs TTS + browser speechSynthesis fallback for audio output." },
-          { title: "Multi-Turn Context", desc: "Last 3 Q&A turns passed as context so follow-up questions (e.g. 'tell me more') work correctly." },
-          { title: "Suggested Follow-ups", desc: "After each answer, 3 contextual follow-up questions are suggested and clickable." },
-          { title: "PDF Viewer + Citation Linking", desc: "Click any source pill → highlights the passage in the in-app PDF panel." },
-          { title: "Evaluation Dashboard", desc: "ROUGE-1/2/L, BLEU, Flesch-Kincaid, faithfulness — streamed live from annotated test suite." },
-          { title: "Rate Limiting + BOOTH_MODE", desc: "SlowAPI per-IP rate limiting. BOOTH_MODE=true lifts limits for shared WiFi demo." },
-          { title: "Accessibility (Atkinson Hyperlegible)", desc: "Body font designed for low-vision users. Voice I/O for audio-first access." },
-        ],
-        sdgEyebrow: "Social Impact",
-        sdgHeading: "SDG Alignment",
-        sdgs: [
-          { sdg: "16", label: "Peace, Justice & Strong Institutions", desc: "Transparent, verifiable government information for every citizen regardless of language, background, or literacy level." },
-          { sdg: "10", label: "Reduced Inequalities", desc: "Multilingual access removes barriers for Malay, Chinese, and English speakers in a single unified platform." },
-          { sdg: "4",  label: "Quality Education", desc: "Empowers citizens to understand legal rights, entitlements, and civic obligations through grounded, plain-language answers." },
-        ],
-        statMalaysians: "Malaysians addressable",
-        statLanguages: "Languages supported",
-        statCost: "Cost to citizens",
-        statReading: "Reading level target",
-      }
+  const copy =
+    language === "ms"
+      ? {
+          eyebrow: "Lingua Rakyat · RISE 2026",
+          heading: "Pameran Projek",
+          subtitle:
+            "Memperluas Akses kepada Perkhidmatan Kerajaan Melalui AI Pelbagai Bahasa. Metrik langsung diambil daripada sistem penilaian secara masa nyata.",
+          loadingMetrics: "Memuatkan metrik langsung…",
+          liveQueries: (n: number) => `Langsung — ${n} pertanyaan direkodkan`,
+          // Quick links
+          quickLinksWorkspaceTitle: "Ruang Kerja",
+          quickLinksWorkspaceDesc:
+            "Muat naik PDF dan tanya soalan dalam Bahasa Melayu, Inggeris, atau Cina.",
+          quickLinksWorkspaceBtn: "Buka Ruang Kerja",
+          quickLinksDocsTitle: "Dokumen",
+          quickLinksDocsDesc:
+            "Muat naik, namakan semula, atau padam dokumen PDF kerajaan.",
+          quickLinksDocsBtn: "Urus Dokumen",
+          quickLinksEvalTitle: "Penilaian",
+          quickLinksEvalDesc:
+            "Jalankan suite ujian ROUGE/BLEU dan lihat skor penanda aras langsung.",
+          quickLinksEvalBtn: "Papan Pemuka Penilaian",
+          // Metrics section
+          qualityMetricsEyebrow: "Metrik Kualiti",
+          qualityMetricsHeading: "Metrik Prestasi Langsung",
+          metricRougeTitle: "ROUGE-1 F1",
+          metricRougeDesc:
+            "Pertindihan perkataan berbanding jawapan rujukan. Julat RAG biasa: 0.10–0.30.",
+          metricBleuTitle: "Skor BLEU",
+          metricBleuDesc: "Ketepatan n-gram berbanding jawapan rujukan.",
+          metricReadabilityTitle: "Kebolehbacaan",
+          metricReadabilityDesc:
+            "Tahap gred Flesch-Kincaid. Lebih rendah = lebih mudah dibaca.",
+          metricConfidenceTitle: "Keyakinan Carian",
+          metricConfidenceDesc:
+            "Skor purata selepas pemeringkatan semula merentas semua pertanyaan.",
+          metricFaithfulTitle: "Kesetiaan Sumber",
+          metricFaithfulDesc:
+            "Sejauh mana jawapan berpunca daripada dokumen sumber (pemeringkat semula Cohere).",
+          metricLatencyTitle: "Kependaman",
+          metricLatencyDesc:
+            "Kependaman respons hujung ke hujung (carian + pemeringkatan + penjanaan).",
+          runBenchmark: "Jalankan penanda aras →",
+          askQuestions: "Tanya soalan untuk markah →",
+          // Feature checklist
+          featuresEyebrow: "Senarai Semak Ciri",
+          featuresHeading: "Keupayaan Sistem",
+          fulfilled: "TERPENUHI",
+          features: [
+            {
+              title: "RAG Pelbagai Bahasa",
+              desc: "Cohere embed-multilingual-v3 — carian pada tahap pembenaman, bukan melalui terjemahan. EN / MS / ZH.",
+            },
+            {
+              title: "Pemeringkatan Semula Neural",
+              desc: "Cohere rerank-multilingual-v3 pemeringkatan silang menilai semula k-chunk teratas sebelum penjanaan.",
+            },
+            {
+              title: "Pengembangan Multi-Pertanyaan",
+              desc: "Soalan dikembangkan kepada ×4 varian bahasa sebelum carian untuk meningkatkan penarikan silang bahasa.",
+            },
+            {
+              title: "Penjaga Bukti (anti-halusinasi)",
+              desc: "Menolak untuk menjana apabila bukti yang diambil semula di bawah ambang keyakinan.",
+            },
+            {
+              title: "Pemarkahan Kesetiaan",
+              desc: "Skor pengikatan setiap jawapan (pemeringkat semula Cohere: jawapan vs chunk sumber). Ditunjukkan dalam UI sembang.",
+            },
+            {
+              title: "Pemotongan Peka Bahagian",
+              desc: "Chunk 360 patah perkataan dengan pertindihan 45 patah; mengesan pengepala bahagian untuk memelihara struktur dokumen.",
+            },
+            {
+              title: "Suara I/O",
+              desc: "Groq Whisper STT untuk input suara. ElevenLabs TTS + fallback speechSynthesis pelayar untuk output audio.",
+            },
+            {
+              title: "Konteks Berbilang Giliran",
+              desc: "3 giliran S&J terakhir dihantar sebagai konteks supaya soalan susulan (cth. 'ceritakan lagi') berfungsi dengan betul.",
+            },
+            {
+              title: "Cadangan Susulan",
+              desc: "Selepas setiap jawapan, 3 soalan susulan kontekstual dicadangkan dan boleh diklik.",
+            },
+            {
+              title: "Penonton PDF + Pautan Petikan",
+              desc: "Klik mana-mana pil sumber → menyerlahkan petikan dalam panel PDF dalam aplikasi.",
+            },
+            {
+              title: "Papan Pemuka Penilaian",
+              desc: "ROUGE-1/2/L, BLEU, Flesch-Kincaid, kesetiaan — dialirkan langsung daripada suite ujian beranotasi.",
+            },
+            {
+              title: "Pengehadan Kadar + BOOTH_MODE",
+              desc: "Pengehadan kadar SlowAPI per-IP. BOOTH_MODE=true melonggarkan had untuk demo WiFi dikongsi.",
+            },
+            {
+              title: "Kebolehaksesan (Atkinson Hyperlegible)",
+              desc: "Fon badan direka untuk pengguna penglihatan rendah. Suara I/O untuk akses utama audio.",
+            },
+          ],
+          // SDG
+          sdgEyebrow: "Impak Sosial",
+          sdgHeading: "Penjajaran SDG",
+          sdgs: [
+            {
+              sdg: "16",
+              label: "Keamanan, Keadilan & Institusi Kukuh",
+              desc: "Maklumat kerajaan yang telus dan boleh disahkan untuk setiap warganegara tanpa mengira bahasa, latar belakang, atau tahap literasi.",
+            },
+            {
+              sdg: "10",
+              label: "Pengurangan Ketidaksamaan",
+              desc: "Akses pelbagai bahasa menghapuskan halangan untuk penutur Melayu, Cina, dan Inggeris dalam satu platform bersatu.",
+            },
+            {
+              sdg: "4",
+              label: "Pendidikan Berkualiti",
+              desc: "Memperkasakan warganegara untuk memahami hak undang-undang, hak, dan kewajipan sivik melalui jawapan yang berasas dalam bahasa mudah.",
+            },
+          ],
+          // Footer stats
+          statMalaysians: "warganegara Malaysia boleh dicapai",
+          statLanguages: "bahasa disokong",
+          statCost: "Kos kepada warganegara",
+          statReading: "Sasaran tahap bacaan",
+        }
+      : {
+          eyebrow: "Lingua Rakyat · RISE 2026",
+          heading: "Project Showcase",
+          subtitle:
+            "Democratizing Access to Government Services Through Multilingual AI. Live metrics pull from the evaluation backend in real time.",
+          loadingMetrics: "Loading live metrics…",
+          liveQueries: (n: number) => `Live — ${n} queries recorded`,
+          quickLinksWorkspaceTitle: "Workspace",
+          quickLinksWorkspaceDesc:
+            "Upload a PDF and ask questions in Malay, English, or Chinese.",
+          quickLinksWorkspaceBtn: "Open Workspace",
+          quickLinksDocsTitle: "Documents",
+          quickLinksDocsDesc:
+            "Upload, rename, or delete government PDF documents.",
+          quickLinksDocsBtn: "Manage Documents",
+          quickLinksEvalTitle: "Evaluation",
+          quickLinksEvalDesc:
+            "Run ROUGE/BLEU test suite and view live benchmark scores.",
+          quickLinksEvalBtn: "Evaluation Dashboard",
+          qualityMetricsEyebrow: "Quality Metrics",
+          qualityMetricsHeading: "Live Performance Metrics",
+          metricRougeTitle: "ROUGE-1 F1",
+          metricRougeDesc:
+            "Word overlap vs ground truth answers. Normal RAG range: 0.10–0.30.",
+          metricBleuTitle: "BLEU Score",
+          metricBleuDesc: "N-gram precision vs reference answers.",
+          metricReadabilityTitle: "Readability",
+          metricReadabilityDesc:
+            "Flesch-Kincaid grade level. Lower = easier to read.",
+          metricConfidenceTitle: "Retrieval Confidence",
+          metricConfidenceDesc: "Mean reranked score across all queries.",
+          metricFaithfulTitle: "Faithfulness",
+          metricFaithfulDesc:
+            "How grounded answers are in the source document (Cohere reranker).",
+          metricLatencyTitle: "Latency",
+          metricLatencyDesc:
+            "End-to-end response latency (retrieval + reranking + generation).",
+          runBenchmark: "Run benchmark →",
+          askQuestions: "Ask questions to score →",
+          featuresEyebrow: "Feature Checklist",
+          featuresHeading: "System Capabilities",
+          fulfilled: "FULFILLED",
+          features: [
+            {
+              title: "Multilingual RAG",
+              desc: "Cohere embed-multilingual-v3 — retrieval at embedding level, not via translation. EN / MS / ZH.",
+            },
+            {
+              title: "Neural Reranking",
+              desc: "Cohere rerank-multilingual-v3 cross-encoder re-scores top-k chunks before generation.",
+            },
+            {
+              title: "Multi-Query Augmentation",
+              desc: "Question expanded to ×4 language variants before retrieval to improve cross-lingual recall.",
+            },
+            {
+              title: "Evidence Guard (anti-hallucination)",
+              desc: "Refuses to generate when retrieved evidence is below the confidence threshold.",
+            },
+            {
+              title: "Faithfulness Scoring",
+              desc: "Per-answer grounding score (Cohere reranker: answer vs source chunks). Shown in chat UI.",
+            },
+            {
+              title: "Section-Aware Chunking",
+              desc: "360-word chunks with 45-word overlap; detects section headers to preserve document structure.",
+            },
+            {
+              title: "Voice I/O",
+              desc: "Groq Whisper STT for voice input. ElevenLabs TTS + browser speechSynthesis fallback for audio output.",
+            },
+            {
+              title: "Multi-Turn Context",
+              desc: "Last 3 Q&A turns passed as context so follow-up questions (e.g. 'tell me more') work correctly.",
+            },
+            {
+              title: "Suggested Follow-ups",
+              desc: "After each answer, 3 contextual follow-up questions are suggested and clickable.",
+            },
+            {
+              title: "PDF Viewer + Citation Linking",
+              desc: "Click any source pill → highlights the passage in the in-app PDF panel.",
+            },
+            {
+              title: "Evaluation Dashboard",
+              desc: "ROUGE-1/2/L, BLEU, Flesch-Kincaid, faithfulness — streamed live from annotated test suite.",
+            },
+            {
+              title: "Rate Limiting + BOOTH_MODE",
+              desc: "SlowAPI per-IP rate limiting. BOOTH_MODE=true lifts limits for shared WiFi demo.",
+            },
+            {
+              title: "Accessibility (Atkinson Hyperlegible)",
+              desc: "Body font designed for low-vision users. Voice I/O for audio-first access.",
+            },
+          ],
+          sdgEyebrow: "Social Impact",
+          sdgHeading: "SDG Alignment",
+          sdgs: [
+            {
+              sdg: "16",
+              label: "Peace, Justice & Strong Institutions",
+              desc: "Transparent, verifiable government information for every citizen regardless of language, background, or literacy level.",
+            },
+            {
+              sdg: "10",
+              label: "Reduced Inequalities",
+              desc: "Multilingual access removes barriers for Malay, Chinese, and English speakers in a single unified platform.",
+            },
+            {
+              sdg: "4",
+              label: "Quality Education",
+              desc: "Empowers citizens to understand legal rights, entitlements, and civic obligations through grounded, plain-language answers.",
+            },
+          ],
+          statMalaysians: "Malaysians addressable",
+          statLanguages: "Languages supported",
+          statCost: "Cost to citizens",
+          statReading: "Reading level target",
+        }
 
   const hasMetrics = report?.status === "ok" && (report.total_queries ?? 0) > 0
 
-  const rougeVal = hasMetrics && report!.generation_quality
-    ? report!.generation_quality.avg_rouge1_f1.toFixed(3)
-    : copy.runBenchmark
-  const bleuVal = hasMetrics && report!.generation_quality
-    ? report!.generation_quality.avg_bleu.toFixed(3)
-    : copy.runBenchmark
+  const rougeVal =
+    hasMetrics && report!.generation_quality
+      ? report!.generation_quality.avg_rouge1_f1.toFixed(3)
+      : copy.runBenchmark
+  const bleuVal =
+    hasMetrics && report!.generation_quality
+      ? report!.generation_quality.avg_bleu.toFixed(3)
+      : copy.runBenchmark
   const readabilityVal = hasMetrics
-    ? `${report!.readability.avg_fk_grade.toFixed(1)} (target ≤ 6)`
-    : "Target ≤ 6"
+    ? t("{value} (target ≤ 6)", {
+        value: report!.readability.avg_fk_grade.toFixed(1),
+      })
+    : t("Target ≤ 6")
   const confidenceVal = hasMetrics
-    ? `${pct(report!.retrieval.avg_confidence)} (target ≥ 50%)`
-    : "Target ≥ 50%"
-  const faithfulnessVal = hasMetrics && (report!.faithfulness?.scored_queries ?? 0) > 0
-    ? `${pct(report!.faithfulness!.avg_faithfulness_score)} (${report!.faithfulness!.scored_queries} scored)`
-    : copy.askQuestions
+    ? t("{value} (target ≥ 50%)", {
+        value: pct(report!.retrieval.avg_confidence),
+      })
+    : t("Target ≥ 50%")
+  const faithfulnessVal =
+    hasMetrics && (report!.faithfulness?.scored_queries ?? 0) > 0
+      ? t("{value} ({count} scored)", {
+          value: pct(report!.faithfulness!.avg_faithfulness_score),
+          count: report!.faithfulness!.scored_queries,
+        })
+      : copy.askQuestions
   const latencyVal = hasMetrics
     ? `p50 ${report!.latency.p50_ms}ms · p95 ${report!.latency.p95_ms}ms`
-    : "Target < 3s"
+    : t("Target < 3s")
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
@@ -271,7 +425,10 @@ export default function ResultsPage() {
         eyebrow={copy.eyebrow}
         title={copy.heading}
         description={copy.subtitle}
-        className={"mb-10 rounded-none border-x-0 border-t-0 bg-transparent px-0 sm:px-0 border-b border-border pb-8 [&_h1]:font-[inherit] [&_p]:font-sans [&_h1]:font-normal [&_h1]:tracking-tight [&_h1]:text-5xl sm:[&_h1]:text-6xl " + editorialFont.className}
+        className={
+          "mb-10 rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 pb-8 sm:px-0 [&_h1]:font-[inherit] [&_h1]:text-5xl [&_h1]:font-normal [&_h1]:tracking-tight sm:[&_h1]:text-6xl [&_p]:font-sans " +
+          editorialFont.className
+        }
       >
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -286,37 +443,112 @@ export default function ResultsPage() {
         ) : null}
       </PageIntro>
 
-      <nav aria-label="On this page" className="mb-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground"><a href="#performance" className="hover:text-primary">{copy.qualityMetricsHeading}</a><a href="#capabilities" className="hover:text-primary">{copy.featuresHeading}</a><a href="#impact" className="hover:text-primary">{copy.sdgHeading}</a></nav>
+      <nav
+        aria-label={t("On this page")}
+        className="mb-10 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground"
+      >
+        <a href="#performance" className="hover:text-primary">
+          {copy.qualityMetricsHeading}
+        </a>
+        <a href="#capabilities" className="hover:text-primary">
+          {copy.featuresHeading}
+        </a>
+        <a href="#impact" className="hover:text-primary">
+          {copy.sdgHeading}
+        </a>
+      </nav>
+      {requestFailed && (
+        <div
+          role="alert"
+          className="mb-6 rounded-lg border border-border bg-muted/30 p-4"
+        >
+          <p className="text-sm text-muted-foreground">
+            {language === "ms"
+              ? t(
+                  "Metrik langsung tidak tersedia. Nilai sasaran bukan keputusan yang diukur."
+                )
+              : t(
+                  "Live metrics are unavailable. Target values are not measured results."
+                )}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              setRequestFailed(false)
+              setLoading(true)
+              setAttempt((value) => value + 1)
+            }}
+          >
+            {language === "ms" ? t("Cuba lagi") : t("Try again")}
+          </Button>
+        </div>
+      )}
       {/* Quick Links */}
       <div className="mb-12 grid gap-5 md:grid-cols-[1.3fr_1fr_1fr]">
         <div className="flex flex-col rounded-xl border border-primary/20 bg-primary/5 p-6">
           <div className="mb-2 flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-primary" />
-            <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksWorkspaceTitle}</h3>
+            <h3 className="font-heading text-base font-semibold text-foreground">
+              {copy.quickLinksWorkspaceTitle}
+            </h3>
           </div>
-          <p className="mb-4 text-sm text-muted-foreground">{copy.quickLinksWorkspaceDesc}</p>
+          <p className="mb-4 text-sm text-muted-foreground">
+            {copy.quickLinksWorkspaceDesc}
+          </p>
           <Button asChild className="mt-auto w-full">
-            <Link href="/workspace">{copy.quickLinksWorkspaceBtn} <ArrowRight className="ml-1 h-4 w-4" /></Link>
+            <Link href="/workspace">
+              {copy.quickLinksWorkspaceBtn}{" "}
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
           </Button>
         </div>
         <div className="flex flex-col rounded-xl border border-border bg-card/60 p-6">
           <div className="mb-2 flex items-center gap-2">
             <FolderOpen className="h-5 w-5 text-primary" />
-            <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksDocsTitle}</h3>
+            <h3 className="font-heading text-base font-semibold text-foreground">
+              {language === "ms"
+                ? t("Cara platform berfungsi")
+                : t("How the platform works")}
+            </h3>
           </div>
-          <p className="mb-4 text-sm text-muted-foreground">{copy.quickLinksDocsDesc}</p>
+          <p className="mb-4 text-sm text-muted-foreground">
+            {language === "ms"
+              ? t("Fahami dokumen, carian dan sumber jawapan.")
+              : t(
+                  "Understand document processing, retrieval and answer sources."
+                )}
+          </p>
           <Button asChild variant="outline" className="mt-auto w-full">
-            <Link href="/manage">{copy.quickLinksDocsBtn} <ArrowRight className="ml-1 h-4 w-4" /></Link>
+            <Link href="/about">
+              {language === "ms"
+                ? t("Kenali platform")
+                : t("Explore the platform")}{" "}
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
           </Button>
         </div>
         <div className="flex flex-col rounded-xl border border-border bg-card/60 p-6">
           <div className="mb-2 flex items-center gap-2">
             <FlaskConical className="h-5 w-5 text-primary" />
-            <h3 className="font-heading text-base font-semibold text-foreground">{copy.quickLinksEvalTitle}</h3>
+            <h3 className="font-heading text-base font-semibold text-foreground">
+              {language === "ms"
+                ? t("Prestasi dan batasan")
+                : t("Performance and limitations")}
+            </h3>
           </div>
-          <p className="mb-4 text-sm text-muted-foreground">{copy.quickLinksEvalDesc}</p>
+          <p className="mb-4 text-sm text-muted-foreground">
+            {language === "ms"
+              ? t("Semak ukuran yang tersedia dan batasannya.")
+              : t("Review the available measurements and their limitations.")}
+          </p>
           <Button asChild variant="outline" className="mt-auto w-full">
-            <Link href="/eval">{copy.quickLinksEvalBtn} <ArrowRight className="ml-1 h-4 w-4" /></Link>
+            <Link href="#performance">
+              {language === "ms" ? t("Lihat prestasi") : t("View performance")}{" "}
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
           </Button>
         </div>
       </div>
@@ -327,18 +559,61 @@ export default function ResultsPage() {
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.qualityMetricsEyebrow}
       </p>
-      <h2 id="performance" tabIndex={-1} style={{ scrollMarginTop: "6rem" }} className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
+      <h2
+        id="performance"
+        tabIndex={-1}
+        style={{ scrollMarginTop: "6rem" }}
+        className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground"
+      >
         <Target className="mr-2 h-5 w-5 text-primary" />
         {copy.qualityMetricsHeading}
       </h2>
-      {loading ? <MetricsFallback /> : (
+      {loading ? (
+        <MetricsFallback />
+      ) : (
         <div className="mb-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          <MetricCard title={copy.metricRougeTitle} value={rougeVal} description={copy.metricRougeDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
-          <MetricCard title={copy.metricBleuTitle} value={bleuVal} description={copy.metricBleuDesc} icon={<Globe2 className="h-4 w-4" />} live={hasMetrics && !!report!.generation_quality} />
-          <MetricCard title={copy.metricReadabilityTitle} value={readabilityVal} description={copy.metricReadabilityDesc} icon={<BookOpen className="h-4 w-4" />} live={hasMetrics} />
-          <MetricCard title={copy.metricConfidenceTitle} value={confidenceVal} description={copy.metricConfidenceDesc} icon={<ShieldCheck className="h-4 w-4" />} live={hasMetrics} />
-          <MetricCard title={copy.metricFaithfulTitle} value={faithfulnessVal} description={copy.metricFaithfulDesc} icon={<ShieldCheck className="h-4 w-4" />} live={hasMetrics && (report!.faithfulness?.scored_queries ?? 0) > 0} />
-          <MetricCard title={copy.metricLatencyTitle} value={latencyVal} description={copy.metricLatencyDesc} icon={<Zap className="h-4 w-4" />} live={hasMetrics} />
+          <MetricCard
+            title={copy.metricRougeTitle}
+            value={rougeVal}
+            description={copy.metricRougeDesc}
+            icon={<BookOpen className="h-4 w-4" />}
+            live={hasMetrics && !!report!.generation_quality}
+          />
+          <MetricCard
+            title={copy.metricBleuTitle}
+            value={bleuVal}
+            description={copy.metricBleuDesc}
+            icon={<Globe2 className="h-4 w-4" />}
+            live={hasMetrics && !!report!.generation_quality}
+          />
+          <MetricCard
+            title={copy.metricReadabilityTitle}
+            value={readabilityVal}
+            description={copy.metricReadabilityDesc}
+            icon={<BookOpen className="h-4 w-4" />}
+            live={hasMetrics}
+          />
+          <MetricCard
+            title={copy.metricConfidenceTitle}
+            value={confidenceVal}
+            description={copy.metricConfidenceDesc}
+            icon={<ShieldCheck className="h-4 w-4" />}
+            live={hasMetrics}
+          />
+          <MetricCard
+            title={copy.metricFaithfulTitle}
+            value={faithfulnessVal}
+            description={copy.metricFaithfulDesc}
+            icon={<ShieldCheck className="h-4 w-4" />}
+            live={hasMetrics && (report!.faithfulness?.scored_queries ?? 0) > 0}
+          />
+          <MetricCard
+            title={copy.metricLatencyTitle}
+            value={latencyVal}
+            description={copy.metricLatencyDesc}
+            icon={<Zap className="h-4 w-4" />}
+            live={hasMetrics}
+          />
         </div>
       )}
 
@@ -348,14 +623,24 @@ export default function ResultsPage() {
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.featuresEyebrow}
       </p>
-      <h2 id="capabilities" tabIndex={-1} style={{ scrollMarginTop: "6rem" }} className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
+      <h2
+        id="capabilities"
+        tabIndex={-1}
+        style={{ scrollMarginTop: "6rem" }}
+        className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground"
+      >
         <CheckCircle2 className="mr-2 h-5 w-5 text-primary" />
         {copy.featuresHeading}
       </h2>
       <div className="mb-12 border-y border-border bg-transparent">
         <div className="divide-y divide-border">
           {copy.features.map((f) => (
-            <ComplianceRow key={f.title} title={f.title} description={f.desc} status={copy.fulfilled} />
+            <ComplianceRow
+              key={f.title}
+              title={f.title}
+              description={f.desc}
+              status={copy.fulfilled}
+            />
           ))}
         </div>
       </div>
@@ -366,7 +651,12 @@ export default function ResultsPage() {
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.sdgEyebrow}
       </p>
-      <h2 id="impact" tabIndex={-1} style={{ scrollMarginTop: "6rem" }} className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground">
+      <h2
+        id="impact"
+        tabIndex={-1}
+        style={{ scrollMarginTop: "6rem" }}
+        className="mb-5 flex items-center font-heading text-2xl font-semibold text-foreground"
+      >
         <Globe2 className="mr-2 h-5 w-5 text-primary" />
         {copy.sdgHeading}
       </h2>
@@ -377,9 +667,13 @@ export default function ResultsPage() {
               <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-primary/30 bg-primary text-primary-foreground">
                 <span className="font-heading text-xl font-bold">{sdg}</span>
               </div>
-              <p className="text-xs font-semibold text-primary">{label}</p>
+              <p className="text-xs font-semibold text-primary">
+                {<UiText text={label} />}
+              </p>
             </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">{desc}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {desc}
+            </p>
           </div>
         ))}
       </div>
@@ -392,8 +686,12 @@ export default function ResultsPage() {
           { value: "≤ 6th", label: copy.statReading },
         ].map(({ value, label }) => (
           <div key={label} className="text-center">
-            <div className="font-heading text-3xl font-bold text-primary">{value}</div>
-            <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+            <div className="font-heading text-3xl font-bold text-primary">
+              {value}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {<UiText text={label} />}
+            </div>
           </div>
         ))}
       </div>

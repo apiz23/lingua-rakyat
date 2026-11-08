@@ -1,5 +1,6 @@
-"use client";
+"use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import {
   DialogClose,
   DialogDescription,
@@ -7,16 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+} from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
+import { X } from "lucide-react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import {
   AlertDialog as AlertDialogRadix,
   Dialog as DialogRadix,
-} from "radix-ui";
-import * as React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+} from "radix-ui"
+import * as React from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 /* ------------------------------------------------------------------ */
 /*  Minimal AlertDialog wrappers                                       */
@@ -25,19 +26,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 function AlertDialogTrigger({
   ...props
 }: React.ComponentProps<typeof AlertDialogRadix.Trigger>) {
-  return <AlertDialogRadix.Trigger {...props} />;
+  return <AlertDialogRadix.Trigger {...props} />
 }
 
 function AlertDialogAction({
   ...props
 }: React.ComponentProps<typeof AlertDialogRadix.Action>) {
-  return <AlertDialogRadix.Action {...props} />;
+  return <AlertDialogRadix.Action {...props} />
 }
 
 function AlertDialogCancel({
   ...props
 }: React.ComponentProps<typeof AlertDialogRadix.Cancel>) {
-  return <AlertDialogRadix.Cancel {...props} />;
+  return <AlertDialogRadix.Cancel {...props} />
 }
 
 function AlertDialogTitle({
@@ -49,7 +50,7 @@ function AlertDialogTitle({
       className={cn("font-heading leading-none font-medium", className)}
       {...props}
     />
-  );
+  )
 }
 
 function AlertDialogDescription({
@@ -61,16 +62,14 @@ function AlertDialogDescription({
       className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
-  );
+  )
 }
 
 function AlertDialogHeader({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  return (
-    <div className={cn("flex flex-col gap-2", className)} {...props} />
-  );
+  return <div className={cn("flex flex-col gap-2", className)} {...props} />
 }
 
 function AlertDialogFooter({
@@ -85,7 +84,7 @@ function AlertDialogFooter({
       )}
       {...props}
     />
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -96,11 +95,11 @@ const SPRING_PANEL = {
   type: "spring" as const,
   duration: 0.25,
   bounce: 0.05,
-};
+}
 
-const BACKDROP_DURATION = 0.2;
+const BACKDROP_DURATION = 0.2
 
-const STAGGER_DELAY = 0.06;
+const STAGGER_DELAY = 0.06
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -108,42 +107,42 @@ const STAGGER_DELAY = 0.06;
 
 export interface DialogProps {
   /** Dialog content */
-  children?: React.ReactNode;
+  children?: React.ReactNode
   /** Additional CSS class names for the content */
-  className?: string;
+  className?: string
   /** Description displayed below the title */
-  description?: string;
+  description?: string
   /** Footer content */
-  footer?: React.ReactNode;
+  footer?: React.ReactNode
   /** Callback when the open state changes */
-  onOpenChange?: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void
   /** Whether the dialog is open */
-  open?: boolean;
+  open?: boolean
   /** Whether to show the close button */
-  showCloseButton?: boolean;
+  showCloseButton?: boolean
   /** Title displayed in the dialog header */
-  title?: string;
+  title?: string
   /** Trigger element that opens the dialog */
-  trigger?: React.ReactNode;
+  trigger?: React.ReactNode
 }
 
 export interface AlertDialogProps {
   /** Alert dialog content */
-  children?: React.ReactNode;
+  children?: React.ReactNode
   /** Additional CSS class names for the content */
-  className?: string;
+  className?: string
   /** Description displayed below the title */
-  description?: string;
+  description?: string
   /** Footer content (typically AlertDialogAction + AlertDialogCancel) */
-  footer?: React.ReactNode;
+  footer?: React.ReactNode
   /** Callback when the open state changes */
-  onOpenChange?: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void
   /** Whether the alert dialog is open */
-  open?: boolean;
+  open?: boolean
   /** Title displayed in the alert dialog header */
-  title?: string;
+  title?: string
   /** Trigger element that opens the alert dialog */
-  trigger?: React.ReactNode;
+  trigger?: React.ReactNode
 }
 
 /* ------------------------------------------------------------------ */
@@ -155,9 +154,9 @@ const StaggerChild = ({
   index,
   shouldReduceMotion,
 }: {
-  children: React.ReactNode;
-  index: number;
-  shouldReduceMotion: boolean | null;
+  children: React.ReactNode
+  index: number
+  shouldReduceMotion: boolean | null
 }) => (
   <motion.div
     animate={
@@ -192,7 +191,7 @@ const StaggerChild = ({
   >
     {children}
   </motion.div>
-);
+)
 
 /* ------------------------------------------------------------------ */
 /*  Animated close button with rotate on hover                        */
@@ -202,21 +201,26 @@ const AnimatedCloseButton = ({
   onClick,
   shouldReduceMotion,
 }: {
-  onClick: () => void;
-  shouldReduceMotion: boolean | null;
-}) => (
-  <motion.button
-    aria-label="Close dialog"
-    className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-    onClick={onClick}
-    transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
-    type="button"
-    whileHover={shouldReduceMotion ? {} : { rotate: 90 }}
-  >
-    <X aria-hidden="true" className="pointer-events-none size-4 shrink-0" />
-    <span className="sr-only">Close</span>
-  </motion.button>
-);
+  onClick: () => void
+  shouldReduceMotion: boolean | null
+}) => {
+  const t = useTranslations()
+  return (
+    <motion.button
+      aria-label={t("Close dialog")}
+      className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+      onClick={onClick}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+      type="button"
+      whileHover={shouldReduceMotion ? {} : { rotate: 90 }}
+    >
+      <X aria-hidden="true" className="pointer-events-none size-4 shrink-0" />
+      <span className="sr-only">
+        <UiText text="Close" />
+      </span>
+    </motion.button>
+  )
+}
 
 /* ------------------------------------------------------------------ */
 /*  Dialog                                                             */
@@ -233,37 +237,37 @@ export default function Dialog({
   trigger,
   footer,
 }: DialogProps) {
-  const shouldReduceMotion = useReducedMotion();
-  const [internalOpen, setInternalOpen] = useState(false);
-  const isControlled = open !== undefined;
-  const isOpen = isControlled ? open : internalOpen;
+  const shouldReduceMotion = useReducedMotion()
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = open !== undefined
+  const isOpen = isControlled ? open : internalOpen
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (!isControlled) {
-        setInternalOpen(next);
+        setInternalOpen(next)
       }
-      onOpenChange?.(next);
+      onOpenChange?.(next)
     },
     [isControlled, onOpenChange]
-  );
+  )
 
   // Track mount state for AnimatePresence exit animations
-  const [showContent, setShowContent] = useState(false);
-  const prevOpenRef = useRef(false);
+  const [showContent, setShowContent] = useState(false)
+  const prevOpenRef = useRef(false)
 
   useEffect(() => {
     if (isOpen && !prevOpenRef.current) {
-      setShowContent(true);
+      setShowContent(true)
     }
-    prevOpenRef.current = !!isOpen;
-  }, [isOpen]);
+    prevOpenRef.current = !!isOpen
+  }, [isOpen])
 
   const handleAnimationComplete = useCallback(() => {
     if (!isOpen) {
-      setShowContent(false);
+      setShowContent(false)
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   return (
     <DialogRadix.Root
@@ -335,9 +339,13 @@ export default function Dialog({
                     shouldReduceMotion={shouldReduceMotion}
                   >
                     <DialogHeader>
-                      {title && <DialogTitle>{title}</DialogTitle>}
+                      {title && (
+                        <DialogTitle>{<UiText text={title} />}</DialogTitle>
+                      )}
                       {description && (
-                        <DialogDescription>{description}</DialogDescription>
+                        <DialogDescription>
+                          {<UiText text={description} />}
+                        </DialogDescription>
                       )}
                     </DialogHeader>
                   </StaggerChild>
@@ -373,7 +381,7 @@ export default function Dialog({
         )}
       </AnimatePresence>
     </DialogRadix.Root>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -390,36 +398,36 @@ export function AlertDialog({
   trigger,
   footer,
 }: AlertDialogProps) {
-  const shouldReduceMotion = useReducedMotion();
-  const [internalOpen, setInternalOpen] = useState(false);
-  const isControlled = open !== undefined;
-  const isOpen = isControlled ? open : internalOpen;
+  const shouldReduceMotion = useReducedMotion()
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = open !== undefined
+  const isOpen = isControlled ? open : internalOpen
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (!isControlled) {
-        setInternalOpen(next);
+        setInternalOpen(next)
       }
-      onOpenChange?.(next);
+      onOpenChange?.(next)
     },
     [isControlled, onOpenChange]
-  );
+  )
 
-  const [showContent, setShowContent] = useState(false);
-  const prevOpenRef = useRef(false);
+  const [showContent, setShowContent] = useState(false)
+  const prevOpenRef = useRef(false)
 
   useEffect(() => {
     if (isOpen && !prevOpenRef.current) {
-      setShowContent(true);
+      setShowContent(true)
     }
-    prevOpenRef.current = !!isOpen;
-  }, [isOpen]);
+    prevOpenRef.current = !!isOpen
+  }, [isOpen])
 
   const handleAnimationComplete = useCallback(() => {
     if (!isOpen) {
-      setShowContent(false);
+      setShowContent(false)
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   return (
     <AlertDialogRadix.Root
@@ -490,10 +498,14 @@ export function AlertDialog({
                     shouldReduceMotion={shouldReduceMotion}
                   >
                     <AlertDialogHeader>
-                      {title && <AlertDialogTitle>{title}</AlertDialogTitle>}
+                      {title && (
+                        <AlertDialogTitle>
+                          {<UiText text={title} />}
+                        </AlertDialogTitle>
+                      )}
                       {description && (
                         <AlertDialogDescription>
-                          {description}
+                          {<UiText text={description} />}
                         </AlertDialogDescription>
                       )}
                     </AlertDialogHeader>
@@ -523,7 +535,7 @@ export function AlertDialog({
         )}
       </AnimatePresence>
     </AlertDialogRadix.Root>
-  );
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -544,4 +556,4 @@ export {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-};
+}

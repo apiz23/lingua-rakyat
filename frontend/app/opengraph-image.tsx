@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og"
+import { getTranslations } from '@/lib/i18n/server'
 
 import {
   OgAside,
@@ -17,12 +18,13 @@ export const contentType = "image/png"
 export const revalidate = 3600
 
 export default async function OpengraphImage() {
+  const t = await getTranslations()
   const [fonts, logo] = await Promise.all([loadBrandFonts(), loadBrandLogo()])
 
   return new ImageResponse(
     (
       <OgShell aside={<OgAside tag="EN · BM · ZH" />}>
-        <OgKicker label="LINGUA RAKYAT" right="Malaysia · GovTech" logo={logo} />
+        <OgKicker label="LINGUA RAKYAT" right={t("Malaysia · GovTech")} logo={logo} />
 
         <div style={{ display: "flex", flexDirection: "column" }}>
           {["Government", "documents,"].map((line) => (
@@ -38,7 +40,7 @@ export default async function OpengraphImage() {
                 color: ogColors.ink,
               }}
             >
-              {line}
+              {t(line)}
             </div>
           ))}
           <div
@@ -52,7 +54,7 @@ export default async function OpengraphImage() {
               color: ogColors.accent,
             }}
           >
-            made plain.
+            {t("made plain.")}
           </div>
           <div
             style={{
@@ -66,8 +68,7 @@ export default async function OpengraphImage() {
               color: ogColors.inkSoft,
             }}
           >
-            Ask in English, Bahasa Melayu, or Chinese — grounded in the official
-            PDF, with the sources cited.
+            {t("Ask in English, Bahasa Melayu, or Chinese — grounded in the official PDF, with the sources cited.")}
           </div>
         </div>
 
@@ -90,7 +91,7 @@ export default async function OpengraphImage() {
               color: ogColors.inkSoft,
             }}
           >
-            BUILT FOR OFFICIAL MALAYSIAN DOCUMENTS
+            {t("BUILT FOR OFFICIAL MALAYSIAN DOCUMENTS")}
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <OgChip label="LHDN" />

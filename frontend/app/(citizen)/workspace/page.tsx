@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "@/components/i18n"
 import { useEffect, useState } from "react"
 import { Document } from "@/lib/api"
 import ChatPanel from "@/components/chat-panel"
@@ -8,14 +9,22 @@ import { useDocuments } from "@/hooks/useDocuments"
 import { useLanguage } from "@/components/language-provider"
 
 export default function WorkSpacePage() {
-  const { userId, activeSessionId, actorGeneration, sessionGeneration } = useWorkspaceSession()
+  const t = useTranslations()
+
+  const { userId, activeSessionId, actorGeneration, sessionGeneration } =
+    useWorkspaceSession()
   const { documents, loading, error, reload } = useDocuments()
   const { language } = useLanguage()
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   useEffect(() => {
     // Preserve the selected anchor when the catalogue refreshes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSelectedDoc((previous) => documents.find((d) => d.id === previous?.id) ?? documents.find((d) => d.status === "ready") ?? null)
+    setSelectedDoc(
+      (previous) =>
+        documents.find((d) => d.id === previous?.id) ??
+        documents.find((d) => d.status === "ready") ??
+        null
+    )
   }, [documents])
 
   return (
@@ -28,17 +37,25 @@ export default function WorkSpacePage() {
           >
             <span>
               {language === "ms"
-                ? "Dokumen tidak dapat dimuatkan. Perkhidmatan dokumen tidak tersedia."
+                ? t(
+                    "Dokumen tidak dapat dimuatkan. Perkhidmatan dokumen tidak tersedia."
+                  )
                 : language === "zh"
                   ? "无法加载文件。文件服务当前不可用。"
-                  : "Documents could not be loaded. The document service is unavailable."}
+                  : t(
+                      "Documents could not be loaded. The document service is unavailable."
+                    )}
             </span>
             <button
               type="button"
               onClick={() => void reload()}
               className="border border-destructive/40 px-3 py-1 text-xs font-medium hover:bg-destructive/10"
             >
-              {language === "ms" ? "Cuba lagi" : language === "zh" ? "重试" : "Retry"}
+              {language === "ms"
+                ? t("Cuba lagi")
+                : language === "zh"
+                  ? "重试"
+                  : t("Retry")}
             </button>
           </div>
         ) : null}

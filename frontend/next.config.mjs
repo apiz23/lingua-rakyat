@@ -17,6 +17,8 @@ const takumiWasmSrc = _requireRoot.resolve(
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Isolate the local UI test server from an already-running developer server.
+  distDir: process.env.I18N_TEST_SERVER === "1" ? ".next-i18n" : process.env.UI01D_TEST_SERVER === "1" ? ".next-ui01d" : ".next",
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
 
   allowedDevOrigins: ["http://192.168.0.108:3000", "http://192.168.1.14:3000"],
@@ -45,6 +47,10 @@ const nextConfig = {
     return [
       ...["/workspace", "/profile", "/shares", "/share/:path*"].map((source) => ({
         source,
+        headers: [{ key: "Cache-Control", value: "no-store" }],
+      })),
+      ...["/workspace", "/profile", "/shares", "/share/:path*"].map((path) => ({
+        source: `/:locale(en|ms)${path}`,
         headers: [{ key: "Cache-Control", value: "no-store" }],
       })),
       {

@@ -1,7 +1,10 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
+import { useLanguage } from "@/components/language-provider"
+import { authReturnPath, localizeHref } from "@/lib/i18n/routing"
 import { useState } from "react"
-import Link from "next/link"
+import { LocalizedLink as Link } from "@/components/i18n"
 import { useSignUp } from "@clerk/nextjs/legacy"
 import { Github, Loader2 } from "lucide-react"
 
@@ -12,6 +15,10 @@ import { AuthShell, AuthGlobalError } from "@/components/auth-shell"
 type Provider = "oauth_google" | "oauth_github"
 
 export default function SignUpPage() {
+  const t = useTranslations()
+  const { language } = useLanguage()
+  const locale = language === "ms" ? "ms" : "en"
+
   const { isLoaded, signUp } = useSignUp()
   const [pending, setPending] = useState<Provider | null>(null)
   const [globalError, setGlobalError] = useState<string>()
@@ -23,26 +30,34 @@ export default function SignUpPage() {
     try {
       await signUp.authenticateWithRedirect({
         strategy,
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/workspace",
+        redirectUrl: localizeHref("/sso-callback", locale),
+        redirectUrlComplete: authReturnPath(
+          new URLSearchParams(window.location.search).get("redirect_url"),
+          locale
+        ),
       })
     } catch (err) {
       console.error("[SignUp] OAuth redirect threw:", err)
-      setGlobalError("Couldn't start sign-up. Please try again.")
+      setGlobalError(t("Couldn't start sign-up. Please try again."))
       setPending(null)
     }
   }
 
   return (
     <AuthShell
-      eyebrow="Create account"
-      title="Create your account"
-      subtitle="Save your chat history and manage your shares"
+      eyebrow={t("Create account")}
+      title={t("Create your account")}
+      subtitle={t("Save your chat history and manage your shares")}
       footer={
         <>
-          Already have an account?{" "}
-          <Link href="/sign-in" className="font-medium text-primary hover:underline">
-            Sign in
+          {" "}
+          <UiText text="Already have an account?" />{" "}
+          <Link
+            href="/sign-in"
+            className="font-medium text-primary hover:underline"
+          >
+            {" "}
+            <UiText text="Sign in" />{" "}
           </Link>
         </>
       }
@@ -61,8 +76,8 @@ export default function SignUpPage() {
             <Loader2 className="animate-spin" />
           ) : (
             <GoogleIcon />
-          )}
-          Continue with Google
+          )}{" "}
+          <UiText text="Continue with Google" />{" "}
         </Button>
 
         <Button
@@ -76,8 +91,8 @@ export default function SignUpPage() {
             <Loader2 className="animate-spin" />
           ) : (
             <Github className="h-4 w-4" />
-          )}
-          Continue with GitHub
+          )}{" "}
+          <UiText text="Continue with GitHub" />{" "}
         </Button>
       </div>
     </AuthShell>

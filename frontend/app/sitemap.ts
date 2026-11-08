@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next"
+import { locales, localizeHref } from '@/lib/i18n/routing'
 
 const BASE_URL = "https://lingua-rakyat.my"
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
+  const pages: MetadataRoute.Sitemap = [
     {
       url: BASE_URL,
       lastModified: new Date(),
@@ -23,4 +24,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
   ]
+  return pages.flatMap(page => locales.map(locale => {
+    const pathname = page.url.slice(BASE_URL.length) || '/'
+    return {...page, url:BASE_URL + localizeHref(pathname,locale), alternates:{languages:{en:BASE_URL + localizeHref(pathname,'en'),ms:BASE_URL + localizeHref(pathname,'ms')}}}
+  }))
 }

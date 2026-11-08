@@ -316,7 +316,7 @@ export default function ChatScreen({
             {docsLoading ? (
               <View style={styles.emptyLoadingRow}>
                 <ActivityIndicator size="small" color={c.primary} />
-                <Text style={styles.emptyMeta}>Loading documents...</Text>
+                <Text style={styles.emptyMeta}>{copy.loadingDocuments}</Text>
               </View>
             ) : (
               <Text style={styles.emptyMeta}>
@@ -353,7 +353,7 @@ export default function ChatScreen({
                     confidenceStyle[m.confidence_label],
                   ]}
                 >
-                  {m.confidence_label.toUpperCase()}
+                  {m.confidence_label === 'high' ? copy.confidenceHigh : m.confidence_label === 'medium' ? copy.confidenceMedium : copy.confidenceLow}
                 </Text>
               ) : null}
 
@@ -469,7 +469,7 @@ export default function ChatScreen({
               </ScrollView>
               {mentionMatches.length >= 5 ? (
                 <View style={styles.scrollIndicator}>
-                  <Text style={styles.scrollIndicatorText}>↕ scroll</Text>
+                  <Text style={styles.scrollIndicatorText}>↕ {copy.scroll}</Text>
                 </View>
               ) : null}
             </View>
