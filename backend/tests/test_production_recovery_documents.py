@@ -30,6 +30,7 @@ SOURCES = [
         "source_type": "official_gov",
         "verification_status": "verified",
         "usage_permitted": True,
+        "usage_rights": "Public information with attribution.",
         "freshness_days": 365,
         "last_verified_at": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
         "revoked_at": None,

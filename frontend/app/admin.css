@@ -206,8 +206,13 @@
 .admin-title { font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.12; overflow-wrap: anywhere; }
 
 
-.admin-record { overflow-wrap: anywhere; }
+.admin-record { min-width: 0; overflow-wrap: anywhere; }
+.admin-record > * { min-width: 0; }
+#admin-main { overflow-wrap: anywhere; }
+.admin-ledger__label > :first-child { min-width: 0; }
+.admin-ledger__label > :last-child { flex-shrink: 0; }
+.admin-filterbar { min-width: 0; }
 .admin-table th { white-space: nowrap; }
 .admin-table td { overflow-wrap: anywhere; }
-.admin-surface { max-width: 100%; }
+.admin-surface { min-width: 0; max-width: 100%; }
 @media(max-width: 639px) { .admin-title { font-size: 1.75rem; } .admin-record { padding: .875rem; } }

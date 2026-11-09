@@ -16,7 +16,36 @@ import {
 import { MetricCell } from "@/components/admin/metric-card"
 import { StatusBadge } from "@/components/admin/status-badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { Field, FieldLabel } from "@/components/ui/field"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   AdminApiError,
   cancelIngestionJob,
@@ -50,7 +79,7 @@ function CandidateRow({
     "ocr_required",
   ].includes(candidate.status)
   return (
-    <article className="admin-record">
+    <article className="mb-3 grid min-w-0 gap-3 rounded-lg border border-border bg-card p-4 [overflow-wrap:anywhere] text-card-foreground shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-baseline gap-2">
@@ -68,7 +97,7 @@ function CandidateRow({
               <StatusBadge value="warning" label={t("OCR required")} />
             ) : null}
           </div>
-          <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+          <p className="mt-1 font-mono text-[11px] break-all text-muted-foreground">
             {candidate.source_id} · {candidate.canonical_url}
           </p>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -106,14 +135,16 @@ function CandidateRow({
               <UiText text="Skipped:" /> {candidate.skip_reason}
             </p>
           ) : null}
-          <details className="mt-2 text-xs text-muted-foreground">
-            <summary className="cursor-pointer">
+          <Collapsible className="mt-2 text-xs text-muted-foreground">
+            <CollapsibleTrigger className="cursor-pointer text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
               <UiText text="Source evidence" />
-            </summary>
-            <pre className="mt-1 max-w-xl overflow-x-auto text-[11px] whitespace-pre-wrap">
-              {JSON.stringify(candidate.metadata, null, 2)}
-            </pre>
-          </details>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <pre className="mt-1 max-w-xl overflow-x-auto text-[11px] whitespace-pre-wrap">
+                {JSON.stringify(candidate.metadata, null, 2)}
+              </pre>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
         <div className="flex flex-wrap gap-2">
           {canIngest ? (
@@ -163,48 +194,54 @@ function JobsTable({
   if (jobs.length === 0)
     return <AdminEmptyState message={t("No ingestion jobs yet.")} />
   return (
-    <div className="admin-surface overflow-x-auto">
-      <table className="admin-table min-w-[760px]">
-        <caption className="sr-only">
+    <Card className="gap-0 py-0">
+      <Table className="min-w-[760px]">
+        <TableCaption className="sr-only">
           <UiText text="Candidate documents and ingestion processing status." />
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">
+        </TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col">
               <UiText text="Job" />
-            </th>
-            <th scope="col">
+            </TableHead>
+            <TableHead scope="col">
               <UiText text="Type" />
-            </th>
-            <th scope="col">
+            </TableHead>
+            <TableHead scope="col">
               <UiText text="Status" />
-            </th>
-            <th scope="col">
+            </TableHead>
+            <TableHead scope="col">
               <UiText text="Stage" />
-            </th>
-            <th className="text-right">
+            </TableHead>
+            <TableHead className="text-right">
               <UiText text="Progress" />
-            </th>
-            <th className="text-right">
+            </TableHead>
+            <TableHead className="text-right">
               <UiText text="Attempts" />
-            </th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
+            </TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {jobs.map((job) => (
-            <tr key={job.id}>
-              <td className="font-mono text-[11px]">{job.id.slice(0, 8)}</td>
-              <td className="text-xs">{t(job.job_type)}</td>
-              <td>
+            <TableRow key={job.id}>
+              <TableCell className="font-mono text-[11px]">
+                {job.id.slice(0, 8)}
+              </TableCell>
+              <TableCell className="text-xs">{t(job.job_type)}</TableCell>
+              <TableCell>
                 <StatusBadge value={job.status} />
-              </td>
-              <td className="text-xs">{job.stage ? t(job.stage) : "—"}</td>
-              <td className="text-right tabular-nums">{job.progress}%</td>
-              <td className="text-right tabular-nums">
+              </TableCell>
+              <TableCell className="text-xs">
+                {job.stage ? t(job.stage) : "—"}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {job.progress}%
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
                 {job.attempts}/{job.max_attempts}
-              </td>
-              <td className="text-right">
+              </TableCell>
+              <TableCell className="text-right">
                 <span className="flex justify-end gap-1">
                   {job.status === "failed" ? (
                     <Button
@@ -225,12 +262,12 @@ function JobsTable({
                     </Button>
                   ) : null}
                 </span>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   )
 }
 
@@ -321,7 +358,7 @@ export default function AdminIngestionPage() {
       {overview.data ? (
         <>
           <section
-            className="admin-ledger mb-8"
+            className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
             aria-label={t("Ingestion metrics")}
           >
             <MetricCell
@@ -386,7 +423,7 @@ export default function AdminIngestionPage() {
           <section className="mb-8">
             <div className="mb-3 flex items-end justify-between gap-2">
               <div>
-                <p className="admin-kicker">
+                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                   <UiText text="Sources / verified only" />
                 </p>
                 <h2 className="mt-1 font-heading text-xl font-bold tracking-tight">
@@ -404,11 +441,14 @@ export default function AdminIngestionPage() {
             ) : (
               <div>
                 {overview.data.sources.map((source, index) => (
-                  <article key={source.source_id} className="admin-record">
+                  <article
+                    key={source.source_id}
+                    className="mb-3 grid min-w-0 gap-3 rounded-lg border border-border bg-card p-4 [overflow-wrap:anywhere] text-card-foreground shadow-sm"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <div className="flex items-baseline gap-2">
-                          <span className="admin-index">
+                      <div className="min-w-0 flex-1 basis-64">
+                        <div className="flex flex-wrap items-baseline gap-2">
+                          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           <span className="font-heading text-base font-semibold">
@@ -455,69 +495,95 @@ export default function AdminIngestionPage() {
       <section className="mb-8">
         <div className="mb-3 flex items-end justify-between gap-2">
           <div>
-            <p className="admin-kicker">
+            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
               <UiText text="Candidates" />
             </p>
             <h2 className="mt-1 font-heading text-xl font-bold tracking-tight">
               <UiText text="Discovered documents" />
             </h2>
           </div>
-          <span className="admin-stamp">
+          <Badge variant="secondary">
             {candidates.data?.total ?? 0} <UiText text="total" />
-          </span>
+          </Badge>
         </div>
 
-        <div className="admin-filterbar mb-3 md:grid-cols-3">
-          <label className="relative">
-            <span className="sr-only">
+        <div className="mb-3 grid min-w-0 gap-4 rounded-lg border border-border bg-card p-4 md:grid-cols-2 xl:grid-cols-3">
+          <Field className="md:col-span-2 xl:col-span-1">
+            <FieldLabel htmlFor="candidate-search" className="sr-only">
               <UiText text="Search candidates" />
-            </span>
-            <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-            <Input
-              className="pl-8"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t("Search title, URL, external id")}
-            />
-          </label>
-          <select
-            className="neo-input h-9 rounded-md px-2 text-sm"
-            value={sourceId}
-            onChange={(event) => setSourceId(event.target.value)}
-            aria-label={t("Source")}
-          >
-            <option value="">
-              <UiText text="All verified sources" />
-            </option>
-            {(overview.data?.sources ?? []).map((source) => (
-              <option key={source.source_id} value={source.source_id}>
-                {source.source_id}
-              </option>
-            ))}
-          </select>
-          <select
-            className="neo-input h-9 rounded-md px-2 text-sm"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            aria-label={t("Candidate status")}
-          >
-            <option value="">
-              <UiText text="All statuses" />
-            </option>
-            {[
-              "discovered",
-              "ingested",
-              "unchanged",
-              "duplicate_review",
-              "ocr_required",
-              "skipped",
-              "failed",
-            ].map((value) => (
-              <option key={value} value={value}>
-                {t(value)}
-              </option>
-            ))}
-          </select>
+            </FieldLabel>
+            <InputGroup>
+              <InputGroupAddon>
+                <Search />
+              </InputGroupAddon>
+              <InputGroupInput
+                id="candidate-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t("Search title, URL, external id")}
+              />
+            </InputGroup>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="candidate-source-filter">
+              <UiText text="Source" />
+            </FieldLabel>
+            <Select
+              value={sourceId || "all"}
+              onValueChange={(value) =>
+                setSourceId(value === "all" ? "" : value)
+              }
+            >
+              <SelectTrigger id="candidate-source-filter" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">
+                    <UiText text="All verified sources" />
+                  </SelectItem>
+                  {(overview.data?.sources ?? []).map((source) => (
+                    <SelectItem key={source.source_id} value={source.source_id}>
+                      {source.source_id}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="candidate-status-filter">
+              <UiText text="Candidate status" />
+            </FieldLabel>
+            <Select
+              value={status || "all"}
+              onValueChange={(value) => setStatus(value === "all" ? "" : value)}
+            >
+              <SelectTrigger id="candidate-status-filter" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">
+                    <UiText text="All statuses" />
+                  </SelectItem>
+                  {[
+                    "discovered",
+                    "ingested",
+                    "unchanged",
+                    "duplicate_review",
+                    "ocr_required",
+                    "skipped",
+                    "failed",
+                  ].map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(value)}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
 
         {candidates.loading ? (
@@ -550,10 +616,10 @@ export default function AdminIngestionPage() {
         ) : null}
       </section>
 
-      <section>
-        <div className="mb-3 flex items-end justify-between gap-2">
+      <section className="flex flex-col gap-6">
+        <div className="flex items-end justify-between gap-2">
           <div>
-            <p className="admin-kicker">
+            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
               <UiText text="Jobs" />
             </p>
             <h2 className="mt-1 font-heading text-xl font-bold tracking-tight">
@@ -598,8 +664,8 @@ export default function AdminIngestionPage() {
         ) : null}
       </section>
 
-      <div className="admin-callout mt-8">
-        <p className="admin-kicker">
+      <div className="mt-8 rounded-lg border border-border bg-muted/50 p-4">
+        <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
           <UiText text="Review handoff" />
         </p>
         <p className="mt-1 text-sm text-muted-foreground">

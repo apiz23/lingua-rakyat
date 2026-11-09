@@ -14,6 +14,7 @@ import {
 } from "@/components/admin/admin-state"
 import { StatusBadge } from "@/components/admin/status-badge"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   AdminApiError,
   getReviewQueue,
@@ -73,11 +74,14 @@ export default function AdminReviewPage() {
         ) : (
           <div>
             {data.map((doc, index) => (
-              <article key={doc.id} className="admin-record">
+              <article
+                key={doc.id}
+                className="mb-3 grid min-w-0 gap-3 rounded-lg border border-border bg-card p-4 [overflow-wrap:anywhere] text-card-foreground shadow-sm"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="admin-index">
+                  <div className="min-w-0 flex-1 basis-64">
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <Link
@@ -95,9 +99,12 @@ export default function AdminReviewPage() {
                         })}
                       />
                       <StatusBadge value={doc.publication_status} />
-                      <span className="admin-stamp">
+                      <Badge
+                        variant="secondary"
+                        className="h-auto max-w-full break-words whitespace-normal"
+                      >
                         <UiText text="source" /> {doc.source_id ?? t("none")}
-                      </span>
+                      </Badge>
                     </div>
                     {doc.blockers && doc.blockers.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -124,7 +131,7 @@ export default function AdminReviewPage() {
                         (blocker) =>
                           ![
                             "missing_approval",
-                            "missing_current_revision",
+                            "revision_not_approved",
                           ].includes(blocker)
                       )}
                     >

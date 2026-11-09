@@ -210,7 +210,7 @@ function Sidebar({
               setOpenMobile(false)
             }
           }}
-          className="w-(--sidebar-width) bg-sidebar p-0 pt-10 text-sidebar-foreground"
+          className="max-h-none w-(--sidebar-width) bg-sidebar p-0 pt-10 text-sidebar-foreground"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,

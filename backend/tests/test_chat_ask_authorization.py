@@ -108,7 +108,7 @@ def test_signed_in_owner_can_read_own_private_document(monkeypatch):
 
 
 def test_idempotent_replay_does_not_repeat_provider_work(monkeypatch):
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
     monkeypatch.setattr(
         chat,
         "_claim_idempotent_run",
@@ -137,7 +137,7 @@ def test_idempotent_replay_does_not_repeat_provider_work(monkeypatch):
 
 
 def test_anonymous_idempotency_key_is_rejected(monkeypatch):
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
     with TestClient(_app()) as client:
         response = client.post("/api/chat/ask", json=_body(idempotency_key="key-1"))
 
@@ -145,7 +145,7 @@ def test_anonymous_idempotency_key_is_rejected(monkeypatch):
 
 
 def test_idempotency_conflict_is_409(monkeypatch):
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
 
     def conflict(*_args, **_kwargs):
         return RunClaim("conflict")
@@ -160,7 +160,7 @@ def test_idempotency_conflict_is_409(monkeypatch):
 
 
 def test_idempotency_in_progress_is_409(monkeypatch):
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
     monkeypatch.setattr(
         chat.idempotency, "claim_run", lambda *_args, **_kwargs: RunClaim("in_progress")
     )
@@ -173,7 +173,7 @@ def test_idempotency_in_progress_is_409(monkeypatch):
 
 
 def test_sse_failure_emits_error_and_never_complete(monkeypatch):
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
 
     def broken_stream(**_kwargs):
         yield {"type": "token", "text": "provisional"}
@@ -194,7 +194,7 @@ def test_sse_failure_emits_error_and_never_complete(monkeypatch):
 
 
 def test_sse_commits_idempotency_before_complete(monkeypatch):
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
     order = []
 
     def stream(**_kwargs):

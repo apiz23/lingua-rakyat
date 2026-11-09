@@ -190,25 +190,30 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   <li aria-hidden="true" className="text-muted-foreground">
                     /
                   </li>
-                  <li aria-current="page" className="font-medium">
+                  <li
+                    aria-current="page"
+                    className="min-w-0 font-medium break-words"
+                  >
                     {<UiText text={current.label} />}
                   </li>
                 </>
               )}
             </ol>
           </nav>
-          <LanguageToggle />
-          <UserButton />
+          <div className="flex shrink-0 items-center gap-2">
+            <LanguageToggle />
+            <UserButton />
+          </div>
         </header>
         <div
           id="admin-main"
-          className="mx-auto w-full max-w-[1440px] min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+          className="mx-auto w-full max-w-7xl min-w-0 px-4 py-6 [overflow-wrap:anywhere] sm:px-6 lg:px-8 lg:py-8"
         >
           {!isLoaded ? (
             <AdminLoading label={t("Loading your session?")} />
           ) : !isSignedIn ? (
             <section className="mx-auto mt-8 max-w-xl rounded-xl border border-border bg-card p-6 sm:p-8">
-              <p className="admin-kicker">
+              <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                 <UiText text="Staff access" />
               </p>
               <h1 className="mt-3 font-heading text-2xl font-semibold">
@@ -248,11 +253,15 @@ export function AdminPageHeader({
   return (
     <header className="mb-6 border-b border-border pb-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1 basis-64">
           {kicker ? (
-            <p className="admin-kicker mb-3">{<UiText text={kicker} />}</p>
+            <p className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+              {<UiText text={kicker} />}
+            </p>
           ) : null}
-          <h1 className="admin-title">{<UiText text={title} />}</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight break-words sm:text-3xl">
+            {<UiText text={title} />}
+          </h1>
           {description ? (
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
               {<UiText text={description} />}
@@ -260,7 +269,9 @@ export function AdminPageHeader({
           ) : null}
         </div>
         {actions ? (
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+          <div className="flex max-w-full flex-wrap items-center gap-2">
+            {actions}
+          </div>
         ) : null}
       </div>
     </header>

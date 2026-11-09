@@ -87,7 +87,7 @@ def test_pipeline_retrieves_with_condensed_query(monkeypatch):
     monkeypatch.setattr(rag, "_condense_llm_call",
                         lambda p: "passport renewal fee for foreigners")
 
-    def fake_retrieve(namespaces, query_variants, top_k):
+    def fake_retrieve(namespaces, query_variants, top_k, allowed_revisions=None):
         captured["variants"] = [v["text"] for v in query_variants]
         return [_stub_match()]
 
@@ -105,7 +105,7 @@ def test_pipeline_retrieves_with_condensed_query(monkeypatch):
 def test_pipeline_uses_raw_question_when_no_history(monkeypatch):
     captured = {}
 
-    def fake_retrieve(namespaces, query_variants, top_k):
+    def fake_retrieve(namespaces, query_variants, top_k, allowed_revisions=None):
         captured["variants"] = [v["text"] for v in query_variants]
         return [_stub_match()]
 

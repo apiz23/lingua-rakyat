@@ -454,30 +454,92 @@ def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filenam
     no longer time out the upload request. Frontend polls /{id}/status.
     """
     from routers.eval import log_data_quality
+    from utils.rag_pipeline import ingest_revision
 
+    client = get_supabase(admin=True)
+    revision_no = 1
     tmp_path = None
     try:
+        rows = (
+            client.table(get_documents_table())
+            .select("*")
+            .eq("id", document_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        row = rows[0] if rows else {}
+        revision_no = int(row.get("current_revision") or row.get("document_version") or 1)
+        storage_path = row.get("storage_path") or f"{document_id}/{safe_filename}"
+        checksum = hashlib.sha256(file_content).hexdigest()
+        existing = (
+            client.table("document_revisions")
+            .select("*")
+            .eq("document_id", document_id)
+            .eq("revision", revision_no)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if not existing:
+            client.table("document_revisions").insert(
+                {
+                    "id": str(uuid.uuid4()),
+                    "document_id": document_id,
+                    "revision": revision_no,
+                    "source_id": row.get("source_id"),
+                    "source_type": row.get("source_type"),
+                    "storage_path": storage_path,
+                    "checksum": checksum,
+                    "approved_by": None,
+                    "approved_at": None,
+                    "created_at": utc_now_iso(),
+                    "indexing_status": "indexing",
+                    "review_status": "pending",
+                    "metadata": {"requires_review": True},
+                }
+            ).execute()
+        else:
+            client.table("document_revisions").update(
+                {"indexing_status": "indexing", "checksum": checksum, "index_error": None}
+            ).eq("document_id", document_id).eq("revision", revision_no).execute()
+
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp.write(file_content)
             tmp_path = tmp.name
 
-        chunk_count, ingest_quality = ingest_document(
+        indexed = ingest_revision(
             pdf_path=tmp_path,
             document_id=document_id,
+            revision=revision_no,
+            source_id=str(row.get("source_id") or ""),
             document_name=safe_filename,
         )
-        get_supabase(admin=True).table(get_documents_table()).update({
+        chunk_count = int(indexed.get("chunk_count") or 0)
+        client.table("document_revisions").update(
+            {
+                "indexing_status": "indexed",
+                "indexed_at": indexed.get("indexed_at"),
+                "chunk_count": chunk_count,
+                "index_namespace": indexed.get("namespace"),
+                "verification_chunk_ids": list(indexed.get("sample_chunk_ids") or []),
+                "index_error": None,
+            }
+        ).eq("document_id", document_id).eq("revision", revision_no).execute()
+        client.table(get_documents_table()).update({
             "chunk_count": chunk_count,
             "status": "ready",
             "error_message": None,
         }).eq("id", document_id).execute()
         # Feed the /api/eval/data-quality dashboard with this document's metrics.
-        log_data_quality({**ingest_quality, "document_id": document_id, "doc_name": safe_filename})
+        log_data_quality({**indexed.get("quality", {}), "document_id": document_id, "doc_name": safe_filename})
         logger.info(
-            "[Upload] Ingestion complete for %s: %d chunks via %s",
+            "[Upload] Revision %s ingestion complete for %s: %d chunks",
+            revision_no,
             document_id,
             chunk_count,
-            str(ingest_quality.get("extraction_method", "text")),
         )
     except Exception as exc:
         try:
@@ -485,6 +547,9 @@ def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filenam
                 "status": "error",
                 "error_message": str(exc),
             }).eq("id", document_id).execute()
+            get_supabase(admin=True).table("document_revisions").update(
+                {"indexing_status": "failed", "index_error": str(exc)[:500]}
+            ).eq("document_id", document_id).eq("revision", revision_no).execute()
         except Exception as db_exc:
             logger.error("[Upload] Failed to record error state for %s: %s", document_id, db_exc)
         log_data_quality({"valid": False, "error": str(exc), "document_id": document_id, "doc_name": safe_filename})

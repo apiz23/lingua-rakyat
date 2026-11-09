@@ -42,7 +42,7 @@ def test_anonymous_buffered_question_is_answered_without_persistence_or_eval(
     client, monkeypatch, answer_result
 ):
     monkeypatch.setattr(chat, "answer_question", lambda **_kwargs: answer_result)
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
     monkeypatch.setattr(chat, "insert_chat_message", lambda *_args: pytest.fail("anonymous history persisted"))
     monkeypatch.setattr(chat, "_record_eval", lambda *_args: pytest.fail("anonymous Q&A copied to evaluation"))
 
@@ -65,7 +65,7 @@ def test_anonymous_streaming_question_is_answered_without_persistence_or_eval(
         },
     ]
     monkeypatch.setattr(chat, "stream_answer_question", lambda **_kwargs: iter(events))
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
     monkeypatch.setattr(chat, "insert_chat_message", lambda *_args: pytest.fail("anonymous history persisted"))
     monkeypatch.setattr(chat, "_record_eval", lambda *_args: pytest.fail("anonymous Q&A copied to evaluation"))
 
@@ -83,7 +83,7 @@ def test_signed_in_streaming_question_persists_final_answer_for_verified_owner(m
     captured = []
     metric_records = []
     monkeypatch.setattr(chat, "insert_chat_message", lambda payload: captured.append(payload) or True)
-    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: None)
+    monkeypatch.setattr(chat, "_authorize_ask_documents", lambda verified, body: ([], {}))
     monkeypatch.setattr(chat.evaluator, "record", lambda **kwargs: metric_records.append(kwargs))
     monkeypatch.setattr(
         chat,

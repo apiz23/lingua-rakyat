@@ -1,0 +1,1126 @@
+[
+  {
+    "route": "/",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/",
+        "h1": [
+          "Government documents.  In your language. "
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/",
+        "h1": [
+          "Government documents.  In your language. "
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/",
+        "h1": [
+          "Government documents.  In your language. "
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/",
+        "h1": [
+          "Government documents.  In your language. "
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/",
+        "h1": [
+          "Government documents.  In your language. "
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/about",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/about",
+        "h1": [
+          "How Lingua Rakyat Works"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/about",
+        "h1": [
+          "How Lingua Rakyat Works"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/about",
+        "h1": [
+          "How Lingua Rakyat Works"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/about",
+        "h1": [
+          "How Lingua Rakyat Works"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/about",
+        "h1": [
+          "How Lingua Rakyat Works"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/results",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/results",
+        "h1": [
+          "Project Showcase"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/results",
+        "h1": [
+          "Project Showcase"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/results",
+        "h1": [
+          "Project Showcase"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/results",
+        "h1": [
+          "Project Showcase"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/results",
+        "h1": [
+          "Project Showcase"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/share/ui01c-missing",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/share/ui01c-missing",
+        "h1": [
+          "This route does not exist."
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/share/ui01c-missing",
+        "h1": [
+          "This route does not exist."
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/share/ui01c-missing",
+        "h1": [
+          "This route does not exist."
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/share/ui01c-missing",
+        "h1": [
+          "This route does not exist."
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/share/ui01c-missing",
+        "h1": [
+          "This route does not exist."
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/sign-in",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/sign-up",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-up",
+        "h1": [
+          "Create your account"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-up",
+        "h1": [
+          "Create your account"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-up",
+        "h1": [
+          "Create your account"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-up",
+        "h1": [
+          "Create your account"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-up",
+        "h1": [
+          "Create your account"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/sso-callback",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/workspace",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/workspace",
+        "h1": [],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/workspace",
+        "h1": [],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/workspace",
+        "h1": [],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/workspace",
+        "h1": [],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/workspace",
+        "h1": [],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/profile",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/shares",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/shares",
+        "h1": [
+          "My shares"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/shares",
+        "h1": [
+          "My shares"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/shares",
+        "h1": [
+          "My shares"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/shares",
+        "h1": [
+          "My shares"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/shares",
+        "h1": [
+          "My shares"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/eval",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/eval",
+        "h1": [
+          "AI Quality Dashboard"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/eval",
+        "h1": [
+          "AI Quality Dashboard"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/eval",
+        "h1": [
+          "AI Quality Dashboard"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/eval",
+        "h1": [
+          "AI Quality Dashboard"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/eval",
+        "h1": [
+          "AI Quality Dashboard"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/benchmark",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/benchmark",
+        "h1": [
+          "Benchmark Lab"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/benchmark",
+        "h1": [
+          "Benchmark Lab"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/benchmark",
+        "h1": [
+          "Benchmark Lab"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/benchmark",
+        "h1": [
+          "Benchmark Lab"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/benchmark",
+        "h1": [
+          "Benchmark Lab"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/documents",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/documents/ui01c-missing",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/ingestion",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/sources",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/review",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/publications",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/audit",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/users",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  },
+  {
+    "route": "/manage/status",
+    "status": 200,
+    "failure": null,
+    "views": [
+      {
+        "width": 375,
+        "scroll": 375,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 430,
+        "scroll": 430,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 768,
+        "scroll": 768,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1024,
+        "scroll": 1024,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      },
+      {
+        "width": 1440,
+        "scroll": 1440,
+        "url": "/sign-in",
+        "h1": [
+          "Continue to your workspace"
+        ],
+        "appError": false
+      }
+    ]
+  }
+]

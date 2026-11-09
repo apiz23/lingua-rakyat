@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import { Check, Copy, LoaderCircle } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";

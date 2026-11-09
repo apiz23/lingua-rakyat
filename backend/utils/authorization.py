@@ -75,24 +75,26 @@ EXPIRY_RUN = "expiry.run"
 INTERNAL_READ = "internal.read"
 
 
-def _role_source_configured() -> bool:
-    return bool((os.getenv("TRUSTED_ROLE_SOURCE") or "").strip())
-
-
 def resolve_permissions(actor: Actor) -> frozenset[str]:
-    """Return the actor's server-side grants.
+    """Resolve the actor's server-side grants.
 
-    A configured role source is not proof that a supported provider exists. No
-    provider has been approved for this deployment, so this function raises
-    :class:`RoleSourceUnavailable` rather than guessing a role from identity.
-    Tests and future adapters may replace this function with a verified
-    implementation.
+    Grants live in the trusted ``admin_roles`` table and are read with the
+    service role. No role is inferred from sign-in, request data or client
+    metadata. A missing role table or unreadable store raises
+    :class:`RoleSourceUnavailable` so callers fail closed with HTTP 503.
     """
-    if not actor.is_authenticated:
+    if not actor.is_authenticated or not actor.subject:
         return frozenset()
-    if not _role_source_configured():
-        raise RoleSourceUnavailable("No trusted role source is configured")
-    raise RoleSourceUnavailable("No approved trusted role provider is installed")
+
+    from utils.role_provider import RoleProviderUnavailable, resolve_actor_permissions
+
+    try:
+        return resolve_actor_permissions(actor.subject)
+    except RoleProviderUnavailable as exc:
+        raise RoleSourceUnavailable("No trusted role provider is available") from exc
+    except Exception as exc:  # configuration/connection errors must deny
+        logger.error("[Authz] Role resolution failed: %s", type(exc).__name__)
+        raise RoleSourceUnavailable("No trusted role provider is available") from exc
 
 
 def get_actor(request: Request) -> Actor:
@@ -103,16 +105,26 @@ def get_actor(request: Request) -> Actor:
         raise
     if token is None:
         return ANONYMOUS
-    try:
-        subject = verify_clerk_token(token)
-    except jwt.exceptions.PyJWKClientConnectionError as exc:
-        logger.error("[Auth] JWKS unreachable: %s", exc)
-        raise HTTPException(status_code=503, detail="Sign-in verification unavailable") from exc
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
-    except RuntimeError as exc:
-        logger.error("[Auth] Misconfiguration: %s", exc)
-        raise HTTPException(status_code=503, detail="Sign-in verification unavailable") from exc
+    subject = None
+    for attempt in range(2):
+        try:
+            subject = verify_clerk_token(token)
+            break
+        except jwt.exceptions.PyJWKClientConnectionError as exc:
+            if attempt == 0:
+                logger.warning("[Auth] JWKS fetch failed, retrying once: %s", type(exc).__name__)
+                continue
+            logger.error("[Auth] JWKS unreachable: %s", exc)
+            raise HTTPException(
+                status_code=503, detail="Sign-in verification unavailable"
+            ) from exc
+        except jwt.PyJWTError as exc:
+            raise HTTPException(status_code=401, detail="Invalid or expired token") from exc
+        except RuntimeError as exc:
+            logger.error("[Auth] Misconfiguration: %s", exc)
+            raise HTTPException(
+                status_code=503, detail="Sign-in verification unavailable"
+            ) from exc
     if not subject or not subject.strip():
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return Actor(ActorKind.CITIZEN, subject.strip())

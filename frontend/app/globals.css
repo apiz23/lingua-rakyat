@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Test traces and generated server output are not UI source files. */
+@source not "../qa";
+@source not "../.next-ui01d";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -519,7 +523,14 @@ html[data-text-size="large"] {
 /* Shared service interaction and content containment. */
 :where(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 :where(main, article, section) { min-width: 0; }
-:where(dialog, [role="dialog"]) { max-width: calc(100vw - 2rem); max-height: calc(100dvh - 2rem); overflow-y: auto; }
+/* Native dialogs only. Radix components own their layout through Tailwind. */
+@layer base {
+  :where(dialog) {
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+  }
+}
 
 @media (prefers-reduced-motion: no-preference) { .service-guide { animation: service-arrive 450ms ease-out both; } .service-guide a:hover { transform: translateY(-2px); } }
 @keyframes service-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }

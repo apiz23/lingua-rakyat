@@ -140,6 +140,7 @@ def test_public_document_catalogue_is_read_only_and_does_not_reconcile(client, m
             "source_type": "official_gov",
             "verification_status": "verified",
             "usage_permitted": True,
+            "usage_rights": "Public information with attribution.",
             "freshness_days": 365,
             "last_verified_at": (now - timedelta(days=1)).isoformat(),
             "revoked_at": None,

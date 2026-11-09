@@ -1,7 +1,7 @@
 "use client"
 
 import { UiText, useTranslations } from "@/components/i18n"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { LocalizedLink as Link } from "@/components/i18n"
 import { useParams } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
@@ -17,7 +17,17 @@ import {
 import { StatusBadge } from "@/components/admin/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { DatePicker } from "@/components/ui/date-picker"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   AdminApiError,
   getAdminDocument,
@@ -109,7 +119,19 @@ export default function AdminDocumentDetailPage() {
   const [sourceId, setSourceId] = useState("")
   const [saving, setSaving] = useState(false)
   const { data: sources } = useAdminResource(listAdminSources, [])
-  const processing = useAdminResource(() => getDocumentProcessing(id), [id])
+  const { data: processingData, reload: reloadProcessing } = useAdminResource(
+    () => getDocumentProcessing(id),
+    [id]
+  )
+
+  useEffect(() => {
+    if (data?.status !== "processing") return
+    const timer = window.setTimeout(() => {
+      void reload()
+      void reloadProcessing()
+    }, 2500)
+    return () => window.clearTimeout(timer)
+  }, [data?.status, reloadProcessing, reload])
 
   const runAction = async (reason: string) => {
     if (!action) return
@@ -157,7 +179,7 @@ export default function AdminDocumentDetailPage() {
       setRevisionAction(null)
       toast.success(t("Revision updated"))
       reload()
-      processing.reload()
+      reloadProcessing()
     } catch (cause) {
       toast.error(
         cause instanceof AdminApiError
@@ -175,7 +197,7 @@ export default function AdminDocumentDetailPage() {
       const updated = await updateAdminDocument(id, {
         name: name.trim(),
         agency: agency.trim() || undefined,
-        expires_at: expiresAt || undefined,
+        expires_at: expiresAt ? `${expiresAt}T23:59:59.999Z` : null,
         source_id: sourceId || null,
       })
       setData(updated)
@@ -224,10 +246,14 @@ export default function AdminDocumentDetailPage() {
           <span className="flex flex-wrap gap-2">
             {canReview ? (
               <>
-                <Button onClick={() => setAction("approve")}>
-                  {" "}
-                  <UiText text="Approve" />{" "}
-                </Button>
+                {data.revision?.review_status !== "approved" ? (
+                  <Button
+                    onClick={() => setAction("approve")}
+                    disabled={busy || data.status !== "ready"}
+                  >
+                    <UiText text="Approve" />
+                  </Button>
+                ) : null}
                 <Button
                   variant="outline"
                   onClick={() => setAction("request_changes")}
@@ -271,7 +297,7 @@ export default function AdminDocumentDetailPage() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <div className="space-y-6 px-4">
+          <div className="flex flex-col gap-6 px-4">
             <h2 className="font-heading text-lg font-semibold">
               <UiText text="Document and processing" />
             </h2>
@@ -385,49 +411,87 @@ export default function AdminDocumentDetailPage() {
                 </Button>
               </div>
               {editing ? (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    aria-label={t("Document name")}
-                  />
-                  <Input
-                    value={agency}
-                    onChange={(event) => setAgency(event.target.value)}
-                    placeholder={t("Agency")}
-                    aria-label={t("Agency")}
-                  />
-                  <select
-                    className="neo-input h-9 rounded-md px-2 text-sm"
-                    aria-label={t("Official source")}
-                    value={sourceId}
-                    onChange={(event) => setSourceId(event.target.value)}
-                  >
-                    <option value="">
-                      <UiText text="No source" />
-                    </option>
-                    {(sources ?? []).map((source) => (
-                      <option key={source.source_id} value={source.source_id}>
-                        {source.source_id} · {t(source.verification_status)}
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    type="date"
-                    value={expiresAt}
-                    onChange={(event) => setExpiresAt(event.target.value)}
-                    aria-label={t("Expiry date")}
-                  />
-                  <Button
-                    onClick={() => void saveMetadata()}
-                    disabled={saving || !name.trim()}
-                  >
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : null}{" "}
-                    <UiText text="Save metadata" />{" "}
-                  </Button>
-                </div>
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void saveMetadata()
+                  }}
+                >
+                  <FieldGroup className="grid gap-3 sm:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="document-name">
+                        <UiText text="Document name" />
+                      </FieldLabel>
+                      <Input
+                        id="document-name"
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        maxLength={180}
+                        required
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="document-agency">
+                        <UiText text="Agency" />
+                      </FieldLabel>
+                      <Input
+                        id="document-agency"
+                        value={agency}
+                        onChange={(event) => setAgency(event.target.value)}
+                        maxLength={120}
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="document-source">
+                        <UiText text="Official source" />
+                      </FieldLabel>
+                      <Select
+                        value={sourceId || "no-source"}
+                        onValueChange={(value) =>
+                          setSourceId(value === "no-source" ? "" : value)
+                        }
+                      >
+                        <SelectTrigger id="document-source" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="no-source">
+                              <UiText text="No source" />
+                            </SelectItem>
+                            {(sources ?? []).map((source) => (
+                              <SelectItem
+                                key={source.source_id}
+                                value={source.source_id}
+                              >
+                                {source.source_id} ·{" "}
+                                {t(source.verification_status)}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="document-expiry">
+                        <UiText text="Expiry date" />
+                      </FieldLabel>
+                      <DatePicker
+                        id="document-expiry"
+                        value={expiresAt}
+                        onChange={setExpiresAt}
+                      />
+                    </Field>
+                    <div className="flex items-end sm:col-span-2">
+                      <Button type="submit" disabled={saving || !name.trim()}>
+                        {saving ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : null}
+                        <UiText text="Save metadata" />
+                      </Button>
+                    </div>
+                  </FieldGroup>
+                </form>
               ) : null}
             </div>
 
@@ -450,14 +514,14 @@ export default function AdminDocumentDetailPage() {
           </div>
         </Card>
 
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <Card size="sm">
             <div className="px-4">
               <h2 className="font-heading text-base font-semibold">
                 <UiText text="Official source" />
               </h2>
               {data.source ? (
-                <dl className="mt-2 space-y-1 text-sm">
+                <dl className="mt-2 flex flex-col gap-1 text-sm">
                   <div className="flex justify-between gap-2">
                     <dt className="text-muted-foreground">
                       <UiText text="ID" />
@@ -519,7 +583,7 @@ export default function AdminDocumentDetailPage() {
                 <UiText text="Indexing makes a revision ready for review. Approval does not publish it; promotion changes the current revision." />
               </p>
               {data.revisions && data.revisions.length > 0 ? (
-                <ul className="mt-2 space-y-3 text-sm">
+                <ul className="mt-2 flex flex-col gap-3 text-sm">
                   {data.revisions.map((rev) => {
                     const isCurrent = rev.revision === data.current_revision
                     const approved = rev.review_status === "approved"
@@ -664,16 +728,16 @@ export default function AdminDocumentDetailPage() {
               <h2 className="font-heading text-base font-semibold">
                 <UiText text="Processing & indexing" />
               </h2>
-              {processing.data ? (
+              {processingData ? (
                 <>
-                  <dl className="mt-2 space-y-1 text-sm">
+                  <dl className="mt-2 flex flex-col gap-1 text-sm">
                     <div className="flex justify-between gap-2">
                       <dt className="text-muted-foreground">
                         <UiText text="Extraction" />
                       </dt>
                       <dd>
                         <StatusBadge
-                          value={processing.data.extraction_status ?? "pending"}
+                          value={processingData.extraction_status ?? "pending"}
                         />
                       </dd>
                     </div>
@@ -682,7 +746,7 @@ export default function AdminDocumentDetailPage() {
                         <UiText text="Pages" />
                       </dt>
                       <dd className="tabular-nums">
-                        {processing.data.page_count}
+                        {processingData.page_count}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-2">
@@ -690,7 +754,7 @@ export default function AdminDocumentDetailPage() {
                         <UiText text="Chunks" />
                       </dt>
                       <dd className="tabular-nums">
-                        {processing.data.chunk_count}
+                        {processingData.chunk_count}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-2">
@@ -698,7 +762,7 @@ export default function AdminDocumentDetailPage() {
                         <UiText text="OCR" />
                       </dt>
                       <dd>
-                        {processing.data.ocr_required
+                        {processingData.ocr_required
                           ? t("Required")
                           : t("Not required")}
                       </dd>
@@ -709,16 +773,16 @@ export default function AdminDocumentDetailPage() {
                       </dt>
                       <dd className="tabular-nums">
                         {
-                          processing.data.revisions.filter(
+                          processingData.revisions.filter(
                             (rev) => rev.requires_review && !rev.approved
                           ).length
                         }
                       </dd>
                     </div>
                   </dl>
-                  {processing.data.error_message ? (
+                  {processingData.error_message ? (
                     <p className="mt-2 text-xs text-destructive">
-                      {processing.data.error_message}
+                      {processingData.error_message}
                     </p>
                   ) : null}
                   <Button
@@ -730,7 +794,7 @@ export default function AdminDocumentDetailPage() {
                       try {
                         await reprocessAdminDocument(id)
                         toast.success(t("Reprocessing queued"))
-                        processing.reload()
+                        reloadProcessing()
                       } catch (cause) {
                         toast.error(
                           cause instanceof AdminApiError
@@ -758,7 +822,7 @@ export default function AdminDocumentDetailPage() {
                 <UiText text="Publication events" />
               </h2>
               {data.events && data.events.length > 0 ? (
-                <ul className="mt-2 space-y-2 text-sm">
+                <ul className="mt-2 flex flex-col gap-2 text-sm">
                   {data.events.map((event, index) => (
                     <li
                       key={`${event.id ?? index}`}

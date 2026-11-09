@@ -66,13 +66,15 @@ def _source_entry_allows_public_use(
         return False
     if entry.get("usage_permitted") is not True:
         return False
+    if not str(entry.get("usage_rights") or "").strip():
+        return False
     if entry.get("revoked_at"):
         return False
 
     freshness_days = entry.get("freshness_days")
     if isinstance(freshness_days, bool) or not isinstance(freshness_days, int):
         return False
-    if freshness_days <= 0:
+    if freshness_days <= 0 or freshness_days > 3650:
         return False
 
     verified_at = _parse_aware_datetime(entry.get("last_verified_at"))

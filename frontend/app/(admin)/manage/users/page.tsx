@@ -1,7 +1,7 @@
 "use client"
 
 import { UiText, useTranslations } from "@/components/i18n"
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
 import { toast } from "sonner"
 
 import { ActionDialog } from "@/components/admin/action-dialog"
@@ -23,6 +23,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   AdminApiError,
   grantAdminRole,
@@ -50,7 +68,8 @@ function GrantRoleDialog({
   const [reason, setReason] = useState("")
   const [busy, setBusy] = useState(false)
 
-  const submit = async () => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setBusy(true)
     try {
       await grantAdminRole({
@@ -76,7 +95,7 @@ function GrantRoleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             <UiText text="Grant admin role" />
@@ -86,54 +105,70 @@ function GrantRoleDialog({
             <UiText text="Roles are stored server-side and audited. You cannot grant a role to yourself." />{" "}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <label className="block text-sm">
-            <UiText text="Clerk actor id" />{" "}
-            <Input
-              className="mt-1"
-              value={actorId}
-              onChange={(event) => setActorId(event.target.value)}
-              placeholder={t("user_…")}
-            />
-          </label>
-          <label className="block text-sm">
-            <UiText text="Role" />{" "}
-            <select
-              className="neo-input mt-1 h-9 w-full rounded-md px-2 text-sm"
-              value={role}
-              onChange={(event) => setRole(event.target.value)}
+        <form
+          id="grant-admin-role-form"
+          onSubmit={submit}
+          className="flex flex-col gap-4"
+        >
+          <FieldGroup className="gap-4">
+            <Field>
+              <FieldLabel htmlFor="admin-role-actor-id">
+                <UiText text="Clerk actor id" />
+              </FieldLabel>
+              <Input
+                id="admin-role-actor-id"
+                value={actorId}
+                onChange={(event) => setActorId(event.target.value)}
+                placeholder={t("user_…")}
+                maxLength={200}
+                required
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="admin-role-select">
+                <UiText text="Role" />
+              </FieldLabel>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger id="admin-role-select" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {roles.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {t(value)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="admin-role-reason">
+                <UiText text="Reason" />
+              </FieldLabel>
+              <Input
+                id="admin-role-reason"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                maxLength={2000}
+              />
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={busy}
             >
-              {roles.map((value) => (
-                <option key={value} value={value}>
-                  {t(value)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <UiText text="Reason" />{" "}
-            <Input
-              className="mt-1"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </label>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={busy}
-          >
-            <UiText text="Cancel" />
-          </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={busy || !actorId.trim()}
-          >
-            <UiText text="Grant role" />
-          </Button>
-        </DialogFooter>
+              <UiText text="Cancel" />
+            </Button>
+            <Button type="submit" disabled={busy}>
+              <UiText text="Grant role" />
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
@@ -169,11 +204,11 @@ export default function AdminUsersPage() {
 
       {data ? (
         <>
-          <div className="admin-callout mb-4 text-sm">
+          <div className="mb-6 rounded-lg border border-border bg-muted/50 p-4 text-sm">
             <p className="font-medium">
               <UiText text="Permission model" />
             </p>
-            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+            <ul className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
               {Object.entries(data.role_permissions).map(
                 ([role, permissions]) => (
                   <li key={role}>
@@ -194,44 +229,44 @@ export default function AdminUsersPage() {
             />
           ) : (
             <Card size="sm">
-              <div className="overflow-x-auto px-1">
-                <table className="admin-table min-w-[760px]">
-                  <caption className="sr-only">
+              <div className="px-1">
+                <Table className="min-w-[760px]">
+                  <TableCaption className="sr-only">
                     <UiText text="Accounts and their assigned administrative roles." />
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">
+                  </TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead scope="col">
                         <UiText text="Actor" />
-                      </th>
-                      <th scope="col">
+                      </TableHead>
+                      <TableHead scope="col">
                         <UiText text="Role" />
-                      </th>
-                      <th scope="col">
+                      </TableHead>
+                      <TableHead scope="col">
                         <UiText text="Granted" />
-                      </th>
-                      <th scope="col">
+                      </TableHead>
+                      <TableHead scope="col">
                         <UiText text="Status" />
-                      </th>
-                      <th scope="col">
+                      </TableHead>
+                      <TableHead scope="col">
                         <UiText text="Reason" />
-                      </th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {data.roles.map((assignment, index) => (
-                      <tr
+                      <TableRow
                         key={`${assignment.id ?? index}`}
                         className="border-b border-border/40 last:border-0"
                       >
-                        <td className="px-3 py-2 font-mono text-xs">
+                        <TableCell className="px-3 py-2 font-mono text-xs">
                           {assignment.actor_id}
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
                           {t(assignment.role.replaceAll("_", " "))}
-                        </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-xs text-muted-foreground">
                           {assignment.granted_at
                             ? new Date(assignment.granted_at).toLocaleString(
                                 t.locale
@@ -240,18 +275,18 @@ export default function AdminUsersPage() {
                           <div>
                             <UiText text="by" /> {assignment.granted_by}
                           </div>
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
                           {assignment.revoked_at ? (
                             <StatusBadge value="revoked" />
                           ) : (
                             <StatusBadge value="verified" label={t("active")} />
                           )}
-                        </td>
-                        <td className="px-3 py-2 text-xs">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-xs">
                           {assignment.reason ?? "—"}
-                        </td>
-                        <td className="px-3 py-2 text-right">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-right">
                           {!assignment.revoked_at ? (
                             <Button
                               size="sm"
@@ -261,11 +296,11 @@ export default function AdminUsersPage() {
                               <UiText text="Revoke" />
                             </Button>
                           ) : null}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </Card>
           )}

@@ -94,8 +94,11 @@ def test_owner_check_requires_identity_first():
     assert exc.value.status_code == 401
 
 
-def test_permission_check_fails_closed_without_role_source(monkeypatch):
-    monkeypatch.delenv("TRUSTED_ROLE_SOURCE", raising=False)
+def test_permission_check_fails_closed_when_provider_unavailable(monkeypatch):
+    def unavailable(_actor):
+        raise authz.RoleSourceUnavailable("no provider")
+
+    monkeypatch.setattr(authz, "resolve_permissions", unavailable)
     dependency = require_permission(authz.DOCUMENTS_MANAGE)
     with pytest.raises(HTTPException) as exc:
         dependency(Actor(ActorKind.CITIZEN, "user_admin"))
@@ -104,6 +107,11 @@ def test_permission_check_fails_closed_without_role_source(monkeypatch):
 
 def test_configured_role_source_without_provider_still_fails_closed(monkeypatch):
     monkeypatch.setenv("TRUSTED_ROLE_SOURCE", "https://roles.example.com")
+
+    def unavailable(_actor):
+        raise authz.RoleSourceUnavailable("no provider")
+
+    monkeypatch.setattr(authz, "resolve_permissions", unavailable)
     dependency = require_permission(authz.EVALUATION_READ)
     with pytest.raises(HTTPException) as exc:
         dependency(Actor(ActorKind.CITIZEN, "user_researcher"))

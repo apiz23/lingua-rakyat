@@ -30,7 +30,10 @@ export function StatusBadge({
 }) {
   const tone = TONES[value] ?? "border-border bg-muted text-muted-foreground"
   return (
-    <Badge variant="outline" className={`capitalize ${tone}`}>
+    <Badge
+      variant="outline"
+      className={`h-auto min-h-5 max-w-full break-words whitespace-normal capitalize ${tone}`}
+    >
       <UiText text={(label ?? value).replaceAll("_", " ")} />
     </Badge>
   )

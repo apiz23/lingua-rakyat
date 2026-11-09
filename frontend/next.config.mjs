@@ -21,7 +21,8 @@ const nextConfig = {
   distDir: process.env.I18N_TEST_SERVER === "1" ? ".next-i18n" : process.env.UI01D_TEST_SERVER === "1" ? ".next-ui01d" : ".next",
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
 
-  allowedDevOrigins: ["http://192.168.0.108:3000", "http://192.168.1.14:3000"],
+  // Next compares the Origin hostname, including for the development WebSocket.
+  allowedDevOrigins: ["localhost", "127.0.0.1", "192.168.0.108", "192.168.1.14"],
 
   images: {
     formats: ["image/avif", "image/webp"],
@@ -38,6 +39,8 @@ const nextConfig = {
   },
 
   experimental: {
+    // Persistent dev output retained stale globals.css across local restarts.
+    turbopackFileSystemCacheForDev: false,
     optimizePackageImports: ["lucide-react", "framer-motion", "radix-ui"],
   },
 

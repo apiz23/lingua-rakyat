@@ -1,0 +1,24 @@
+[
+  {
+    "name": "About section navigation",
+    "passed": true
+  },
+  {
+    "name": "Keyboard focus visible",
+    "passed": true
+  },
+  {
+    "name": "Mobile sidebar open and Escape",
+    "passed": false,
+    "error": "locator.waitFor: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog') to be hidden\u001b[22m\n\u001b[2m    13 × locator resolved to visible <div role=\"dialog\" tabindex=\"-1\" id=\"radix-_r_c_\" data-side=\"left\" data-state=\"open\" data-mobile=\"true\" data-slot=\"sidebar\" data-sidebar=\"sidebar\" aria-labelledby=\"radix-_r_d_\" aria-describedby=\"radix-_r_e_\" class=\"fixed z-50 flex flex-col gap-4 bg-clip-padding text-sm shadow-lg transition duration-200 ease-in-out data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full d…>…</div>\u001b[22m\n"
+  },
+  {
+    "name": "Admin signed-out redirect",
+    "passed": true
+  },
+  {
+    "name": "Research section selector",
+    "passed": false,
+    "error": "page.waitForFunction: Timeout 30000ms exceeded."
+  }
+]

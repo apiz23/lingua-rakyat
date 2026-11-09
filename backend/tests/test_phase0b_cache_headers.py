@@ -40,6 +40,7 @@ def test_pdf_range_request_is_not_cached(monkeypatch):
             "source_type": "official_gov",
             "verification_status": "verified",
             "usage_permitted": True,
+            "usage_rights": "Public information with attribution.",
             "freshness_days": 365,
             "last_verified_at": (now - timedelta(days=1)).isoformat(),
         }],

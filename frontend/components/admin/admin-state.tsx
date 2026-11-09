@@ -11,7 +11,7 @@ export function AdminLoading({ label = "Loading…" }: { label?: string }) {
     <div
       role="status"
       aria-live="polite"
-      className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-6 text-sm text-muted-foreground"
+      className="flex min-w-0 items-center gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-6 text-sm break-words text-muted-foreground [&>svg]:shrink-0"
     >
       <Loader2 className="h-4 w-4 animate-spin" />
       {<UiText text={label} />}
@@ -73,7 +73,9 @@ export function AdminErrorState({
       role="alert"
       className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
     >
-      <span className="flex items-center gap-2">{content}</span>
+      <span className="flex min-w-0 flex-1 items-center gap-2 break-words [&>svg]:shrink-0">
+        {content}
+      </span>
       {onRetry && apiError?.code !== "forbidden" ? (
         <Button variant="outline" size="sm" onClick={onRetry}>
           <RefreshCw className="h-3.5 w-3.5" /> <UiText text="Retry" />{" "}

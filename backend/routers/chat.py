@@ -25,7 +25,7 @@ from utils.chat_history import (
     update_conversation_title,
 )
 from rate_limits import CHAT_LIMIT, get_proxy_aware_remote_address
-from utils.rag_pipeline import answer_question, stream_answer_question
+from utils.rag_pipeline import answer_question, revision_namespace, stream_answer_question
 
 logger = logging.getLogger("chat_router")
 limiter = Limiter(key_func=get_proxy_aware_remote_address)
@@ -139,14 +139,16 @@ def _requested_document_ids(body: AskRequest) -> list[str]:
     return ids
 
 
-def _authorize_ask_documents(verified: Optional[str], body: AskRequest) -> None:
-    """Require public eligibility or verified ownership for every document."""
+def _authorize_ask_documents(
+    verified: Optional[str], body: AskRequest
+) -> tuple[list[str], dict[str, Optional[int]]]:
+    """Authorize every document and resolve revision-scoped retrieval targets."""
     ids = _requested_document_ids(body)
     try:
         rows, snapshot = eligibility.load_documents_for_authorization(
             get_supabase(admin=True), ids
         )
-        eligibility.authorize_document_rows(
+        allowed = eligibility.authorize_document_rows(
             _actor_for(verified), rows, snapshot, requested_ids=ids
         )
     except eligibility.EligibilityUnavailable as exc:
@@ -154,6 +156,42 @@ def _authorize_ask_documents(verified: Optional[str], body: AskRequest) -> None:
         raise HTTPException(
             status_code=503, detail="Document service is temporarily unavailable."
         ) from exc
+
+    namespaces: list[str] = []
+    revisions: dict[str, Optional[int]] = {}
+    for document_id, row in allowed.items():
+        current = eligibility.revision_number(row)
+        revision_records = snapshot.revisions_by_document.get(document_id, ())
+        revision_record = next(
+            (
+                revision
+                for revision in revision_records
+                if revision.get("revision") == current
+                and not revision.get("revoked_at")
+            ),
+            None,
+        )
+        if revision_record is not None and current is not None:
+            namespaces.append(revision_namespace(document_id, current))
+            revisions[document_id] = int(current)
+        else:
+            # Legacy documents indexed before revision namespaces existed.
+            namespaces.append(document_id)
+            revisions[document_id] = None
+    return namespaces, revisions
+
+
+def _recheck_ask_documents(
+    verified: Optional[str], body: AskRequest, expected: dict[str, Optional[int]]
+) -> None:
+    """Revalidate eligibility and revision identity after retrieval."""
+    _, current = _authorize_ask_documents(verified, body)
+    if current is None:
+        return
+    if current != expected:
+        raise HTTPException(
+            status_code=409, detail="Document revision changed during the request. Please retry."
+        )
 
 
 def _idempotency_fingerprint(body: AskRequest) -> dict[str, Any]:
@@ -296,7 +334,7 @@ async def ask_question(
     if verified:
         body.user_id = verified
     _validate_ask_request(body)
-    _authorize_ask_documents(verified, body)
+    namespaces, allowed_revisions = _authorize_ask_documents(verified, body)
     claim = _claim_idempotent_run(verified, body)
     if claim is not None and claim.state == "replay" and claim.response is not None:
         return AskResponse(**claim.response)
@@ -310,11 +348,19 @@ async def ask_question(
             bypass_cache=body.bypass_cache,
             chat_history=body.chat_history or None,
             document_ids=body.document_ids or None,
+            namespaces=namespaces,
+            allowed_revisions=allowed_revisions,
         )
     except Exception as exc:
         _fail_idempotent_run(verified, body)
         logger.error("[Chat] Q&A failed: %s", exc)
         raise HTTPException(status_code=500, detail="Failed to generate answer. Please try again later.") from exc
+
+    try:
+        _recheck_ask_documents(verified, body, allowed_revisions)
+    except HTTPException:
+        _fail_idempotent_run(verified, body)
+        raise
 
     timestamp = datetime.utcnow().isoformat() + "Z"
     answer_text = result["answer"]
@@ -361,7 +407,7 @@ async def ask_question_stream(
     if verified:
         body.user_id = verified
     _validate_ask_request(body)
-    _authorize_ask_documents(verified, body)
+    namespaces, allowed_revisions = _authorize_ask_documents(verified, body)
     claim = _claim_idempotent_run(verified, body)
 
     async def event_stream():
@@ -384,6 +430,8 @@ async def ask_question_stream(
                 bypass_cache=body.bypass_cache,
                 chat_history=body.chat_history or None,
                 document_ids=body.document_ids or None,
+                namespaces=namespaces,
+                allowed_revisions=allowed_revisions,
             ):
                 if event["type"] == "token":
                     answer_pieces.append(event["text"])
@@ -403,6 +451,7 @@ async def ask_question_stream(
             answer_text = (final_result.get("answer") or "").strip() or "".join(
                 answer_pieces
             ).strip()
+            _recheck_ask_documents(verified, body, allowed_revisions)
             if verified:
                 if not insert_chat_message(
                     _history_payload(body, final_result, timestamp, answer_text)

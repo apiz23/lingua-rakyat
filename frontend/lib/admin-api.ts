@@ -20,7 +20,9 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     authorizedFetch(`${BASE}${path}`, {
       ...init,
       headers: {
-        ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+        ...(init?.body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
         ...(init?.headers as Record<string, string> | undefined),
       },
     })
@@ -36,13 +38,23 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (response.status === 401) {
-    throw new AdminApiError("Sign in required for administration.", 401, "unauthorized")
+    throw new AdminApiError(
+      "Sign in required for administration.",
+      401,
+      "unauthorized"
+    )
   }
   if (response.status === 403) {
-    throw new AdminApiError("You do not have permission for this action.", 403, "forbidden")
+    throw new AdminApiError(
+      "You do not have permission for this action.",
+      403,
+      "forbidden"
+    )
   }
   if (response.status === 503) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null
+    const body = (await response.json().catch(() => null)) as {
+      detail?: string
+    } | null
     throw new AdminApiError(
       body?.detail ??
         "Admin services are unavailable. The role provider or admin tables may not be configured.",
@@ -51,8 +63,14 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     )
   }
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null
-    throw new AdminApiError(body?.detail ?? "Admin request failed.", response.status, "error")
+    const body = (await response.json().catch(() => null)) as {
+      detail?: string
+    } | null
+    throw new AdminApiError(
+      body?.detail ?? "Admin request failed.",
+      response.status,
+      "error"
+    )
   }
   return response.json() as Promise<T>
 }
@@ -198,7 +216,8 @@ export function getDashboard() {
 export function listAdminDocuments(filters: DocumentFilters = {}) {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(filters)) {
-    if (value !== undefined && value !== "" && value !== null) params.set(key, String(value))
+    if (value !== undefined && value !== "" && value !== null)
+      params.set(key, String(value))
   }
   return adminFetch<Paginated<AdminDocument>>(`/documents?${params.toString()}`)
 }
@@ -209,7 +228,12 @@ export function getAdminDocument(id: string) {
 
 export function updateAdminDocument(
   id: string,
-  updates: Partial<Pick<AdminDocument, "name" | "agency" | "is_featured" | "expires_at" | "source_id">>
+  updates: Partial<
+    Pick<
+      AdminDocument,
+      "name" | "agency" | "is_featured" | "expires_at" | "source_id"
+    >
+  >
 ) {
   return adminFetch<AdminDocument>(`/documents/${encodeURIComponent(id)}`, {
     method: "PATCH",
@@ -217,19 +241,26 @@ export function updateAdminDocument(
   })
 }
 
-export function uploadAdminDocument(file: File) {
+export function uploadAdminDocument(file: File, sourceId?: string) {
   const form = new FormData()
   form.append("file", file)
-  return adminFetch<{ id: string; name: string; status: string }>("/documents/upload", {
-    method: "POST",
-    body: form,
-  })
+  if (sourceId) form.append("source_id", sourceId)
+  return adminFetch<{ id: string; name: string; status: string }>(
+    "/documents/upload",
+    {
+      method: "POST",
+      body: form,
+    }
+  )
 }
 
-export function listAdminSources(params: { q?: string; verification_status?: string } = {}) {
+export function listAdminSources(
+  params: { q?: string; verification_status?: string } = {}
+) {
   const search = new URLSearchParams()
   if (params.q) search.set("q", params.q)
-  if (params.verification_status) search.set("verification_status", params.verification_status)
+  if (params.verification_status)
+    search.set("verification_status", params.verification_status)
   return adminFetch<AdminSource[]>(`/sources?${search.toString()}`)
 }
 
@@ -248,7 +279,10 @@ export function createAdminSource(payload: {
   })
 }
 
-export function updateAdminSource(sourceId: string, payload: Record<string, unknown>) {
+export function updateAdminSource(
+  sourceId: string,
+  payload: Record<string, unknown>
+) {
   return adminFetch<AdminSource>(`/sources/${encodeURIComponent(sourceId)}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
@@ -257,55 +291,84 @@ export function updateAdminSource(sourceId: string, payload: Record<string, unkn
 
 export function verifyAdminSource(
   sourceId: string,
-  payload: { evidence: string; freshness_days: number; usage_rights?: string; usage_permitted: boolean }
+  payload: {
+    evidence: string
+    freshness_days: number
+    usage_rights: string
+    usage_permitted: boolean
+  }
 ) {
-  return adminFetch<AdminSource>(`/sources/${encodeURIComponent(sourceId)}/verify`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  })
+  return adminFetch<AdminSource>(
+    `/sources/${encodeURIComponent(sourceId)}/verify`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  )
 }
 
 export function revokeAdminSource(sourceId: string, reason: string) {
-  return adminFetch<AdminSource>(`/sources/${encodeURIComponent(sourceId)}/revoke`, {
-    method: "POST",
-    body: JSON.stringify({ reason }),
-  })
+  return adminFetch<AdminSource>(
+    `/sources/${encodeURIComponent(sourceId)}/revoke`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }
+  )
 }
 
 export function getReviewQueue() {
   return adminFetch<AdminDocument[]>("/review-queue")
 }
 
-export function reviewAdminDocument(id: string, action: "approve" | "reject" | "request_changes", reason?: string) {
-  return adminFetch<AdminDocument>(`/documents/${encodeURIComponent(id)}/review`, {
-    method: "POST",
-    body: JSON.stringify({ action, reason }),
-  })
+export function reviewAdminDocument(
+  id: string,
+  action: "approve" | "reject" | "request_changes",
+  reason?: string
+) {
+  return adminFetch<AdminDocument>(
+    `/documents/${encodeURIComponent(id)}/review`,
+    {
+      method: "POST",
+      body: JSON.stringify({ action, reason }),
+    }
+  )
 }
 
 export function publishAdminDocument(id: string, reason?: string) {
-  return adminFetch<AdminDocument>(`/documents/${encodeURIComponent(id)}/publish`, {
-    method: "POST",
-    body: JSON.stringify({ reason }),
-  })
+  return adminFetch<AdminDocument>(
+    `/documents/${encodeURIComponent(id)}/publish`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }
+  )
 }
 
 export function suspendAdminDocument(id: string, reason: string) {
-  return adminFetch<AdminDocument>(`/documents/${encodeURIComponent(id)}/suspend`, {
-    method: "POST",
-    body: JSON.stringify({ reason }),
-  })
+  return adminFetch<AdminDocument>(
+    `/documents/${encodeURIComponent(id)}/suspend`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }
+  )
 }
 
 export function withdrawAdminDocument(id: string, reason: string) {
-  return adminFetch<AdminDocument>(`/documents/${encodeURIComponent(id)}/withdraw`, {
-    method: "POST",
-    body: JSON.stringify({ reason }),
-  })
+  return adminFetch<AdminDocument>(
+    `/documents/${encodeURIComponent(id)}/withdraw`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }
+  )
 }
 
 export function listAdminRevisions(id: string) {
-  return adminFetch<AdminRevision[]>(`/documents/${encodeURIComponent(id)}/revisions`)
+  return adminFetch<AdminRevision[]>(
+    `/documents/${encodeURIComponent(id)}/revisions`
+  )
 }
 
 export function reviewAdminRevision(
@@ -320,21 +383,36 @@ export function reviewAdminRevision(
   )
 }
 
-export function promoteAdminRevision(documentId: string, revision: number, reason?: string) {
+export function promoteAdminRevision(
+  documentId: string,
+  revision: number,
+  reason?: string
+) {
   return adminFetch<AdminRevision>(
     `/documents/${encodeURIComponent(documentId)}/revisions/${revision}/promote`,
     { method: "POST", body: JSON.stringify({ reason }) }
   )
 }
 
-export function rollbackAdminRevision(documentId: string, revision: number, reason: string) {
+export function rollbackAdminRevision(
+  documentId: string,
+  revision: number,
+  reason: string
+) {
   return adminFetch<AdminRevision>(
     `/documents/${encodeURIComponent(documentId)}/revisions/${revision}/rollback`,
     { method: "POST", body: JSON.stringify({ reason }) }
   )
 }
 
-export function listAdminAudit(params: { action?: string; actor_id?: string; target_id?: string; page?: number } = {}) {
+export function listAdminAudit(
+  params: {
+    action?: string
+    actor_id?: string
+    target_id?: string
+    page?: number
+  } = {}
+) {
   const search = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") search.set(key, String(value))
@@ -361,14 +439,22 @@ export function listAdminRoles() {
   }>("/roles")
 }
 
-export function grantAdminRole(payload: { target_actor_id: string; role: string; reason?: string }) {
+export function grantAdminRole(payload: {
+  target_actor_id: string
+  role: string
+  reason?: string
+}) {
   return adminFetch<RoleAssignment>("/roles", {
     method: "POST",
     body: JSON.stringify(payload),
   })
 }
 
-export function revokeAdminRole(payload: { target_actor_id: string; role: string; reason: string }) {
+export function revokeAdminRole(payload: {
+  target_actor_id: string
+  role: string
+  reason: string
+}) {
   return adminFetch<RoleAssignment>("/roles/revoke", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -456,60 +542,90 @@ export function getIngestionOverview() {
 }
 
 export function startAdminDiscovery(sourceId: string) {
-  return adminFetch<IngestionJob>(`/ingestion/sources/${encodeURIComponent(sourceId)}/discover`, {
-    method: "POST",
-  })
+  return adminFetch<IngestionJob>(
+    `/ingestion/sources/${encodeURIComponent(sourceId)}/discover`,
+    {
+      method: "POST",
+    }
+  )
 }
 
-export function listIngestionCandidates(params: {
-  source_id?: string
-  status?: string
-  q?: string
-  page?: number
-  page_size?: number
-} = {}) {
+export function listIngestionCandidates(
+  params: {
+    source_id?: string
+    status?: string
+    q?: string
+    page?: number
+    page_size?: number
+  } = {}
+) {
   const search = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") search.set(key, String(value))
   }
-  return adminFetch<Paginated<IngestionCandidate>>(`/ingestion/candidates?${search.toString()}`)
+  return adminFetch<Paginated<IngestionCandidate>>(
+    `/ingestion/candidates?${search.toString()}`
+  )
 }
 
 export function getIngestionCandidate(id: string) {
-  return adminFetch<IngestionCandidate>(`/ingestion/candidates/${encodeURIComponent(id)}`)
+  return adminFetch<IngestionCandidate>(
+    `/ingestion/candidates/${encodeURIComponent(id)}`
+  )
 }
 
 export function ingestCandidate(id: string) {
-  return adminFetch<IngestionJob>(`/ingestion/candidates/${encodeURIComponent(id)}/ingest`, {
-    method: "POST",
-  })
+  return adminFetch<IngestionJob>(
+    `/ingestion/candidates/${encodeURIComponent(id)}/ingest`,
+    {
+      method: "POST",
+    }
+  )
 }
 
 export function skipCandidate(id: string, reason: string) {
-  return adminFetch<IngestionCandidate>(`/ingestion/candidates/${encodeURIComponent(id)}/skip`, {
-    method: "POST",
-    body: JSON.stringify({ reason }),
-  })
+  return adminFetch<IngestionCandidate>(
+    `/ingestion/candidates/${encodeURIComponent(id)}/skip`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }
+  )
 }
 
-export function listIngestionJobs(params: { status?: string; job_type?: string; page?: number; page_size?: number } = {}) {
+export function listIngestionJobs(
+  params: {
+    status?: string
+    job_type?: string
+    page?: number
+    page_size?: number
+  } = {}
+) {
   const search = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") search.set(key, String(value))
   }
-  return adminFetch<Paginated<IngestionJob>>(`/ingestion/jobs?${search.toString()}`)
+  return adminFetch<Paginated<IngestionJob>>(
+    `/ingestion/jobs?${search.toString()}`
+  )
 }
 
 export function retryIngestionJob(id: string) {
-  return adminFetch<IngestionJob>(`/ingestion/jobs/${encodeURIComponent(id)}/retry`, {
-    method: "POST",
-  })
+  return adminFetch<IngestionJob>(
+    `/ingestion/jobs/${encodeURIComponent(id)}/retry`,
+    {
+      method: "POST",
+    }
+  )
 }
 
 export function cancelIngestionJob(id: string) {
-  return adminFetch<IngestionJob>(`/ingestion/jobs/${encodeURIComponent(id)}/cancel`, {
-    method: "POST",
-  })
+  return adminFetch<IngestionJob>(
+    `/ingestion/jobs/${encodeURIComponent(id)}/cancel`,
+    {
+      method: "POST",
+    }
+  )
 }
 
 export function getDocumentProcessing(documentId: string) {
@@ -536,7 +652,10 @@ export function getDocumentProcessing(documentId: string) {
 }
 
 export function reprocessAdminDocument(documentId: string) {
-  return adminFetch<IngestionJob>(`/documents/${encodeURIComponent(documentId)}/reprocess`, {
-    method: "POST",
-  })
+  return adminFetch<IngestionJob>(
+    `/documents/${encodeURIComponent(documentId)}/reprocess`,
+    {
+      method: "POST",
+    }
+  )
 }

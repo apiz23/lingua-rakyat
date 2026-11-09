@@ -73,7 +73,7 @@ function PublicationsView() {
               setPage(1)
             }}
           >
-            <span className="admin-index mr-1">
+            <span className="mr-1 shrink-0 text-xs text-muted-foreground tabular-nums">
               {String(index + 1).padStart(2, "0")}
             </span>
             {t(value)}
@@ -92,11 +92,14 @@ function PublicationsView() {
         ) : (
           <div>
             {data.items.map((doc, index) => (
-              <article key={doc.id} className="admin-record">
+              <article
+                key={doc.id}
+                className="mb-3 grid min-w-0 gap-3 rounded-lg border border-border bg-card p-4 [overflow-wrap:anywhere] text-card-foreground shadow-sm"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1 basis-64">
                     <div className="flex flex-wrap items-baseline gap-2">
-                      <span className="admin-index">
+                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <Link

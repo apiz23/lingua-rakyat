@@ -591,7 +591,7 @@ export default function Home() {
             </div>
 
             <div className="min-w-0">
-              <Terminal className="rounded-xl border-border bg-zinc-950 text-zinc-100 shadow-sm">
+              <Terminal compact className="rounded-xl border-border bg-zinc-950 text-zinc-100 shadow-sm">
                 <AnimatedSpan className="flex items-center gap-2 text-xs text-zinc-400">
                   <FileText className="size-3.5 shrink-0" />
                   <span className="font-medium tracking-wide">

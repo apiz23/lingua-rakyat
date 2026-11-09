@@ -23,7 +23,7 @@ def test_health_endpoints_return_only_minimal_status():
         assert "SUPABASE" not in ready.text
 
 
-def test_v1_router_mounts_only_currently_authorized_audience_groups():
+def test_v1_router_mounts_audience_groups_with_privileged_admin():
     paths = app.openapi()["paths"]
 
     assert "/api/v1/public/voice/transcriptions" in paths
@@ -34,5 +34,17 @@ def test_v1_router_mounts_only_currently_authorized_audience_groups():
     assert "/api/v1/me/conversations" in paths
     assert "/api/v1/me/shares" in paths
     assert "/api/v1/machine/telegram/webhook" in paths
-    assert not any(path.startswith("/api/v1/admin/") for path in paths)
+    assert "/api/v1/admin/dashboard" in paths
+    assert "/api/v1/admin/documents" in paths
+    assert "/api/v1/admin/review-queue" in paths
+    assert "/api/v1/admin/audit-logs" in paths
     assert not any(path.startswith("/api/v1/internal/") for path in paths)
+
+    # Admin is mounted but privileged: anonymous access must not reach data.
+    with TestClient(app) as client:
+        for path in (
+            "/api/v1/admin/dashboard",
+            "/api/v1/admin/documents",
+            "/api/v1/admin/audit-logs",
+        ):
+            assert client.get(path).status_code == 401

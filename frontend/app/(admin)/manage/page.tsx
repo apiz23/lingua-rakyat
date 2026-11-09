@@ -50,7 +50,7 @@ export default function AdminOverviewPage() {
         <>
           <section
             aria-label={t("Operational metrics")}
-            className="admin-ledger"
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
           >
             <MetricCell
               index={1}
@@ -149,7 +149,7 @@ export default function AdminOverviewPage() {
           >
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
               <div>
-                <p className="admin-kicker">
+                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                   <UiText text="Audit / latest 10" />
                 </p>
                 <h2 className="mt-1 font-heading text-xl font-bold tracking-tight">
@@ -179,7 +179,7 @@ export default function AdminOverviewPage() {
                     key={`${entry.id ?? index}`}
                     className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1 border-b border-border py-3 sm:grid-cols-[5.5rem_auto_minmax(0,1fr)_auto]"
                   >
-                    <span className="admin-index tabular-nums">
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                       {entry.created_at
                         ? new Date(entry.created_at).toLocaleTimeString(
                             t.locale,
