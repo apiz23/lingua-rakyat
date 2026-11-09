@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "@/components/i18n"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import "react-pdf/dist/Page/TextLayer.css"
@@ -68,17 +69,21 @@ function PdfErrorState({
   language: string
   onRetry: () => void
 }) {
+  const t = useTranslations()
+
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
       <FileX className="h-8 w-8 text-muted-foreground/50" />
       <p className="text-sm text-muted-foreground">
-        {language === "ms" ? "Gagal memuatkan PDF." : "Failed to load PDF."}
+        {language === "ms"
+          ? t("Gagal memuatkan PDF.")
+          : t("Failed to load PDF.")}
       </p>
       <button
         onClick={onRetry}
         className="text-xs text-primary underline-offset-2 hover:underline"
       >
-        {language === "ms" ? "Cuba semula" : "Try again"}
+        {language === "ms" ? t("Cuba semula") : t("Try again")}
       </button>
     </div>
   )
@@ -97,6 +102,8 @@ function PdfViewer({
   highlightText,
   language,
 }: PdfViewerProps) {
+  const t = useTranslations()
+
   const proxyUrl = `${API_URL}/api/documents/${documentId}/pdf`
 
   const [numPages, setNumPages] = useState<number | null>(null)
@@ -177,8 +184,8 @@ function PdfViewer({
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>
             {language === "ms"
-              ? "Penyerlahan teks tidak tersedia untuk dokumen imbasan."
-              : "Text highlighting unavailable for scanned documents."}
+              ? t("Penyerlahan teks tidak tersedia untuk dokumen imbasan.")
+              : t("Text highlighting unavailable for scanned documents.")}
           </span>
         </div>
       )}
@@ -221,21 +228,19 @@ function PdfViewer({
         <button
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={currentPage <= 1}
-          aria-label="Previous page"
+          aria-label={t("Previous page")}
           className="p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <span className="text-[11px] text-muted-foreground">
-          {language === "ms" ? "Halaman" : "Page"} {currentPage}
+          {language === "ms" ? t("Halaman") : t("Page")} {currentPage}
           {numPages ? ` / ${numPages}` : ""}
         </span>
         <button
-          onClick={() =>
-            setCurrentPage((p) => Math.min(numPages ?? p, p + 1))
-          }
+          onClick={() => setCurrentPage((p) => Math.min(numPages ?? p, p + 1))}
           disabled={numPages !== null && currentPage >= numPages}
-          aria-label="Next page"
+          aria-label={t("Next page")}
           className="p-1 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
         >
           <ChevronRight className="h-4 w-4" />
@@ -256,6 +261,8 @@ function PanelHeader({
   language: string
   onClose: () => void
 }) {
+  const t = useTranslations()
+
   return (
     <div className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3">
       <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
@@ -265,14 +272,14 @@ function PanelHeader({
         href={`${API_URL}/api/documents/${documentId}/pdf?download=1`}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={language === "ms" ? "Muat turun PDF" : "Download PDF"}
+        aria-label={language === "ms" ? t("Muat turun PDF") : t("Download PDF")}
         className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-foreground"
       >
         <Download className="h-4 w-4" />
       </a>
       <button
         onClick={onClose}
-        aria-label="Close PDF viewer"
+        aria-label={t("Close PDF viewer")}
         className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-foreground"
       >
         <X className="h-4 w-4" />
@@ -313,7 +320,12 @@ export default function PdfPanel({
           style={{ width: "min(680px, 92vw)", maxWidth: "min(680px, 92vw)" }}
         >
           <SheetTitle className="sr-only">{docName}</SheetTitle>
-          <PanelHeader docName={docName} documentId={documentId} language={language} onClose={onClose} />
+          <PanelHeader
+            docName={docName}
+            documentId={documentId}
+            language={language}
+            onClose={onClose}
+          />
           <div className="min-h-0 flex-1">{viewer}</div>
         </SheetContent>
       </Sheet>
@@ -329,7 +341,12 @@ export default function PdfPanel({
         className="max-w-[min(95vw,540px)] gap-0 overflow-hidden p-0"
       >
         <div className="flex flex-col" style={{ height: "80vh" }}>
-          <PanelHeader docName={docName} documentId={documentId} language={language} onClose={onClose} />
+          <PanelHeader
+            docName={docName}
+            documentId={documentId}
+            language={language}
+            onClose={onClose}
+          />
           <div className="min-h-0 flex-1">{viewer}</div>
         </div>
       </SmoothDialog>
@@ -340,7 +357,12 @@ export default function PdfPanel({
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
       <DrawerContent className="flex max-h-[80vh] flex-col gap-0 p-0">
         <DrawerTitle className="sr-only">{docName}</DrawerTitle>
-        <PanelHeader docName={docName} documentId={documentId} language={language} onClose={onClose} />
+        <PanelHeader
+          docName={docName}
+          documentId={documentId}
+          language={language}
+          onClose={onClose}
+        />
         <div className="min-h-0 flex-1">{viewer}</div>
       </DrawerContent>
     </Drawer>

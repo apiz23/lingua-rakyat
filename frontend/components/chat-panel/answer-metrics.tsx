@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import { useState } from "react"
 import { ChevronDown, ChevronRight, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -26,7 +27,15 @@ const FILLED_CLASS: Record<Tone, string> = {
   warning: "bg-warning",
 }
 
-function MetricBar({ label, value, tooltip }: { label: string; value: number; tooltip?: string }) {
+function MetricBar({
+  label,
+  value,
+  tooltip,
+}: {
+  label: string
+  value: number
+  tooltip?: string
+}) {
   const pct = Math.round(value * 100)
   const tone = toneFor(value)
   const filled = Math.round(value * SEGMENTS)
@@ -35,7 +44,7 @@ function MetricBar({ label, value, tooltip }: { label: string; value: number; to
     <div className="space-y-1">
       <div className="flex items-baseline justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1 truncate text-[11px] font-medium text-muted-foreground">
-          {label}
+          {<UiText text={label} />}
           {tooltip && (
             <span title={tooltip} className="shrink-0 cursor-help">
               <Info
@@ -45,7 +54,7 @@ function MetricBar({ label, value, tooltip }: { label: string; value: number; to
             </span>
           )}
         </span>
-        <span className="shrink-0 text-[11px] font-semibold tabular-nums text-foreground/70">
+        <span className="shrink-0 text-[11px] font-semibold text-foreground/70 tabular-nums">
           {pct}%
         </span>
       </div>
@@ -75,7 +84,14 @@ interface BreakdownProps {
   language: string
 }
 
-function Breakdown({ confidence, faithfulness, sources, language }: BreakdownProps) {
+function Breakdown({
+  confidence,
+  faithfulness,
+  sources,
+  language,
+}: BreakdownProps) {
+  const t = useTranslations()
+
   const ms = language === "ms"
   const topSources = [...sources]
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
@@ -85,22 +101,25 @@ function Breakdown({ confidence, faithfulness, sources, language }: BreakdownPro
 
   return (
     <div className="mt-2 space-y-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-[10px] leading-relaxed text-muted-foreground">
-
       {/* Confidence section */}
       <div className="space-y-1.5">
-        <p className="font-semibold text-foreground/80 uppercase tracking-wider text-[9px]">
-          {ms ? "Keyakinan" : "Confidence"} — {pct(confidence)}
+        <p className="text-[9px] font-semibold tracking-wider text-foreground/80 uppercase">
+          {ms ? t("Keyakinan") : t("Confidence")} — {pct(confidence)}
         </p>
         <p>
           {ms
-            ? "Skor tertinggi daripada semua sumber yang ditemui. Formula: (kesamaan vektor × 35%) + (penilaian semula Cohere × 65%)"
-            : "Highest score across all retrieved sources. Formula: (vector similarity × 35%) + (Cohere rerank × 65%)"}
+            ? t(
+                "Skor tertinggi daripada semua sumber yang ditemui. Formula: (kesamaan vektor × 35%) + (penilaian semula Cohere × 65%)"
+              )
+            : t(
+                "Highest score across all retrieved sources. Formula: (vector similarity × 35%) + (Cohere rerank × 65%)"
+              )}
         </p>
 
         {topSources.length > 0 && (
           <div className="mt-1.5 space-y-1">
             <p className="font-medium text-foreground/60">
-              {ms ? "Skor teratas:" : "Top source scores:"}
+              {ms ? t("Skor teratas:") : t("Top source scores:")}
             </p>
             {topSources.map((src, i) => {
               const v = src.vector_score ?? 0
@@ -108,19 +127,27 @@ function Breakdown({ confidence, faithfulness, sources, language }: BreakdownPro
               const combined = src.score ?? 0
               const name = src.doc_name
                 ? src.doc_name.replace(/\.pdf$/i, "")
-                : ms ? `Sumber ${i + 1}` : `Source ${i + 1}`
+                : ms
+                  ? `Sumber ${i + 1}`
+                  : `Source ${i + 1}`
               const page = src.page_start ? ` p.${src.page_start}` : ""
               return (
                 <div key={i} className="flex items-start gap-2">
-                  <span className="shrink-0 font-mono text-foreground/50">{i + 1}.</span>
+                  <span className="shrink-0 font-mono text-foreground/50">
+                    {i + 1}.
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <span className="truncate text-foreground/60">{name}{page}</span>
-                    <span className="ml-1.5 font-semibold tabular-nums text-foreground/80">
+                    <span className="truncate text-foreground/60">
+                      {name}
+                      {page}
+                    </span>
+                    <span className="ml-1.5 font-semibold text-foreground/80 tabular-nums">
                       {pct(combined)}
                     </span>
                     {(v > 0 || r > 0) && (
                       <span className="ml-1 text-muted-foreground/60">
-                        ({ms ? "vektor" : "vec"} {pct(v)} + {ms ? "semantik" : "rerank"} {pct(r)})
+                        ({ms ? t("vektor") : t("vec")} {pct(v)} +{" "}
+                        {ms ? t("semantik") : t("rerank")} {pct(r)})
                       </span>
                     )}
                   </div>
@@ -134,13 +161,18 @@ function Breakdown({ confidence, faithfulness, sources, language }: BreakdownPro
       {/* Faithfulness section */}
       {hasFaithfulness && (
         <div className="space-y-1 border-t border-border/40 pt-3">
-          <p className="font-semibold text-foreground/80 uppercase tracking-wider text-[9px]">
-            {ms ? "Berdasar Sumber" : "Grounded"} — {pct(faithfulness as number)}
+          <p className="text-[9px] font-semibold tracking-wider text-foreground/80 uppercase">
+            {ms ? t("Berdasar Sumber") : t("Grounded")} —{" "}
+            {pct(faithfulness as number)}
           </p>
           <p>
             {ms
-              ? "Cohere menguji: adakah setiap kenyataan dalam jawapan disokong oleh petikan sumber? Jawapan digunakan sebagai pertanyaan; sumber sebagai dokumen. Skor tinggi = jawapan kekal dalam kandungan sumber."
-              : "Cohere reranker run in reverse: the answer is used as the query, source chunks as documents. Measures how well every claim in the answer stays within the source text. High = fully grounded, no hallucination."}
+              ? t(
+                  "Cohere menguji: adakah setiap kenyataan dalam jawapan disokong oleh petikan sumber? Jawapan digunakan sebagai pertanyaan; sumber sebagai dokumen. Skor tinggi = jawapan kekal dalam kandungan sumber."
+                )
+              : t(
+                  "Cohere reranker run in reverse: the answer is used as the query, source chunks as documents. Measures how well every claim in the answer stays within the source text. High = fully grounded, no hallucination."
+                )}
           </p>
         </div>
       )}
@@ -167,6 +199,8 @@ export function AnswerMetrics({
   confidenceLabel?: string
   sources?: SourceChunk[]
 }) {
+  const t = useTranslations()
+
   const ms = language === "ms"
   const hasFaithfulness = typeof faithfulness === "number" && faithfulness > 0
   const [open, setOpen] = useState(false)
@@ -189,11 +223,11 @@ export function AnswerMetrics({
     >
       {docName && (
         <div className="flex items-baseline justify-between gap-2">
-          <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="min-w-0 truncate text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
             {docName}
           </span>
           {page ? (
-            <span className="shrink-0 text-[10px] font-medium tabular-nums text-muted-foreground/70">
+            <span className="shrink-0 text-[10px] font-medium text-muted-foreground/70 tabular-nums">
               p.{page}
             </span>
           ) : null}
@@ -201,23 +235,31 @@ export function AnswerMetrics({
       )}
       {confidence > 0 && (
         <MetricBar
-          label={ms ? "Keyakinan" : "Confidence"}
+          label={ms ? t("Keyakinan") : t("Confidence")}
           value={confidence}
           tooltip={
             ms
-              ? "Kualiti padanan sumber. Formula: kesamaan vektor × 35% + Cohere rerank × 65%"
-              : "Source match quality. Formula: vector similarity × 35% + Cohere rerank × 65%"
+              ? t(
+                  "Kualiti padanan sumber. Formula: kesamaan vektor × 35% + Cohere rerank × 65%"
+                )
+              : t(
+                  "Source match quality. Formula: vector similarity × 35% + Cohere rerank × 65%"
+                )
           }
         />
       )}
       {hasFaithfulness && (
         <MetricBar
-          label={ms ? "Berdasar sumber" : "Grounded"}
+          label={ms ? t("Berdasar sumber") : t("Grounded")}
           value={faithfulness as number}
           tooltip={
             ms
-              ? "Setiap kenyataan dalam jawapan disokong petikan sumber. Tinggi = tiada halusinasi."
-              : "Answer stays within source text. High = every claim is backed by retrieved passages, no hallucination."
+              ? t(
+                  "Setiap kenyataan dalam jawapan disokong petikan sumber. Tinggi = tiada halusinasi."
+                )
+              : t(
+                  "Answer stays within source text. High = every claim is backed by retrieved passages, no hallucination."
+                )
           }
         />
       )}
@@ -243,7 +285,7 @@ export function AnswerMetrics({
         ) : (
           <ChevronRight className="h-3 w-3 shrink-0" />
         )}
-        {ms ? "Bagaimana dikira?" : "How calculated?"}
+        {ms ? t("Bagaimana dikira?") : t("How calculated?")}
       </button>
 
       {open && (

@@ -1,6 +1,7 @@
 "use client"
 
 import { motion, useReducedMotion } from "framer-motion"
+import { useTranslations } from "@/components/i18n"
 import { Clock3, Plus } from "lucide-react"
 import type { ChatCopy } from "@/lib/i18n/chat"
 
@@ -29,6 +30,7 @@ export function ThreadHistoryPanel({
 }) {
   const shouldReduce = useReducedMotion()
 
+  const t = useTranslations()
   return (
     <motion.div
       key="history-panel"
@@ -91,7 +93,7 @@ export function ThreadHistoryPanel({
                     <div className="flex items-center gap-2">
                       <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-xs font-medium text-foreground">
-                        {new Date(thread.lastUpdated).toLocaleString([], {
+                        {new Date(thread.lastUpdated).toLocaleString(t.locale, {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",

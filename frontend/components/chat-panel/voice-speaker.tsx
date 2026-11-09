@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText } from "@/components/i18n"
 import { Loader2, Square, Volume2 } from "lucide-react"
 import { useTTS } from "@/hooks/useTTS"
 
@@ -9,21 +10,37 @@ interface VoiceSpeakerProps {
 }
 
 const TTS_COPY = {
-  ms: { loading: "Memuatkan audio…", stop: "Henti", retry: "Cuba semula", listen: "Dengar Jawapan" },
-  en: { loading: "Loading audio…",   stop: "Stop",  retry: "Retry",       listen: "Listen" },
-  zh: { loading: "加载音频中…",       stop: "停止",  retry: "重试",         listen: "朗读回答" },
+  ms: {
+    loading: "Memuatkan audio…",
+    stop: "Henti",
+    retry: "Cuba semula",
+    listen: "Dengar Jawapan",
+  },
+  en: {
+    loading: "Loading audio…",
+    stop: "Stop",
+    retry: "Retry",
+    listen: "Listen",
+  },
+  zh: {
+    loading: "加载音频中…",
+    stop: "停止",
+    retry: "重试",
+    listen: "朗读回答",
+  },
 }
 
 export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
   const { play, stop, state } = useTTS()
   // language is the detected answer language (may be "zh-cn", "id", …)
-  const t = TTS_COPY[
-    language.startsWith("zh")
-      ? "zh"
-      : language.startsWith("ms") || language.startsWith("id")
-        ? "ms"
-        : "en"
-  ]
+  const t =
+    TTS_COPY[
+      language.startsWith("zh")
+        ? "zh"
+        : language.startsWith("ms") || language.startsWith("id")
+          ? "ms"
+          : "en"
+    ]
 
   const handleClick = () => {
     if (state === "playing") {
@@ -34,10 +51,13 @@ export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
   }
 
   const label =
-    state === "loading" ? t.loading :
-    state === "playing" ? t.stop :
-    state === "error"   ? t.retry :
-    t.listen
+    state === "loading"
+      ? t.loading
+      : state === "playing"
+        ? t.stop
+        : state === "error"
+          ? t.retry
+          : t.listen
 
   return (
     <button
@@ -49,8 +69,10 @@ export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
     >
       {state === "loading" && <Loader2 className="h-3 w-3 animate-spin" />}
       {state === "playing" && <Square className="h-3 w-3 fill-current" />}
-      {(state === "idle" || state === "error") && <Volume2 className="h-3 w-3" />}
-      {label}
+      {(state === "idle" || state === "error") && (
+        <Volume2 className="h-3 w-3" />
+      )}
+      {<UiText text={label} />}
     </button>
   )
 }

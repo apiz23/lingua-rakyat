@@ -1,7 +1,10 @@
 "use client"
 
+import { UiText } from "@/components/i18n"
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { usePathname } from "@/components/i18n"
+import { useRouter } from "@/components/i18n"
+
 import {
   Globe,
   LayoutDashboard,
@@ -36,8 +39,19 @@ type CommandEntry = {
 
 const OPEN_COMMAND_EVENT = "lingua-rakyat:open-command-palette"
 
+const VISIBLE_COMMAND_IDS: Record<
+  "public" | "citizen" | "admin" | "research",
+  ReadonlySet<string>
+> = {
+  public: new Set(["home", "results"]),
+  citizen: new Set(["home", "workspace", "results"]),
+  admin: new Set(["home", "manage"]),
+  research: new Set(["home", "results"]),
+}
+
 export default function CommandPaletteTopRight() {
   const router = useRouter()
+  const pathname = usePathname()
   const { language, setLanguage } = useLanguage()
   const isMobile = useMobile()
 
@@ -110,43 +124,61 @@ export default function CommandPaletteTopRight() {
           toggleLanguage: "Toggle language",
         }
 
+  // Navigation is audience-scoped. Route groups are presentation, not
+  // authorization: the backend still enforces every privileged call.
+  const audience: "public" | "citizen" | "admin" | "research" =
+    pathname?.startsWith("/manage")
+      ? "admin"
+      : pathname?.startsWith("/eval") || pathname?.startsWith("/benchmark")
+        ? "research"
+        : pathname?.startsWith("/workspace") ||
+            pathname?.startsWith("/profile") ||
+            pathname?.startsWith("/shares")
+          ? "citizen"
+          : "public"
+  const visibleCommandIds = VISIBLE_COMMAND_IDS[audience]
+
   const pageItems = React.useMemo<CommandEntry[]>(
-    () => [
-      {
-        id: "home",
-        label: copy.home,
-        hint: "/",
-        icon: LayoutDashboard,
-        action: () => router.push("/"),
-      },
-      {
-        id: "workspace",
-        label: copy.workspace,
-        hint: "/workspace",
-        icon: FolderOpen,
-        action: () => router.push("/workspace"),
-      },
-      {
-        id: "manage",
-        label: copy.manage,
-        hint: "/manage",
-        icon: FileText,
-        action: () => router.push("/manage"),
-      },
-      {
-        id: "results",
-        label: copy.results,
-        hint: "/results",
-        icon: TrendingUp,
-        action: () => router.push("/results"),
-      },
-    ],
+    () =>
+      (
+        [
+          {
+            id: "home",
+            label: copy.home,
+            hint: "/",
+            icon: LayoutDashboard,
+            action: () => router.push("/"),
+          },
+          {
+            id: "workspace",
+            label: copy.workspace,
+            hint: "/workspace",
+            icon: FolderOpen,
+            action: () => router.push("/workspace"),
+          },
+          {
+            id: "manage",
+            label: copy.manage,
+            hint: "/manage",
+            icon: FileText,
+            action: () => router.push("/manage"),
+          },
+          {
+            id: "results",
+            label: copy.results,
+            hint: "/results",
+            icon: TrendingUp,
+            action: () => router.push("/results"),
+          },
+        ] satisfies CommandEntry[]
+      ).filter((item) => visibleCommandIds.has(item.id)),
     [
       copy.home,
       copy.manage,
       copy.results,
       copy.workspace,
       router,
+      visibleCommandIds,
     ]
   )
 
@@ -203,9 +235,8 @@ export default function CommandPaletteTopRight() {
 
                 <div className="flex flex-1 flex-col">
                   <span className="group-data-[selected=true]:text-primary">
-                    {item.label}
+                    {<UiText text={item.label} />}
                   </span>
-                 
                 </div>
 
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
@@ -229,10 +260,10 @@ export default function CommandPaletteTopRight() {
 
                 <div className="flex flex-1 flex-col">
                   <span className="group-data-[selected=true]:text-primary">
-                    {item.label}
+                    {<UiText text={item.label} />}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {item.hint}
+                    {<UiText text={item.hint} />}
                   </span>
                 </div>
               </CommandItem>
@@ -245,19 +276,27 @@ export default function CommandPaletteTopRight() {
           <div className="border-t border-border/40 px-4 py-3">
             <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px]">Navigate</span>
+                <span className="text-[11px]">
+                  <UiText text="Navigate" />
+                </span>
                 <KbdGroup>
                   <Kbd>↑</Kbd>
                   <Kbd>↓</Kbd>
                 </KbdGroup>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px]">Select</span>
+                <span className="text-[11px]">
+                  <UiText text="Select" />
+                </span>
                 <Kbd>↵</Kbd>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px]">Close</span>
-                <Kbd>esc</Kbd>
+                <span className="text-[11px]">
+                  <UiText text="Close" />
+                </span>
+                <Kbd>
+                  <UiText text="esc" />
+                </Kbd>
               </div>
             </div>
           </div>

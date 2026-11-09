@@ -1,4 +1,13 @@
 allowBuilds:
+  esbuild: true
   msw: true
   sharp: true
   unrs-resolver: true
+overrides:
+  '@clerk/localizations>@clerk/shared': '4.25.2'
+onlyBuiltDependencies:
+  - esbuild
+  - msw
+  - sharp
+  - unrs-resolver
+  - "@tailwindcss/oxide"

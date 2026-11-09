@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "@/components/i18n"
 import {
   Fragment,
   useCallback,
@@ -12,7 +13,10 @@ import { useAuth } from "@clerk/nextjs"
 import { WifiOff } from "lucide-react"
 import { purgeLegacyOfflineData } from "@/lib/offline-cache"
 import { useLanguage } from "@/components/language-provider"
-import { createInvalidationChannel, OFFLINE_PROTOCOL_VERSION } from "@/lib/offline-protocol"
+import {
+  createInvalidationChannel,
+  OFFLINE_PROTOCOL_VERSION,
+} from "@/lib/offline-protocol"
 
 const LEGACY_CACHE_PREFIX = "lingua-rakyat"
 
@@ -65,14 +69,22 @@ async function purgeLegacyCaches() {
  * invalidation. Private data still fails closed at the API, which verifies the
  * Clerk token server-side.
  */
-export default function OfflineProvider({ children }: { children: React.ReactNode }) {
+export default function OfflineProvider({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const t = useTranslations()
+
   const { isLoaded, isSignedIn, userId } = useAuth()
   const { language } = useLanguage()
   const online = useSyncExternalStore(subscribeOnline, getOnline, () => true)
   const offline = !online
   const [epoch, setEpoch] = useState(0)
   const mounted = useRef(false)
-  const channel = useRef<ReturnType<typeof createInvalidationChannel> | null>(null)
+  const channel = useRef<ReturnType<typeof createInvalidationChannel> | null>(
+    null
+  )
   const actor = useRef<string | null>(null)
 
   const invalidate = useCallback(() => {
@@ -119,7 +131,10 @@ export default function OfflineProvider({ children }: { children: React.ReactNod
       mounted.current = false
       channel.current = null
       peer.close()
-      navigator.serviceWorker?.removeEventListener("controllerchange", onController)
+      navigator.serviceWorker?.removeEventListener(
+        "controllerchange",
+        onController
+      )
       navigator.serviceWorker?.removeEventListener("message", onWorkerMessage)
       window.removeEventListener("online", onConnectivity)
       window.removeEventListener("offline", onConnectivity)
@@ -154,10 +169,12 @@ export default function OfflineProvider({ children }: { children: React.ReactNod
           <WifiOff className="h-3.5 w-3.5" />
           <span>
             {language === "ms"
-              ? "Luar talian: sambung semula untuk mengakses dokumen dan jawapan tersimpan"
+              ? t(
+                  "Luar talian: sambung semula untuk mengakses dokumen dan jawapan tersimpan"
+                )
               : language === "zh"
                 ? "离线：请重新连接网络以访问文件和已保存的答案"
-                : "Offline: reconnect to access documents and saved answers"}
+                : t("Offline: reconnect to access documents and saved answers")}
           </span>
         </div>
       )}

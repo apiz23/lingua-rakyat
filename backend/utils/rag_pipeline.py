@@ -3,6 +3,7 @@ rag_pipeline.py - Lightweight multilingual RAG pipeline.
 """
 
 import logging
+import hashlib
 import math
 import os
 import re
@@ -165,6 +166,13 @@ def detect_language(text: str) -> str:
 _query_cache: dict[tuple, dict[str, Any]] = {}
 CACHE_MAX_SIZE = 200
 
+# Release gate: answer caching stays disabled until keys carry document scope,
+# revision, source, policy epoch, model and prompt versions and hits re-check
+# every cited revision. Until then a cache hit could outlive a withdrawal.
+ENABLE_ANSWER_CACHE = (
+    os.getenv("ENABLE_ANSWER_CACHE", "false").strip().lower() == "true"
+)
+
 _augmenter: Optional[QueryAugmenter] = None
 
 
@@ -207,6 +215,8 @@ def cache_get(
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
 ) -> dict[str, Any] | None:
+    if not ENABLE_ANSWER_CACHE:
+        return None
     entry = _query_cache.get(
         _cache_key(
             question,
@@ -228,6 +238,8 @@ def cache_set(
     model_override: str | None = None,
     enable_query_augmentation: bool = True,
 ) -> None:
+    if not ENABLE_ANSWER_CACHE:
+        return
     global _query_cache
     if len(_query_cache) >= CACHE_MAX_SIZE:
         evict_n = max(1, CACHE_MAX_SIZE // 5)
@@ -683,6 +695,170 @@ def ingest_document(
     return len(chunks), quality
 
 
+def revision_namespace(document_id: str, revision: int) -> str:
+    """Isolated Pinecone namespace for one document revision."""
+    return f"doc:{document_id}:rev:{int(revision)}"
+
+
+def ingest_revision(
+    pdf_path: str,
+    document_id: str,
+    revision: int,
+    source_id: str = "",
+    document_name: str | None = None,
+) -> dict[str, Any]:
+    """Extract, embed and index one revision into an isolated namespace.
+
+    The namespace is replaced only for this revision, so a failed reindex never
+    touches the currently published revision's vectors. Success is reported
+    only after the index reports the expected vector count.
+    """
+    logger.info(
+        "[Ingest] Revision start: document_id=%s revision=%s", document_id, revision
+    )
+    pages, quality = extract_pages_from_pdf(pdf_path)
+    if not pages:
+        raise ValueError("No text extracted from PDF.")
+    chunks = chunk_pages(pages)
+    if not chunks:
+        raise ValueError("No valid chunks after filtering.")
+
+    namespace = revision_namespace(document_id, revision)
+    chunk_texts = [chunk["text"] for chunk in chunks]
+    embeddings = get_embeddings_cohere(chunk_texts)
+    if len(embeddings) != len(chunks) or any(not vector for vector in embeddings):
+        raise RuntimeError("Indexing failed: embedding count or empty vector mismatch")
+    indexed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    embedding_model = os.getenv("COHERE_EMBED_MODEL", "embed-multilingual-v3.0")
+
+    vectors = []
+    chunk_ids: list[str] = []
+    for index_num, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+        content_hash = hashlib.sha1(chunk["text"].encode("utf-8")).hexdigest()
+        chunk_id = f"{document_id}:rev{int(revision)}:{index_num}:{content_hash[:12]}"
+        chunk_ids.append(chunk_id)
+        vectors.append(
+            (
+                chunk_id,
+                embedding,
+                {
+                    "text": chunk["text"],
+                    "doc_id": document_id,
+                    "revision": int(revision),
+                    "revision_id": str(int(revision)),
+                    "source_id": source_id,
+                    "chunk_id": chunk_id,
+                    "chunk_index": index_num,
+                    "content_hash": content_hash,
+                    "doc_name": document_name or "",
+                    "page_start": chunk["page_start"],
+                    "page_end": chunk["page_end"],
+                    "section_title": chunk["section_title"],
+                    "indexed_at": indexed_at,
+                    "embedding_model": embedding_model,
+                    "index_status": "indexed",
+                },
+            )
+        )
+
+    index = _get_index()
+    # Safe: this namespace belongs to the pending revision only.
+    try:
+        index.delete(delete_all=True, namespace=namespace)
+    except Exception:
+        pass
+    index.upsert(vectors=vectors, namespace=namespace)
+
+    stats = index.describe_index_stats()
+    raw_namespaces = getattr(stats, "namespaces", None)
+    if raw_namespaces is None and isinstance(stats, dict):
+        raw_namespaces = stats.get("namespaces", {})
+    entry = (raw_namespaces or {}).get(namespace) if raw_namespaces else None
+    vector_count = None
+    if entry is not None:
+        vector_count = (
+            entry.get("vector_count")
+            if isinstance(entry, dict)
+            else getattr(entry, "vector_count", None)
+        )
+    if vector_count is None or int(vector_count) != len(vectors):
+        raise RuntimeError("Index verification failed: vectors missing after upsert")
+
+    sample_ids = chunk_ids[:1] + (chunk_ids[-1:] if len(chunk_ids) > 1 else [])
+    try:
+        fetched = index.fetch(ids=sample_ids, namespace=namespace)
+        raw_vectors = getattr(fetched, "vectors", None)
+        if raw_vectors is None and isinstance(fetched, dict):
+            raw_vectors = fetched.get("vectors", {})
+        for sample_id in sample_ids:
+            item = (raw_vectors or {}).get(sample_id)
+            metadata = getattr(item, "metadata", None) if item is not None else None
+            if metadata is None and isinstance(item, dict):
+                metadata = item.get("metadata")
+            if not isinstance(metadata, dict) or metadata.get("revision") != int(revision):
+                raise RuntimeError("Index verification failed: sample metadata mismatch")
+            if metadata.get("doc_id") != document_id:
+                raise RuntimeError("Index verification failed: sample document mismatch")
+            if source_id and metadata.get("source_id") != source_id:
+                raise RuntimeError("Index verification failed: sample source mismatch")
+    except AttributeError:
+        # Provider without fetch in this adapter: count verification only.
+        logger.warning("[Ingest] Index fetch unavailable; count-only verification")
+
+    return {
+        "chunk_count": len(vectors),
+        "namespace": namespace,
+        "chunk_ids": chunk_ids,
+        "sample_chunk_ids": sample_ids,
+        "quality": quality,
+        "embedding_model": embedding_model,
+        "indexed_at": indexed_at,
+        "verified": True,
+    }
+
+
+def verify_revision_index(
+    namespace: str,
+    expected_chunks: int,
+    sample_ids: Optional[list[str]] = None,
+    document_id: Optional[str] = None,
+    revision: Optional[int] = None,
+) -> bool:
+    if not namespace or expected_chunks <= 0:
+        return False
+    index = _get_index()
+    stats = index.describe_index_stats()
+    raw = getattr(stats, "namespaces", None)
+    if raw is None and isinstance(stats, dict):
+        raw = stats.get("namespaces", {})
+    entry = (raw or {}).get(namespace)
+    if entry is None:
+        return False
+    count = entry.get("vector_count") if isinstance(entry, dict) else getattr(entry, "vector_count", 0)
+    if int(count or 0) < expected_chunks:
+        return False
+    if sample_ids:
+        try:
+            fetched = index.fetch(ids=list(sample_ids), namespace=namespace)
+        except Exception:
+            return False
+        raw_vectors = getattr(fetched, "vectors", None)
+        if raw_vectors is None and isinstance(fetched, dict):
+            raw_vectors = fetched.get("vectors", {})
+        for sample_id in sample_ids:
+            item = (raw_vectors or {}).get(sample_id)
+            metadata = getattr(item, "metadata", None) if item is not None else None
+            if metadata is None and isinstance(item, dict):
+                metadata = item.get("metadata")
+            if not isinstance(metadata, dict):
+                return False
+            if document_id is not None and metadata.get("doc_id") != document_id:
+                return False
+            if revision is not None and metadata.get("revision") != revision:
+                return False
+    return True
+
+
 def _get_index():
     return Pinecone(api_key=PINECONE_API_KEY).Index(PINECONE_INDEX)
 
@@ -933,6 +1109,7 @@ def _retrieve_matches(
     namespaces: list[str],
     query_variants: list[dict[str, str]],
     top_k: int,
+    allowed_revisions: dict[str, Optional[int]] | None = None,
 ) -> list[dict[str, Any]]:
     index = _get_index()
     all_matches: list[dict[str, Any]] = []
@@ -954,6 +1131,16 @@ def _retrieve_matches(
                 metadata = match.get("metadata", {})
                 # Older vectors predate the doc_id field; fall back to namespace.
                 metadata.setdefault("doc_id", namespace)
+                if allowed_revisions is not None:
+                    document_ref = str(metadata.get("doc_id") or "")
+                    if document_ref not in allowed_revisions:
+                        continue
+                    expected_revision = allowed_revisions[document_ref]
+                    if expected_revision is None:
+                        if metadata.get("revision") is not None:
+                            continue
+                    elif str(metadata.get("revision")) != str(expected_revision):
+                        continue
                 reranked_score = min(1.0, match.get("score", 0.0) + _query_variant_weight(variant["variant_type"]))
                 all_matches.append({
                     "id": match.get("id"),
@@ -1430,6 +1617,8 @@ def _prepare_pipeline(
     enable_query_augmentation: bool = True,
     chat_history: list[dict] | None = None,
     document_ids: list[str] | None = None,
+    namespaces: list[str] | None = None,
+    allowed_revisions: dict[str, int | None] | None = None,
 ) -> dict[str, Any]:
     t_start = time.time()
     lang = detect_language(question)
@@ -1437,10 +1626,15 @@ def _prepare_pipeline(
     small_model = _is_small_model(model_name)
     is_summary = is_summarize_intent(question)
 
-    namespaces = _resolve_namespaces(document_id, document_ids)
+    namespaces = namespaces or _resolve_namespaces(document_id, document_ids)
     if not namespaces:
         raise RuntimeError("No document specified. Provide a document_id or document_ids.")
     multi_doc = len(namespaces) > 1
+    logical_document_id = (
+        document_id
+        or (document_ids[0] if document_ids else None)
+        or (next(iter(allowed_revisions), namespaces[0]) if allowed_revisions else namespaces[0])
+    )
 
     # History-aware rewrite: a bare follow-up ("what about for foreigners?")
     # has no subject, so embed a standalone version built from recent turns.
@@ -1462,7 +1656,12 @@ def _prepare_pipeline(
         top_k += min(len(namespaces), 3)
 
     t_retrieve = time.time()
-    matches = _retrieve_matches(namespaces=namespaces, query_variants=query_variants, top_k=top_k)
+    matches = _retrieve_matches(
+        namespaces=namespaces,
+        query_variants=query_variants,
+        top_k=top_k,
+        allowed_revisions=allowed_revisions,
+    )
     retrieve_ms = round((time.time() - t_retrieve) * 1000)
     filtered_matches = _filter_matches(matches, is_summary=is_summary)
     if not filtered_matches:
@@ -1496,7 +1695,7 @@ def _prepare_pipeline(
 
     return {
         "question": question,
-        "document_id": namespaces[0],
+        "document_id": logical_document_id,
         "namespaces": namespaces,
         "multi_doc": multi_doc,
         "language": lang,
@@ -1841,11 +2040,20 @@ def answer_question(
     bypass_cache: bool = False,
     chat_history: list[dict] | None = None,
     document_ids: list[str] | None = None,
+    namespaces: list[str] | None = None,
+    allowed_revisions: dict[str, int | None] | None = None,
 ) -> dict[str, Any]:
     question = _sanitize_question(question)
     # Skip cache when conversation history is present (same question, different
-    # context) or when querying multiple docs (cache is keyed on a single doc).
-    skip_cache = bypass_cache or bool(chat_history) or bool(document_ids)
+    # context), when querying multiple docs, or when revision-scoped retrieval
+    # is in use (cache keys are not revision-aware yet).
+    skip_cache = (
+        bypass_cache
+        or bool(chat_history)
+        or bool(document_ids)
+        or allowed_revisions is not None
+        or namespaces is not None
+    )
     cached = None if skip_cache else cache_get(
         question,
         document_id,
@@ -1862,6 +2070,8 @@ def answer_question(
         enable_query_augmentation=enable_query_augmentation,
         chat_history=chat_history,
         document_ids=document_ids,
+        namespaces=namespaces,
+        allowed_revisions=allowed_revisions,
     )
     if prepared["sufficient_evidence"] or prepared.get("usable_evidence", False):
         answer_text, model_used = _generate_completion(prepared["prompt_text"], prepared["model_name"])
@@ -1891,9 +2101,17 @@ def stream_answer_question(
     bypass_cache: bool = False,
     chat_history: list[dict] | None = None,
     document_ids: list[str] | None = None,
+    namespaces: list[str] | None = None,
+    allowed_revisions: dict[str, int | None] | None = None,
 ) -> Generator[dict[str, Any], None, None]:
     question = _sanitize_question(question)
-    skip_cache = bypass_cache or bool(chat_history) or bool(document_ids)
+    skip_cache = (
+        bypass_cache
+        or bool(chat_history)
+        or bool(document_ids)
+        or allowed_revisions is not None
+        or namespaces is not None
+    )
     cached = None if skip_cache else cache_get(
         question,
         document_id,
@@ -1923,6 +2141,8 @@ def stream_answer_question(
         enable_query_augmentation=enable_query_augmentation,
         chat_history=chat_history,
         document_ids=document_ids,
+        namespaces=namespaces,
+        allowed_revisions=allowed_revisions,
     )
     yield {
         "type": "retrieval",

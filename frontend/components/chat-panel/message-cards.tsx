@@ -1,5 +1,7 @@
 "use client"
 
+import { localizeHref } from "@/lib/i18n/routing"
+import { UiText, useTranslations } from "@/components/i18n"
 import React, { useState } from "react"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
@@ -227,7 +229,7 @@ const SourcePills = React.memo(function SourcePills({
           title={label}
         >
           <FileText className="h-3 w-3 shrink-0" />
-          <span>{label}</span>
+          <span>{<UiText text={label} />}</span>
           <ExternalLink className="h-3 w-3 shrink-0 text-primary/60 group-hover/pill:text-primary-foreground/80" />
         </button>
       </div>
@@ -303,6 +305,8 @@ export const AIMessageCard = React.memo(function AIMessageCard({
   docId?: string
   simpleMode?: boolean
 }) {
+  const t = useTranslations()
+
   const { language } = useLanguage()
   const shouldReduce = useReducedMotion()
   const isSourcesOpen = expandedSources.has(message.id)
@@ -381,24 +385,35 @@ export const AIMessageCard = React.memo(function AIMessageCard({
         requestLifetime.finish()
       }
     },
-    [feedback, sessionId, docId, message.id, message.question, message.sources, lifetime]
+    [
+      feedback,
+      sessionId,
+      docId,
+      message.id,
+      message.question,
+      message.sources,
+      lifetime,
+    ]
   )
 
   const handleShare = React.useCallback(async () => {
     const requestLifetime = lifetime.begin()
     setSharing(true)
     try {
-      const result = await createShare({
-        session_id: sessionId ?? "",
-        question: message.question,
-        answer: message.answer,
-      }, requestLifetime.signal)
+      const result = await createShare(
+        {
+          session_id: sessionId ?? "",
+          question: message.question,
+          answer: message.answer,
+        },
+        requestLifetime.signal
+      )
       if (!requestLifetime.current()) return
-      const url = `${window.location.origin}${result.url}`
+      const url = `${window.location.origin}${localizeHref(result.url, language === "ms" ? "ms" : "en")}`
       try {
         await navigator.clipboard.writeText(url)
         if (!requestLifetime.current()) return
-        toast.success("Link copied! Share via WhatsApp or SMS.")
+        toast.success(t("Link copied! Share via WhatsApp or SMS."))
       } catch {
         if (!requestLifetime.current()) return
         // Clipboard denied (non-HTTPS, permissions) — show the link instead
@@ -410,17 +425,12 @@ export const AIMessageCard = React.memo(function AIMessageCard({
         toast.error(error.message)
         return
       }
-      toast.error("Couldn't create link — try again")
+      toast.error(t("Couldn't create link — try again"))
     } finally {
       if (requestLifetime.current()) setSharing(false)
       requestLifetime.finish()
     }
-  }, [
-    sessionId,
-    message.question,
-    message.answer,
-    lifetime,
-  ])
+  }, [sessionId, message.question, message.answer, lifetime, language, t])
 
   React.useEffect(() => {
     return () => {
@@ -459,13 +469,25 @@ export const AIMessageCard = React.memo(function AIMessageCard({
       sources: message.sources,
     })
     const labels = {
-      generating: { label: copy.answerGenerating, dotColor: "bg-muted-foreground" },
+      generating: {
+        label: copy.answerGenerating,
+        dotColor: "bg-muted-foreground",
+      },
       verifying: { label: copy.answerVerifying, dotColor: "bg-warning" },
       verified: { label: copy.answerVerified, dotColor: "bg-success" },
-      partially_supported: { label: copy.answerPartiallySupported, dotColor: "bg-warning" },
+      partially_supported: {
+        label: copy.answerPartiallySupported,
+        dotColor: "bg-warning",
+      },
       conflicting: { label: copy.answerConflicting, dotColor: "bg-warning" },
-      unsupported: { label: copy.answerUnsupported, dotColor: "bg-destructive" },
-      unverifiable: { label: copy.answerVerificationUnavailable, dotColor: "bg-muted-foreground" },
+      unsupported: {
+        label: copy.answerUnsupported,
+        dotColor: "bg-destructive",
+      },
+      unverifiable: {
+        label: copy.answerVerificationUnavailable,
+        dotColor: "bg-muted-foreground",
+      },
     }
     return labels[state]
   })()
@@ -500,7 +522,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                   copyToClipboard(message.answer, `a-${message.timestamp}`)
                 }
                 className="p-1.5 opacity-100 transition-opacity hover:bg-muted sm:opacity-50 sm:group-hover:opacity-100"
-                title="Copy answer"
+                title={t("Copy answer")}
               >
                 {copiedId === `a-${message.timestamp}` ? (
                   <Check className="h-4 w-4 text-primary" />
@@ -520,12 +542,12 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                 )}
               />
               <span aria-live={message.isStreaming ? "polite" : undefined}>
-                {evidenceState.label}
+                {<UiText text={evidenceState.label} />}
               </span>
               {!simpleMode && message.cached ? (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span>{language === "ms" ? "cache" : "cached"}</span>
+                  <span>{language === "ms" ? t("cache") : t("cached")}</span>
                 </>
               ) : null}
               {!simpleMode && message.latency_ms > 0 ? (
@@ -628,10 +650,10 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                 <div className="mt-3 space-y-1.5">
                   <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                     {message.language === "ms"
-                      ? "Soalan susulan:"
+                      ? t("Soalan susulan:")
                       : message.language === "zh-cn"
                         ? "后续问题："
-                        : "Follow-up questions:"}
+                        : t("Follow-up questions:")}
                   </p>
                   <div className="flex flex-col gap-1.5">
                     {message.suggestions.map((q) => (
@@ -663,7 +685,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
             <div className="mt-4 flex flex-col gap-2 border-t border-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-1 sm:gap-3">
                 <span className="text-xs text-muted-foreground">
-                  {new Date(message.timestamp).toLocaleTimeString([], {
+                  {new Date(message.timestamp).toLocaleTimeString(t.locale, {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
@@ -683,17 +705,17 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                       ].join(" ")}
                       title={
                         language === "ms"
-                          ? "Jawapan berguna"
+                          ? t("Jawapan berguna")
                           : language === "zh"
                             ? "有帮助"
-                            : "Helpful"
+                            : t("Helpful")
                       }
                       aria-label={
                         language === "ms"
-                          ? "Jawapan berguna"
+                          ? t("Jawapan berguna")
                           : language === "zh"
                             ? "有帮助"
-                            : "Helpful"
+                            : t("Helpful")
                       }
                     >
                       <ThumbsUp className="h-4 w-4" />
@@ -710,17 +732,17 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                       ].join(" ")}
                       title={
                         language === "ms"
-                          ? "Jawapan tidak berguna"
+                          ? t("Jawapan tidak berguna")
                           : language === "zh"
                             ? "没帮助"
-                            : "Not helpful"
+                            : t("Not helpful")
                       }
                       aria-label={
                         language === "ms"
-                          ? "Jawapan tidak berguna"
+                          ? t("Jawapan tidak berguna")
                           : language === "zh"
                             ? "没帮助"
-                            : "Not helpful"
+                            : t("Not helpful")
                       }
                     >
                       <ThumbsDown className="h-4 w-4" />
@@ -731,18 +753,18 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                       disabled={sharing}
                       aria-label={
                         language === "ms"
-                          ? "Kongsi jawapan"
+                          ? t("Kongsi jawapan")
                           : language === "zh"
                             ? "分享回答"
-                            : "Share answer"
+                            : t("Share answer")
                       }
                       className="p-2 text-muted-foreground/40 transition-colors hover:text-foreground disabled:opacity-50"
                       title={
                         language === "ms"
-                          ? "Kongsi jawapan"
+                          ? t("Kongsi jawapan")
                           : language === "zh"
                             ? "分享回答"
-                            : "Share answer"
+                            : t("Share answer")
                       }
                     >
                       <Share2 className="h-4 w-4" />
@@ -762,13 +784,24 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                   {isSourcesOpen ? (
                     <>
                       {message.sources.length}{" "}
-                      {language === "ms" ? "sumber" : "sources"}
+                      {language === "ms" ? t("sumber") : t("sources")}
                     </>
                   ) : (
                     <>
                       {message.sources.length > 0
-                        ? `Source: ${message.sources[0].doc_name || message.sources[0].document_id}${message.sources[0].page_start ? ` · p.${message.sources[0].page_start}` : ""}${message.sources.length > 1 ? ` +${message.sources.length - 1} more` : ""}`
-                        : "Sources"}
+                        ? t("Source: {value0}{value1}{value2}", {
+                            value0:
+                              message.sources[0].doc_name ||
+                              message.sources[0].document_id,
+                            value1: message.sources[0].page_start
+                              ? ` · p.${message.sources[0].page_start}`
+                              : "",
+                            value2:
+                              message.sources.length > 1
+                                ? ` +${message.sources.length - 1} more`
+                                : "",
+                          })
+                        : t("Sources")}
                     </>
                   )}
                   {isSourcesOpen ? (
@@ -795,7 +828,7 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                 >
                   <div className="mt-4 space-y-2">
                     <div className="px-1 text-xs font-medium text-muted-foreground">
-                      {language === "ms" ? "Sumber:" : "Sources:"}
+                      {language === "ms" ? t("Sumber:") : t("Sources:")}
                     </div>
 
                     {message.sources.map((source, sourceIndex) => {
@@ -866,12 +899,12 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                                     className="ml-1 inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:outline-none"
                                     title={
                                       language === "ms"
-                                        ? "Lihat halaman asal"
-                                        : "View source page"
+                                        ? t("Lihat halaman asal")
+                                        : t("View source page")
                                     }
                                   >
                                     <ExternalLink className="h-3 w-3" />
-                                    {language === "ms" ? "lihat" : "view"}
+                                    {language === "ms" ? t("lihat") : t("view")}
                                   </button>
                                 ) : null}
                               </div>
@@ -888,9 +921,11 @@ export const AIMessageCard = React.memo(function AIMessageCard({
                                   />
                                 </div>
                                 <span className="text-[10px] whitespace-nowrap text-muted-foreground">
-                                  {(
-                                    source.confidence_label ?? scoreLabel
-                                  ).toString()}{" "}
+                                  {t(
+                                    (
+                                      source.confidence_label ?? scoreLabel
+                                    ).toString()
+                                  )}{" "}
                                   - {Math.round(source.score * 100)}%
                                 </span>
                               </div>
@@ -929,6 +964,8 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
   copiedId: string | null
   copyToClipboard: (text: string, id: string) => void
 }) {
+  const t = useTranslations()
+
   return (
     <Message align="end" className="group items-start gap-2 sm:gap-3">
       <MessageAvatar className="mt-1 mr-2 hidden h-9 w-9 self-start bg-primary/10 ring-1 ring-primary/30 group-has-data-[slot=message-footer]/message:translate-y-0 sm:flex sm:h-10 sm:w-10">
@@ -942,7 +979,7 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
 
         <MessageFooter className="gap-2 px-0 font-normal">
           <span className="text-xs text-muted-foreground">
-            {new Date(message.timestamp).toLocaleTimeString([], {
+            {new Date(message.timestamp).toLocaleTimeString(t.locale, {
               hour: "2-digit",
               minute: "2-digit",
             })}
@@ -954,7 +991,7 @@ export const UserMessageBubble = React.memo(function UserMessageBubble({
               copyToClipboard(message.question, `q-${message.timestamp}`)
             }
             className="p-1 opacity-100 transition-opacity hover:bg-muted sm:opacity-50 sm:group-hover:opacity-100"
-            title="Copy question"
+            title={t("Copy question")}
           >
             {copiedId === `q-${message.timestamp}` ? (
               <Check className="h-3.5 w-3.5 text-primary" />
@@ -988,7 +1025,7 @@ export function TypingIndicator() {
         <MarkerIcon>
           <Loader2 className="animate-spin text-primary" />
         </MarkerIcon>
-        <MarkerContent>{label}</MarkerContent>
+        <MarkerContent>{<UiText text={label} />}</MarkerContent>
       </Marker>
     </div>
   )

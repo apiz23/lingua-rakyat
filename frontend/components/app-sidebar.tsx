@@ -1,24 +1,14 @@
 "use client"
 
+import { useTranslations } from "@/components/i18n"
 import { useEffect, useState } from "react"
-import Link from "next/link"
+import { LocalizedLink as Link } from "@/components/i18n"
 import Image from "next/image"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "@/components/i18n"
+import { useRouter } from "@/components/i18n"
+
 import { useUser } from "@clerk/nextjs"
-import {
-  FolderOpen,
-  Target,
-  Command,
-  MessageSquare,
-  Languages,
-  BookOpen,
-  Plus,
-  User,
-  LogOut,
-  Share2,
-  Check,
-  X,
-} from "lucide-react"
+import { Command, MessageSquare, Plus, User, Check, X } from "lucide-react"
 
 import {
   Sidebar,
@@ -30,7 +20,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  sidebarMenuButtonVariants,
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useLanguage } from "@/components/language-provider"
@@ -59,37 +48,38 @@ const navItems: NavItem[] = [
     icon: MessageSquare,
   },
   {
-    href: "/manage",
-    label: "Documents",
-    icon: FolderOpen,
+    href: "/shares",
+    label: "Shared conversations",
+    icon: MessageSquare,
   },
   {
-    href: "/results",
-    label: "Showcase",
-    icon: Target,
-  },
-  {
-    href: "/about",
-    label: "About",
-    icon: BookOpen,
+    href: "/profile",
+    label: "Profile",
+    icon: User,
   },
 ] as const
 
-function relativeTime(iso: string): string {
+function relativeTime(iso: string, locale: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return "now"
-  if (mins < 60) return `${mins}m`
+  const formatter = new Intl.RelativeTimeFormat(locale, {
+    numeric: "auto",
+    style: "short",
+  })
+  if (mins < 1) return formatter.format(0, "second")
+  if (mins < 60) return formatter.format(-mins, "minute")
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h`
-  return `${Math.floor(hrs / 24)}d`
+  if (hrs < 24) return formatter.format(-hrs, "hour")
+  return formatter.format(-Math.floor(hrs / 24), "day")
 }
 
 export function AppSidebar() {
+  const t = useTranslations()
+
   const pathname = usePathname()
   const router = useRouter()
   const { language } = useLanguage()
-  const { setOpenMobile, isMobile } = useSidebar()
+  const { setOpenMobile } = useSidebar()
   const { userId, activeSessionId, setActiveSessionId } = useWorkspaceSession()
   const { user, isSignedIn } = useUser()
 
@@ -108,20 +98,29 @@ export function AppSidebar() {
       setConversations([])
       setHistoryNeedsSignIn(false)
       setLoadingConversations(false)
-      return () => { lifetime.invalidate() }
+      return () => {
+        lifetime.invalidate()
+      }
     }
     setLoadingConversations(true)
     listConversations(userId, requestLifetime.signal)
-      .then((items) => { if (requestLifetime.current()) setConversations(items) })
+      .then((items) => {
+        if (requestLifetime.current()) setConversations(items)
+      })
       .catch((error: unknown) => {
         if (!requestLifetime.current()) return
         setConversations([])
         setHistoryNeedsSignIn(
-          error instanceof Error && error.name === "HistoryAuthorizationError",
+          error instanceof Error && error.name === "HistoryAuthorizationError"
         )
       })
-      .finally(() => { if (requestLifetime.current()) setLoadingConversations(false); requestLifetime.finish() })
-    return () => { lifetime.invalidate() }
+      .finally(() => {
+        if (requestLifetime.current()) setLoadingConversations(false)
+        requestLifetime.finish()
+      })
+    return () => {
+      lifetime.invalidate()
+    }
   }, [userId, activeSessionId, isSignedIn, lifetime])
 
   const handleStartRename = (conv: ConversationSummary) => {
@@ -141,8 +140,16 @@ export function AppSidebar() {
       return
     }
     const requestLifetime = lifetime.begin()
-    const ok = await renameConversation(userId, sessionId, trimmed, requestLifetime.signal)
-    if (!requestLifetime.current()) { requestLifetime.finish(); return }
+    const ok = await renameConversation(
+      userId,
+      sessionId,
+      trimmed,
+      requestLifetime.signal
+    )
+    if (!requestLifetime.current()) {
+      requestLifetime.finish()
+      return
+    }
     if (ok) {
       setConversations((prev) =>
         prev.map((c) =>
@@ -234,10 +241,10 @@ export function AppSidebar() {
                 <div className="flex aspect-square size-8 items-center justify-center">
                   <Image
                     src="/icons/android-chrome-512x512.png"
-                    alt="Lingua Rakyat logo"
+                    alt=""
                     width={64}
                     height={64}
-                    className="rounded-full"
+                    className="rounded-lg object-contain"
                   />
                 </div>
                 <div className="grid flex-1 text-left leading-tight">
@@ -295,6 +302,7 @@ export function AppSidebar() {
                   >
                     <Link
                       href={item.href}
+                      aria-current={active ? "page" : undefined}
                       className="flex items-center gap-2.5"
                     >
                       <Icon
@@ -325,7 +333,9 @@ export function AppSidebar() {
               ))
             ) : conversations.length === 0 ? (
               <p className="px-2 py-4 text-center text-[11px] text-muted-foreground/50">
-                {!isSignedIn || historyNeedsSignIn ? copy.recentSignIn : copy.recentEmpty}
+                {!isSignedIn || historyNeedsSignIn
+                  ? copy.recentSignIn
+                  : copy.recentEmpty}
               </p>
             ) : (
               conversations.map((conv) => {
@@ -353,7 +363,7 @@ export function AppSidebar() {
                           type="button"
                           onClick={() => handleConfirmRename(conv.session_id)}
                           className="shrink-0 rounded p-1 text-success transition-colors hover:bg-success/10"
-                          aria-label="Confirm"
+                          aria-label={t("Confirm")}
                         >
                           <Check className="h-3 w-3" />
                         </button>
@@ -361,7 +371,7 @@ export function AppSidebar() {
                           type="button"
                           onClick={handleCancelRename}
                           className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted"
-                          aria-label="Cancel"
+                          aria-label={t("Cancel")}
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -383,7 +393,7 @@ export function AppSidebar() {
                           {displayTitle}
                         </span>
                         <span className="text-[10px] text-muted-foreground/60">
-                          {relativeTime(conv.last_at)} · {conv.count}
+                          {relativeTime(conv.last_at, t.locale)} · {conv.count}
                         </span>
                       </SidebarMenuButton>
                     )}
@@ -410,7 +420,7 @@ export function AppSidebar() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={user.imageUrl}
-                      alt=""
+                      alt={t("")}
                       className="h-5 w-5 shrink-0 rounded-full group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7"
                     />
                   ) : (
@@ -443,7 +453,7 @@ export function AppSidebar() {
             href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="GitHub repository"
+            aria-label={t("GitHub repository")}
             onClick={handleNavigation}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-muted-foreground/50 transition-colors hover:border-foreground/30 hover:bg-muted hover:text-muted-foreground"
           >
@@ -454,7 +464,7 @@ export function AppSidebar() {
             href="https://www.linkedin.com/in/muh-hafizuddin/"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="LinkedIn profile"
+            aria-label={t("LinkedIn profile")}
             onClick={handleNavigation}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-muted-foreground/50 transition-colors hover:border-foreground/30 hover:bg-muted hover:text-muted-foreground"
           >

@@ -3,6 +3,11 @@
 export type AppLanguage = "ms" | "en" | "zh"
 
 export type Copy = {
+  loadingDocuments: string
+  scroll: string
+  confidenceHigh: string
+  confidenceMedium: string
+  confidenceLow: string
   appName: string
   tagline: string
   documents: string
@@ -52,6 +57,11 @@ export type Copy = {
 
 export const COPY: Record<AppLanguage, Copy> = {
   ms: {
+    loadingDocuments: "Memuatkan dokumen…",
+    scroll: "tatal",
+    confidenceHigh: "Padanan tinggi",
+    confidenceMedium: "Padanan sederhana",
+    confidenceLow: "Padanan rendah",
     appName: "Lingua Rakyat",
     tagline: "Jawapan dokumen kerajaan, dalam bahasa anda",
     documents: "Dokumen",
@@ -100,6 +110,11 @@ export const COPY: Record<AppLanguage, Copy> = {
     continueWithoutSaving: "Teruskan tanpa menyimpan",
   },
   en: {
+    loadingDocuments: "Loading documents…",
+    scroll: "scroll",
+    confidenceHigh: "High match",
+    confidenceMedium: "Medium match",
+    confidenceLow: "Low match",
     appName: "Lingua Rakyat",
     tagline: "Government document answers, in your language",
     documents: "Documents",
@@ -147,6 +162,11 @@ export const COPY: Record<AppLanguage, Copy> = {
     continueWithoutSaving: "Continue without saving",
   },
   zh: {
+    loadingDocuments: "正在加载文件…",
+    scroll: "滚动",
+    confidenceHigh: "高匹配度",
+    confidenceMedium: "中等匹配度",
+    confidenceLow: "低匹配度",
     appName: "Lingua Rakyat",
     tagline: "政府文件解答，用您的语言",
     documents: "文件",

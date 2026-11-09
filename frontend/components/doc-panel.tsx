@@ -1,6 +1,7 @@
-// src/components/doc-panel.tsx
 "use client"
 
+// src/components/doc-panel.tsx
+import { UiText, useTranslations } from "@/components/i18n"
 import { useState, useEffect } from "react"
 import { Document, listDocuments } from "@/lib/api"
 import { toast } from "sonner"
@@ -20,7 +21,7 @@ import {
   RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
+import { LocalizedLink as Link } from "@/components/i18n"
 import { useLanguage } from "./language-provider"
 import UploadModal from "./upload-modal"
 import { Button } from "./ui/button"
@@ -34,6 +35,7 @@ export default function DocumentPanel({
   selectedDoc,
   onSelectDoc,
 }: DocumentPanelProps) {
+  const t = useTranslations()
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -183,13 +185,13 @@ export default function DocumentPanel({
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
     if (diffDays === 0) {
-      return `${copy.today}, ${date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`
+      return `${copy.today}, ${date.toLocaleTimeString(t.locale, { hour: "2-digit", minute: "2-digit" })}`
     } else if (diffDays === 1) {
-      return `${copy.yesterday}, ${date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`
+      return `${copy.yesterday}, ${date.toLocaleTimeString(t.locale, { hour: "2-digit", minute: "2-digit" })}`
     } else if (diffDays < 7) {
       return `${diffDays} ${copy.daysAgo}`
     } else {
-      return date.toLocaleDateString(undefined, {
+      return date.toLocaleDateString(t.locale, {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -253,7 +255,7 @@ export default function DocumentPanel({
               </span>
             ) : (
               <span className="text-xs text-muted-foreground">
-                {formatFileSize(doc.size_bytes)} • PDF
+                {formatFileSize(doc.size_bytes)} <UiText text="• PDF" />{" "}
               </span>
             )}
             <span
@@ -293,7 +295,8 @@ export default function DocumentPanel({
           {/* Title and Back button */}
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold tracking-tight">
-              Lingua Rakyat
+              {" "}
+              <UiText text="Lingua Rakyat" />{" "}
             </h1>
             <div className="flex items-center gap-2">
               {/* Reload button */}

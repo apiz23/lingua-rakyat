@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText } from "@/components/i18n"
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
 
@@ -45,16 +46,13 @@ function CommandDialog({
   return (
     <SmoothDialog
       {...props}
-      className={cn(
-        "overflow-hidden rounded-xl p-0",
-        className
-      )}
+      className={cn("overflow-hidden rounded-xl p-0", className)}
       showCloseButton={showCloseButton}
     >
       <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
         <DialogHeader className="sr-only">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>{<UiText text={title} />}</DialogTitle>
+          <DialogDescription>{<UiText text={description} />}</DialogDescription>
         </DialogHeader>
         {children}
       </Command>

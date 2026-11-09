@@ -1,5 +1,6 @@
 "use client"
 
+import { UiText, useTranslations } from "@/components/i18n"
 import { useState, useCallback, useEffect, useRef } from "react"
 import {
   uploadDocument,
@@ -33,6 +34,8 @@ export default function UploadModal({
   onClose,
   onUploadComplete,
 }: UploadModalProps) {
+  const t = useTranslations()
+
   const [step, setStep] = useState<"token" | "upload">("token")
   const [token, setToken] = useState("")
   const [showToken, setShowToken] = useState(false)
@@ -119,15 +122,19 @@ export default function UploadModal({
       })()
 
       toast.promise(promise, {
-        loading: `Processing ${file.name}...`,
+        loading: t("Processing {name}…", { name: file.name }),
         success: (status) => {
           setTimeout(() => {
             onUploadComplete()
             handleCancel()
           }, 500)
-          return `${file.name} ready — ${status.chunk_count} chunks indexed`
+          return t("{name} ready — {count} chunks indexed", {
+            name: file.name,
+            count: status.chunk_count,
+          })
         },
-        error: (err) => `Upload failed: ${err.message}`,
+        error: (err) =>
+          t("Upload failed: {message}", { message: t(err.message) }),
       })
 
       await promise
@@ -215,7 +222,7 @@ export default function UploadModal({
         aria-modal="true"
         aria-labelledby="upload-modal-title"
         tabIndex={-1}
-        className="animate-in fade-in zoom-in-95 neo-card relative w-full max-w-md rounded-lg bg-card p-6 shadow-xl outline-none duration-200"
+        className="animate-in fade-in zoom-in-95 neo-card relative w-full max-w-md rounded-lg bg-card p-6 shadow-xl duration-200 outline-none"
       >
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
@@ -226,12 +233,14 @@ export default function UploadModal({
               <Upload className="h-5 w-5 text-primary" />
             )}
             <h2 id="upload-modal-title" className="text-xl font-semibold">
-              {step === "token" ? "Enter Access Token" : "Upload Document"}
+              {step === "token"
+                ? t("Enter Access Token")
+                : t("Upload Document")}
             </h2>
           </div>
           <button
             onClick={handleCancel}
-            className="rounded p-1 transition-colors hover:bg-accent active:scale-[0.93] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="rounded p-1 transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.93]"
             disabled={uploading || verifying}
           >
             <X className="h-5 w-5" />
@@ -242,7 +251,8 @@ export default function UploadModal({
         {step === "token" && (
           <>
             <p className="mb-4 text-sm text-muted-foreground">
-              Upload access is restricted. Enter your token to continue.
+              {" "}
+              <UiText text="Upload access is restricted. Enter your token to continue." />{" "}
             </p>
 
             <div className="mb-4">
@@ -255,14 +265,14 @@ export default function UploadModal({
                     setError(null)
                   }}
                   onKeyDown={(e) => e.key === "Enter" && handleVerifyToken()}
-                  placeholder="Paste your access token"
+                  placeholder={t("Paste your access token")}
                   disabled={verifying}
                   className="neo-input w-full bg-background px-4 py-2.5 pr-10 text-sm placeholder:text-muted-foreground/50 disabled:opacity-50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowToken((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showToken ? (
                     <EyeOff className="h-4 w-4" />
@@ -276,7 +286,7 @@ export default function UploadModal({
             {error && (
               <div className="mb-4 flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-destructive">
                 <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                <p className="text-sm">{error}</p>
+                <p className="text-sm">{<UiText text={error} />}</p>
               </div>
             )}
 
@@ -286,7 +296,8 @@ export default function UploadModal({
                 disabled={verifying}
                 className="neo-btn bg-background px-4 py-2 text-sm hover:bg-accent disabled:opacity-50"
               >
-                Cancel
+                {" "}
+                <UiText text="Cancel" />{" "}
               </button>
               <button
                 onClick={handleVerifyToken}
@@ -295,13 +306,13 @@ export default function UploadModal({
               >
                 {verifying ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Verifying...
+                    <Loader2 className="h-4 w-4 animate-spin" />{" "}
+                    <UiText text="Verifying..." />{" "}
                   </>
                 ) : (
                   <>
-                    <KeyRound className="h-4 w-4" />
-                    Verify
+                    <KeyRound className="h-4 w-4" />{" "}
+                    <UiText text="Verify" />{" "}
                   </>
                 )}
               </button>
@@ -316,7 +327,7 @@ export default function UploadModal({
               <div
                 {...getRootProps()}
                 onClick={open}
-                className={`mb-4 neo-card cursor-pointer border border-dashed p-8 text-center transition-colors ${
+                className={`neo-card mb-4 cursor-pointer border border-dashed p-8 text-center transition-colors ${
                   isDragActive
                     ? "border-primary bg-primary/5"
                     : "border-border hover:border-primary/50 hover:bg-accent/50"
@@ -326,14 +337,17 @@ export default function UploadModal({
                 <Upload className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
                 <p className="mb-1 font-medium">
                   {isDragActive
-                    ? "Drop your PDF here"
-                    : "Click to select or drag and drop"}
+                    ? t("Drop your PDF here")
+                    : t("Click to select or drag and drop")}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  PDF only (max {MAX_FILE_SIZE / (1024 * 1024)} MB)
+                  {" "}
+                  <UiText text="PDF only (max" />{" "}
+                  {MAX_FILE_SIZE / (1024 * 1024)} <UiText text="MB)" />{" "}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Government PDFs only — text and scanned PDFs supported.
+                  {" "}
+                  <UiText text="Government PDFs only — text and scanned PDFs supported." />{" "}
                 </p>
               </div>
             )}
@@ -358,8 +372,10 @@ export default function UploadModal({
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {processing
-                            ? "Uploaded — indexing document…"
-                            : `${uploadProgress}% uploaded`}
+                            ? t("Uploaded — indexing document…")
+                            : t("{value0}% uploaded", {
+                                value0: uploadProgress,
+                              })}
                         </p>
                       </div>
                     )}
@@ -379,7 +395,7 @@ export default function UploadModal({
             {error && (
               <div className="mb-4 flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-destructive">
                 <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                <p className="text-sm">{error}</p>
+                <p className="text-sm">{<UiText text={error} />}</p>
               </div>
             )}
 
@@ -389,7 +405,8 @@ export default function UploadModal({
                 disabled={uploading}
                 className="neo-btn bg-background px-4 py-2 text-sm hover:bg-accent disabled:opacity-50"
               >
-                Cancel
+                {" "}
+                <UiText text="Cancel" />{" "}
               </button>
               {file && (
                 <button
@@ -400,12 +417,12 @@ export default function UploadModal({
                   {uploading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {processing ? "Processing..." : "Uploading..."}
+                      {processing ? t("Processing...") : t("Uploading...")}
                     </>
                   ) : (
                     <>
-                      <Upload className="h-4 w-4" />
-                      Upload
+                      <Upload className="h-4 w-4" />{" "}
+                      <UiText text="Upload" />{" "}
                     </>
                   )}
                 </button>

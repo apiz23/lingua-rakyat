@@ -30,26 +30,32 @@ _supabase: Optional[Client] = None
 _supabase_admin: Optional[Client] = None
 
 
+def _env_value(name: str) -> str:
+    """Read an env var and remove copy/paste artefacts (spaces, quotes, CRLF)."""
+    return (os.getenv(name) or "").strip().strip('"').strip("'")
+
+
 def get_supabase(admin: bool = False) -> Client:
     """
     Return a Supabase client.
     admin=True  → service_role key (destructive/privileged ops).
-    admin=False → anon key, or service_role if no anon key is configured.
+    admin=False → anon key. Public reads fail closed without it; the service
+    role key is never used as an implicit fallback here.
     """
     global _supabase, _supabase_admin
 
     if admin:
         if _supabase_admin is None:
-            url = os.getenv("SUPABASE_URL")
-            key = os.getenv("SUPABASE_KEY")
+            url = _env_value("SUPABASE_URL")
+            key = _env_value("SUPABASE_KEY")
             if not url or not key:
                 raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in your .env file.")
             _supabase_admin = create_client(url, key)
         return _supabase_admin
 
     if _supabase is None:
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_ANON_KEY")
+        url = _env_value("SUPABASE_URL")
+        key = _env_value("SUPABASE_ANON_KEY")
         if not url or not key:
             raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be set for public Supabase access.")
         _supabase = create_client(url, key)
@@ -88,12 +94,28 @@ def verify_clerk_token(token: str) -> str:
     return sub
 
 
-def get_verified_user(request: Request) -> Optional[str]:
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.lower().startswith("bearer "):
+def parse_bearer_token(auth_header: Optional[str]) -> Optional[str]:
+    """Return the bearer token, or None when no credential was supplied.
+
+    A present but malformed Authorization header is an authentication failure,
+    not an anonymous request: silently downgrading it would turn a broken
+    authenticated call into a less-privileged one.
+    """
+    if auth_header is None:
         return None
-    token = auth_header[7:].strip()
-    if not token:
+    parts = auth_header.strip().split(None, 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1].strip():
+        raise HTTPException(status_code=401, detail="Malformed Authorization header")
+    token = parts[1].strip()
+    # A second credential inside the token cannot be a valid JWT.
+    if any(char.isspace() for char in token):
+        raise HTTPException(status_code=401, detail="Malformed Authorization header")
+    return token
+
+
+def get_verified_user(request: Request) -> Optional[str]:
+    token = parse_bearer_token(request.headers.get("authorization"))
+    if token is None:
         return None
     try:
         return verify_clerk_token(token)

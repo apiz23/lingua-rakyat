@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Test traces and generated server output are not UI source files. */
+@source not "../qa";
+@source not "../.next-ui01d";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -224,6 +228,24 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+
+  table {
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+  }
+
+  thead {
+    border-bottom: 2px solid var(--border);
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
   }
 
   body {
@@ -497,3 +519,28 @@ html[data-text-size="large"] {
     border-color: transparent !important;
   }
 }
+
+/* Shared service interaction and content containment. */
+:where(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+:where(main, article, section) { min-width: 0; }
+/* Native dialogs only. Radix components own their layout through Tailwind. */
+@layer base {
+  :where(dialog) {
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) { .service-guide { animation: service-arrive 450ms ease-out both; } .service-guide a:hover { transform: translateY(-2px); } }
+@keyframes service-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Landing editorial typesetting, scoped to the hero. */
+@keyframes editorial-soak { 0% { opacity:0; filter:blur(12px); letter-spacing:.18em; transform:translateY(.08em); } 60% { opacity:1; filter:blur(0); letter-spacing:-.01em; transform:translateY(-.01em); } 100% { opacity:1; filter:none; letter-spacing:-.015em; transform:none; } }
+.editorial-word { display:inline-block; animation:editorial-soak 1100ms cubic-bezier(.22,.61,.36,1) both; }
+.editorial-rise { animation:service-arrive 900ms ease-out both; }
+@keyframes editorial-rule { from {transform:scaleX(0)} to {transform:scaleX(1)} }
+.editorial-rule { animation:editorial-rule 700ms cubic-bezier(.16,1,.3,1) 1400ms both; }
+@keyframes editorial-draw { from {stroke-dashoffset:1} to {stroke-dashoffset:0} }
+.editorial-draw { stroke-dasharray:1; animation:editorial-draw 900ms ease-out 1700ms both; }
+@media(prefers-reduced-motion:reduce) { .editorial-word,.editorial-rise,.editorial-rule,.editorial-draw { animation:none; opacity:1; filter:none; transform:none; stroke-dashoffset:0; } }

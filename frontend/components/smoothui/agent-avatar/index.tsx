@@ -1,5 +1,5 @@
 "use client"
-
+import { useTranslations } from "@/components/i18n"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef } from "react"
 
@@ -121,6 +121,8 @@ const AgentAvatar = ({
   className,
   ...props
 }: AgentAvatarProps) => {
+  const t = useTranslations()
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
 
@@ -265,7 +267,7 @@ const AgentAvatar = ({
 
   return (
     <canvas
-      aria-label={`Avatar for ${seed}`}
+      aria-label={t("Avatar for {value0}", { value0: seed })}
       className={cn("rounded-full", className)}
       ref={canvasRef}
       role="img"

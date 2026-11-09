@@ -240,8 +240,9 @@ def test_public_share_retrieval_remains_available_including_legacy_ownerless_sha
     assert response.json()["evidence_linked"] is False
 
 
-def test_public_retrieval_ignores_legacy_caller_supplied_evidence_fields(setup):
+def test_public_retrieval_ignores_legacy_caller_supplied_evidence_fields(setup, monkeypatch):
     client, database = setup
+    monkeypatch.setattr(share, "_eligible_share_sources", lambda sources: sources)
     database.tables[shared_answers.TABLE].append({
         "slug": "old-share", "user_id": "user_alice",
         "question": "When is the deadline?", "answer": "The deadline is 30 June.",

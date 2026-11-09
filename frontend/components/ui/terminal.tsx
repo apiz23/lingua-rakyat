@@ -229,6 +229,7 @@ export const TypingAnimation = ({
 interface TerminalProps {
   children: React.ReactNode
   className?: string
+  compact?: boolean
   sequence?: boolean
   startOnView?: boolean
 }
@@ -236,6 +237,7 @@ interface TerminalProps {
 export const Terminal = ({
   children,
   className,
+  compact = false,
   sequence = true,
   startOnView = true,
 }: TerminalProps) => {
@@ -277,15 +279,15 @@ export const Terminal = ({
         className
       )}
     >
-      <div className="border-border flex flex-col gap-y-2 border-b p-4">
+      <div className={cn("border-border flex flex-col gap-y-2 border-b", compact ? "p-3" : "p-4")}>
         <div className="flex flex-row gap-x-2">
           <div className="h-2 w-2 rounded-full bg-destructive"></div>
           <div className="h-2 w-2 rounded-full bg-warning"></div>
           <div className="h-2 w-2 rounded-full bg-success"></div>
         </div>
       </div>
-      <pre className="overflow-visible p-4 whitespace-pre-wrap break-words">
-        <code className="grid gap-y-1">{wrappedChildren}</code>
+      <pre className={cn("overflow-visible whitespace-pre-wrap break-words", compact ? "p-3" : "p-4")}>
+        <code className={cn("grid", compact ? "gap-y-2" : "gap-y-1")}>{wrappedChildren}</code>
       </pre>
     </div>
   )

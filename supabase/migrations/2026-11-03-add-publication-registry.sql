@@ -1,0 +1,183 @@
+-- Additive publication lifecycle + idempotency storage (2026-11-03).
+--
+-- Safety properties:
+--   * Existing documents keep their ids and remain unclassified/draft. Nothing
+--     is published or backfilled from readiness, featured flags or URLs.
+--   * Every new table is default-deny for browser roles. Only the backend
+--     service role (which bypasses RLS) may read or write them.
+--   * No Supabase-managed table schema is altered. Storage RLS policies only
+--     restrict browser access to the private documents bucket.
+
+-- ---------------------------------------------------------------------------
+-- 1. Current revision alias (document_version stays the legacy writer field)
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.lr_documents
+  ADD COLUMN IF NOT EXISTS current_revision integer NOT NULL DEFAULT 1;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.lr_documents'::regclass
+      AND conname = 'lr_documents_current_revision_check'
+  ) THEN
+    ALTER TABLE public.lr_documents
+      ADD CONSTRAINT lr_documents_current_revision_check CHECK (current_revision > 0);
+  END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.sync_document_current_revision()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- document_version remains the writer field for existing code. The
+  -- eligibility service reads current_revision, so keep them identical.
+  NEW.current_revision = GREATEST(COALESCE(NEW.document_version, 1), 1);
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS lr_documents_sync_current_revision ON public.lr_documents;
+CREATE TRIGGER lr_documents_sync_current_revision
+  BEFORE INSERT OR UPDATE ON public.lr_documents
+  FOR EACH ROW EXECUTE FUNCTION public.sync_document_current_revision();
+
+-- ---------------------------------------------------------------------------
+-- 2. Trusted source registry
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.official_sources (
+  source_id text PRIMARY KEY,
+  issuing_organization text NOT NULL,
+  authority text,
+  source_url text,
+  source_type text NOT NULL,
+  verification_status text NOT NULL DEFAULT 'unverified',
+  verified_by text,
+  verified_at timestamptz,
+  usage_rights text,
+  usage_permitted boolean NOT NULL DEFAULT false,
+  freshness_days integer,
+  last_verified_at timestamptz,
+  revoked_at timestamptz,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT official_sources_verification_status_check
+    CHECK (verification_status IN ('unverified', 'pending', 'verified', 'revoked')),
+  CONSTRAINT official_sources_freshness_check
+    CHECK (freshness_days IS NULL OR freshness_days > 0),
+  CONSTRAINT official_sources_verified_metadata_check
+    CHECK (
+      verification_status <> 'verified'
+      OR (
+        nullif(trim(issuing_organization), '') IS NOT NULL
+        AND nullif(trim(source_type), '') IS NOT NULL
+        AND nullif(trim(verified_by), '') IS NOT NULL
+        AND verified_at IS NOT NULL
+        AND last_verified_at IS NOT NULL
+        AND freshness_days IS NOT NULL
+      )
+    )
+);
+
+ALTER TABLE public.official_sources ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.official_sources FROM anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 3. Document revisions (immutable history; current revision is approved)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.document_revisions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id text NOT NULL REFERENCES public.lr_documents(id) ON DELETE CASCADE,
+  revision integer NOT NULL,
+  source_id text,
+  source_type text,
+  storage_path text NOT NULL,
+  checksum text,
+  approved_by text,
+  approved_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  superseded_at timestamptz,
+  revoked_at timestamptz,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  CONSTRAINT document_revisions_revision_check CHECK (revision > 0),
+  CONSTRAINT document_revisions_storage_check CHECK (nullif(trim(storage_path), '') IS NOT NULL),
+  CONSTRAINT document_revisions_unique_revision UNIQUE (document_id, revision)
+);
+
+CREATE INDEX IF NOT EXISTS document_revisions_document_id_idx
+  ON public.document_revisions (document_id);
+
+ALTER TABLE public.document_revisions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.document_revisions FROM anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 4. Append-only publication events
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.publication_events (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  document_id text NOT NULL,
+  revision integer,
+  event_type text NOT NULL,
+  actor text NOT NULL,
+  occurred_at timestamptz NOT NULL DEFAULT now(),
+  idempotency_key text NOT NULL UNIQUE,
+  details jsonb NOT NULL DEFAULT '{}'::jsonb,
+  CONSTRAINT publication_events_type_check
+    CHECK (event_type IN ('approval', 'publication', 'suspension', 'expiration', 'withdrawal')),
+  CONSTRAINT publication_events_actor_check CHECK (nullif(trim(actor), '') IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS publication_events_document_id_idx
+  ON public.publication_events (document_id, occurred_at DESC);
+
+ALTER TABLE public.publication_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.publication_events FROM anon, authenticated;
+REVOKE UPDATE, DELETE ON TABLE public.publication_events FROM anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 5. Idempotent authenticated answer runs
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.answer_runs (
+  actor_id text NOT NULL,
+  idempotency_key text NOT NULL,
+  request_fingerprint text NOT NULL,
+  status text NOT NULL DEFAULT 'in_progress',
+  response jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (actor_id, idempotency_key),
+  CONSTRAINT answer_runs_status_check
+    CHECK (status IN ('in_progress', 'complete', 'failed'))
+);
+
+ALTER TABLE public.answer_runs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.answer_runs FROM anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 6. Private documents bucket: deny browser read/write
+-- ---------------------------------------------------------------------------
+-- Restrictive policies AND with any permissive policy already present. The
+-- backend keeps service-role access; no browser role can read or write the
+-- private bucket directly. This does not alter storage table schemas.
+DROP POLICY IF EXISTS documents_bucket_deny_browser_select ON storage.objects;
+CREATE POLICY documents_bucket_deny_browser_select ON storage.objects
+  AS RESTRICTIVE FOR SELECT TO anon, authenticated
+  USING (bucket_id <> 'documents');
+
+DROP POLICY IF EXISTS documents_bucket_deny_browser_insert ON storage.objects;
+CREATE POLICY documents_bucket_deny_browser_insert ON storage.objects
+  AS RESTRICTIVE FOR INSERT TO anon, authenticated
+  WITH CHECK (bucket_id <> 'documents');
+
+DROP POLICY IF EXISTS documents_bucket_deny_browser_update ON storage.objects;
+CREATE POLICY documents_bucket_deny_browser_update ON storage.objects
+  AS RESTRICTIVE FOR UPDATE TO anon, authenticated
+  USING (bucket_id <> 'documents')
+  WITH CHECK (bucket_id <> 'documents');
+
+DROP POLICY IF EXISTS documents_bucket_deny_browser_delete ON storage.objects;
+CREATE POLICY documents_bucket_deny_browser_delete ON storage.objects
+  AS RESTRICTIVE FOR DELETE TO anon, authenticated
+  USING (bucket_id <> 'documents');

@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 from types import ModuleType, SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -63,7 +64,53 @@ def client():
         yield test_client
 
 
+class TableReadOnlySupabase:
+    """Read-only client with per-table rows; writes are forbidden."""
+
+    def __init__(self, tables, operations):
+        self.tables = tables
+        self.operations = operations
+        self._rows = []
+
+    def table(self, name):
+        self.operations.append(("table", name))
+        self._rows = list(self.tables.get(name, []))
+        return self
+
+    def select(self, *_args, **_kwargs):
+        self.operations.append("select")
+        return self
+
+    def order(self, *_args, **_kwargs):
+        self.operations.append("order")
+        return self
+
+    def eq(self, field, value):
+        self._rows = [row for row in self._rows if str(row.get(field)) == str(value)]
+        return self
+
+    def limit(self, *_args, **_kwargs):
+        return self
+
+    def execute(self):
+        self.operations.append("execute")
+        return SimpleNamespace(data=list(self._rows))
+
+    def insert(self, *_args, **_kwargs):
+        raise AssertionError("public catalogue attempted insert")
+
+    def upsert(self, *_args, **_kwargs):
+        raise AssertionError("public catalogue attempted upsert")
+
+    def update(self, *_args, **_kwargs):
+        raise AssertionError("public catalogue attempted update")
+
+    def delete(self, *_args, **_kwargs):
+        raise AssertionError("public catalogue attempted delete")
+
+
 def test_public_document_catalogue_is_read_only_and_does_not_reconcile(client, monkeypatch):
+    now = datetime.now(timezone.utc)
     rows = [{
         "id": "public-doc-1",
         "name": "Public information.pdf",
@@ -74,14 +121,46 @@ def test_public_document_catalogue_is_read_only_and_does_not_reconcile(client, m
         "storage_path": "public-doc-1/file.pdf",
         "public_url": "https://example.test/file.pdf",
         "agency": "JPN",
+        "visibility_scope": "public",
+        "publication_status": "published",
+        "source_id": "src-1",
+        "source_type": "official_gov",
+        "owner_type": "operator",
+        "owner_id": "operator-1",
+        "approved_by": "operator-1",
+        "approved_at": (now - timedelta(days=2)).isoformat(),
+        "published_at": (now - timedelta(days=1)).isoformat(),
+        "last_verified_at": (now - timedelta(days=1)).isoformat(),
+        "current_revision": 1,
     }]
+    tables = {
+        "lr_documents": rows,
+        "official_sources": [{
+            "source_id": "src-1",
+            "source_type": "official_gov",
+            "verification_status": "verified",
+            "usage_permitted": True,
+            "usage_rights": "Public information with attribution.",
+            "freshness_days": 365,
+            "last_verified_at": (now - timedelta(days=1)).isoformat(),
+            "revoked_at": None,
+        }],
+        "document_revisions": [{
+            "document_id": "public-doc-1",
+            "revision": 1,
+            "storage_path": "public-doc-1/file.pdf",
+            "approved_by": "operator-1",
+            "approved_at": (now - timedelta(days=2)).isoformat(),
+        }],
+    }
     accesses = []
     operations = []
 
     def get_supabase(*, admin=False):
         accesses.append(admin)
-        assert admin is False, "public catalogue must not acquire service-role client"
-        return ReadOnlySupabase(rows, operations)
+        # Eligibility reads the trusted registry with the service client; the
+        # public catalogue itself must still be read through the anon client.
+        return TableReadOnlySupabase(tables, operations)
 
     monkeypatch.setattr(documents, "get_supabase", get_supabase)
     monkeypatch.setattr(
@@ -93,9 +172,13 @@ def test_public_document_catalogue_is_read_only_and_does_not_reconcile(client, m
     response = client.get("/api/documents/")
 
     assert response.status_code == 200
-    assert [doc["id"] for doc in response.json()] == ["public-doc-1"]
-    assert accesses == [False]
-    assert operations == ["select", "order", "execute"]
+    body = response.json()
+    assert [doc["id"] for doc in body] == ["public-doc-1"]
+    assert body[0]["storage_path"] is None
+    assert body[0]["public_url"] is None
+    assert body[0]["pdf_url"] == "/api/documents/public-doc-1/pdf"
+    assert False in accesses
+    assert not any(op in {"insert", "upsert", "update", "delete"} for op in operations)
 
 
 def test_public_document_catalogue_reports_unavailable_database(client, monkeypatch):

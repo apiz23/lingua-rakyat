@@ -69,7 +69,7 @@ def test_retrieve_matches_spans_all_namespaces(monkeypatch):
 # ---- pipeline integration: per-source doc id ----
 
 def test_pipeline_sources_carry_per_document_id(monkeypatch):
-    def fake_retrieve(namespaces, query_variants, top_k):
+    def fake_retrieve(namespaces, query_variants, top_k, allowed_revisions=None):
         return [
             {"id": "docA_0", "score": 0.9, "reranked_score": 0.9,
              "metadata": {"text": "from A", "doc_id": "docA", "doc_name": "A",

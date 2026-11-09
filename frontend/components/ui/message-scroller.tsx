@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "@/components/i18n"
 import * as React from "react"
 import {
   MessageScroller as MessageScrollerPrimitive,
@@ -42,7 +43,7 @@ function MessageScrollerViewport({
     <MessageScrollerPrimitive.Viewport
       data-slot="message-scroller-viewport"
       className={cn(
-        "size-full min-h-0 min-w-0 scroll-pt-16 scroll-fade-b scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-thumb-transparent data-autoscrolling:scrollbar-track-transparent",
+        "scroll-fade-b scrollbar-thin scrollbar-gutter-stable data-autoscrolling:scrollbar-thumb-transparent data-autoscrolling:scrollbar-track-transparent size-full min-h-0 min-w-0 scroll-pt-16 overflow-y-auto overscroll-contain contain-content",
         className
       )}
       {...props}
@@ -91,6 +92,8 @@ function MessageScrollerButton({
   ...props
 }: React.ComponentProps<typeof MessageScrollerPrimitive.Button> &
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  const t = useTranslations()
+
   return (
     <MessageScrollerPrimitive.Button
       data-slot="message-scroller-button"
@@ -107,10 +110,9 @@ function MessageScrollerButton({
     >
       {children ?? (
         <>
-          <ArrowDownIcon
-          />
+          <ArrowDownIcon />
           <span className="sr-only">
-            {direction === "end" ? "Scroll to end" : "Scroll to start"}
+            {direction === "end" ? t("Scroll to end") : t("Scroll to start")}
           </span>
         </>
       )}

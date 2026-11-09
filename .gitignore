@@ -32,4 +32,7 @@ page_index/
 
 mobile/node_modules/
 mobile/expo/
-mobile/.env
+mobile/.env.next-e2e/
+frontend/test-results/
+frontend/playwright-report/
+frontend/.next-e2e/
