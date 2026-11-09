@@ -9,6 +9,7 @@ today's behavior. An invalid token is a hard 401, never a silent fallback.
 
 import logging
 import os
+import httpx
 from typing import Optional
 
 import jwt
@@ -20,6 +21,31 @@ logger = logging.getLogger("auth")
 CLERK_ISSUER = os.getenv("CLERK_ISSUER", "")
 
 _jwk_client: Optional[jwt.PyJWKClient] = None
+
+
+def verified_account_email(subject: str) -> Optional[str]:
+    """Resolve a verified primary email using the server's Clerk credential."""
+    from urllib.parse import quote
+
+    secret = _env_value("CLERK_SECRET_KEY")
+    if not secret:
+        raise RuntimeError("CLERK_SECRET_KEY is required for account email lookup")
+    try:
+        response = httpx.get(
+            "https://api.clerk.com/v1/users/" + quote(subject, safe=""),
+            headers={"Authorization": "Bearer " + secret},
+            timeout=10,
+        )
+        response.raise_for_status()
+        user = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise RuntimeError("Account email lookup unavailable") from exc
+    primary_id = user.get("primary_email_address_id")
+    for address in user.get("email_addresses", []):
+        if address.get("id") == primary_id and (address.get("verification") or {}).get("status") == "verified":
+            email = address.get("email_address")
+            return email.strip().lower() if isinstance(email, str) else None
+    return None
 
 # ─── Supabase Clients (Least Privilege) ─────────────────────────────────────
 # Public client uses SUPABASE_ANON_KEY (RLS-gated when policies are in place).
@@ -73,8 +99,8 @@ def _get_jwk_client() -> jwt.PyJWKClient:
     return _jwk_client
 
 
-def verify_clerk_token(token: str) -> str:
-    """Return the Clerk user id (sub). Raises jwt exceptions when invalid."""
+def verify_clerk_claims(token: str) -> dict:
+    """Return verified Clerk claims. Raises jwt exceptions when invalid."""
     signing_key = _get_jwk_client().get_signing_key_from_jwt(token)
     claims = jwt.decode(
         token,
@@ -91,7 +117,12 @@ def verify_clerk_token(token: str) -> str:
     sub = claims.get("sub", "")
     if not sub:
         raise jwt.InvalidTokenError("Token has no sub claim")
-    return sub
+    return claims
+
+
+def verify_clerk_token(token: str) -> str:
+    """Return the Clerk user id (sub). Raises jwt exceptions when invalid."""
+    return str(verify_clerk_claims(token)["sub"])
 
 
 def parse_bearer_token(auth_header: Optional[str]) -> Optional[str]:

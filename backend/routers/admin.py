@@ -101,14 +101,14 @@ class ReviewRequest(BaseModel):
 
 class RoleGrant(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    target_actor_id: str = Field(min_length=1, max_length=200)
+    target_actor_id: str = Field(min_length=3, max_length=320)
     role: str
     reason: Optional[str] = Field(default=None, max_length=2000)
 
 
 class RoleRevoke(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    target_actor_id: str = Field(min_length=1, max_length=200)
+    target_actor_id: str = Field(min_length=3, max_length=320)
     role: str
     reason: str = Field(min_length=1, max_length=2000)
 

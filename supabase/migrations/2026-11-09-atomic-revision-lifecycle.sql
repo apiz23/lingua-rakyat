@@ -84,7 +84,7 @@ begin
   end if;
 
   select coalesce(string_agg(role, ','), '') into v_actor_role
-    from public.admin_roles where actor_id = p_actor and revoked_at is null;
+    from public.lr_admin_roles where email = p_actor and revoked_at is null;
 
   insert into public.admin_audit_log
     (actor_id, actor_role, action, target_type, target_id, reason,
@@ -199,7 +199,7 @@ begin
      jsonb_build_object('action', p_action, 'previous_revision', p_expected_current, 'reason', p_reason));
 
   select coalesce(string_agg(role, ','), '') into v_actor_role
-    from public.admin_roles where actor_id = p_actor and revoked_at is null;
+    from public.lr_admin_roles where email = p_actor and revoked_at is null;
 
   insert into public.admin_audit_log
     (actor_id, actor_role, action, target_type, target_id, reason,

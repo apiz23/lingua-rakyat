@@ -73,7 +73,7 @@ function GrantRoleDialog({
     setBusy(true)
     try {
       await grantAdminRole({
-        target_actor_id: actorId.trim(),
+        target_actor_id: actorId.trim().toLowerCase(),
         role,
         reason: reason.trim() || undefined,
       })
@@ -113,13 +113,14 @@ function GrantRoleDialog({
           <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor="admin-role-actor-id">
-                <UiText text="Clerk actor id" />
+                <UiText text="Email address" />
               </FieldLabel>
               <Input
                 id="admin-role-actor-id"
                 value={actorId}
                 onChange={(event) => setActorId(event.target.value)}
-                placeholder={t("user_…")}
+                placeholder="name@example.com"
+                type="email"
                 maxLength={200}
                 required
               />

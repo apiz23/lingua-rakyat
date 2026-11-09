@@ -15,7 +15,7 @@ from routers import admin as admin_router
 from utils import admin_service, authorization
 from utils.authorization import Actor, ActorKind
 
-ACTOR = Actor(ActorKind.CITIZEN, "user_admin")
+ACTOR = Actor(ActorKind.CITIZEN, "user_admin", "admin@example.com")
 NOW = datetime.now(timezone.utc)
 
 
@@ -165,7 +165,7 @@ def base_db(missing=None, **overrides):
         "document_revisions": [revision()],
         "publication_events": [],
         "admin_audit_log": [],
-        "admin_roles": [],
+        "lr_admin_roles": [],
     }
     tables.update(overrides)
     return DB(tables, missing=missing)
@@ -709,23 +709,23 @@ def test_role_grant_rejects_self_promotion_and_unknown_role():
     db = base_db()
     with pytest.raises(admin_service.AdminValidationError):
         admin_service.grant_role(
-            db, ACTOR, target_actor_id="user_admin", role="super_admin", reason=None
+            db, ACTOR, target_actor_id="admin@example.com", role="super_admin", reason=None
         )
     with pytest.raises(admin_service.AdminValidationError):
         admin_service.grant_role(
-            db, ACTOR, target_actor_id="user_other", role="owner", reason=None
+            db, ACTOR, target_actor_id="other@example.com", role="owner", reason=None
         )
     granted = admin_service.grant_role(
-        db, ACTOR, target_actor_id="user_other", role="reviewer", reason="New reviewer"
+        db, ACTOR, target_actor_id="other@example.com", role="reviewer", reason="New reviewer"
     )
     assert granted["role"] == "reviewer"
     with pytest.raises(admin_service.AdminConflict):
         admin_service.grant_role(
-            db, ACTOR, target_actor_id="user_other", role="reviewer", reason=None
+            db, ACTOR, target_actor_id="other@example.com", role="reviewer", reason=None
         )
     with pytest.raises(admin_service.AdminValidationError):
         admin_service.revoke_role(
-            db, ACTOR, target_actor_id="user_admin", role="super_admin", reason="x"
+            db, ACTOR, target_actor_id="admin@example.com", role="super_admin", reason="x"
         )
 
 

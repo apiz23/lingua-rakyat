@@ -1,6 +1,6 @@
 """Trusted, server-side admin role and permission provider.
 
-Roles live in ``public.admin_roles`` and are granted/revoked only by the
+Roles live in ``public.lr_admin_roles`` and are granted/revoked only by the
 backend (service role) after a super-admin permission check. The browser never
 supplies a role. A missing table or read failure is treated as "provider
 unavailable" and callers fail closed with HTTP 503.
@@ -14,7 +14,7 @@ from typing import Any, Iterable, Optional
 
 logger = logging.getLogger("role_provider")
 
-ROLES_TABLE = os.getenv("ADMIN_ROLES_TABLE", "admin_roles")
+ROLES_TABLE = os.getenv("ADMIN_ROLES_TABLE", "lr_admin_roles")
 
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     "super_admin": frozenset(
@@ -114,7 +114,7 @@ def active_roles(actor_id: str, client: Any) -> set[str]:
         return set()
     roles: set[str] = set()
     for row in _rows(client):
-        if row.get("actor_id") != actor_id:
+        if str(row.get("email") or "").strip().lower() != actor_id.strip().lower():
             continue
         if row.get("revoked_at"):
             continue

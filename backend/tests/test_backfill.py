@@ -92,7 +92,7 @@ class DB:
             "official_sources": [],
             "publication_events": [],
             "admin_audit_log": [],
-            "admin_roles": [],
+            "lr_admin_roles": [],
         }
         self.storage = Storage()
 

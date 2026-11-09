@@ -62,6 +62,7 @@ def test_missing_header_is_anonymous():
 
 
 def test_valid_token_produces_citizen_actor(monkeypatch):
+    monkeypatch.setattr("utils.auth.verified_account_email", lambda subject: "citizen@example.com")
     install_fake_jwks(monkeypatch, PUBLIC_KEY)
     token = mint_token(PRIVATE_KEY, sub="user_abc")
     actor = get_actor(FakeRequest(f"Bearer {token}"))

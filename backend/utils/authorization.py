@@ -48,6 +48,7 @@ class Actor:
 
     kind: ActorKind
     subject: Optional[str] = None
+    email: Optional[str] = None
 
     @property
     def is_authenticated(self) -> bool:
@@ -78,7 +79,7 @@ INTERNAL_READ = "internal.read"
 def resolve_permissions(actor: Actor) -> frozenset[str]:
     """Resolve the actor's server-side grants.
 
-    Grants live in the trusted ``admin_roles`` table and are read with the
+    Grants live in the trusted ``lr_admin_roles`` table and are read with the
     service role. No role is inferred from sign-in, request data or client
     metadata. A missing role table or unreadable store raises
     :class:`RoleSourceUnavailable` so callers fail closed with HTTP 503.
@@ -89,7 +90,11 @@ def resolve_permissions(actor: Actor) -> frozenset[str]:
     from utils.role_provider import RoleProviderUnavailable, resolve_actor_permissions
 
     try:
-        return resolve_actor_permissions(actor.subject)
+        # Role records are keyed by the normalized email claim in the
+        # verified session token and resolved only from Supabase.
+        if not actor.email:
+            return frozenset()
+        return resolve_actor_permissions(actor.email.strip().lower())
     except RoleProviderUnavailable as exc:
         raise RoleSourceUnavailable("No trusted role provider is available") from exc
     except Exception as exc:  # configuration/connection errors must deny
@@ -108,7 +113,15 @@ def get_actor(request: Request) -> Actor:
     subject = None
     for attempt in range(2):
         try:
-            subject = verify_clerk_token(token)
+            from utils.auth import verify_clerk_claims
+
+            claims = verify_clerk_claims(token)
+            subject = claims.get("sub")
+            email = claims.get("email")
+            if os.getenv("CLERK_SECRET_KEY") or not isinstance(email, str) or not email.strip():
+                from utils.auth import verified_account_email
+
+                email = verified_account_email(subject)
             break
         except jwt.exceptions.PyJWKClientConnectionError as exc:
             if attempt == 0:
@@ -127,7 +140,7 @@ def get_actor(request: Request) -> Actor:
             ) from exc
     if not subject or not subject.strip():
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return Actor(ActorKind.CITIZEN, subject.strip())
+    return Actor(ActorKind.CITIZEN, subject.strip(), email.strip().lower() if isinstance(email, str) and email.strip() else None)
 
 
 def require_authenticated(actor: Actor = Depends(get_actor)) -> Actor:

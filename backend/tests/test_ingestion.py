@@ -132,7 +132,7 @@ def base_db(**overrides):
         "document_revisions": [],
         "publication_events": [],
         "admin_audit_log": [],
-        "admin_roles": [],
+        "lr_admin_roles": [],
         "ingestion_candidates": [],
         "ingestion_jobs": [],
         "source_discovery_checkpoints": [],

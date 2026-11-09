@@ -26,7 +26,7 @@ from utils.role_provider import KNOWN_ROLES, ROLE_PERMISSIONS
 
 logger = logging.getLogger("admin_service")
 
-ROLES_TABLE = "admin_roles"
+ROLES_TABLE = "lr_admin_roles"
 AUDIT_TABLE = "admin_audit_log"
 
 DASHBOARD_EXPIRING_DAYS = 30
@@ -142,7 +142,7 @@ def _actor_roles(client: Any, actor: Actor) -> set[str]:
     from utils.role_provider import active_roles
 
     try:
-        return active_roles(actor.subject or "", client)
+        return active_roles(actor.email or "", client)
     except Exception:
         # Role display in an audit row is best effort; the permission check
         # already happened before this operation ran.
@@ -1103,7 +1103,7 @@ def list_roles(client: Any, actor: Actor) -> dict[str, Any]:
         "roles": [
             {
                 "id": row.get("id"),
-                "actor_id": row.get("actor_id"),
+                "actor_id": row.get("email"),
                 "role": row.get("role"),
                 "granted_by": row.get("granted_by"),
                 "granted_at": row.get("granted_at"),
@@ -1127,22 +1127,24 @@ def grant_role(
     reason: Optional[str],
     correlation_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    target_actor_id = (target_actor_id or "").strip()
+    target_actor_id = (target_actor_id or "").strip().lower()
     if not target_actor_id:
         raise AdminValidationError("target actor id is required")
-    if target_actor_id == actor.subject:
+    if actor.email and target_actor_id == actor.email.strip().lower():
         raise AdminValidationError("Self-promotion is not allowed")
+    if "@" not in target_actor_id:
+        raise AdminValidationError("A valid email address is required")
     if role not in KNOWN_ROLES:
         raise AdminValidationError("Unknown role")
     active = [
         row
         for row in _read(client, ROLES_TABLE)
-        if row.get("actor_id") == target_actor_id and row.get("role") == role and not row.get("revoked_at")
+        if row.get("email") == target_actor_id and row.get("role") == role and not row.get("revoked_at")
     ]
     if active:
         raise AdminConflict("Role is already active for this actor")
     record = {
-        "actor_id": target_actor_id,
+        "email": target_actor_id,
         "role": role,
         "granted_by": actor.subject,
         "granted_at": _iso(),
@@ -1171,16 +1173,16 @@ def revoke_role(
     reason: str,
     correlation_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    target_actor_id = (target_actor_id or "").strip()
+    target_actor_id = (target_actor_id or "").strip().lower()
     reason = (reason or "").strip()
     if not reason:
         raise AdminValidationError("A reason is required")
-    if target_actor_id == actor.subject:
+    if actor.email and target_actor_id == actor.email.strip().lower():
         raise AdminValidationError("You cannot revoke your own role")
     active = [
         row
         for row in _read(client, ROLES_TABLE)
-        if row.get("actor_id") == target_actor_id and row.get("role") == role and not row.get("revoked_at")
+        if row.get("email") == target_actor_id and row.get("role") == role and not row.get("revoked_at")
     ]
     if not active:
         raise AdminNotFound("Active role assignment not found")
