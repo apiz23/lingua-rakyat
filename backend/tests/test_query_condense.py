@@ -14,14 +14,14 @@ from utils.rag_pipeline import _condense_query
 
 
 def test_no_history_returns_question_unchanged():
-    # No history → nothing to condense, no LLM call, not rewritten.
+
     out, rewritten = _condense_query("What is the renewal fee?", None, "en")
     assert out == "What is the renewal fee?"
     assert rewritten is False
 
 
 def test_empty_history_turns_return_question_unchanged():
-    # Turns missing question/answer text are unusable → treated as no history.
+
     history = [{"question": "", "answer": ""}, {"question": "  ", "answer": ""}]
     out, rewritten = _condense_query("What about for foreigners?", history, "en")
     assert out == "What about for foreigners?"
@@ -81,8 +81,8 @@ def _stub_match(text="A passport renewal fee applies."):
 
 
 def test_pipeline_retrieves_with_condensed_query(monkeypatch):
-    # The condensed standalone query must drive retrieval; the original
-    # follow-up must still drive the answer prompt.
+
+
     captured = {}
     monkeypatch.setattr(rag, "_condense_llm_call",
                         lambda p: "passport renewal fee for foreigners")

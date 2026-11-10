@@ -1,13 +1,11 @@
 @import "tailwindcss";
 
-/* Test traces and generated server output are not UI source files. */
 @source not "../qa";
 @source not "../.next-ui01d";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* WARM CIVIC — warm paper neutrals (hue 85) + civic green (hue 152) */
   --background: oklch(0.975 0.015 85);
   --foreground: oklch(0.26 0.02 152);
 
@@ -20,7 +18,6 @@
   --primary: oklch(0.42 0.1 152);
   --primary-foreground: oklch(1 0 0);
 
-  /* soft green tint surface (chips, badges, selected states) */
   --secondary: oklch(0.94 0.04 152);
   --secondary-foreground: oklch(0.35 0.1 152);
 
@@ -37,7 +34,6 @@
   --input: oklch(0.88 0.02 152);
   --ring: oklch(0.55 0.1 152);
 
-  /* charts → green shades */
   --chart-1: oklch(0.55 0.13 152);
   --chart-2: oklch(0.42 0.1 152);
   --chart-3: oklch(0.7 0.12 152);
@@ -78,7 +74,6 @@
 }
 
 .dark {
-  /* WARM CIVIC dark — neutral ink surfaces, green reserved for signal */
   --background: oklch(0.14 0.006 145);
   --foreground: oklch(0.93 0.01 85);
 
@@ -143,9 +138,6 @@
   --shadow-2xl: 0 16px 32px hsl(0 0% 0% / 0.2);
 }
 
-/* =========================
-   THEME MAPPING
-========================= */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -216,9 +208,6 @@
   --tracking-normal: var(--tracking-normal);
 }
 
-/* =========================
-   ANIMATION TOKENS
-========================= */
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -301,22 +290,11 @@
   }
 }
 
-/* =========================
-   WEIGHT NORMALISATION
-   Atkinson Hyperlegible ships only 400 + 700. Declared 500/600 on body
-   text silently renders as faux-700 (everything looks bold). Map the
-   in-between utilities back to regular so emphasis stays reserved for
-   true bold. Headings (--font-heading) and mono keep their real weights.
-========================= */
 :where(.font-medium, .font-semibold):not(h1, h2, h3, h4, h5, h6, .font-heading, .font-mono) {
   font-weight: 400;
 }
 
-/* =========================
-   BACKGROUND LAYER
-========================= */
 
-/* Topo contour stroke color — adapts to theme */
 .topo-strokes {
   stroke: var(--color-primary);
   stroke-opacity: 0.28;
@@ -367,7 +345,6 @@
   background-size: 200px 200px;
 }
 
-/* PDF passage highlight — react-pdf customTextRenderer */
 .pdf-hl {
   background: oklch(0.85 0.15 85 / 0.65);
   padding: 1px 0;
@@ -394,14 +371,7 @@ html[data-text-size="large"] {
   font-size: 112.5%;
 }
 
-/* =========================
-   MINIMAL UTILITIES
-   Premium utilitarian — flat fill, hairline border, crisp radius,
-   ultra-diffuse shadows only. Class names kept stable so existing
-   components (neo-card / neo-btn / neo-input) keep working.
-========================= */
 @layer components {
-  /* Cards & containers — flat fill, 1px hairline border, soft lift on hover */
   .neo-card {
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -415,7 +385,6 @@ html[data-text-size="large"] {
     box-shadow: 0 2px 8px hsl(0 0% 0% / 0.04);
   }
 
-  /* Buttons — hairline border, flat fill, micro-scale press (no hard shadow) */
   .neo-btn {
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -433,7 +402,6 @@ html[data-text-size="large"] {
     opacity: 0.5;
   }
 
-  /* Inputs — hairline border, quiet focus ring (no glow, no hard offset) */
   .neo-input {
     border: 1px solid var(--input);
     border-radius: 6px;
@@ -450,12 +418,6 @@ html[data-text-size="large"] {
   }
 }
 
-/* =========================
-   NEO-BRUTALISM NEUTRALIZER
-   Global pass over legacy brutalist patterns — no JSX changes needed.
-   Thick borders → hairline · hard offset shadows → soft diffuse ·
-   decorative rotations/offsets → neutral. Applies page-wide via tokens.
-========================= */
 @layer utilities {
   .border-2,
   .border-x-2,
@@ -502,14 +464,10 @@ html[data-text-size="large"] {
     transform: translate(0, 0) !important;
   }
 
-  /* brutalist 4-side bordered boxes → token radius (8px) so they match
-     neo-card / buttons / token --radius instead of staying sharp */
   .border-2 {
     border-radius: var(--radius) !important;
   }
 
-  /* foreground-tinted borders → transparent (kills black section rules,
-     box outlines, table rules, and brutalist chips) */
   [class^="border-foreground"],
   [class*=" border-foreground"] {
     border-color: transparent !important;
@@ -520,10 +478,8 @@ html[data-text-size="large"] {
   }
 }
 
-/* Shared service interaction and content containment. */
 :where(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 :where(main, article, section) { min-width: 0; }
-/* Native dialogs only. Radix components own their layout through Tailwind. */
 @layer base {
   :where(dialog) {
     max-width: calc(100vw - 2rem);
@@ -535,7 +491,6 @@ html[data-text-size="large"] {
 @media (prefers-reduced-motion: no-preference) { .service-guide { animation: service-arrive 450ms ease-out both; } .service-guide a:hover { transform: translateY(-2px); } }
 @keyframes service-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Landing editorial typesetting, scoped to the hero. */
 @keyframes editorial-soak { 0% { opacity:0; filter:blur(12px); letter-spacing:.18em; transform:translateY(.08em); } 60% { opacity:1; filter:blur(0); letter-spacing:-.01em; transform:translateY(-.01em); } 100% { opacity:1; filter:none; letter-spacing:-.015em; transform:none; } }
 .editorial-word { display:inline-block; animation:editorial-soak 1100ms cubic-bezier(.22,.61,.36,1) both; }
 .editorial-rise { animation:service-arrive 900ms ease-out both; }

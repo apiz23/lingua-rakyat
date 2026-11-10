@@ -201,9 +201,9 @@ class VerificationResult(BaseModel):
         }
 
 
-# ---------------------------------------------------------------------------
-# Evidence preparation (no retrieval, no fabrication)
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def build_evidence(
@@ -293,9 +293,9 @@ def render_evidence_block(evidence: list[EvidenceItem]) -> str:
     return "\n\n".join(blocks)
 
 
-# ---------------------------------------------------------------------------
-# Claim extraction
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def build_extraction_prompt(answer: str, lang: str) -> str:
@@ -478,9 +478,9 @@ def extract_claims(
     return result.claims
 
 
-# ---------------------------------------------------------------------------
-# Claim verification
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def build_verification_prompt(
@@ -538,7 +538,7 @@ def _parse_json(raw: str) -> Any:
     except (TypeError, ValueError):
         pass
 
-    # Recover the first top-level JSON object/array from surrounding prose.
+
     starts = [position for position in (cleaned.find("{"), cleaned.find("[")) if position >= 0]
     if not starts:
         raise ClaimExtractionError("No JSON found in model response.")
@@ -597,8 +597,8 @@ def parse_verification(
 
         explanation = re.sub(r"\s+", " ", str(item.get("explanation") or "")).strip()[:400]
 
-        # Fail-safe consistency rules. The model cannot mark a claim supported
-        # without a citation that exists in the retrieved evidence.
+
+
         if conflicting:
             status = "conflicting"
             explanation = "Conflicting evidence was identified in the retrieved sources."
@@ -633,7 +633,7 @@ def parse_verification(
             ClaimVerification(
                 claim_id=claim_id,
                 text=expected[claim_id],
-                status=status,  # type: ignore[arg-type]
+                status=status,
                 supporting_source_ids=supporting,
                 conflicting_source_ids=conflicting,
                 explanation=explanation,
@@ -698,12 +698,12 @@ def _result_from_claims(
     deduped_issues = list(dict.fromkeys(citation_issues or []))
     citation_valid = not deduped_issues
 
-    # Strict aggregation invariant:
-    #   1. incomplete/limit-exceeded extraction can never be verified;
-    #   2. conflicting > unsupported > partially_supported;
-    #   3. "verified" requires claims, all supported, and valid citations;
-    #   4. any unverifiable claim (or empty claim list) falls through to
-    #      unverifiable rather than being ignored.
+
+
+
+
+
+
     if not extraction_complete or extraction_status != "complete":
         overall: VerificationStatus = "unverifiable"
     elif any(claim.status == "conflicting" for claim in claims):
@@ -873,9 +873,9 @@ def verify_claims(
     )
 
 
-# ---------------------------------------------------------------------------
-# Revision and safe recovery
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def build_revision_prompt(
@@ -1062,9 +1062,9 @@ def verify_and_recover(
 
     claims = extraction.claims
 
-    # Extraction completeness is a hard gate. We may still verify the claims
-    # that were extracted so the UI can show useful counts, but an incomplete
-    # list can never produce a "verified" answer and must not trigger revision.
+
+
+
     if not extraction.complete or extraction.status != "complete":
         if not claims:
             result = _result_from_claims(
@@ -1123,7 +1123,7 @@ def verify_and_recover(
         return answer, first
 
     if first.verification_status == "unverifiable":
-        # No usable evidence or no reliable determination: do not rewrite blindly.
+
         return answer, first
 
     try:
@@ -1141,7 +1141,7 @@ def verify_and_recover(
     try:
         revised_extraction = extract_claims_result(revised, lang, llm_call)
         if not revised_extraction.complete or revised_extraction.status != "complete":
-            # A revision we cannot fully enumerate is not safe to present.
+
             first.abstained = True
             first.verification_error = revised_extraction.error or "revision_extraction_incomplete"
             first.verification_summary = _incomplete_extraction_summary(
@@ -1165,7 +1165,7 @@ def verify_and_recover(
     if second.verification_status in ("verified", "partially_supported"):
         return revised, second
 
-    # Revision still not safe: abstain, preserving only confirmed facts.
+
     second.abstained = True
     return _abstention_answer(lang, second, evidence), second
 

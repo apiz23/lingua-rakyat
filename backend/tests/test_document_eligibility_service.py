@@ -228,8 +228,8 @@ class MissingPublicationTables(Client):
 
 
 def test_missing_registry_tables_degrade_to_no_approved_rows():
-    # An unapplied migration is a deployment state, not an outage: the
-    # catalogue must return an empty (deny) result, not a 503.
+
+
     client = MissingPublicationTables(documents=[document()])
     snap = snapshot(client)
     assert snap.approved_sources == {}
@@ -284,7 +284,7 @@ def test_legacy_compatibility_never_widens_explicit_or_broken_rows(monkeypatch, 
     monkeypatch.setenv("ALLOW_LEGACY_PUBLIC_DOCUMENTS", "true")
     snap = eligibility.EligibilitySnapshot(approved_sources={}, revisions_by_document={})
     if row.get("storage_path") is None:
-        # Catalogue eligibility still matches old behaviour; the PDF path is absent.
+
         assert eligibility.is_document_public(row, snap, now=NOW)
         assert eligibility.public_pdf_storage_path(row, snap, now=NOW) is None
     else:

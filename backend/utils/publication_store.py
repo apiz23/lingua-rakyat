@@ -58,7 +58,7 @@ def _is_missing_table(exc: Exception) -> bool:
 def _rows(client: Any, table: str) -> list[dict[str, Any]]:
     try:
         result = client.table(table).select("*").execute()
-    except Exception as exc:  # provider/network errors are availability failures
+    except Exception as exc:
         if _is_missing_table(exc):
             logger.error(
                 "[Publication] Required table %s is missing. Apply the publication "
@@ -76,7 +76,7 @@ def fetch_approved_sources(client: Any) -> dict[str, dict[str, Any]]:
     try:
         rows = _rows(client, sources_table())
     except PublicationSchemaMissing:
-        # No registry means no approved source, so everything denies.
+
         return {}
     registry: dict[str, dict[str, Any]] = {}
     for row in rows:
@@ -109,7 +109,7 @@ def fetch_revisions(
     try:
         rows = _rows(client, revisions_table())
     except PublicationSchemaMissing:
-        # Without revision records no document has a current approved revision.
+
         return []
     if document_ids is None:
         return rows
@@ -176,8 +176,8 @@ def record_publication_event(
     try:
         client.table(events_table()).insert(payload).execute()
     except Exception as exc:
-        # A concurrent retry may have won the unique key. Treat that as already
-        # recorded only when the store says so; anything else is an outage.
+
+
         if _is_duplicate_key(exc):
             return False
         raise PublicationStoreUnavailable("Could not append publication event") from exc

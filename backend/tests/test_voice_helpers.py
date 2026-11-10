@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from utils.voice_helpers import transcribe_audio, text_to_speech
 
 
-# ── transcribe_audio ─────────────────────────────────────────────────────────
+
 
 def test_transcribe_audio_returns_transcript_and_language():
     mock_response = MagicMock()
@@ -42,7 +42,7 @@ def test_transcribe_audio_propagates_groq_error():
             pass
 
 
-# ── text_to_speech ────────────────────────────────────────────────────────────
+
 
 def test_text_to_speech_returns_bytes():
     fake_audio = [b"chunk1", b"chunk2", b"chunk3"]

@@ -1,4 +1,3 @@
-// frontend/app/(app)/about/data.ts
 import type { ComponentType } from "react"
 import {
   Shield, FileSearch, Layers, Brain, Database,
@@ -6,7 +5,6 @@ import {
   Mic, BarChart3, FileText, Zap,
 } from "lucide-react"
 
-// ── Types ──────────────────────────────────────────────────────────────────
 
 export type StackItem = {
   name: string
@@ -45,7 +43,6 @@ export type ApiEndpoint = {
   desc: string
 }
 
-// ── Tech Stack — English ───────────────────────────────────────────────────
 
 export const BACKEND_STACK: StackItem[] = [
   {
@@ -193,7 +190,6 @@ export const FRONTEND_STACK: StackItem[] = [
   },
 ]
 
-// ── Tech Stack — Malay ─────────────────────────────────────────────────────
 
 export const BACKEND_STACK_MS: StackItem[] = [
   {
@@ -301,7 +297,6 @@ export const FRONTEND_STACK_MS: StackItem[] = [
   },
 ]
 
-// ── API Endpoints ──────────────────────────────────────────────────────────
 
 export const API_ENDPOINTS: ApiEndpoint[] = [
   { method: "POST",   path: "/api/documents/upload",              desc: "Disabled pending trusted administrator authorization" },
@@ -353,7 +348,6 @@ export const METHOD_COLORS: Record<string, string> = {
   DELETE: "bg-destructive/10 text-destructive border-destructive/20",
 }
 
-// ── Eval Metrics — English ─────────────────────────────────────────────────
 
 export const EVAL_METRICS: MetricItem[] = [
   {
@@ -407,7 +401,6 @@ export const EVAL_METRICS: MetricItem[] = [
   },
 ]
 
-// ── Eval Metrics — Malay ───────────────────────────────────────────────────
 
 export const EVAL_METRICS_MS: MetricItem[] = [
   {
@@ -447,7 +440,6 @@ export const EVAL_METRICS_MS: MetricItem[] = [
   },
 ]
 
-// ── Ingestion Pipeline Steps — English ────────────────────────────────────
 
 export const INGESTION_STEPS: PipelineStepData[] = [
   {
@@ -502,7 +494,6 @@ export const INGESTION_STEPS: PipelineStepData[] = [
   },
 ]
 
-// ── Ingestion Pipeline Steps — Malay ──────────────────────────────────────
 
 export const INGESTION_STEPS_MS: PipelineStepData[] = [
   {
@@ -557,7 +548,6 @@ export const INGESTION_STEPS_MS: PipelineStepData[] = [
   },
 ]
 
-// ── Q&A Pipeline Steps — English ──────────────────────────────────────────
 
 export const QA_STEPS: PipelineStepData[] = [
   {
@@ -632,7 +622,6 @@ export const QA_STEPS: PipelineStepData[] = [
   },
 ]
 
-// ── Q&A Pipeline Steps — Malay ─────────────────────────────────────────────
 
 export const QA_STEPS_MS: PipelineStepData[] = [
   {
@@ -707,7 +696,6 @@ export const QA_STEPS_MS: PipelineStepData[] = [
   },
 ]
 
-// ── Key Features — English ─────────────────────────────────────────────────
 
 export const KEY_FEATURES: FeatureItem[] = [
   {
@@ -772,7 +760,6 @@ export const KEY_FEATURES: FeatureItem[] = [
   },
 ]
 
-// ── Key Features — Malay ───────────────────────────────────────────────────
 
 export const KEY_FEATURES_MS: FeatureItem[] = [
   {

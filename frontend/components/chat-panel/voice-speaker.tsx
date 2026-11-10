@@ -32,7 +32,6 @@ const TTS_COPY = {
 
 export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
   const { play, stop, state } = useTTS()
-  // language is the detected answer language (may be "zh-cn", "id", …)
   const t =
     TTS_COPY[
       language.startsWith("zh")

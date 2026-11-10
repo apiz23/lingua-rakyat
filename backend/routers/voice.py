@@ -16,7 +16,7 @@ limiter = Limiter(key_func=get_proxy_aware_remote_address)
 router = APIRouter()
 public_v1_router = APIRouter()
 
-MIN_AUDIO_BYTES = 1  # rejects zero-byte uploads; real duration check is Groq's response
+MIN_AUDIO_BYTES = 1
 
 
 class TTSRequest(BaseModel):
@@ -24,7 +24,7 @@ class TTSRequest(BaseModel):
     language: str = "en"
 
 
-# ── /transcribe ───────────────────────────────────────────────────────────────
+
 
 @router.post("/transcribe")
 @limiter.limit(VOICE_LIMIT)
@@ -47,7 +47,7 @@ async def transcribe(request: Request, audio: UploadFile = File(...)):
     return result
 
 
-# ── /tts ──────────────────────────────────────────────────────────────────────
+
 
 @router.post("/tts")
 @limiter.limit(VOICE_LIMIT)
@@ -59,16 +59,16 @@ async def tts(request: Request, body: TTSRequest):
     audio_bytes = text_to_speech(body.text, body.language)
 
     if audio_bytes is None:
-        # ElevenLabs quota exceeded — tell frontend to use speechSynthesis
+
         return JSONResponse(content={"fallback": True})
 
     extra_headers = {"X-TTS-Truncated": "true"} if len(body.text) > MAX_TTS_CHARS else {}
     return Response(content=audio_bytes, media_type="audio/mpeg", headers=extra_headers)
 
 
-# Versioned public contract. Both routes use the same limited handlers as the
-# legacy paths so behavior and provider safeguards remain consistent during
-# client migration.
+
+
+
 public_v1_router.add_api_route(
     "/transcriptions",
     transcribe,

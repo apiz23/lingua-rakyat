@@ -1,7 +1,3 @@
-// Suggested questions keyed by the agencies actually seeded in
-// backend/routers/documents.py FEATURED_DOCS. Keep in sync if that list
-// changes — a question referencing an agency with no doc yields
-// evidence_mode: "insufficient" instead of a real answer.
 
 export type Lang = "ms" | "en" | "zh"
 

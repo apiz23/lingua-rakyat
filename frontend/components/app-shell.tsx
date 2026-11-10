@@ -62,7 +62,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarTrigger className="-ml-1 text-muted-foreground transition-colors hover:text-primary" />
 
             <div className="flex w-full items-center justify-end gap-2">
-              {/* Mobile button */}
               <button
                 type="button"
                 onClick={openCommandPalette}
@@ -72,7 +71,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <Search className="h-4 w-4" />
               </button>
 
-              {/* Desktop shortcut hint */}
               <button
                 type="button"
                 onClick={openCommandPalette}
@@ -89,7 +87,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </kbd>
               </button>
 
-              {/* GitHub Link with text - Use LinkPreview ALONE without nested Link */}
               <LinkPreview
                 url={GITHUB_URL}
                 className="neo-btn hidden items-center gap-2 bg-background px-3 py-2 text-xs text-muted-foreground hover:text-primary sm:inline-flex"
@@ -100,7 +97,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
               </LinkPreview>
 
-              {/* Mobile GitHub Icon only */}
               <Link
                 href={GITHUB_URL}
                 target="_blank"

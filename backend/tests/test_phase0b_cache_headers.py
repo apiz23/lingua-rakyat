@@ -87,5 +87,5 @@ def test_pdf_range_request_is_not_cached(monkeypatch):
     monkeypatch.setattr(documents, "get_supabase", lambda admin=False: Query())
     with TestClient(app) as client:
         response = client.get("/api/documents/doc/pdf", headers={"Range": "bytes=0-3"})
-        assert response.status_code == 200  # Proxy currently serves the whole file.
+        assert response.status_code == 200
         assert response.headers["cache-control"] == "no-store"

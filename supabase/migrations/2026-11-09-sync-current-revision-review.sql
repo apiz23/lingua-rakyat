@@ -1,5 +1,5 @@
--- Keep document approval and current-revision review state in one transaction.
--- Publication eligibility requires both records to agree.
+
+
 
 create or replace function public.review_current_document_revision(
   p_document_id text,

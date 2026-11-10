@@ -42,12 +42,12 @@ class AskRequest(BaseModel):
     model_override: str = ""
     enable_query_augmentation: bool = True
     bypass_cache: bool = False
-    # Last N Q&A turns for multi-turn context. Each: {"question": str, "answer": str}
+
     chat_history: list[dict] = Field(default_factory=list)
-    # Optional multi-document scope. When non-empty, retrieval spans every doc
-    # in this list (citizen asks across their whole library, no file picking).
+
+
     document_ids: list[str] = Field(default_factory=list)
-    # Authenticated retries reuse this key so provider work is not repeated.
+
     idempotency_key: Optional[str] = Field(default=None, max_length=200)
 
 
@@ -81,8 +81,8 @@ class AskResponse(BaseModel):
     faithfulness: Optional[float] = None
     evidence_mode: str = "strong"
     confidence_explanation: Optional[str] = None
-    # Additive, backward-compatible verification metadata. Absent on older
-    # clients/history rows; never required to render an answer.
+
+
     verification: Optional[dict[str, Any]] = None
 
 
@@ -175,7 +175,7 @@ def _authorize_ask_documents(
             namespaces.append(revision_namespace(document_id, current))
             revisions[document_id] = int(current)
         else:
-            # Legacy documents indexed before revision namespaces existed.
+
             namespaces.append(document_id)
             revisions[document_id] = None
     return namespaces, revisions
@@ -213,8 +213,8 @@ def _claim_idempotent_run(verified: Optional[str], body: AskRequest):
     if not key:
         return None
     if not verified:
-        # Anonymous callers have no verified actor; a client-supplied key could
-        # collide across devices and reveal another caller's answer.
+
+
         raise HTTPException(
             status_code=400, detail="idempotency_key requires a signed-in account"
         )
@@ -296,8 +296,8 @@ def _history_payload(body: AskRequest, result: dict[str, Any], timestamp: str, a
 
 def _record_eval(body: AskRequest, result: dict[str, Any], answer_text: str) -> None:
     try:
-        # Faithfulness is computed once in the RAG pipeline (_build_result) and
-        # carried on the result, so we reuse it here instead of a second Cohere call.
+
+
         evaluator.record(
             question=body.question,
             answer=answer_text,
@@ -364,8 +364,8 @@ async def ask_question(
 
     timestamp = datetime.utcnow().isoformat() + "Z"
     answer_text = result["answer"]
-    # Public anonymous Q&A has no secure session capability, so do not persist
-    # caller-supplied anonymous IDs or copy public prompts into evaluation data.
+
+
     if verified:
         if not insert_chat_message(_history_payload(body, result, timestamp, answer_text)):
             _fail_idempotent_run(verified, body)
@@ -437,8 +437,8 @@ async def ask_question_stream(
                     answer_pieces.append(event["text"])
                     yield f"data: {json.dumps(event)}\n\n"
                 elif event["type"] == "complete":
-                    # Hold completion until persistence and idempotency commit
-                    # succeed, so the client never sees a false success.
+
+
                     final_result = event
                 else:
                     yield f"data: {json.dumps(event)}\n\n"
@@ -446,8 +446,8 @@ async def ask_question_stream(
             if final_result is None:
                 raise RuntimeError("Streaming finished without a completion event.")
 
-            # The completion event is authoritative: verification may have
-            # revised the answer after provisional tokens were streamed.
+
+
             answer_text = (final_result.get("answer") or "").strip() or "".join(
                 answer_pieces
             ).strip()
@@ -501,9 +501,9 @@ async def get_conversations(
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     verified: Optional[str] = Depends(get_verified_user),
 ):
-    # Anonymous IDs travel via header, not the query string — a query param
-    # ends up in browser history, proxy/access logs, and Referer headers;
-    # a header does not. Query param kept only as a deprecated fallback.
+
+
+
     if not verified or not verified.strip():
         raise HTTPException(status_code=401, detail="Sign-in required to access chat history")
     supplied_user_id = x_user_id if x_user_id is not None else user_id
@@ -539,7 +539,7 @@ async def get_chat_history(
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     verified: Optional[str] = Depends(get_verified_user),
 ):
-    # See get_conversations above — header preferred over query string.
+
     if not verified or not verified.strip():
         raise HTTPException(status_code=401, detail="Sign-in required to access chat history")
     supplied_user_id = x_user_id if x_user_id is not None else user_id
@@ -601,9 +601,9 @@ async def clear_document_chat_history(
     }
 
 
-# Versioned authenticated-citizen adapters. They intentionally omit caller
-# owner IDs from their schemas and delegate to the established Clerk-checked
-# handlers. History remains document-scoped; there is no unscoped list/delete.
+
+
+
 @me_v1_router.get("/conversations", response_model=list[ConversationSummary])
 async def get_my_conversations_v1(
     verified: Optional[str] = Depends(get_verified_user),

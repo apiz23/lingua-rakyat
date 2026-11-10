@@ -158,8 +158,8 @@ def test_public_document_catalogue_is_read_only_and_does_not_reconcile(client, m
 
     def get_supabase(*, admin=False):
         accesses.append(admin)
-        # Eligibility reads the trusted registry with the service client; the
-        # public catalogue itself must still be read through the anon client.
+
+
         return TableReadOnlySupabase(tables, operations)
 
     monkeypatch.setattr(documents, "get_supabase", get_supabase)
@@ -195,9 +195,9 @@ def test_public_document_catalogue_reports_unavailable_database(client, monkeypa
 
     response = client.get("/api/documents/")
 
-    # An empty library and an unreachable catalogue must not look identical to
-    # the client. 503 lets the UI show an outage instead of "upload your first
-    # PDF" while production documents exist.
+
+
+
     assert response.status_code == 503
     assert response.json()["detail"] == "Document catalogue is temporarily unavailable."
 

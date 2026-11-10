@@ -38,6 +38,3 @@ router.include_router(admin_ingestion_router, prefix="/admin/ingestion", tags=["
 router.include_router(
     admin_ingestion_documents_router, prefix="/admin/documents", tags=["Admin Ingestion v1"]
 )
-
-# Admin routes are mounted but fail closed (503) until a trusted role provider
-# is provisioned and the actor has an explicit server-side role.

@@ -9,7 +9,11 @@ function load(fetch, authHeader) {
   const source = readFileSync(new URL("../../mobile/src/api.ts", import.meta.url), "utf8")
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const loaded = { exports: {} }
-  const mocks = { "expo/fetch": { fetch }, "./auth-token": { authHeader } }
+  const parserSource = readFileSync(new URL("../../mobile/src/chat-stream.ts", import.meta.url), "utf8")
+  const parserCode = ts.transpileModule(parserSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  const parser = { exports: {} }
+  new Function("require", "module", "exports", parserCode)(require, parser, parser.exports)
+  const mocks = { "expo/fetch": { fetch }, "./auth-token": { authHeader }, "./chat-stream": parser.exports }
   new Function("require", "module", "exports", code)((name) => mocks[name] ?? require(name), loaded, loaded.exports)
   return loaded.exports
 }

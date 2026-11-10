@@ -24,7 +24,7 @@ def test_title_is_earliest_question():
 def test_ordered_by_last_at_desc():
     with patch.object(ch, "list_chat_messages", return_value=_ROWS):
         convs = ch.list_conversations("user1")
-    assert convs[0]["session_id"] == "s1"  # last_at 10:00 > 09:00
+    assert convs[0]["session_id"] == "s1"
 
 def test_count_is_correct():
     with patch.object(ch, "list_chat_messages", return_value=_ROWS):

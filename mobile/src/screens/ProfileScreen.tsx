@@ -132,7 +132,6 @@ export default function ProfileScreen({
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Identity */}
         <View style={styles.identityBlock}>
           <View style={styles.avatarRing}>
             {isSignedIn && user?.imageUrl ? (
@@ -162,7 +161,6 @@ export default function ProfileScreen({
           ) : null}
         </View>
 
-        {/* Account actions */}
         <Text style={styles.sectionTitle}>{copy.account}</Text>
         <View style={styles.card}>
           {isSignedIn ? (
@@ -219,7 +217,6 @@ export default function ProfileScreen({
           <Text style={styles.authErrorText}>{copy.signInError}</Text>
         ) : null}
 
-        {/* Language */}
         <Text style={styles.sectionTitle}>{copy.language}</Text>
         <View style={styles.card}>
           {LANGUAGES.map((lang, i) => {
@@ -257,7 +254,6 @@ export default function ProfileScreen({
           })}
         </View>
 
-        {/* Chat History */}
         <Text style={styles.sectionTitle}>{copy.chatHistory}</Text>
         <View style={styles.card}>
           {historyLoading ? (
@@ -309,7 +305,6 @@ export default function ProfileScreen({
           )}
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Image source={logo} style={styles.footerLogo} resizeMode="contain" />
           <Text style={styles.footerName}>{copy.appName}</Text>

@@ -38,10 +38,10 @@ MAX_UPLOAD_PAGES = 200
 
 SAMPLE_DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "sample_docs")
 
-# Pre-loaded government document library. Entries with a source_url are
-# downloaded into sample_docs on first seed if the file is not shipped in the
-# repo, so the library can grow without committing every PDF. Official URLs
-# rot — when a download 404s the seed just skips that doc and logs it.
+
+
+
+
 FEATURED_DOCS = [
     {
         "doc_id": "jpn-mykad-faq",
@@ -95,9 +95,9 @@ class DocumentCatalogueUnavailable(RuntimeError):
     """The public document catalogue cannot be read right now."""
 
 
-# Cache for list_storage_documents() — avoids repeated storage API calls.
-# TTL: 60 seconds. Fresh enough to detect new uploads, cheap enough to skip
-# redundant Supabase storage list() calls on every request.
+
+
+
 _storage_cache: list[dict[str, Any]] | None = None
 _storage_cache_at: datetime | None = None
 _STORAGE_CACHE_TTL = timedelta(seconds=60)
@@ -200,11 +200,11 @@ def _snapshot_for_rows(rows: list[dict[str, Any]]) -> eligibility.EligibilitySna
 
 def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
     last_error: Optional[Exception] = None
-    # Public reads use the anon client first. During the 2026-11-01 recovery the
-    # production anon key was missing/unusable while the service key worked, so
-    # the public catalogue (already filtered to eligible rows) falls back to the
-    # service client rather than showing a permanently empty site. Private/
-    # user-scoped tables never use this fallback.
+
+
+
+
+
     for admin in (False, True):
         try:
             response = _query_catalogue(get_supabase(admin=admin))
@@ -228,9 +228,9 @@ def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
                 "[Documents] Catalogue read failed (service_client=%s): %s", admin, exc
             )
 
-    # Public reads must distinguish "empty catalogue" from "catalogue
-    # unreachable". The non-strict form keeps maintenance callers working;
-    # the HTTP read path passes strict=True and returns 503.
+
+
+
     if strict:
         raise DocumentCatalogueUnavailable("Document catalogue unavailable") from last_error
     return []
@@ -333,8 +333,8 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
 
             if storage_match or storage_path in storage_paths:
                 if storage_match:
-                    # Featured docs keep their curated display name ("MyKad FAQ
-                    # (JPN)") instead of the raw storage filename.
+
+
                     if not doc.get("is_featured"):
                         doc["name"] = storage_match["name"]
                     doc["size_bytes"] = storage_match["size_bytes"]
@@ -342,7 +342,7 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
                     doc["public_url"] = storage_match["public_url"]
                 valid_documents.append(normalize_document_row(doc))
             elif storage_path is None:
-                # Seeded doc — no storage backing by design, keep it
+
                 valid_documents.append(normalize_document_row(doc))
             else:
                 removed_ids.append(doc["id"])
@@ -533,7 +533,7 @@ def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filenam
             "status": "ready",
             "error_message": None,
         }).eq("id", document_id).execute()
-        # Feed the /api/eval/data-quality dashboard with this document's metrics.
+
         log_data_quality({**indexed.get("quality", {}), "document_id": document_id, "doc_name": safe_filename})
         logger.info(
             "[Upload] Revision %s ingestion complete for %s: %d chunks",
@@ -641,9 +641,9 @@ async def get_document_status(document_id: str):
 
 @router.get("/", response_model=list[DocumentResponse])
 async def list_documents():
-    # Public read path: use only the registered catalogue. Storage
-    # reconciliation can write/delete rows with the service role and belongs
-    # in a separately authorized maintenance workflow.
+
+
+
     try:
         documents = load_documents(strict=True)
     except DocumentCatalogueUnavailable as exc:
@@ -789,15 +789,15 @@ def _read_catalogue_row(
             continue
 
         if not rows.data:
-            # A successful read with no row is a real 404; only a failed read
-            # falls through to the service client.
+
+
             raise HTTPException(status_code=404, detail="Document not found")
         row = rows.data[0]
         if not isinstance(row, dict):
             raise HTTPException(status_code=404, detail="Document not found")
         snapshot = _snapshot_for_rows([row])
         if not eligibility.is_document_public(row, snapshot):
-            # Do not reveal whether a private/draft document exists.
+
             raise HTTPException(status_code=404, detail="Document not found")
         if admin:
             logger.warning(
@@ -1003,14 +1003,14 @@ async def _do_seed() -> dict:
             logger.warning("[Seed] PDF not found, skipping: %s", pdf_path)
             continue
 
-        # Deterministic UUID — used for BOTH Supabase row id and Pinecone namespace
+
         supabase_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
 
         existing = existing_by_name.get(doc_name)
         if existing:
             already_present += 1
-            # Older seeds never uploaded the file to storage, so the PDF viewer
-            # 404s on these docs. Backfill storage for them once.
+
+
             if not existing.get("storage_path"):
                 storage_path = _upload_seed_pdf_to_storage(
                     str(existing["id"]), featured["filename"], pdf_path
@@ -1045,7 +1045,7 @@ async def _do_seed() -> dict:
                 "public_url": build_public_url(storage_path),
                 "error_message": None,
             }
-            # Attempt with optional columns first; fall back to base if Supabase rejects
+
             for payload in [
                 {**base_payload, "is_featured": True, "agency": featured["agency"]},
                 base_payload,

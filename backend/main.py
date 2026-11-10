@@ -27,15 +27,15 @@ from slowapi.middleware import SlowAPIMiddleware
 
 load_dotenv()
 
-# ─── Rate Limiter ────────────────────────────────────────────────────────────
-# Per-IP limits prevent abuse and show production-readiness to judges.
-# Values are env-gated (see rate_limits.py): set BOOTH_MODE=true at a demo booth
-# where all visitors share one public IP, otherwise buckets fill and judges 429.
+
+
+
+
 from rate_limits import BOOTH_MODE, GLOBAL_DEFAULT, get_proxy_aware_remote_address
 
 limiter = Limiter(key_func=get_proxy_aware_remote_address, default_limits=[GLOBAL_DEFAULT])
 
-# ─── Logging Setup ───────────────────────────────────────────────────────────
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
@@ -47,7 +47,7 @@ logger.info("Starting Lingua Rakyat backend (lightweight mode — Cohere + Groq)
 if BOOTH_MODE:
     logger.warning("[RateLimit] BOOTH_MODE=true — using generous demo limits (global=%s)", GLOBAL_DEFAULT)
 
-# ─── Router imports ───────────────────────────────────────────────────────────
+
 from routers.documents import router as documents_router
 from routers.chat import router as chat_router
 from routers.eval import router as eval_router
@@ -59,7 +59,7 @@ from routers.user import router as user_router
 from api.v1.router import router as api_v1_router
 from utils.auth import get_supabase
 
-# ─── App instance ─────────────────────────────────────────────────────────────
+
 app = FastAPI(
     title="Lingua Rakyat — Multilingual RAG Backend",
     description=(
@@ -71,12 +71,12 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Attach rate limiter state and error handler
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# ─── CORS Configuration ───────────────────────────────────────────────────────
+
 allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
@@ -107,7 +107,7 @@ app.add_middleware(
     max_age=3600,
 )
 
-# ─── Request Logging Middleware ───────────────────────────────────────────────
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log every request with method, path, status code, and latency."""
@@ -130,7 +130,7 @@ async def log_requests(request: Request, call_next):
         )
         raise
 
-# ─── Global Exception Handler ─────────────────────────────────────────────────
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """
@@ -153,7 +153,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         },
     )
 
-# ─── Routers ─────────────────────────────────────────────────────────────────
+
 app.include_router(documents_router, prefix="/api/documents", tags=["Documents"])
 app.include_router(chat_router,      prefix="/api/chat",      tags=["Chat"])
 app.include_router(eval_router,      prefix="/api/eval",      tags=["Evaluation"])
@@ -164,8 +164,8 @@ app.include_router(share_router,     prefix="/api/share",     tags=["Share"])
 app.include_router(api_v1_router,    prefix="/api/v1",         tags=["Versioned API"])
 app.include_router(user_router,      prefix="/api/user",      tags=["User"])
 
-# ─── Startup: Seed + Prewarm ──────────────────────────────────────────────────
-# ─── Health Check ─────────────────────────────────────────────────────────────
+
+
 @app.get("/health/live", tags=["Health"])
 async def liveness_check():
     """Liveness only: the process can answer HTTP."""

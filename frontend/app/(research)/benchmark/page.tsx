@@ -37,7 +37,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 function pct(v: number) {
   return `${Math.round(v * 100)}%`
@@ -79,7 +78,6 @@ const SCORE_CONFIG: Record<
   },
 }
 
-// ── benchmarkGrade ─────────────────────────────────────────────────────────
 
 function benchmarkGrade(
   result: TestSuiteResult | null,
@@ -120,7 +118,6 @@ function benchmarkGrade(
   )
 }
 
-// ── SegBar ─────────────────────────────────────────────────────────────────
 
 function SegBar({
   label,
@@ -157,7 +154,6 @@ function SegBar({
   )
 }
 
-// ── StatTile ───────────────────────────────────────────────────────────────
 
 function StatTile({
   label,
@@ -211,7 +207,6 @@ function StatTile({
   )
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────
 
 function BenchmarkFixture() {
   const t = useTranslations()
@@ -690,7 +685,6 @@ export default function BenchmarkPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
-        {/* ── Compact page header ── */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <BarChart3 className="h-5 w-5 text-primary" />
@@ -710,7 +704,6 @@ export default function BenchmarkPage() {
           </button>
         </div>
 
-        {/* ── Score hero + run controls ── */}
         {loading ? (
           <BenchmarkFallback />
         ) : (
@@ -722,7 +715,6 @@ export default function BenchmarkPage() {
               )}
             >
               <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                {/* Score display */}
                 <div className="flex items-end gap-5">
                   <div>
                     <p
@@ -773,7 +765,6 @@ export default function BenchmarkPage() {
                   </div>
                 </div>
 
-                {/* Run controls */}
                 <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[300px]">
                   <Select
                     value={selectedDocId}
@@ -859,7 +850,6 @@ export default function BenchmarkPage() {
               </div>
             </section>
 
-            {/* ── 4 metric tiles ── */}
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatTile
                 label={t("ROUGE-1")}
@@ -939,9 +929,7 @@ export default function BenchmarkPage() {
               />
             </section>
 
-            {/* ── Results + right panel ── */}
             <section className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
-              {/* Per-case results */}
               <div className="neo-card">
                 <div className="flex items-center justify-between border-b-2 border-foreground/40 px-5 py-4">
                   <div>
@@ -1058,9 +1046,7 @@ export default function BenchmarkPage() {
                 )}
               </div>
 
-              {/* Right column */}
               <div className="space-y-4">
-                {/* ROUGE context */}
                 <div className="neo-card p-5">
                   <div className="mb-3 flex items-center gap-2">
                     <Info className="h-4 w-4 shrink-0 text-primary" />
@@ -1078,7 +1064,6 @@ export default function BenchmarkPage() {
                   </div>
                 </div>
 
-                {/* Scorecard */}
                 <div className="neo-card p-5">
                   <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
                     {copy.scorecard}
@@ -1139,7 +1124,6 @@ export default function BenchmarkPage() {
                   </div>
                 </div>
 
-                {/* Live snapshot */}
                 <div className="neo-card p-5">
                   <p className="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">
                     {copy.liveSnapshot}
@@ -1192,7 +1176,6 @@ export default function BenchmarkPage() {
                   )}
                 </div>
 
-                {/* ROUGE score bars (if generation quality) */}
                 {report?.generation_quality && (
                   <div className="neo-card p-5">
                     <p className="mb-3 text-[10px] font-semibold tracking-[0.18em] text-primary uppercase">

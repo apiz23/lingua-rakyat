@@ -1,5 +1,8 @@
 "use client"
 
+import CivicBackground from "@/components/civic-background"
+import HeroText from "@/components/ui/hero-shutter-text"
+
 import { UiText, useTranslations } from "@/components/i18n"
 import dynamic from "next/dynamic"
 import { motion, useReducedMotion } from "framer-motion"
@@ -42,7 +45,7 @@ const TechStackLogos = dynamic(
 const editorialSerif = Instrument_Serif({
   subsets: ["latin"],
   weight: "400",
-  style: ["normal", "italic"],
+  style: "normal",
   display: "swap",
 })
 
@@ -158,9 +161,9 @@ export default function Home() {
           headline2: "Dalam bahasa anda.",
 
           subhead:
-            "Sistem soal jawab dokumen kerajaan berasaskan AI yang menggunakan Cohere multilingual embeddings, penyusunan semula neural Cohere, dan LLM. Jawapan bersumberkan dokumen dengan skor ketepatan, dalam Bahasa Melayu, English, dan Mandarin.",
+            "Tanya tentang dokumen kerajaan Malaysia dalam Bahasa Melayu, English atau Mandarin. Baca penerangan dan semak petikan sumber yang disertakan.",
 
-          cta: "Terokai Demo Teknikal",
+          cta: "Tanya soalan",
           ctaSecondary: "Tonton Demo",
 
           strip: [
@@ -170,67 +173,68 @@ export default function Home() {
             { icon: Target, label: "Skor Keyakinan" },
           ],
 
-          howItWorks: "Aliran Sistem",
+          howItWorks: "Cara jawapan dihasilkan",
 
           steps: [
             {
               n: "01",
               title: "Ingestion",
-              desc: "PDF ? pengekstrakan teks ? pembahagian bahagian-sedar (360 patah perkataan, overlap 45) ? embedding Cohere multilingual-v3 ? Pinecone.",
+              desc: "Sistem mengekstrak teks PDF, membahagikannya kepada petikan dan mengindeksnya untuk carian.",
               icon: FileText,
             },
             {
               n: "02",
               title: "Retrieval",
-              desc: "Pengesanan bahasa ? augmentasi pertanyaan (×4 varian) ? embedding Cohere ? carian vektor Pinecone ? penyusunan semula neural Cohere ? top-k chunks.",
+              desc: "Sistem mencari petikan yang sepadan dengan soalan anda, kemudian menyusunnya mengikut kesesuaian.",
               icon: Languages,
             },
             {
               n: "03",
               title: "Generation",
-              desc: "Pengawal bukti ? prompt berasaskan konteks ? LLM ? jawapan beranak + petikan sumber + skor keyakinan + skor ketepatan.",
+              desc: "Sistem menyemak bukti yang ditemui, menjana jawapan dan menyertakan petikan sumber serta skor penilaian jawapan.",
               icon: FileSearch,
             },
           ],
 
-          whatItDoes: "Ciri-ciri Utama",
+          whatItDoes: "Alat untuk membaca dokumen",
 
           builtFor:
-            "Sistem RAG lengkap dengan papan pemuka penilaian untuk ketelusan dan kebolehpercayaan.",
+            "Tanya soalan, semak sumber dan lihat cara jawapan dinilai.",
 
           features: [
             {
-              label: "Multilingual RAG",
-              desc: "Cohere embed-v3 dengan sokongan 100+ bahasa, menghasilkan jawapan dalam BM, EN, atau zh.",
+              label: "Jawapan pelbagai bahasa",
+              desc: "Tanya soalan dan baca jawapan dalam Bahasa Melayu, English atau Mandarin.",
               icon: Globe,
             },
             {
-              label: "Evaluation Suite",
+              label: "Penilaian jawapan",
               desc: "ROUGE, BLEU, Flesch-Kincaid, exact match, serta metrik masa nyata.",
               icon: BarChart3,
             },
             {
-              label: "Suara I/O",
-              desc: "Tanya melalui suara (Whisper STT) dan dengar jawapan dibaca balik (ElevenLabs TTS). Sokongan speechSynthesis pelayar sebagai sandaran.",
+              label: "Tanya dan dengar melalui suara",
+              desc: "Tanya soalan melalui suara dan dengar jawapan dibacakan.",
               icon: Mic,
             },
             {
-              label: "Pengawal Bukti",
-              desc: "Menolak berhalusinasi — hanya menjawab apabila bukti kukuh. Setiap jawapan disertai skor ketepatan (faithfulness) terhadap sumber.",
+              label: "Semakan bukti",
+              desc: "Menyemak bukti sebelum menjawab dan menilai sejauh mana jawapan mengikuti sumbernya.",
               icon: Shield,
             },
           ],
 
-          watchDemo: "Demonstrasi Teknikal",
-          seeItWork: "Sistem memproses dokumen kerajaan sebenar",
+          watchDemo: "Tonton demo",
+          seeItWork: "Soal jawab menggunakan dokumen kerajaan",
 
-          builtWith: "Stack Teknologi",
+          builtWith: "Teknologi",
 
           previewQ: "Soalan: Siapakah yang layak memohon bantuan ini?",
           previewA:
-            "Berdasarkan Seksyen 2.1, pemohon mestilah warganegara Malaysia berumur 18 tahun ke atas dengan pendapatan isi rumah = RM4,000.",
+            "Dalam contoh rekaan ini, Seksyen 2.1 menetapkan kewarganegaraan Malaysia, umur minimum 18 tahun dan had pendapatan isi rumah RM4,000.",
           sampleTitle: "Lihat contoh jawapan",
-          sampleDescription: "Jawapan dipadankan dengan petikan sumber supaya anda boleh menyemaknya.",
+          sampleDescription:
+            "Jawapan dipadankan dengan petikan sumber supaya anda boleh menyemaknya.",
           sampleCta: "Tanya soalan anda",
           sampleNote: "Pratonton contoh — bukan nasihat rasmi",
           previewSrc: "Petikan sumber · Pratonton",
@@ -242,9 +246,9 @@ export default function Home() {
           headline2: "In your language.",
 
           subhead:
-            "An AI-powered government document Q&A system using Cohere multilingual embeddings, Cohere neural reranking, and LLM. Source-cited answers with faithfulness scoring in Malay, English, and Chinese.",
+            "Ask about Malaysian government documents in Malay, English or Chinese. Read an explanation and check the source passages included with the answer.",
 
-          cta: "Explore Technical Demo",
+          cta: "Ask a question",
           ctaSecondary: "Watch Demo",
 
           strip: [
@@ -254,67 +258,68 @@ export default function Home() {
             { icon: Target, label: "Confidence Scoring" },
           ],
 
-          howItWorks: "System Flow",
+          howItWorks: "How answers are produced",
 
           steps: [
             {
               n: "01",
               title: "Ingestion",
-              desc: "PDF ? text extraction ? section-aware chunking (360-word window, 45-word overlap) ? Cohere embed-multilingual-v3 ? Pinecone.",
+              desc: "The system extracts text from PDFs, splits it into passages and indexes them for search.",
               icon: FileText,
             },
             {
               n: "02",
               title: "Retrieval",
-              desc: "Language detection ? multi-query augmentation (×4 variants) ? Cohere embedding ? Pinecone vector search ? Cohere neural reranking ? top-k chunks.",
+              desc: "The system searches for passages that match your question, then ranks them by relevance.",
               icon: Languages,
             },
             {
               n: "03",
               title: "Generation",
-              desc: "Evidence guard ? context-aware prompt ? LLM ? streamed answer + source citations + confidence + faithfulness score.",
+              desc: "The system checks the matching passages and writes an answer with source citations and evaluation scores.",
               icon: FileSearch,
             },
           ],
 
-          whatItDoes: "Key Features",
+          whatItDoes: "Tools for reading documents",
 
           builtFor:
-            "A complete RAG system with an evaluation dashboard for transparency and reliability.",
+            "Ask questions, check sources and see how answers are evaluated.",
 
           features: [
             {
-              label: "Multilingual RAG",
-              desc: "Cohere embed-v3 with support for 100+ languages, generating outputs in BM, EN, or zh.",
+              label: "Multilingual answers",
+              desc: "Ask questions and read answers in Malay, English or Chinese.",
               icon: Globe,
             },
             {
-              label: "Evaluation Suite",
+              label: "Answer evaluation",
               desc: "ROUGE, BLEU, Flesch-Kincaid, exact match, and real-time metrics.",
               icon: BarChart3,
             },
             {
-              label: "Voice I/O",
-              desc: "Ask by voice (Whisper STT) and hear answers read back (ElevenLabs TTS). Browser speechSynthesis fallback when offline.",
+              label: "Ask and listen by voice",
+              desc: "Ask a question by voice and listen to the answer read aloud.",
               icon: Mic,
             },
             {
-              label: "Evidence Guard",
-              desc: "Refuses to hallucinate — only answers when retrieved evidence clears the confidence threshold. Every answer carries a faithfulness score.",
+              label: "Evidence checks",
+              desc: "Checks the source passages before answering and scores how closely the answer follows them.",
               icon: Shield,
             },
           ],
 
-          watchDemo: "Technical Demonstration",
-          seeItWork: "System processing real government documents",
+          watchDemo: "Watch the demo",
+          seeItWork: "Questions and answers with government documents",
 
-          builtWith: "Technology Stack",
+          builtWith: "Technology",
 
-          previewQ: "Query: Who is eligible to apply for this benefit?",
+          previewQ: "Who is eligible to apply for this benefit?",
           previewA:
-            "According to Section 2.1, applicants must be Malaysian citizens aged 18 and above with a household income = RM4,000.",
+            "In this example, Section 2.1 requires Malaysian citizenship, an age of at least 18 and household income of RM4,000 or less.",
           sampleTitle: "See a sample answer",
-          sampleDescription: "Answers stay connected to a source passage so you can check the information.",
+          sampleDescription:
+            "Read the answer alongside its source passage to check the details.",
           sampleCta: "Ask your own question",
           sampleNote: "Example preview — not official guidance",
           previewSrc: "Source excerpt · Preview",
@@ -322,10 +327,10 @@ export default function Home() {
   const comparison =
     language === "ms"
       ? {
-          kicker: "Differentiation vs Generic RAG",
-          title: "Dibina untuk AI sivik Malaysia, bukan chatbot generik.",
+          kicker: "Document Q&A comparison",
+          title: "Soal jawab dokumen dengan sumber untuk disemak.",
           subhead:
-            'Bukan "GPT + PDF upload". Diposisikan sebagai "Malaysian-first civic AI": bercakap Bahasa Melayu secara semula jadi, faham konteks kerajaan, dan telus melalui sumber + halaman.',
+            "Bandingkan sokongan bahasa, petikan sumber dan alat untuk menyemak jawapan.",
           columns: [
             "Lingua Rakyat",
             "ChatGPT + PDF upload",
@@ -374,10 +379,10 @@ export default function Home() {
             "Nota: Sambungan internet diperlukan untuk mengakses dokumen dan jawapan.",
         }
       : {
-          kicker: "Differentiation vs Generic RAG",
-          title: "Built for Malaysian civic AI, not generic chatbots.",
+          kicker: "Document Q&A comparison",
+          title: "Document questions, with sources you can check.",
           subhead:
-            'Not "GPT + PDF upload". Positioned as "Malaysian-first civic AI": speaks Malay naturally, knows government context, and stays transparent with sources + pages.',
+            "Compare language support, source citations and tools for reviewing answers.",
           columns: [
             "Lingua Rakyat",
             "ChatGPT + PDF upload",
@@ -394,7 +399,7 @@ export default function Home() {
               values: [true, false, false, false],
             },
             {
-              label: "PDF citations + pages",
+              label: "PDF citations and pages",
               values: [true, true, true, true],
             },
             {
@@ -410,15 +415,15 @@ export default function Home() {
               values: [true, false, true, true],
             },
             {
-              label: "Built-in eval metrics (ROUGE/BLEU)",
+              label: "Answer evaluation metrics",
               values: [true, false, false, false],
             },
             {
-              label: "Faithfulness scoring (answer vs sources)",
+              label: "Answer-to-source comparison",
               values: [true, false, false, false],
             },
             {
-              label: "Voice I/O (STT + TTS)",
+              label: "Voice questions and playback",
               values: [true, true, true, false],
             },
           ],
@@ -429,98 +434,64 @@ export default function Home() {
   return (
     <div className="relative min-h-dvh overflow-x-clip bg-background">
       <main className="landing-service relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10">
-        <section className="editorial-hero mx-auto flex min-h-[560px] max-w-4xl flex-col items-center justify-center py-12 text-center sm:min-h-[620px]">
-          <p className="mb-7 flex flex-wrap justify-center gap-x-3 text-[10px] font-semibold tracking-[.25em] text-muted-foreground uppercase">
-            {(language === "ms"
-              ? ["Dokumen", "Bahasa", "Kefahaman"]
-              : ["Documents", "Language", "Understanding"]
-            ).map((word, i) => (
-              <span
-                className="editorial-rise"
-                style={{ animationDelay: i * 400 + "ms" }}
-                key={word}
-              >
-                {word}
-              </span>
-            ))}
-          </p>
-          <h1
-            aria-label={copy.headline1 + " " + copy.headline2}
-            className={
-              editorialSerif.className +
-              " max-w-[18ch] text-[clamp(3.25rem,6.8vw,6rem)] leading-[1.05] font-normal tracking-[-.015em] text-balance"
-            }
-          >
-            <span aria-hidden="true">
-              {copy.headline1.split(" ").map((word, i, words) => (
+        <section className="editorial-hero relative left-1/2 isolate w-screen -translate-x-1/2 text-center">
+          <CivicBackground language={language} />
+          <div className="mx-auto flex min-h-[560px] w-full max-w-4xl flex-col items-center justify-center px-4 py-12 sm:min-h-[620px] sm:px-6">
+            <p className="mb-7 flex flex-wrap justify-center gap-x-3 text-[10px] font-semibold tracking-[.25em] text-muted-foreground uppercase">
+              {(language === "ms"
+                ? ["Dokumen", "Bahasa", "Kefahaman"]
+                : ["Documents", "Language", "Understanding"]
+              ).map((word, i) => (
                 <span
-                  key={word + i}
-                  className="editorial-word"
-                  style={{ animationDelay: 300 + i * 140 + "ms" }}
+                  className="editorial-rise"
+                  style={{ animationDelay: i * 400 + "ms" }}
+                  key={word}
                 >
                   {word}
-                  {i < words.length - 1 ? "\u00a0" : null}
                 </span>
               ))}
-            </span>{" "}
-            <span aria-hidden="true" className="relative inline-block italic">
-              {copy.headline2.split(" ").map((word, i, words) => (
-                <span
-                  key={word + i}
-                  className="editorial-word"
-                  style={{ animationDelay: 860 + i * 140 + "ms" }}
-                >
-                  {word}
-                  {i < words.length - 1 ? "\u00a0" : null}
-                </span>
-              ))}
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 300 12"
-                preserveAspectRatio="none"
-                className="absolute -bottom-[.1em] left-0 h-[.14em] w-full"
-              >
-                <path
-                  className="editorial-draw"
-                  d="M2 7 C 80 2, 180 11, 298 5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.25"
-                  vectorEffect="non-scaling-stroke"
-                  pathLength="1"
-                />
-              </svg>
-            </span>
-          </h1>
-          <div
-            aria-hidden="true"
-            className="editorial-rule mt-8 h-px w-20 bg-foreground/20"
-          />
-          <p
-            className="editorial-rise mx-auto mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-[17px]"
-            style={{ animationDelay: "1500ms" }}
-          >
-            {copy.subhead}
-          </p>
-          <div
-            className="editorial-rise mt-9 flex flex-col items-center gap-5 sm:flex-row sm:gap-8"
-            style={{ animationDelay: "1700ms" }}
-          >
-            <Button asChild className="rounded-sm px-7 py-6">
-              <Link href="/workspace">
-                {copy.cta}
-                <ArrowRight className="ml-2 size-4" />
-              </Link>
-            </Button>
-            <a
-              href="#demo-section"
-              className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            </p>
+            <h1
+              className={
+                editorialSerif.className +
+                " w-full max-w-[18ch] text-[clamp(2.25rem,6.8vw,6rem)] leading-[1.05] font-normal tracking-[-.015em] text-balance"
+              }
             >
-              {language === "ms"
-                ? t("Lihat cara ia berfungsi")
-                : t("See how it works")}{" "}
-              ?
-            </a>
+              <HeroText
+                key={language}
+                text={copy.headline1 + " " + copy.headline2}
+              />
+            </h1>
+            <div
+              aria-hidden="true"
+              className="editorial-rule mt-8 h-px w-20 bg-foreground/20"
+            />
+            <p
+              className="editorial-rise mx-auto mt-6 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-[17px]"
+              style={{ animationDelay: "1500ms" }}
+            >
+              {copy.subhead}
+            </p>
+            <div
+              className="editorial-rise mt-9 flex flex-col items-center gap-5 sm:flex-row sm:gap-8"
+              style={{ animationDelay: "1700ms" }}
+            >
+              <Button asChild className="rounded-sm px-7 py-6">
+                <Link href="/workspace">
+                  {copy.cta}
+                  <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+              <a
+                href="#demo-section"
+                className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                {language === "ms"
+                  ? t("Lihat cara ia berfungsi")
+                  : t("See how it works")}{" "}
+                <span aria-hidden="true">&rarr;</span>
+              </a>
+            </div>
           </div>
         </section>
         <section
@@ -574,7 +545,9 @@ export default function Home() {
           <section className="mx-auto grid max-w-5xl items-center gap-6 py-10 sm:py-14 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-12 lg:py-16">
             <div className="max-w-md">
               <p className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">
-                {language === "ms" ? "Jawapan bersumber" : "Source-grounded answers"}
+                {language === "ms"
+                  ? "Jawapan bersumber"
+                  : "Answers with sources"}
               </p>
               <h2 className="mt-3 font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                 {copy.sampleTitle}
@@ -591,7 +564,10 @@ export default function Home() {
             </div>
 
             <div className="min-w-0">
-              <Terminal compact className="rounded-xl border-border bg-zinc-950 text-zinc-100 shadow-sm">
+              <Terminal
+                compact
+                className="rounded-xl border-border bg-zinc-950 text-zinc-100 shadow-sm"
+              >
                 <AnimatedSpan className="flex items-center gap-2 text-xs text-zinc-400">
                   <FileText className="size-3.5 shrink-0" />
                   <span className="font-medium tracking-wide">
@@ -607,7 +583,9 @@ export default function Home() {
                 </div>
 
                 <AnimatedSpan className="rounded-md bg-zinc-900 px-3 py-3 text-zinc-100">
-                  <p className="text-xs leading-relaxed sm:text-sm">{copy.previewA}</p>
+                  <p className="text-xs leading-relaxed sm:text-sm">
+                    {copy.previewA}
+                  </p>
                   <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[11px] text-zinc-400">
                     <BookOpen className="size-3 shrink-0" />
                     <span>{copy.previewSrc}</span>
@@ -623,7 +601,6 @@ export default function Home() {
           </section>
         </FadeInUp>
 
-        {/* Comparison */}
         <section className="border-t border-border pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft>
             <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
@@ -788,7 +765,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Video demo section with responsive media player */}
         <section
           id="demo-section"
           className="border-t border-border pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32"
@@ -812,7 +788,6 @@ export default function Home() {
           </ScaleIn>
         </section>
 
-        {/* Tech stack section with responsive logo carousel */}
         <section className="border-t border-border pt-14 pb-16 sm:pt-16 sm:pb-24 lg:pb-32">
           <FadeInLeft className="block">
             <p className="mt-5 inline-flex items-center bg-secondary px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.2em] text-secondary-foreground uppercase">
@@ -821,16 +796,16 @@ export default function Home() {
             </p>
             <h2 className="mt-4 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
               {language === "ms"
-                ? t("Di sebalik setiap jawapan.")
-                : t("Behind every answer.")}
+                ? t("Teknologi yang digunakan oleh Lingua Rakyat")
+                : t("Technology used by Lingua Rakyat")}
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
               {language === "ms"
                 ? t(
-                    "Daripada dokumen kepada carian dan jawapan: kenali teknologi yang menyokong platform ini."
+                    "Alat yang digunakan oleh Lingua Rakyat untuk menyimpan dokumen, mencari petikan dan menjana jawapan."
                   )
                 : t(
-                    "From documents to retrieval and answers: explore the tools that support the platform."
+                    "The tools Lingua Rakyat uses to store documents, search passages and write answers."
                   )}
             </p>
           </FadeInLeft>

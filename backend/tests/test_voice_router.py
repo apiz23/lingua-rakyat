@@ -93,7 +93,7 @@ def test_tts_rejects_empty_text():
         "/api/voice/tts",
         json={"text": "", "language": "en"},
     )
-    assert resp.status_code == 422  # Pydantic validation
+    assert resp.status_code == 422
 
 
 def test_transcribe_returns_422_on_transcription_error():

@@ -47,11 +47,11 @@ def verified_account_email(subject: str) -> Optional[str]:
             return email.strip().lower() if isinstance(email, str) else None
     return None
 
-# ─── Supabase Clients (Least Privilege) ─────────────────────────────────────
-# Public client uses SUPABASE_ANON_KEY (RLS-gated when policies are in place).
-# Admin client uses SUPABASE_KEY (service_role — bypasses RLS).
-# Public operations fail closed when the anon key is missing; they never fall
-# back to the admin key.
+
+
+
+
+
 _supabase: Optional[Client] = None
 _supabase_admin: Optional[Client] = None
 
@@ -138,7 +138,7 @@ def parse_bearer_token(auth_header: Optional[str]) -> Optional[str]:
     if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1].strip():
         raise HTTPException(status_code=401, detail="Malformed Authorization header")
     token = parts[1].strip()
-    # A second credential inside the token cannot be a valid JWT.
+
     if any(char.isspace() for char in token):
         raise HTTPException(status_code=401, detail="Malformed Authorization header")
     return token

@@ -17,7 +17,6 @@ export default function WorkSpacePage() {
   const { language } = useLanguage()
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   useEffect(() => {
-    // Preserve the selected anchor when the catalogue refreshes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedDoc(
       (previous) =>

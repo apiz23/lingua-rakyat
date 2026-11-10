@@ -21,9 +21,6 @@ export function useDocuments() {
       }
       return docs
     } catch (err) {
-      // A failed catalogue must be visible as an outage, not as an empty
-      // library. The previous silent fallback made a backend configuration
-      // failure look like "no documents uploaded yet".
       if (request.current()) {
         setError(err instanceof Error ? err.message : "Failed to load documents")
       }

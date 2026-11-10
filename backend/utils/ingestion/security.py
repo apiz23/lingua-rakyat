@@ -168,7 +168,7 @@ def _robots_allowed(url: str, hosts: set[str]) -> bool:
         elif response.status_code == 404:
             parser = None
         else:
-            # An inaccessible robots.txt is treated as disallowed.
+
             _robots_cache[host] = (now, _DISALLOW_ALL)
             return False
     except FetchError:

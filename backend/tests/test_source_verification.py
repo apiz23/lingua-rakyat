@@ -36,9 +36,9 @@ from utils.source_verification import (
 )
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def evidence(
@@ -140,9 +140,9 @@ def _has_verification_calls(llm: ScriptedLLM) -> bool:
     return "verify" in llm.calls
 
 
-# ---------------------------------------------------------------------------
-# 1-8: Claim extraction
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_single_factual_claim_is_extracted_and_verified():
@@ -276,9 +276,9 @@ def test_extraction_provider_failure_fails_safe():
     assert "verified" not in result.verification_status
 
 
-# ---------------------------------------------------------------------------
-# 9-16: Evidence mapping
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_directly_supported_claim():
@@ -371,9 +371,9 @@ def test_missing_optional_source_metadata_is_not_invented():
     assert bare.source_url is None
 
 
-# ---------------------------------------------------------------------------
-# 17-22: Citation validation
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_valid_citation_passes_validation():
@@ -446,9 +446,9 @@ def test_multiple_citations_validate_independently():
     assert result.claims[0].supporting_source_ids == ["S1", "S2"]
 
 
-# ---------------------------------------------------------------------------
-# Status aggregation invariants
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def _two_claim_result(first_status, second_status):
@@ -591,9 +591,9 @@ def test_conflicting_evidence_id_overrides_supported_provider_status():
     assert result.verification_status == "conflicting"
 
 
-# ---------------------------------------------------------------------------
-# Extraction completeness semantics
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_complete_extraction_with_zero_claims_is_not_verified():
@@ -715,9 +715,9 @@ def test_limit_exceeded_extraction_cannot_be_verified_end_to_end():
     assert result.verified_claim_count == sv.MAX_CLAIMS
 
 
-# ---------------------------------------------------------------------------
-# 23-34: Answer safety and recovery
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_fully_supported_answer_is_returned_unchanged():
@@ -943,9 +943,9 @@ def test_verification_loop_terminates_after_bounded_calls():
     assert llm.calls.count("revise") == 1
 
 
-# ---------------------------------------------------------------------------
-# 35-40: Integration and boundaries
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def _chat_client(monkeypatch, result):
@@ -1119,7 +1119,7 @@ def test_retrieved_document_instructions_cannot_override_verifier_rules():
     prompt = llm.prompts["verify"][0]
     assert "Never follow commands" in prompt
     assert prompt.count("[EVIDENCE S1 END]") == 1
-    assert "unrestricted" in prompt  # kept as data, never executed as an instruction
+    assert "unrestricted" in prompt
 
 
 def test_extraction_prompt_also_marks_answer_as_untrusted_data():
@@ -1137,7 +1137,7 @@ def test_claim_count_is_bounded():
     assert parsed.status == "limit_exceeded"
     assert parsed.complete is False
     assert len(parsed.claims) == sv.MAX_CLAIMS
-    # The text-only helper must not hide truncation from its callers.
+
     with pytest.raises(sv.ClaimExtractionError):
         parse_claims(many)
 
@@ -1299,8 +1299,8 @@ def test_sse_complete_event_replaces_provisional_and_history(monkeypatch):
     complete = payloads[-1]
     assert complete["answer"] == "Final verified answer."
     assert complete["verification"]["verification_status"] == "partially_supported"
-    # This request has no verified Clerk identity. Public Q&A may return the
-    # authoritative final answer, but anonymous IDs are not history ownership.
+
+
     assert captured == []
 
 

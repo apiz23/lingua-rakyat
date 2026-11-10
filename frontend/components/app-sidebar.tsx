@@ -93,7 +93,6 @@ export function AppSidebar() {
   useEffect(() => {
     const requestLifetime = lifetime.begin()
     if (!isSignedIn || !userId) {
-      // Identity changes must clear the sidebar before it can show old data.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setConversations([])
       setHistoryNeedsSignIn(false)

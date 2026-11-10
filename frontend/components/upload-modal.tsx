@@ -107,8 +107,6 @@ export default function UploadModal({
     }, 200)
 
     try {
-      // Upload returns as soon as the file is stored; ingestion continues in
-      // the background, so we poll the status endpoint until it settles.
       const promise = (async () => {
         const result = await uploadDocument(file, verifiedToken)
         clearInterval(progressInterval)
@@ -224,7 +222,6 @@ export default function UploadModal({
         tabIndex={-1}
         className="animate-in fade-in zoom-in-95 neo-card relative w-full max-w-md rounded-lg bg-card p-6 shadow-xl duration-200 outline-none"
       >
-        {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {step === "token" ? (
@@ -247,7 +244,6 @@ export default function UploadModal({
           </button>
         </div>
 
-        {/* Step: Token gate */}
         {step === "token" && (
           <>
             <p className="mb-4 text-sm text-muted-foreground">
@@ -320,7 +316,6 @@ export default function UploadModal({
           </>
         )}
 
-        {/* Step: File upload */}
         {step === "upload" && (
           <>
             {!file && (

@@ -147,7 +147,6 @@ export default function ResultsPage() {
             "Memperluas Akses kepada Perkhidmatan Kerajaan Melalui AI Pelbagai Bahasa. Metrik langsung diambil daripada sistem penilaian secara masa nyata.",
           loadingMetrics: "Memuatkan metrik langsung…",
           liveQueries: (n: number) => `Langsung — ${n} pertanyaan direkodkan`,
-          // Quick links
           quickLinksWorkspaceTitle: "Ruang Kerja",
           quickLinksWorkspaceDesc:
             "Muat naik PDF dan tanya soalan dalam Bahasa Melayu, Inggeris, atau Cina.",
@@ -160,7 +159,6 @@ export default function ResultsPage() {
           quickLinksEvalDesc:
             "Jalankan suite ujian ROUGE/BLEU dan lihat skor penanda aras langsung.",
           quickLinksEvalBtn: "Papan Pemuka Penilaian",
-          // Metrics section
           qualityMetricsEyebrow: "Metrik Kualiti",
           qualityMetricsHeading: "Metrik Prestasi Langsung",
           metricRougeTitle: "ROUGE-1 F1",
@@ -182,7 +180,6 @@ export default function ResultsPage() {
             "Kependaman respons hujung ke hujung (carian + pemeringkatan + penjanaan).",
           runBenchmark: "Jalankan penanda aras →",
           askQuestions: "Tanya soalan untuk markah →",
-          // Feature checklist
           featuresEyebrow: "Senarai Semak Ciri",
           featuresHeading: "Keupayaan Sistem",
           fulfilled: "TERPENUHI",
@@ -240,7 +237,6 @@ export default function ResultsPage() {
               desc: "Fon badan direka untuk pengguna penglihatan rendah. Suara I/O untuk akses utama audio.",
             },
           ],
-          // SDG
           sdgEyebrow: "Impak Sosial",
           sdgHeading: "Penjajaran SDG",
           sdgs: [
@@ -260,7 +256,6 @@ export default function ResultsPage() {
               desc: "Memperkasakan warganegara untuk memahami hak undang-undang, hak, dan kewajipan sivik melalui jawapan yang berasas dalam bahasa mudah.",
             },
           ],
-          // Footer stats
           statMalaysians: "warganegara Malaysia boleh dicapai",
           statLanguages: "bahasa disokong",
           statCost: "Kos kepada warganegara",
@@ -420,7 +415,6 @@ export default function ResultsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
-      {/* Header */}
       <PageIntro
         eyebrow={copy.eyebrow}
         title={copy.heading}
@@ -486,7 +480,6 @@ export default function ResultsPage() {
           </Button>
         </div>
       )}
-      {/* Quick Links */}
       <div className="mb-12 grid gap-5 md:grid-cols-[1.3fr_1fr_1fr]">
         <div className="flex flex-col rounded-xl border border-primary/20 bg-primary/5 p-6">
           <div className="mb-2 flex items-center gap-2">
@@ -555,7 +548,6 @@ export default function ResultsPage() {
 
       <div className="mb-8 h-px w-full bg-border" />
 
-      {/* Live quality metrics */}
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.qualityMetricsEyebrow}
       </p>
@@ -619,7 +611,6 @@ export default function ResultsPage() {
 
       <div className="mb-8 h-px w-full bg-border" />
 
-      {/* Feature checklist */}
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.featuresEyebrow}
       </p>
@@ -647,7 +638,6 @@ export default function ResultsPage() {
 
       <div className="mb-8 h-px w-full bg-border" />
 
-      {/* SDG Impact */}
       <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-muted-foreground uppercase">
         {copy.sdgEyebrow}
       </p>

@@ -18,7 +18,6 @@ export function useAdminResource<T>(loader: () => Promise<T>, deps: DependencyLi
     } finally {
       setLoading(false)
     }
-    // loader identity is controlled by the caller's dependency list
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 

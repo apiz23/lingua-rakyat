@@ -1,4 +1,4 @@
-# backend/tests/test_seed.py
+
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -32,8 +32,8 @@ def test_featured_source_urls_are_https():
 
 
 def test_featured_docs_resolvable():
-    # Every featured doc must either ship in sample_docs or declare a
-    # source_url the seed can download it from.
+
+
     for doc in FEATURED_DOCS:
         local = os.path.exists(os.path.join(SAMPLE_DOCS_DIR, doc["filename"]))
         assert local or doc.get("source_url"), (

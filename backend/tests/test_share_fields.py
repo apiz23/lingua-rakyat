@@ -25,10 +25,10 @@ class FakeQuery:
         class Res:
             pass
         res = Res()
-        if self.payload is not None:  # insert path
+        if self.payload is not None:
             self.store[self.payload["slug"]] = self.payload
             res.data = [self.payload]
-        else:  # select path
+        else:
             row = self.store.get(self._slug)
             res.data = [row] if row else []
         return res
@@ -81,7 +81,7 @@ def test_get_share_roundtrip(monkeypatch):
 
 
 def test_response_model_defaults_for_old_rows():
-    # Rows created before the migration lack the new keys entirely.
+
     old_row = {
         "slug": "abc", "question": "Q", "answer": "A",
         "sources": [], "language": "ms", "created_at": "2026-01-01T00:00:00Z",

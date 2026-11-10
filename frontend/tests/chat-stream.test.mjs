@@ -2,7 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { consumeChatSse, parseChatStreamEvent, ChatStreamInterruptedError, getVerificationLifecycleState } from "../lib/chat-stream.ts"
 
-const source = { source_id: "S1", document_id: "doc-1", text: "Synthetic evidence" }
+const source = { source_id: "S1", document_id: "doc-1", text: "Synthetic evidence", score: 0.8 }
 
 function verification(status = "verified") {
   return {

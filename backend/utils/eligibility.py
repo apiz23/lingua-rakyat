@@ -27,14 +27,14 @@ from utils.publication_store import (
 
 logger = logging.getLogger("eligibility")
 
-# Owner kinds whose rows may be read by the verified owner even when private.
+
 _CITIZEN_OWNER_TYPES = {"citizen", "user"}
 
-# Temporary, explicitly opt-in compatibility switch for documents uploaded
-# before the publication model existed. Default is off. Enabling it lets
-# unclassified/draft rows be served exactly as the old catalogue did, which
-# bypasses trusted-source verification and human approval. Use only to recover
-# a local/demo library while the migration and approvals are completed.
+
+
+
+
+
 _LEGACY_FLAG = "ALLOW_LEGACY_PUBLIC_DOCUMENTS"
 
 

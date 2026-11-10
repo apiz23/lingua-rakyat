@@ -30,7 +30,7 @@ from typing import Callable, Optional
 
 logger = logging.getLogger("evaluation")
 
-# ─── Text Normalization ───────────────────────────────────────────────────────
+
 
 def _tokenize(text: str) -> list[str]:
     """Lowercase, strip punctuation, split into tokens."""
@@ -43,7 +43,7 @@ def _ngrams(tokens: list[str], n: int) -> Counter:
     return Counter(tuple(tokens[i:i+n]) for i in range(len(tokens) - n + 1))
 
 
-# ─── ROUGE ───────────────────────────────────────────────────────────────────
+
 
 def rouge_n(hypothesis: str, reference: str, n: int) -> dict:
     """
@@ -80,7 +80,7 @@ def rouge_l(hypothesis: str, reference: str) -> dict:
     hyp = _tokenize(hypothesis)
     ref = _tokenize(reference)
 
-    # LCS via DP
+
     m, n = len(hyp), len(ref)
     dp = [[0] * (n + 1) for _ in range(m + 1)]
     for i in range(1, m + 1):
@@ -102,7 +102,7 @@ def rouge_l(hypothesis: str, reference: str) -> dict:
     }
 
 
-# ─── BLEU ─────────────────────────────────────────────────────────────────────
+
 
 def bleu_score(hypothesis: str, reference: str, max_n: int = 4) -> float:
     """
@@ -117,7 +117,7 @@ def bleu_score(hypothesis: str, reference: str, max_n: int = 4) -> float:
     if not hyp_tokens:
         return 0.0
 
-    # Brevity penalty
+
     bp = min(1.0, math.exp(1 - len(ref_tokens) / max(len(hyp_tokens), 1)))
 
     log_avg = 0.0
@@ -139,14 +139,14 @@ def bleu_score(hypothesis: str, reference: str, max_n: int = 4) -> float:
     return round(bp * math.exp(log_avg / valid_n), 4)
 
 
-# ─── Exact Match ─────────────────────────────────────────────────────────────
+
 
 def exact_match(hypothesis: str, reference: str) -> bool:
     """True if normalized hypothesis equals normalized reference."""
     return " ".join(_tokenize(hypothesis)) == " ".join(_tokenize(reference))
 
 
-# ─── Readability (Flesch-Kincaid Grade Level Proxy) ──────────────────────────
+
 
 def flesch_kincaid_grade(text: str) -> float:
     """
@@ -160,7 +160,7 @@ def flesch_kincaid_grade(text: str) -> float:
     if not sentences or not words:
         return 0.0
 
-    # Approximate syllable count: count vowel groups
+
     def syllables(word: str) -> int:
         count = len(re.findall(r"[aeiou]+", word.lower()))
         return max(count, 1)
@@ -173,7 +173,7 @@ def flesch_kincaid_grade(text: str) -> float:
     return round(max(grade, 0.0), 2)
 
 
-# ─── Evaluator ───────────────────────────────────────────────────────────────
+
 
 class Evaluator:
     """
@@ -213,7 +213,7 @@ class Evaluator:
     def __len__(self) -> int:
         return len(self._records)
 
-    # ── Record a single Q&A interaction ──────────────────────────────────
+
 
     def record(
         self,
@@ -240,7 +240,7 @@ class Evaluator:
             "confidence":  confidence,
             "latency_ms":  latency_ms,
             "document_id": document_id,
-            # Readability (always computed)
+
             "fk_grade":    flesch_kincaid_grade(answer),
         }
 
@@ -283,7 +283,7 @@ class Evaluator:
                 logger.warning("[Eval] Persistence failed: %s", exc)
         return record
 
-    # ── Aggregate report ─────────────────────────────────────────────────
+
 
     def report(self) -> dict:
         """
@@ -302,22 +302,22 @@ class Evaluator:
         n = len(self._records)
         graded = [r for r in self._records if r.get("has_ground_truth")]
 
-        # ── Latency percentiles ───────────────────────────────────────────
+
         latencies = sorted(r.get("latency_ms", 0) for r in self._records)
         p50 = latencies[int(n * 0.50)]
         p95 = latencies[min(int(n * 0.95), n - 1)]
         p99 = latencies[min(int(n * 0.99), n - 1)]
 
-        # ── Confidence stats ──────────────────────────────────────────────
+
         confidences = [r.get("confidence", 0.0) for r in self._records]
         avg_confidence = round(sum(confidences) / n, 4)
 
-        # ── Readability stats ─────────────────────────────────────────────
+
         grades = [r.get("fk_grade", 0.0) for r in self._records]
         avg_grade = round(sum(grades) / n, 2)
         pct_simple = round(sum(1 for g in grades if g <= 6) / n * 100, 1)
 
-        # ── ROUGE / BLEU (only when ground truth available) ───────────────
+
         rouge_bleu: dict = {}
         if graded:
             ng = len(graded)
@@ -330,7 +330,7 @@ class Evaluator:
                 "exact_match_rate": round(sum(1 for r in graded if r["exact_match"]) / ng * 100, 1),
             }
 
-        # ── Faithfulness (only queries with a score) ──────────────────────
+
         faithful_records = [r for r in self._records if r.get("faithfulness_score") is not None]
         faithfulness_stats: dict = {}
         if faithful_records:
@@ -342,7 +342,7 @@ class Evaluator:
                 ),
             }
 
-        # ── Per-language breakdown ────────────────────────────────────────
+
         lang_stats: dict = defaultdict(lambda: {"count": 0, "total_conf": 0.0,
                                                   "total_latency": 0, "total_grade": 0.0})
         for r in self._records:
@@ -362,7 +362,7 @@ class Evaluator:
                 "avg_fk_grade":   round(ls["total_grade"]   / c, 2),
             }
 
-        # ── Build final report ────────────────────────────────────────────
+
         report_data = {
             "status":        "ok",
             "generated_at":  datetime.utcnow().isoformat() + "Z",
@@ -411,9 +411,9 @@ class Evaluator:
         logger.info("[Eval] Records cleared.")
 
 
-# ─── Document Category Detection ────────────────────────────────────────────────
-# Maps document names / keywords to test case category.
-# Used by run-test-suite-stream to only run relevant test cases.
+
+
+
 
 CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "identity": [
@@ -426,7 +426,7 @@ CATEGORY_KEYWORDS: dict[str, list[str]] = {
     ],
 }
 
-# Keywords that clearly indicate an unrelated / non-gov-services document
+
 UNRELATED_KEYWORDS: list[str] = [
     "data sharing", "data protection", "cybersecurity", "act 2025",
     "traffic", "lalu lintas", "companies act", "akta syarikat",
@@ -445,12 +445,12 @@ def detect_document_category(doc_name: str, doc_id: str = "") -> "str | None":
     """
     text = (doc_name + " " + doc_id).lower()
 
-    # Check if document is clearly unrelated
+
     for kw in UNRELATED_KEYWORDS:
         if kw in text:
             return None
 
-    # Score each category by keyword hits
+
     scores: dict = {}
     for category, keywords in CATEGORY_KEYWORDS.items():
         score = sum(1 for kw in keywords if kw.lower() in text)
@@ -478,15 +478,15 @@ def get_test_cases_for_document(doc_name: str, doc_id: str = "") -> "tuple[list,
     return (matching if matching else BUILT_IN_TEST_CASES), category
 
 
-# ─── Built-in Test Dataset (Ground Truth) ────────────────────────────────────
-# A small set of representative Q&A pairs used to demonstrate evaluation.
-# In production, expand this with real annotated pairs from a domain expert.
 
-# ─── Annotated Test Dataset (30 cases) ──────────────────────────────────────
-# Covers the current bundled MyKad FAQ and Malaysian Passport Guidelines
-# documents in English (en), Malay (ms), and Chinese (zh-cn).
-# Ground truth answers follow the 3-5 bullet point format the LLM is prompted
-# to produce. Used by POST /api/eval/run-test-suite for ROUGE/BLEU scoring.
+
+
+
+
+
+
+
+
 
 BUILT_IN_TEST_CASES: list[dict] = [
     {

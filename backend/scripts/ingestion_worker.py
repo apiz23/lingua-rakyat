@@ -54,7 +54,7 @@ def run_once(client, identity: str) -> bool:
         else:
             service.run_ingest(client, job["id"], claimed=True)
     except Exception as exc:
-        # Service execution persists failures; this guards the worker loop.
+
         _emit("job_execution_error", job_id=job["id"], worker_id=identity, error_type=type(exc).__name__)
     return True
 

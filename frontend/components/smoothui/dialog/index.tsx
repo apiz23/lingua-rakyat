@@ -19,9 +19,6 @@ import {
 import * as React from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
-/* ------------------------------------------------------------------ */
-/*  Minimal AlertDialog wrappers                                       */
-/* ------------------------------------------------------------------ */
 
 function AlertDialogTrigger({
   ...props
@@ -87,9 +84,6 @@ function AlertDialogFooter({
   )
 }
 
-/* ------------------------------------------------------------------ */
-/*  Shared animation constants                                        */
-/* ------------------------------------------------------------------ */
 
 const SPRING_PANEL = {
   type: "spring" as const,
@@ -101,9 +95,6 @@ const BACKDROP_DURATION = 0.2
 
 const STAGGER_DELAY = 0.06
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export interface DialogProps {
   /** Dialog content */
@@ -145,9 +136,6 @@ export interface AlertDialogProps {
   trigger?: React.ReactNode
 }
 
-/* ------------------------------------------------------------------ */
-/*  Stagger wrapper — animates children in sequence                   */
-/* ------------------------------------------------------------------ */
 
 const StaggerChild = ({
   children,
@@ -193,9 +181,6 @@ const StaggerChild = ({
   </motion.div>
 )
 
-/* ------------------------------------------------------------------ */
-/*  Animated close button with rotate on hover                        */
-/* ------------------------------------------------------------------ */
 
 const AnimatedCloseButton = ({
   onClick,
@@ -222,9 +207,6 @@ const AnimatedCloseButton = ({
   )
 }
 
-/* ------------------------------------------------------------------ */
-/*  Dialog                                                             */
-/* ------------------------------------------------------------------ */
 
 export default function Dialog({
   open,
@@ -252,7 +234,6 @@ export default function Dialog({
     [isControlled, onOpenChange]
   )
 
-  // Track mount state for AnimatePresence exit animations
   const [showContent, setShowContent] = useState(false)
   const prevOpenRef = useRef(false)
 
@@ -279,7 +260,6 @@ export default function Dialog({
       <AnimatePresence onExitComplete={() => setShowContent(false)}>
         {isOpen && (
           <DialogRadix.Portal forceMount>
-            {/* Backdrop with blur + opacity fade */}
             <DialogRadix.Overlay asChild forceMount>
               <motion.div
                 animate={{ opacity: 1 }}
@@ -293,7 +273,6 @@ export default function Dialog({
               />
             </DialogRadix.Overlay>
 
-            {/* Content panel — spring scale + translateY entrance */}
             <DialogRadix.Content asChild forceMount>
               <motion.div
                 animate={
@@ -332,7 +311,6 @@ export default function Dialog({
                 onAnimationComplete={handleAnimationComplete}
                 transition={shouldReduceMotion ? { duration: 0 } : SPRING_PANEL}
               >
-                {/* Staggered content sections */}
                 {(title || description) && (
                   <StaggerChild
                     index={0}
@@ -384,9 +362,6 @@ export default function Dialog({
   )
 }
 
-/* ------------------------------------------------------------------ */
-/*  AlertDialog                                                        */
-/* ------------------------------------------------------------------ */
 
 export function AlertDialog({
   open,
@@ -439,7 +414,6 @@ export function AlertDialog({
       <AnimatePresence onExitComplete={() => setShowContent(false)}>
         {isOpen && (
           <AlertDialogRadix.Portal forceMount>
-            {/* Backdrop */}
             <AlertDialogRadix.Overlay asChild forceMount>
               <motion.div
                 animate={{ opacity: 1 }}
@@ -453,7 +427,6 @@ export function AlertDialog({
               />
             </AlertDialogRadix.Overlay>
 
-            {/* Content panel */}
             <AlertDialogRadix.Content asChild forceMount>
               <motion.div
                 animate={
@@ -538,9 +511,6 @@ export function AlertDialog({
   )
 }
 
-/* ------------------------------------------------------------------ */
-/*  Re-exports                                                         */
-/* ------------------------------------------------------------------ */
 
 export {
   AlertDialogAction,

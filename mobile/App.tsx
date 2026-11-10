@@ -112,7 +112,6 @@ function ActorRoot() {
     try {
       setDocs(await listDocuments())
     } catch {
-      // Keep whatever list we had; chat shows the no-docs state if empty.
     } finally {
       setDocsLoading(false)
     }

@@ -37,7 +37,7 @@ class FakeQuery:
         class Res:
             pass
         res = Res()
-        if self.payload is not None:  # insert path
+        if self.payload is not None:
             if self.store.get("_reject_user_id_column") and "user_id" in self.payload:
                 raise RuntimeError("column lr_shared_answers.user_id does not exist")
             self.store[self.payload["slug"]] = self.payload
@@ -147,7 +147,7 @@ def test_revoke_anonymous_share_forbidden(monkeypatch):
     fake = _with_fake(monkeypatch)
     from routers.share import revoke_share
     slug = sa.store_share(question="Q", answer="A", sources=[], language="ms", user_id="user_abc")
-    fake.store[slug].pop("user_id")  # legacy ownerless public share
+    fake.store[slug].pop("user_id")
     with pytest.raises(HTTPException) as exc:
         revoke_share(slug, verified="user_abc")
     assert exc.value.status_code == 403

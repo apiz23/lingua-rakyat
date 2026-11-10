@@ -1,5 +1,3 @@
-// Official brand marks as inline SVG paths — Google's four-color "G" and
-// the GitHub octocat mark. No image assets, theme-safe.
 
 import React from "react"
 import Svg, { Path } from "react-native-svg"

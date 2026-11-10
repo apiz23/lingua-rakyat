@@ -12,20 +12,20 @@ try:
     from elevenlabs.client import ElevenLabs
     from elevenlabs.core.api_error import ApiError
 except ImportError:
-    ElevenLabs = None  # type: ignore[assignment,misc]
-    ApiError = Exception  # type: ignore[assignment,misc]
+    ElevenLabs = None
+    ApiError = Exception
 
 load_dotenv()
 
 logger = logging.getLogger("voice_helpers")
 
-# ── Clients (module-level singletons) ────────────────────────────────────────
+
 _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 _elevenlabs_client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY")) if ElevenLabs is not None else None
 
-# Male voice for English responses (default: Adam)
+
 VOICE_ID_EN = os.getenv("ELEVENLABS_VOICE_ID_EN", os.getenv("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB"))
-# Female voice for Malay / other languages (default: Rachel)
+
 VOICE_ID_MS = os.getenv("ELEVENLABS_VOICE_ID_MS", "21m00Tcm4TlvDq8ikWAM")
 TTS_MODEL = "eleven_multilingual_v2"
 WHISPER_MODEL = "whisper-large-v3"
@@ -36,7 +36,7 @@ class TranscriptionError(Exception):
     """Raised when Groq Whisper transcription fails."""
 
 
-# ── STT ───────────────────────────────────────────────────────────────────────
+
 
 def transcribe_audio(audio_bytes: bytes, filename: str) -> dict:
     """
@@ -52,8 +52,8 @@ def transcribe_audio(audio_bytes: bytes, filename: str) -> dict:
     Raises:
         TranscriptionError: On empty input or Groq API failure.
     """
-    # Defensive guard — router rejects empty bytes at HTTP layer (400),
-    # but this protects non-HTTP callers too.
+
+
     if not audio_bytes:
         raise TranscriptionError("empty audio: no bytes received")
 
@@ -78,7 +78,7 @@ def transcribe_audio(audio_bytes: bytes, filename: str) -> dict:
         raise TranscriptionError(f"transcription failed: {exc}") from exc
 
 
-# ── TTS ───────────────────────────────────────────────────────────────────────
+
 
 _MALAY_LANGS = {"ms", "id"}
 

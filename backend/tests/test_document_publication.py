@@ -121,7 +121,7 @@ def test_telegram_document_requires_an_owner_id_even_if_otherwise_published():
         "2026-10-31T12:00:00Z",
         "2026-10-31T11:59:59Z",
         "not-a-date",
-        "2026-11-01T00:00:00",  # Naive local time is ambiguous.
+        "2026-11-01T00:00:00",
     ],
 )
 def test_expired_or_malformed_expiry_is_ineligible(expires_at):

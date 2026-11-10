@@ -5,7 +5,7 @@ import pytest
 from utils.rag_pipeline import _confidence_explanation
 
 
-# ── None cases ────────────────────────────────────────────────────────────────
+
 
 def test_summary_mode_returns_none():
     assert _confidence_explanation("summary", 5, 0.9, "en") is None
@@ -19,7 +19,7 @@ def test_strong_at_threshold_returns_none():
     assert _confidence_explanation("strong", 3, 0.75, "en") is None
 
 
-# ── strong but moderate score ────────────────────────────────────────────────
+
 
 def test_strong_moderate_en():
     out = _confidence_explanation("strong", 4, 0.62, "en")
@@ -41,7 +41,7 @@ def test_strong_moderate_zh():
     assert out == "找到 4 个来源，最佳匹配 62%"
 
 
-# ── cautious ─────────────────────────────────────────────────────────────────
+
 
 def test_cautious_en():
     out = _confidence_explanation("cautious", 2, 0.45, "en")
@@ -65,7 +65,7 @@ def test_cautious_zh():
     assert "请以官方来源核实" in out
 
 
-# ── insufficient ─────────────────────────────────────────────────────────────
+
 
 def test_insufficient_uses_doc_name_and_strips_pdf():
     out = _confidence_explanation("insufficient", 1, 0.3, "en", doc_name="KWSP-2024.pdf")
@@ -84,7 +84,7 @@ def test_insufficient_ms_doc_fallback():
     assert "dokumen" in out
 
 
-# ── language fallbacks ───────────────────────────────────────────────────────
+
 
 def test_unknown_language_falls_back_to_en():
     out = _confidence_explanation("cautious", 2, 0.45, "th")

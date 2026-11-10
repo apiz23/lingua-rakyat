@@ -32,8 +32,6 @@ function copyFor(language?: string) {
   return COPY.en
 }
 
-// Satori renders with latin brand faces only. If the shared text contains CJK,
-// fall back to latin copy instead of shipping tofu boxes into the preview card.
 const CJK = /[\u3400-\u9fff]/
 const hasCjk = (text: string) => CJK.test(text)
 const latinOnly = (text: string | null | undefined) =>

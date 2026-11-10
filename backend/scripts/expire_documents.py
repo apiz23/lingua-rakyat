@@ -19,7 +19,7 @@ from utils.expiry import run_expiry
 def main() -> int:
     try:
         summary = run_expiry(get_supabase(admin=True))
-    except Exception as exc:  # report and fail the job; never pretend success
+    except Exception as exc:
         print(f"expiry failed: {type(exc).__name__}", file=sys.stderr)
         return 1
     print(f"due={summary['due']} newly_expired={summary['expired']}")

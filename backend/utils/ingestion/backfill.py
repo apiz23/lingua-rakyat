@@ -121,7 +121,7 @@ def backfill_document(
     if existing and (
         existing.get("review_status") == "approved" or existing.get("approved_by")
     ):
-        # Never rewrite an approved/current revision during backfill.
+
         return BackfillResult(document_id, "skipped", revision_no, str(existing.get("checksum") or ""))
     if existing and existing.get("indexing_status") == "indexed":
         return BackfillResult(document_id, "skipped", revision_no, str(existing.get("checksum") or ""))

@@ -122,7 +122,6 @@ export default function ChatScreen({
     return () => clearInterval(t)
   }, [waitSeconds > 0])
 
-  // "@" mention detection
   const mentionQuery = useMemo(() => {
     const match = input.match(/@([^\s@]*)$/)
     return match && readyDocs.length > 0 ? match[1] : null
@@ -294,7 +293,6 @@ export default function ChatScreen({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0}
     >
-      {/* Chat messages */}
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -391,7 +389,6 @@ export default function ChatScreen({
         ))}
       </ScrollView>
 
-      {/* Document picker dropdown */}
       {docPickerOpen ? (
         <View style={styles.pickerContainer}>
           <View style={styles.pickerHeader}>
@@ -440,7 +437,6 @@ export default function ChatScreen({
         </View>
       ) : null}
 
-      {/* @ mention panel — scrollable with indicator */}
       {mentionQuery !== null ? (
         <View style={styles.mentionPanel}>
           <Text style={styles.mentionTitle}>{copy.mentionTitle}</Text>
@@ -477,7 +473,6 @@ export default function ChatScreen({
         </View>
       ) : null}
 
-      {/* Pinned doc chip */}
       {mentionDoc ? (
         <View style={styles.pinnedRow}>
           <Text style={styles.pinnedChip} numberOfLines={1}>
@@ -489,7 +484,6 @@ export default function ChatScreen({
         </View>
       ) : null}
 
-      {/* Composer */}
       <View
         style={[
           styles.composerArea,
@@ -713,7 +707,6 @@ const createStyles = (c: Palette) =>
       color: c.primary,
     },
 
-    // ── Document picker dropdown ──
     pickerContainer: {
       backgroundColor: c.card,
       borderTopWidth: 1,
@@ -798,7 +791,6 @@ const createStyles = (c: Palette) =>
       color: c.mutedForeground,
     },
 
-    // ── Skeleton loading ──
     skeletonList: {
       padding: spacing.lg,
       gap: spacing.md,
@@ -824,7 +816,6 @@ const createStyles = (c: Palette) =>
       backgroundColor: c.muted,
     },
 
-    // ── @ mention panel ──
     mentionPanel: {
       backgroundColor: c.card,
       borderTopWidth: 1,
@@ -868,7 +859,6 @@ const createStyles = (c: Palette) =>
       letterSpacing: 0.5,
     },
 
-    // ── Pinned doc chip ──
     pinnedRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -894,7 +884,6 @@ const createStyles = (c: Palette) =>
       color: c.mutedForeground,
     },
 
-    // ── Composer ──
     composerArea: {
       flexShrink: 0,
       borderTopWidth: 1,

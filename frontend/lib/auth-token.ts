@@ -1,4 +1,3 @@
-// Bridge between Clerk's React-context getToken() and plain fetch helpers.
 type TokenGetter = () => Promise<string | null>
 
 let tokenGetter: TokenGetter | null = null

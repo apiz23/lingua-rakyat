@@ -1,0 +1,156 @@
+.background {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+  color: var(--primary);
+}
+.background svg {
+  position: absolute;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+.documents {
+  width: clamp(110px, 17vw, 205px);
+  left: 3%;
+  top: 15%;
+  opacity: 0.16;
+  transform: rotate(-12deg);
+  animation: documents 14s ease-in-out infinite;
+}
+.paper {
+  fill: var(--background);
+}
+.arch {
+  width: clamp(130px, 20vw, 240px);
+  right: 3%;
+  bottom: 9%;
+  opacity: 0.17;
+  animation: arch 17s ease-in-out infinite;
+}
+.citation {
+  width: 70px;
+  right: 6%;
+  top: 12%;
+  opacity: 0.22;
+  animation: citation 11s ease-in-out infinite;
+}
+.orbit {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  left: -10%;
+  bottom: 0;
+  opacity: 0.1;
+}
+.orbit::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px dashed currentColor;
+  border-radius: inherit;
+}
+.crossOne,
+.crossTwo {
+  position: absolute;
+  font: 300 22px monospace;
+  opacity: 0.25;
+}
+.crossOne {
+  left: 13%;
+  bottom: 17%;
+}
+.crossTwo {
+  right: 19%;
+  top: 6%;
+}
+.control {
+  position: absolute;
+  right: 1rem;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.control:hover {
+  color: var(--primary);
+}
+.control:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.background[data-paused="true"] * {
+  animation-play-state: paused;
+}
+@keyframes documents {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-12deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(-9deg);
+  }
+}
+@keyframes arch {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+@keyframes citation {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(8px) rotate(8deg);
+  }
+}
+@media (max-width: 767px) {
+  .documents {
+    left: -50px;
+    top: 10px;
+    width: 120px;
+    opacity: 0.1;
+  }
+  .arch {
+    right: -65px;
+    bottom: 5%;
+    width: 160px;
+    opacity: 0.12;
+  }
+  .citation {
+    right: -10px;
+    top: 12px;
+    width: 48px;
+    opacity: 0.14;
+  }
+  .crossOne,
+  .crossTwo,
+  .orbit {
+    display: none;
+  }
+  .control {
+    right: 4px;
+    bottom: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .background * {
+    animation: none !important;
+  }
+  .control {
+    display: none;
+  }
+}

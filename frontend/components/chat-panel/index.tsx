@@ -80,13 +80,10 @@ import { VoiceMicButton } from "./voice-mic-button"
 import { EmptyState } from "./empty-state"
 import { ThreadHistoryPanel, type ChatThread } from "./thread-history-panel"
 
-// react-pdf (pdf.js) touches browser-only DOMMatrix at module load — never SSR it
 const PdfPanel = dynamic(() => import("./pdf-panel"), { ssr: false })
 
 function shortModelLabel(modelId: string): string {
   if (!modelId) return "Auto"
-  // Prefer the full, human-readable label from the model registry (e.g.
-  // "Llama 3.3 70B") instead of an abbreviated token like "70B".
   const known = GROQ_MODELS.find((m) => m.id === modelId)
   if (known) return known.label
   return modelId
@@ -159,8 +156,6 @@ function buildThreads(history: ChatHistoryMessage[]): ChatThread[] {
 interface PdfViewerState {
   page: number
   highlightText: string | null
-  // Which document the citation belongs to. In multi-doc mode this can be a
-  // different file from the anchored selectedDoc.
   documentId?: string
   docName?: string
 }
@@ -204,7 +199,6 @@ export default function ChatPanel({
   const [sessionId, setSessionId] = useState("")
   const [readyDocs, setReadyDocs] = useState<Document[]>([])
   const readyDocIds = readyDocs.map((d) => d.id)
-  // "@" mention: pin retrieval to one document for upcoming questions.
   const [mentionDoc, setMentionDoc] = useState<Document | null>(null)
   const [mentionQuery, setMentionQuery] = useState<string | null>(null)
   const [mentionIndex, setMentionIndex] = useState(0)
@@ -213,14 +207,9 @@ export default function ChatPanel({
     []
   )
 
-  // Persisted settings (localStorage-backed)
   const [selectedPopoverModel, setSelectedPopoverModel] =
     useLocalStorageSetting<string>("lr-chat-model", DEFAULT_CHAT_MODEL_ID)
 
-  // One-time migration off Groq-deprecated models: llama-4-scout and
-  // qwen3-32b were decommissioned 2026-07-17, llama-3.3-70b (the old stored
-  // default) shuts down 2026-08-16. Runs after the hook's load effect; the
-  // flag lets a user deliberately re-pick llama-3.3 until it dies.
   useEffect(() => {
     if (window.localStorage.getItem("lr-chat-model-migrated-v2")) return
     window.localStorage.setItem("lr-chat-model-migrated-v2", "true")
@@ -237,10 +226,6 @@ export default function ChatPanel({
   }, [setSelectedPopoverModel])
   const [enableQueryAugmentation, setEnableQueryAugmentation] =
     useLocalStorageSetting<boolean>("lr-augmentation", true)
-  // Multi-document mode: query across every ready doc instead of just the
-  // selected one ("no file picking"). selectedDoc stays the session anchor.
-  // Default ON so citizens search their whole library without choosing a file;
-  // the toggle below lets them narrow to the anchored doc when they want.
   const [askAllDocs, setAskAllDocs] = useLocalStorageSetting<boolean>(
     "lr-ask-all-docs",
     true
@@ -254,9 +239,6 @@ export default function ChatPanel({
     "lingua-autospeak",
     false
   )
-  // Simple view (default ON): hides technical chrome — confidence bars,
-  // latency — so non-technical citizens see just the answer.
-  // Power users/judges flip it off via the options menu.
   const [simpleMode, setSimpleMode] = useLocalStorageSetting<boolean>(
     "lr-simple-mode",
     true
@@ -306,10 +288,6 @@ export default function ChatPanel({
     document.documentElement.setAttribute("data-text-size", textSize)
   }, [textSize])
 
-  // Keep the list of ready docs fresh so multi-doc mode spans the whole
-  // library. When a parent provides `documents` (workspace page's shared
-  // useDocuments), skip the internal fetch entirely — avoids a duplicate
-  // listDocuments() call.
   useEffect(() => {
     if (externalDocuments) {
       setReadyDocs(externalDocuments.filter((d) => d.status === "ready"))
@@ -323,7 +301,6 @@ export default function ChatPanel({
         setReadyDocs(docs.filter((d) => d.status === "ready"))
       })
       .catch(() => {
-        /* offline / fetch failure — multi-doc simply stays single-doc */
       })
     return () => {
       active = false
@@ -352,7 +329,6 @@ export default function ChatPanel({
   }, [input])
 
   useEffect(() => {
-    // Only self-manage userId when workspace doesn't provide one externally.
     if (externalUserId) return
 
     const userStorageKey = "lr-user-id"
@@ -386,8 +362,6 @@ export default function ChatPanel({
         setSessionId(externalSessionId)
         return
       }
-      // Externally-controlled "new chat" (null): mint a fresh session so the
-      // composer is enabled — an empty sessionId keeps the input disabled.
       setMessages([])
       setExpandedSources(new Set())
       setDocumentHistory([])
@@ -396,7 +370,6 @@ export default function ChatPanel({
       return
     }
 
-    // existing doc-keyed session logic unchanged below:
     if (!selectedDoc) {
       setMessages([])
       setExpandedSources(new Set())
@@ -436,7 +409,6 @@ export default function ChatPanel({
       300
     )
     return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuestion, selectedDoc, userId, sessionId])
 
   useEffect(() => {
@@ -525,9 +497,6 @@ export default function ChatPanel({
         : `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`
     let messageAdded = false
 
-    // Show the question + a streaming placeholder immediately, before the
-    // first SSE event arrives — otherwise the user's question is invisible
-    // during the retrieval gap.
     setMessages((prev) => [
       ...prev,
       {
@@ -547,15 +516,11 @@ export default function ChatPanel({
     messageAdded = true
 
     try {
-      // Last 3 completed turns as multi-turn context
       const chatHistory = messages
         .filter((m) => !m.isStreaming && m.answer)
         .slice(-3)
         .map((m) => ({ question: m.question, answer: m.answer.slice(0, 400) }))
 
-      // Multi-doc: span every ready doc (plus the selected one) when the user
-      // opts into "ask all". Empty list = single-doc behaviour on the backend.
-      // An "@" mention overrides both and pins retrieval to that one document.
       const multiDocIds = mentionDoc
         ? [mentionDoc.id]
         : askAllDocs && readyDocIds.length > 1
@@ -822,8 +787,6 @@ export default function ChatPanel({
     }
   }
 
-  // Stable identities so React.memo on the message cards actually skips
-  // re-renders during token streaming.
   const submitQuestionRef = useRef(submitQuestion)
   submitQuestionRef.current = submitQuestion
 
@@ -897,7 +860,6 @@ export default function ChatPanel({
         toast.success(copiedToastRef.current)
       } catch {
         requestLifetime.finish()
-        // Clipboard denied (non-HTTPS / permissions) — nothing else to do
       }
     },
     [lifetime]
@@ -918,8 +880,6 @@ export default function ChatPanel({
     setShowHistory(false)
   }
 
-  // "@" mention: typing "@…" at the end of the input opens a picker of ready
-  // documents; selecting one pins retrieval to that document until removed.
   const mentionMatches = React.useMemo(() => {
     if (mentionQuery === null) return []
     const q = mentionQuery.toLowerCase()
@@ -1024,16 +984,12 @@ export default function ChatPanel({
   const chatStatus = loading ? "streaming" : "ready"
 
   const docPublicUrl = selectedDoc?.public_url ?? null
-  // PdfViewer always uses the backend proxy; docPublicUrl is not required.
   const pdfOpen = pdfViewerState !== null
 
   return (
     <div className="flex h-full min-h-0 bg-background">
-      {/* Chat column */}
       <AiChat status={chatStatus} className="h-full min-w-0 flex-1 font-sans">
         <AiChatBody className="min-h-0">
-          {/* Thread history panel — always rendered above the scroll area so it
-            stays visible regardless of scroll position or message count. */}
           {selectedDoc && showHistory ? (
             <div className="mx-auto w-full max-w-5xl px-4 pt-3 sm:px-10 sm:pt-6">
               <AnimatePresence>
@@ -1439,7 +1395,6 @@ export default function ChatPanel({
                         key={doc.id}
                         type="button"
                         onMouseDown={(e) => {
-                          // preventDefault keeps focus in the textarea
                           e.preventDefault()
                           selectMention(doc)
                         }}
@@ -1585,9 +1540,6 @@ export default function ChatPanel({
         </AiChatFooter>
       </AiChat>
 
-      {/* PDF panel — Sheet on desktop, Drawer on mobile. Opens the cited
-          source's own document, which in multi-doc mode may not be the
-          anchored selectedDoc. */}
       <PdfPanel
         open={pdfOpen}
         url={docPublicUrl ?? ""}

@@ -19,7 +19,7 @@ from pinecone import Pinecone
 from pypdf import PdfReader
 
 try:
-    import fitz  # PyMuPDF
+    import fitz
 except Exception:
     fitz = None
 
@@ -52,8 +52,8 @@ logging.basicConfig(
 logger = logging.getLogger("rag_pipeline")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-# llama-3.3-70b-versatile is deprecated (decommissioned 2026-08-16); Groq's
-# recommended replacement is openai/gpt-oss-120b.
+
+
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
 
@@ -74,10 +74,10 @@ CHUNK_TARGET_WORDS = 360
 CHUNK_MAX_WORDS = 520
 CHUNK_OVERLAP_WORDS = 45
 CONFIDENCE_THRESHOLD = 0.50
-# Below CONFIDENCE_THRESHOLD but at/above this, answer cautiously (grounded in
-# the closest chunk; the cautious prompt self-refuses if truly irrelevant).
-# Only below this do we fall back to the canned "insufficient evidence" reply —
-# kept low so the booth rarely sees a hard refusal.
+
+
+
+
 MIN_USABLE_CONFIDENCE = 0.12
 OCR_MIN_CHARS = 50
 PROMPT_RETRY_CHAR_LIMITS = [2500, 1200]
@@ -98,9 +98,9 @@ SUMMARIZE_KEYWORDS: list[str] = [
     "rumusan", "apa isi", "apakah dokumen", "ceritakan", "terangkan dokumen",
     "apa yang penting", "kandungan dokumen", "huraikan", "jelaskan dokumen",
     "apa dokumen ini", "总结", "概述", "摘要", "这个文件", "主要内容",
-    # Open-ended "what else / what other / tell me more" — these vague meta
-    # questions retrieve poorly as pinpoint QA and otherwise trip the evidence
-    # guard, so route them to the broad summary path instead.
+
+
+
     "apa lagi", "apa lain", "ada apa lagi", "lagi dalam dokumen",
     "lain dalam dokumen", "apa lagi dalam", "what else", "anything else",
     "what other", "tell me more", "anything more", "what's in this",
@@ -135,8 +135,8 @@ DIALECT_KEYWORDS: dict[str, list[str]] = {
 }
 
 
-# Word-boundary regex for Malay keywords \u2014 prevents "ini" matching "initial",
-# "dia" matching "media"/"India", "itu" matching "institution", "ada" matching "adapted", etc.
+
+
 _MS_KEYWORD_RE = re.compile(
     r"\b(?:" + "|".join(re.escape(k) for k in DIALECT_KEYWORDS["ms"]) + r")\b"
 )
@@ -148,7 +148,7 @@ def detect_language(text: str) -> str:
     if _MS_KEYWORD_RE.search(text_lower):
         return "ms"
 
-    # CJK keywords: substring match safe since these chars never appear in Latin text
+
     if any(kw in text_lower for kw in DIALECT_KEYWORDS.get("zh-cn", [])):
         return "zh-cn"
 
@@ -166,9 +166,9 @@ def detect_language(text: str) -> str:
 _query_cache: dict[tuple, dict[str, Any]] = {}
 CACHE_MAX_SIZE = 200
 
-# Release gate: answer caching stays disabled until keys carry document scope,
-# revision, source, policy epoch, model and prompt versions and hits re-check
-# every cited revision. Until then a cache hit could outlive a withdrawal.
+
+
+
 ENABLE_ANSWER_CACHE = (
     os.getenv("ENABLE_ANSWER_CACHE", "false").strip().lower() == "true"
 )
@@ -762,7 +762,7 @@ def ingest_revision(
         )
 
     index = _get_index()
-    # Safe: this namespace belongs to the pending revision only.
+
     try:
         index.delete(delete_all=True, namespace=namespace)
     except Exception:
@@ -802,7 +802,7 @@ def ingest_revision(
             if source_id and metadata.get("source_id") != source_id:
                 raise RuntimeError("Index verification failed: sample source mismatch")
     except AttributeError:
-        # Provider without fetch in this adapter: count verification only.
+
         logger.warning("[Ingest] Index fetch unavailable; count-only verification")
 
     return {
@@ -880,7 +880,7 @@ def _clean_augmented_query_text(text: str, fallback: str) -> str:
     if fenced_match:
         cleaned = fenced_match.group(1).strip()
 
-    # Drop common label / explanation lines the model sometimes adds.
+
     lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
     filtered_lines: list[str] = []
     for line in lines:
@@ -1114,7 +1114,7 @@ def _retrieve_matches(
     index = _get_index()
     all_matches: list[dict[str, Any]] = []
 
-    # Batch-embed all variant texts in a single Cohere call
+
     variant_texts = [v["text"] for v in query_variants]
     embeddings = get_embeddings_cohere(variant_texts, input_type="search_query")
 
@@ -1129,7 +1129,7 @@ def _retrieve_matches(
 
             for match in results["matches"]:
                 metadata = match.get("metadata", {})
-                # Older vectors predate the doc_id field; fall back to namespace.
+
                 metadata.setdefault("doc_id", namespace)
                 if allowed_revisions is not None:
                     document_ref = str(metadata.get("doc_id") or "")
@@ -1598,7 +1598,7 @@ def _confidence_explanation(
         template = templates["insufficient"]
     elif evidence_mode == "cautious":
         template = templates["cautious"]
-    else:  # strong, score below 0.75
+    else:
         template = templates["strong_moderate"]
 
     return template.format(
@@ -1636,9 +1636,9 @@ def _prepare_pipeline(
         or (next(iter(allowed_revisions), namespaces[0]) if allowed_revisions else namespaces[0])
     )
 
-    # History-aware rewrite: a bare follow-up ("what about for foreigners?")
-    # has no subject, so embed a standalone version built from recent turns.
-    # The original question is kept for the answer prompt + history injection.
+
+
+
     retrieval_question = question
     history_rewritten = False
     if ENABLE_HISTORY_CONDENSE and not is_summary:
@@ -1651,7 +1651,7 @@ def _prepare_pipeline(
     if multi_doc:
         retrieval_mode = f"{retrieval_mode}+multidoc"
     top_k = ((TOP_K_SMALL + 2) if small_model else (TOP_K_LARGE + 3)) if is_summary else (TOP_K_SMALL if small_model else TOP_K_LARGE)
-    # Spread a few more slots across docs so several can surface in one answer.
+
     if multi_doc:
         top_k += min(len(namespaces), 3)
 
@@ -1720,9 +1720,9 @@ def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -
     top_score = prepared["filtered_matches"][0]["reranked_score"] if prepared["filtered_matches"] else 0.0
     confidence_label = _confidence_label(top_score, prepared["sufficient_evidence"])
 
-    # Faithfulness: how grounded the answer is in the retrieved chunks. Skipped
-    # for the canned "insufficient evidence" reply (grounding it is meaningless)
-    # and for cached/offline paths that never reach this builder.
+
+
+
     faithfulness: Optional[float] = None
     if prepared.get("evidence_mode") != "insufficient":
         source_texts = [m["metadata"].get("text", "") for m in prepared["filtered_matches"]]
@@ -2044,9 +2044,9 @@ def answer_question(
     allowed_revisions: dict[str, int | None] | None = None,
 ) -> dict[str, Any]:
     question = _sanitize_question(question)
-    # Skip cache when conversation history is present (same question, different
-    # context), when querying multiple docs, or when revision-scoped retrieval
-    # is in use (cache keys are not revision-aware yet).
+
+
+
     skip_cache = (
         bypass_cache
         or bool(chat_history)
@@ -2172,8 +2172,8 @@ def stream_answer_question(
         and prepared.get("evidence_mode") != "insufficient"
         and prepared.get("filtered_matches")
     ):
-        # Explicit provisional state: tokens already shown are pre-verification.
-        # The final "complete" event is authoritative and may replace them.
+
+
         yield {"type": "verifying"}
     answer_text, verification = _verify_generated_answer(prepared, answer_text)
     result = _attach_verification(
@@ -2191,7 +2191,7 @@ def stream_answer_question(
     yield {"type": "sources", "sources": result["sources"]}
     yield {"type": "complete", **result}
 
-    # Suggested follow-ups — generated after complete so they don't block the answer stream
+
     if prepared.get("evidence_mode") not in ("insufficient",):
         suggestions = _generate_suggestions(question, answer_text, prepared["language"])
         if suggestions:

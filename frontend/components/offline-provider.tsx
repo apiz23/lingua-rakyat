@@ -51,8 +51,6 @@ async function purgeLegacyCaches() {
         .map((key) => caches.delete(key))
     )
   } catch {
-    // A failed cache purge must never block rendering. Legacy content is also
-    // unreachable because every cache reader was removed in Phase 0B.
   }
 }
 
@@ -123,7 +121,6 @@ export default function OfflineProvider({
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {
-        // The worker is an optional cache-hygiene layer, not a render gate.
       })
     }
 
@@ -149,8 +146,6 @@ export default function OfflineProvider({
 
   useEffect(() => {
     if (!isLoaded) return
-    // A real actor switch must notify peer tabs. Remounting is handled by the
-    // actor key below, so this effect performs no state updates.
     if (actor.current !== null && actor.current !== actorKey) {
       channel.current?.send()
     }

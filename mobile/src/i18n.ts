@@ -1,4 +1,3 @@
-// Trilingual UI copy — mirrors the web app's language set (ms | en | zh).
 
 export type AppLanguage = "ms" | "en" | "zh"
 

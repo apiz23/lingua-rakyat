@@ -17,7 +17,6 @@ const takumiWasmSrc = _requireRoot.resolve(
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Isolate the local UI test server from an already-running developer server.
   distDir: process.env.I18N_TEST_SERVER === "1" ? ".next-i18n" : process.env.UI01D_TEST_SERVER === "1" ? ".next-ui01d" : ".next",
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
 
@@ -39,7 +38,6 @@ const nextConfig = {
   },
 
   experimental: {
-    // Persistent dev output retained stale globals.css across local restarts.
     turbopackFileSystemCacheForDev: false,
     optimizePackageImports: ["lucide-react", "framer-motion", "radix-ui"],
   },
@@ -59,15 +57,10 @@ const nextConfig = {
       {
         source: "/:path*",
         headers: [
-          // Closes clickjacking: app has authenticated single-click actions
-          // (revoke share, sign out) that must never be reachable from a
-          // hostile iframe overlay.
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Content-Security-Policy", value: "frame-ancestors 'none';" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          // Voice input is a real feature (VoiceMicButton) — scope
-          // microphone to same-origin instead of blocking it outright.
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(self), geolocation=()",
@@ -80,7 +73,6 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     // react-pdf / PDF.js: disable canvas (not needed for text rendering)
     config.resolve.alias.canvas = false
-    // Copy PDF.js worker to public/ for production builds
     if (!isServer) {
       config.plugins.push(
         new CopyPlugin({

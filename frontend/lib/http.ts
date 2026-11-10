@@ -1,3 +1,4 @@
+
 // Single API transport. Every browser/server request to the FastAPI backend
 // resolves its URL and authentication behavior here; do not add competing
 // fetch wrappers.
@@ -10,7 +11,6 @@
 //   If the refresh yields no token we never downgrade to anonymous.
 // - 403 never refreshes a token. 429 raises a typed rate-limit error.
 // - Sensitive responses are no-store. Streams are returned untouched.
-
 import { authHeader } from "@/lib/auth-token"
 import { API_URL } from "@/lib/config"
 
@@ -86,7 +86,6 @@ function requestInit(
   return {
     ...init,
     headers,
-    // Sensitive responses (answers, history, shares, PDFs) must not be cached.
     cache: init?.cache ?? "no-store",
   }
 }
@@ -129,9 +128,6 @@ export async function authorizedFetch(
   throwIfRateLimited(response)
 
   if (response.status === 401) {
-    // Only a request that carried a credential is retried with a refreshed
-    // one. A first-paint request that raced token registration gets one short
-    // wait, then retries only if a credential now exists.
     if (!firstToken) {
       await waitForTokenRegistration()
       if (aborted(init?.signal)) {
@@ -154,7 +150,6 @@ export async function authorizedFetch(
     throwIfRateLimited(response)
   }
 
-  // 403 is an authorization decision, not an expiry signal: no retry here.
   return response
 }
 

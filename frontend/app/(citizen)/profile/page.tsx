@@ -205,7 +205,6 @@ export default function ProfilePage() {
         />
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Account card */}
           <section className="overflow-hidden rounded-lg border border-border bg-card lg:col-span-1">
             <div className="border-b border-border px-5 py-4">
               <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
@@ -263,7 +262,6 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* Shared answers */}
           <section className="overflow-hidden rounded-lg border border-border bg-card lg:col-span-2">
             <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
               <div className="flex items-center gap-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">

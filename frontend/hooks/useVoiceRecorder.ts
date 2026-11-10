@@ -60,7 +60,6 @@ export function useVoiceRecorder(uiLanguage = "en"): UseVoiceRecorderReturn {
       try {
         if (recorder.state !== "inactive") recorder.stop()
       } catch {
-        // Tracks must still be stopped if the browser already closed the recorder.
       }
     }
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -117,7 +116,6 @@ export function useVoiceRecorder(uiLanguage = "en"): UseVoiceRecorderReturn {
     }
 
     recorder.onstop = async () => {
-      // Stop all mic tracks
       stream.getTracks().forEach((t) => t.stop())
       if (!current()) return
       streamRef.current = null

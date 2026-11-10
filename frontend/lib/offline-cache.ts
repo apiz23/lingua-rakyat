@@ -21,8 +21,6 @@ export function purgeLegacyOfflineData(): OfflineCleanupResult {
   return { ok: failed.length === 0, failed }
 }
 
-// Kept as compatibility functions for existing callers. Personal and
-// revocable data must not be persisted or returned by offline fallback.
 export function cacheDocuments(documents: Document[]): void { void documents }
 export function getCachedDocuments(): Document[] { return [] }
 export function cacheHistory(messages: ChatHistoryMessage[]): void { void messages }

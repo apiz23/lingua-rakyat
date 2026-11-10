@@ -60,20 +60,20 @@ def _limit(env_key: str, normal: str, booth: str) -> str:
     return booth if BOOTH_MODE else normal
 
 
-# Global default applied to every route via SlowAPIMiddleware (main.py).
+
 GLOBAL_DEFAULT = _limit("GLOBAL_RATE_LIMIT", "200/minute", "2000/minute")
 
-# Chat Q&A (ask + ask-stream).
+
 CHAT_LIMIT = _limit("CHAT_RATE_LIMIT", "30/minute", "300/minute")
 
-# Voice STT + TTS — most likely to throttle at a booth.
+
 VOICE_LIMIT = _limit("VOICE_RATE_LIMIT", "10/minute", "120/minute")
 
-# Document verify-token / upload / rename.
+
 DOC_LIMIT = _limit("DOC_RATE_LIMIT", "10/minute", "120/minute")
 
-# Signed PDF-URL fetch (called when opening the PDF panel).
+
 PDF_URL_LIMIT = _limit("PDF_URL_RATE_LIMIT", "20/minute", "240/minute")
 
-# Seed featured documents (admin/setup action).
+
 SEED_LIMIT = _limit("SEED_RATE_LIMIT", "5/minute", "30/minute")

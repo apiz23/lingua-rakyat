@@ -150,7 +150,6 @@ const AgentAvatar = ({
     const draw = (time: number) => {
       ctx.clearRect(0, 0, size, size)
 
-      // Scale pulse — whole avatar breathes
       const scale = shouldAnimate
         ? 1 + Math.sin(time * SCALE_PULSE_SPEED) * SCALE_PULSE_AMOUNT
         : 1
@@ -160,38 +159,31 @@ const AgentAvatar = ({
       ctx.scale(scale, scale)
       ctx.translate(-half, -half)
 
-      // Clip to circle
       ctx.beginPath()
       ctx.arc(half, half, half, 0, Math.PI * 2)
       ctx.clip()
 
-      // Dark background
       ctx.fillStyle = "#08080f"
       ctx.fillRect(0, 0, size, size)
 
-      // Global breathe offset for lightness
       const breatheOffset = shouldAnimate
         ? Math.sin(time * BREATHE_SPEED) * BREATHE_AMPLITUDE
         : 0
 
-      // Draw pixel grid
       for (let y = 0; y < GRID_SIZE; y++) {
         for (let x = 0; x < GRID_SIZE; x++) {
           const cell = grid[y][x]
           const [h, s, l] = palette[cell.colorIndex]
 
-          // Per-pixel pulse
           const pulse = shouldAnimate
             ? Math.sin(time * PULSE_SPEED + cell.phase) * PULSE_AMPLITUDE
             : 0
 
-          // Diagonal wave sweep
           const waveDist = (x + y) / WAVE_LENGTH
           const wave = shouldAnimate
             ? Math.sin(time * WAVE_SPEED + waveDist) * WAVE_AMPLITUDE
             : 0
 
-          // Sparkle — occasional bright flash
           const sparkleVal = shouldAnimate
             ? Math.sin(time * SPARKLE_SPEED + cell.sparklePhase)
             : 0
@@ -210,7 +202,6 @@ const AgentAvatar = ({
           )
           const finalSat = Math.min(100, s + 5)
 
-          // Pixel glow — subtle shadow per cell
           ctx.shadowColor = `hsl(${h}, ${finalSat}%, ${finalLight}%)`
           ctx.shadowBlur = cellSize * 0.45
 
@@ -219,11 +210,9 @@ const AgentAvatar = ({
         }
       }
 
-      // Reset shadow before restore
       ctx.shadowBlur = 0
       ctx.restore()
 
-      // Outer glow ring
       const [gh, gs, gl] = palette[0]
       ctx.save()
       ctx.globalCompositeOperation = "screen"

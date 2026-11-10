@@ -18,7 +18,7 @@ class FakeRequest:
             self.headers["authorization"] = auth_header
 
 
-# ── FakeSupabase with update support (extends the pattern in test_share_fields.py) ──
+
 
 class FakeQuery:
     def __init__(self, store, table):
@@ -171,7 +171,7 @@ def test_conversations_rejects_spoofed_clerk_id_without_token():
 
 
 def test_conversations_rejects_anonymous_id_from_header(monkeypatch):
-    # Browser-generated IDs are not proof of anonymous history ownership.
+
     import routers.chat as chat
     import asyncio
     with pytest.raises(HTTPException) as exc:
@@ -190,7 +190,7 @@ def test_conversations_rejects_spoofed_clerk_id_via_header():
 def test_history_payload_uses_verified_user():
     from routers.chat import AskRequest, _history_payload
     body = AskRequest(
-        user_id="user_abc",  # handler has already overridden this from the token
+        user_id="user_abc",
         document_id="d1",
         document_name="Doc",
         session_id="s1",

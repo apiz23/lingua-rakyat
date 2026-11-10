@@ -144,14 +144,14 @@ def _actor_roles(client: Any, actor: Actor) -> set[str]:
     try:
         return active_roles(actor.email or "", client)
     except Exception:
-        # Role display in an audit row is best effort; the permission check
-        # already happened before this operation ran.
+
+
         return set()
 
 
-# ---------------------------------------------------------------------------
-# Views
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def _document_view(
@@ -264,9 +264,9 @@ def _documents(client: Any) -> list[dict[str, Any]]:
         raise AdminUnavailable("Could not read documents") from exc
 
 
-# ---------------------------------------------------------------------------
-# Dashboard
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def _latest_review_actions(client: Any) -> dict[str, str]:
@@ -334,9 +334,9 @@ def dashboard(client: Any, actor: Actor) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Documents
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def list_documents(
@@ -493,9 +493,9 @@ def update_document_metadata(
     return get_document(client, actor, document_id)
 
 
-# ---------------------------------------------------------------------------
-# Sources
-# ---------------------------------------------------------------------------
+
+
+
 
 
 SOURCE_FIELDS = {
@@ -794,9 +794,9 @@ def revoke_source(
     return _source_view({**row, **payload})
 
 
-# ---------------------------------------------------------------------------
-# Review, approval and publication
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def publication_blockers(
@@ -950,8 +950,8 @@ def publish_document(
     prospective = {**row, **payload, "source_type": source.get("source_type"), "current_revision": revision.get("revision")}
     approved_sources = {str(source.get("source_id")): source}
     if not is_publicly_eligible(prospective, approved_sources=approved_sources):
-        # Re-run with the same clock used for publication; eligibility also
-        # checks approval ordering and freshness.
+
+
         raise AdminValidationError("Document fails publication eligibility")
 
     _update(client, documents_table(), "id", document_id, payload)
@@ -1040,9 +1040,9 @@ def list_revisions(client: Any, actor: Actor, document_id: str) -> list[dict[str
     return items
 
 
-# ---------------------------------------------------------------------------
-# Audit, roles and status
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def _audit_view(row: Mapping[str, Any]) -> dict[str, Any]:

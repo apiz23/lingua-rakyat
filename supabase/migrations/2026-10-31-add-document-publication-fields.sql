@@ -1,5 +1,5 @@
--- Add explicit, deny-by-default publication metadata to the document catalogue.
--- Existing documents remain unclassified/draft. Processing status is unchanged.
+
+
 -- This migration targets the checked-in public.lr_documents table; deployments
 -- using DOCUMENTS_TABLE must reconcile that configuration before applying it.
 

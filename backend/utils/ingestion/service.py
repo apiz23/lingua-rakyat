@@ -129,9 +129,9 @@ def _normalize_date(value: str) -> Optional[datetime]:
     return parsed.astimezone(timezone.utc)
 
 
-# ---------------------------------------------------------------------------
-# Sources and candidates
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def _source(client: Any, source_id: str) -> dict[str, Any]:
@@ -271,9 +271,9 @@ def skip_candidate(client: Any, actor: Any, candidate_id: str, reason: str) -> d
     return get_candidate(client, actor, candidate_id)
 
 
-# ---------------------------------------------------------------------------
-# Jobs
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def _job_view(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -318,7 +318,7 @@ def recover_stale_jobs(client: Any) -> int:
             filters: dict[str, Any] = {"id": job.get("id"), "status": "running"}
             if job.get("worker_id"):
                 filters["worker_id"] = job.get("worker_id")
-            # Compare the observed lease: a heartbeat may renew it after our read.
+
             if job.get("lease_expires_at") is not None:
                 filters["lease_expires_at"] = job["lease_expires_at"]
             elif job.get("started_at") is not None:
@@ -456,7 +456,7 @@ def _create_job(
     try:
         return _job_view(_insert(client, JOBS_TABLE, payload))
     except IngestionUnavailable:
-        # A concurrent request may have won the active-job unique index.
+
         active = [
             job
             for job in _read(client, JOBS_TABLE)
@@ -603,9 +603,9 @@ def cancel_job(client: Any, actor: Any, job_id: str) -> dict[str, Any]:
     return get_job(client, actor, job_id)
 
 
-# ---------------------------------------------------------------------------
-# Execution
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def _claim_job(client: Any, job_id: str) -> Optional[dict[str, Any]]:
@@ -796,7 +796,7 @@ def run_discovery(client: Any, job_id: str, *, claimed: bool = False) -> None:
                 "updated_at": _iso(),
             }
             if current:
-                # Never reset a human decision or an existing document link.
+
                 if current.get("status") in {"discovered", "failed", "duplicate_review"}:
                     _update(client, CANDIDATES_TABLE, {"id": current.get("id")}, payload)
             else:
@@ -894,7 +894,7 @@ def _revisions(client: Any) -> list[dict[str, Any]]:
 
 @dataclass(frozen=True)
 class DuplicateDecision:
-    kind: str  # new | unchanged | new_revision | duplicate_review
+    kind: str
     document_id: Optional[str] = None
     revision: Optional[Mapping[str, Any]] = None
     reason: str = ""
@@ -1232,8 +1232,8 @@ def _register_new_revision(
         )
         return revision_no
 
-    # Pending revision indexes into its own isolated namespace. It never
-    # becomes public until approval + explicit promotion.
+
+
     try:
         indexed = _index_document(
             document_id, revision_no, str(source.get("source_id") or ""), content, filename
@@ -1448,7 +1448,7 @@ def run_ingest(client: Any, job_id: str, *, claimed: bool = False) -> None:
             )
             return
 
-        # Reprocess path: reindex an existing private/unpublished document.
+
         document = next(
             (doc for doc in _documents(client) if str(doc.get("id")) == str(document_id_job)),
             None,
@@ -1549,9 +1549,9 @@ def _job_actor(job: Mapping[str, Any]) -> Any:
     return _JobActor(subject)
 
 
-# ---------------------------------------------------------------------------
-# Overview and processing views
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def ingestion_overview(client: Any, actor: Any) -> dict[str, Any]:

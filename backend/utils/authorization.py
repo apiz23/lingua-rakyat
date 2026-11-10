@@ -67,7 +67,7 @@ class RoleSourceUnavailable(RuntimeError):
     """No trusted server-side permission source is available."""
 
 
-# Permissions are explicit operation names, never inferred from login state.
+
 DOCUMENTS_MANAGE = "documents.manage"
 DOCUMENTS_PUBLISH = "documents.publish"
 EVALUATION_READ = "evaluation.read"
@@ -90,14 +90,14 @@ def resolve_permissions(actor: Actor) -> frozenset[str]:
     from utils.role_provider import RoleProviderUnavailable, resolve_actor_permissions
 
     try:
-        # Role records are keyed by the normalized email claim in the
-        # verified session token and resolved only from Supabase.
+
+
         if not actor.email:
             return frozenset()
         return resolve_actor_permissions(actor.email.strip().lower())
     except RoleProviderUnavailable as exc:
         raise RoleSourceUnavailable("No trusted role provider is available") from exc
-    except Exception as exc:  # configuration/connection errors must deny
+    except Exception as exc:
         logger.error("[Authz] Role resolution failed: %s", type(exc).__name__)
         raise RoleSourceUnavailable("No trusted role provider is available") from exc
 
@@ -150,7 +150,7 @@ def require_authenticated(actor: Actor = Depends(get_actor)) -> Actor:
     return actor
 
 
-# Alias kept for readability at call sites that only care about citizens.
+
 require_citizen = require_authenticated
 
 

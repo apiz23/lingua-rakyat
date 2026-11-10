@@ -224,9 +224,9 @@ def patch_index(monkeypatch, *, chunks=7, fail=False):
     return calls
 
 
-# ---------------------------------------------------------------------------
-# Source and URL security
-# ---------------------------------------------------------------------------
+
+
+
 
 
 @pytest.mark.parametrize(
@@ -331,7 +331,7 @@ def test_connection_is_pinned_to_validated_ip_with_host_and_sni(monkeypatch):
         "Client",
         lambda **_kwargs: _FakeClient([_FakeResponse(content=b"%PDF-1.4")], captured),
     )
-    # robots.txt is fetched first.
+
     monkeypatch.setattr(security, "_robots_allowed", lambda *_args: True)
 
     result = security._request(
@@ -406,9 +406,9 @@ def test_response_size_limit_and_timeout(monkeypatch):
         )
 
 
-# ---------------------------------------------------------------------------
-# Discovery
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_discovery_creates_candidates_and_is_idempotent(monkeypatch):
@@ -434,9 +434,9 @@ def test_discovery_creates_candidates_and_is_idempotent(monkeypatch):
     assert len(db.tables["ingestion_candidates"]) == 2
 
 
-# ---------------------------------------------------------------------------
-# Ingest lifecycle
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_new_document_is_ingested_private_and_unpublished(monkeypatch):
@@ -591,9 +591,9 @@ def test_indexing_failure_leaves_document_private_and_failed(monkeypatch):
     assert db.tables["ingestion_jobs"][0]["status"] == "failed"
 
 
-# ---------------------------------------------------------------------------
-# Jobs
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_active_job_prevents_duplicate_concurrent_work():
@@ -732,7 +732,7 @@ def test_retry_schedules_backoff_and_clears_lease():
     assert job["status"] == "queued"
     assert job["worker_id"] is None
     assert job["next_retry_at"]
-    assert service.claim_next_job(db, "worker-1") is None  # not due yet
+    assert service.claim_next_job(db, "worker-1") is None
 
 
 def test_expired_worker_cannot_overwrite_newer_worker():
@@ -761,9 +761,9 @@ def test_cancelled_job_does_not_index(monkeypatch):
     assert db.tables["lr_documents"] == []
 
 
-# ---------------------------------------------------------------------------
-# Integration and publication isolation
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_full_pipeline_stops_before_review(monkeypatch):
@@ -802,9 +802,9 @@ def test_full_pipeline_stops_before_review(monkeypatch):
     assert db.tables["publication_events"] == []
 
 
-# ---------------------------------------------------------------------------
-# Endpoint authorization
-# ---------------------------------------------------------------------------
+
+
+
 
 
 @pytest.fixture

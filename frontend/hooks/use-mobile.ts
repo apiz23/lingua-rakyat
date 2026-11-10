@@ -42,7 +42,6 @@ export function useIsMobile() {
   return isMobile
 }
 
-// Backwards-compatible alias used throughout the codebase.
 export function useMobile() {
   return useIsMobile()
 }

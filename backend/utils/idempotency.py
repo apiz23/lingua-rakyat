@@ -86,7 +86,7 @@ def claim_run(
             return RunClaim("conflict")
         if status == "in_progress":
             return RunClaim("in_progress")
-        # A failed run may be retried with the same key and body.
+
         if not _set_in_progress(client, actor_id, idempotency_key):
             raise IdempotencyUnavailable("Could not restart failed answer run")
         return RunClaim("new")
@@ -101,7 +101,7 @@ def claim_run(
     try:
         client.table(runs_table()).insert(payload).execute()
     except Exception as exc:
-        # A concurrent request may have inserted the row first.
+
         raced = _existing(client, actor_id, idempotency_key)
         if raced is None:
             raise IdempotencyUnavailable("Could not start answer run") from exc

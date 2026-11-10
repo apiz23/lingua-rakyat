@@ -120,8 +120,8 @@ def test_configured_role_source_without_provider_still_fails_closed(monkeypatch)
 
 
 def test_authentication_alone_is_not_admin(monkeypatch):
-    # A resolved grant list that does not contain the operation is a 403, even
-    # for a signed-in user. Admin is never inferred from authentication.
+
+
     monkeypatch.setattr(authz, "resolve_permissions", lambda actor: frozenset({"evaluation.read"}))
     dependency = require_permission(authz.DOCUMENTS_MANAGE)
     with pytest.raises(HTTPException) as exc:

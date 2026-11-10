@@ -62,11 +62,11 @@ def _load_eval_records() -> list[dict]:
     return response.data or []
 
 
-# ─── Shared evaluator — writes to Supabase lr_eval_records on each record ────
+
 _evaluator = Evaluator(persist_fn=_persist_eval_record, load_fn=_load_eval_records)
 
 
-# ─── Request / Response Models ────────────────────────────────────────────────
+
 
 class RecordRequest(BaseModel):
     """
@@ -91,11 +91,11 @@ class TestSuiteRequest(BaseModel):
     against passport docs.
     """
     document_id: str
-    doc_name: str = ""  # used for category auto-detection
-    model_override: str = ""  # optional model override for this run
+    doc_name: str = ""
+    model_override: str = ""
 
 
-# ─── Endpoints ────────────────────────────────────────────────────────────────
+
 
 @router.get("/report")
 async def get_eval_report():
@@ -169,7 +169,7 @@ async def run_test_suite(req: TestSuiteRequest):
     if not req.document_id:
         raise HTTPException(status_code=400, detail="document_id is required")
 
-    # Auto-detect category and select matching test cases only
+
     test_cases, detected_category = get_test_cases_for_document(req.doc_name, req.document_id)
 
     if not test_cases:
@@ -197,7 +197,7 @@ async def run_test_suite(req: TestSuiteRequest):
             rag_result = answer_question(
                 question=case["question"],
                 document_id=req.document_id,
-                model_override=req.model_override or GROQ_MODEL_FAST,  # prefer request override, else fast model
+                model_override=req.model_override or GROQ_MODEL_FAST,
             )
             answer = rag_result["answer"]
             gt     = case["ground_truth"]
@@ -251,7 +251,7 @@ async def run_test_suite(req: TestSuiteRequest):
             detail=f"All test cases failed. Errors: {errors}"
         )
 
-    # ── Aggregate ─────────────────────────────────────────────────────────
+
     n = len(results)
     scored_sim = [r for r in results if r["scores"].get("semantic_similarity") is not None]
     if scored_sim:
@@ -310,22 +310,22 @@ def _verify_eval_token(token: str) -> bool:
 async def eval_health():
     """Quick check that the evaluation module is loaded and working."""
     _require_internal_authorization()
-    # Smoke-test the metrics on a trivial example
+
     r1  = rouge_n("hello world", "hello world", 1)
     fk  = flesch_kincaid_grade("The cat sat on the mat. It is a nice day.")
     return {
         "status":          "ok",
         "records_stored":  len(_evaluator),
         "smoke_test": {
-            "rouge1_perfect_f1":  r1["f1"],   # should be 1.0
-            "fk_grade_simple_sentence": fk,   # should be low
+            "rouge1_perfect_f1":  r1["f1"],
+            "fk_grade_simple_sentence": fk,
         },
     }
 
 
-# ─── Data Quality & Augmentation Endpoints ───────────────────────────────────
 
-# In-memory store for data quality reports (populated on document upload)
+
+
 _data_quality_log: list[dict] = []
 
 
@@ -429,9 +429,9 @@ async def simplify_demo():
     }
 
 
-# ─── Streaming Test Suite (SSE) ───────────────────────────────────────────────
-# Sends each case result as a Server-Sent Event the moment it finishes.
-# Frontend receives progress in real time instead of waiting ~60s for all 30.
+
+
+
 
 import json as _json
 from fastapi.responses import StreamingResponse as _StreamingResponse
@@ -455,13 +455,13 @@ async def run_test_suite_stream(req: TestSuiteRequest):
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="document_id is required")
 
-    # Auto-detect category and select matching test cases only
+
     test_cases, detected_category = get_test_cases_for_document(req.doc_name, req.document_id)
     total = len(test_cases)
 
     async def event_stream():
         if not test_cases:
-            # Immediately send a meaningful "skipped" event instead of running 0 cases
+
             payload = _json.dumps({
                 "type": "skipped",
                 "reason": (
@@ -475,7 +475,7 @@ async def run_test_suite_stream(req: TestSuiteRequest):
             yield f"data: {_json.dumps({'type': 'done'})}\n\n"
             return
 
-        # Send category info first so frontend can show it
+
         yield f"data: {_json.dumps({'type': 'category', 'category': detected_category, 'total': total})}\n\n"
 
         results = []
@@ -486,7 +486,7 @@ async def run_test_suite_stream(req: TestSuiteRequest):
                 rag_result = answer_question(
                     question=case["question"],
                     document_id=req.document_id,
-                    model_override=req.model_override or GROQ_MODEL_FAST,  # prefer request override, else fast model
+                    model_override=req.model_override or GROQ_MODEL_FAST,
                 )
                 answer = rag_result["answer"]
                 gt     = case["ground_truth"]
@@ -546,7 +546,7 @@ async def run_test_suite_stream(req: TestSuiteRequest):
                 })
                 yield f"data: {payload}\n\n"
 
-        # Send aggregate after all cases
+
         if results:
             n = len(results)
             scored_sim = [r for r in results if r["scores"].get("semantic_similarity") is not None]

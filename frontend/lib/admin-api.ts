@@ -1,4 +1,19 @@
-// Admin API client. All calls go through the shared authenticated transport.
+import { adminHeaders } from "./admin-headers"
+import { z } from "zod"
+import {
+  DashboardMetricsSchema,
+  AuditEntrySchema,
+  DashboardResponseSchema,
+  PaginatedSchema,
+  AdminSourceSchema,
+  AdminRevisionSchema,
+  PublicationEventSchema,
+  AdminDocumentSchema,
+  RoleAssignmentSchema,
+  IngestionOverviewSchema,
+  IngestionJobSchema,
+  IngestionCandidateSchema,
+} from "./admin-schemas"
 import { authorizedFetch } from "@/lib/http"
 
 export class AdminApiError extends Error {
@@ -15,22 +30,20 @@ export class AdminApiError extends Error {
 
 const BASE = "/api/v1/admin"
 
-async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function adminFetch<T>(
+  schema: z.ZodType<T>,
+  path: string,
+  init?: RequestInit
+): Promise<T> {
+  const headers = adminHeaders(init)
   const send = () =>
     authorizedFetch(`${BASE}${path}`, {
       ...init,
-      headers: {
-        ...(init?.body instanceof FormData
-          ? {}
-          : { "Content-Type": "application/json" }),
-        ...(init?.headers as Record<string, string> | undefined),
-      },
+      headers,
     })
 
   let response = await send()
 
-  // Read-only admin calls get one retry for transient role-store/JWKS
-  // availability failures. Mutations are never retried automatically.
   const method = (init?.method ?? "GET").toUpperCase()
   if (response.status === 503 && method === "GET") {
     await new Promise((resolve) => setTimeout(resolve, 400))
@@ -52,141 +65,48 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     )
   }
   if (response.status === 503) {
-    const body = (await response.json().catch(() => null)) as {
-      detail?: string
-    } | null
+    const raw: unknown = await response.json().catch(() => null)
+    const body = z.object({ detail: z.string().optional() }).safeParse(raw)
     throw new AdminApiError(
-      body?.detail ??
+      (body.success ? body.data.detail : undefined) ??
         "Admin services are unavailable. The role provider or admin tables may not be configured.",
       503,
       "unavailable"
     )
   }
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      detail?: string
-    } | null
+    const raw: unknown = await response.json().catch(() => null)
+    const body = z.object({ detail: z.string().optional() }).safeParse(raw)
     throw new AdminApiError(
-      body?.detail ?? "Admin request failed.",
+      (body.success ? body.data.detail : undefined) ?? "Admin request failed.",
       response.status,
       "error"
     )
   }
-  return response.json() as Promise<T>
+  const raw: unknown = await response.json().catch(() => undefined)
+  const parsed = schema.safeParse(raw)
+  if (!parsed.success)
+    throw new AdminApiError(
+      "Admin service returned an invalid response.",
+      response.status,
+      "error"
+    )
+  return parsed.data
 }
 
-export type AdminDocument = {
-  id: string
-  name: string
-  size_bytes: number
-  chunk_count: number
-  status: "processing" | "ready" | "error" | string
-  uploaded_at: string
-  agency?: string | null
-  is_featured: boolean
-  visibility_scope: string
-  publication_status: string
-  source_id?: string | null
-  source_type?: string | null
-  owner_type?: string | null
-  approved_by?: string | null
-  approved_at?: string | null
-  published_at?: string | null
-  expires_at?: string | null
-  last_verified_at?: string | null
-  current_revision: number
-  error_message?: string | null
-  has_storage: boolean
-  source?: AdminSource | null
-  revision?: AdminRevision | null
-  revisions?: AdminRevision[]
-  events?: PublicationEvent[]
-  blockers?: string[]
-}
+export type AdminDocument = z.infer<typeof AdminDocumentSchema>
 
-export type AdminRevision = {
-  revision: number
-  source_id?: string | null
-  source_type?: string | null
-  checksum?: string | null
-  approved_by?: string | null
-  approved_at?: string | null
-  created_at?: string | null
-  superseded_at?: string | null
-  revoked_at?: string | null
-  has_storage: boolean
-  is_current: boolean
-  indexing_status?: string
-  indexed_at?: string | null
-  chunk_count?: number
-  index_error?: string | null
-  review_status?: string
-  review_reason?: string | null
-  reviewed_by?: string | null
-  reviewed_at?: string | null
-}
+export type AdminRevision = z.infer<typeof AdminRevisionSchema>
 
-export type PublicationEvent = {
-  id?: number
-  event_type: string
-  actor?: string
-  occurred_at?: string
-  details?: Record<string, unknown>
-}
+export type PublicationEvent = z.infer<typeof PublicationEventSchema>
 
-export type AdminSource = {
-  source_id: string
-  issuing_organization: string
-  authority?: string | null
-  source_url?: string | null
-  source_type: string
-  verification_status: string
-  verified_by?: string | null
-  verified_at?: string | null
-  usage_rights?: string | null
-  usage_permitted: boolean
-  freshness_days?: number | null
-  last_verified_at?: string | null
-  revoked_at?: string | null
-  metadata: Record<string, unknown>
-  created_at?: string | null
-  updated_at?: string | null
-}
+export type AdminSource = z.infer<typeof AdminSourceSchema>
 
-export type DashboardMetrics = {
-  total_documents: number
-  awaiting_review: number
-  published: number
-  approved: number
-  rejected: number
-  suspended: number
-  withdrawn: number
-  expiring: number
-  expired: number
-  unverified_sources: number
-  failed_ingestion: number
-}
+export type DashboardMetrics = z.infer<typeof DashboardMetricsSchema>
 
-export type AuditEntry = {
-  id?: number
-  actor_id?: string
-  actor_role?: string
-  action?: string
-  target_type?: string
-  target_id?: string
-  reason?: string
-  state_from?: string
-  state_to?: string
-  correlation_id?: string
-  details?: Record<string, unknown>
-  created_at?: string
-}
+export type AuditEntry = z.infer<typeof AuditEntrySchema>
 
-export type DashboardResponse = {
-  generated_at: string
-  metrics: DashboardMetrics
-  recent_activity: AuditEntry[]
-}
+export type DashboardResponse = z.infer<typeof DashboardResponseSchema>
 
 export type Paginated<T> = {
   items: T[]
@@ -210,7 +130,7 @@ export type DocumentFilters = {
 }
 
 export function getDashboard() {
-  return adminFetch<DashboardResponse>("/dashboard")
+  return adminFetch(DashboardResponseSchema, "/dashboard")
 }
 
 export function listAdminDocuments(filters: DocumentFilters = {}) {
@@ -219,11 +139,14 @@ export function listAdminDocuments(filters: DocumentFilters = {}) {
     if (value !== undefined && value !== "" && value !== null)
       params.set(key, String(value))
   }
-  return adminFetch<Paginated<AdminDocument>>(`/documents?${params.toString()}`)
+  return adminFetch(
+    PaginatedSchema(AdminDocumentSchema),
+    `/documents?${params.toString()}`
+  )
 }
 
 export function getAdminDocument(id: string) {
-  return adminFetch<AdminDocument>(`/documents/${encodeURIComponent(id)}`)
+  return adminFetch(AdminDocumentSchema, `/documents/${encodeURIComponent(id)}`)
 }
 
 export function updateAdminDocument(
@@ -235,17 +158,22 @@ export function updateAdminDocument(
     >
   >
 ) {
-  return adminFetch<AdminDocument>(`/documents/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: JSON.stringify(updates),
-  })
+  return adminFetch(
+    AdminDocumentSchema,
+    `/documents/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    }
+  )
 }
 
 export function uploadAdminDocument(file: File, sourceId?: string) {
   const form = new FormData()
   form.append("file", file)
   if (sourceId) form.append("source_id", sourceId)
-  return adminFetch<{ id: string; name: string; status: string }>(
+  return adminFetch(
+    z.object({ id: z.string(), name: z.string(), status: z.string() }),
     "/documents/upload",
     {
       method: "POST",
@@ -261,7 +189,7 @@ export function listAdminSources(
   if (params.q) search.set("q", params.q)
   if (params.verification_status)
     search.set("verification_status", params.verification_status)
-  return adminFetch<AdminSource[]>(`/sources?${search.toString()}`)
+  return adminFetch(z.array(AdminSourceSchema), `/sources?${search.toString()}`)
 }
 
 export function createAdminSource(payload: {
@@ -273,7 +201,7 @@ export function createAdminSource(payload: {
   usage_rights?: string
   freshness_days?: number
 }) {
-  return adminFetch<AdminSource>("/sources", {
+  return adminFetch(AdminSourceSchema, "/sources", {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -283,10 +211,14 @@ export function updateAdminSource(
   sourceId: string,
   payload: Record<string, unknown>
 ) {
-  return adminFetch<AdminSource>(`/sources/${encodeURIComponent(sourceId)}`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  })
+  return adminFetch(
+    AdminSourceSchema,
+    `/sources/${encodeURIComponent(sourceId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  )
 }
 
 export function verifyAdminSource(
@@ -298,7 +230,8 @@ export function verifyAdminSource(
     usage_permitted: boolean
   }
 ) {
-  return adminFetch<AdminSource>(
+  return adminFetch(
+    AdminSourceSchema,
     `/sources/${encodeURIComponent(sourceId)}/verify`,
     {
       method: "POST",
@@ -308,7 +241,8 @@ export function verifyAdminSource(
 }
 
 export function revokeAdminSource(sourceId: string, reason: string) {
-  return adminFetch<AdminSource>(
+  return adminFetch(
+    AdminSourceSchema,
     `/sources/${encodeURIComponent(sourceId)}/revoke`,
     {
       method: "POST",
@@ -318,7 +252,7 @@ export function revokeAdminSource(sourceId: string, reason: string) {
 }
 
 export function getReviewQueue() {
-  return adminFetch<AdminDocument[]>("/review-queue")
+  return adminFetch(z.array(AdminDocumentSchema), "/review-queue")
 }
 
 export function reviewAdminDocument(
@@ -326,7 +260,8 @@ export function reviewAdminDocument(
   action: "approve" | "reject" | "request_changes",
   reason?: string
 ) {
-  return adminFetch<AdminDocument>(
+  return adminFetch(
+    AdminDocumentSchema,
     `/documents/${encodeURIComponent(id)}/review`,
     {
       method: "POST",
@@ -336,7 +271,8 @@ export function reviewAdminDocument(
 }
 
 export function publishAdminDocument(id: string, reason?: string) {
-  return adminFetch<AdminDocument>(
+  return adminFetch(
+    AdminDocumentSchema,
     `/documents/${encodeURIComponent(id)}/publish`,
     {
       method: "POST",
@@ -346,7 +282,8 @@ export function publishAdminDocument(id: string, reason?: string) {
 }
 
 export function suspendAdminDocument(id: string, reason: string) {
-  return adminFetch<AdminDocument>(
+  return adminFetch(
+    AdminDocumentSchema,
     `/documents/${encodeURIComponent(id)}/suspend`,
     {
       method: "POST",
@@ -356,7 +293,8 @@ export function suspendAdminDocument(id: string, reason: string) {
 }
 
 export function withdrawAdminDocument(id: string, reason: string) {
-  return adminFetch<AdminDocument>(
+  return adminFetch(
+    AdminDocumentSchema,
     `/documents/${encodeURIComponent(id)}/withdraw`,
     {
       method: "POST",
@@ -366,7 +304,8 @@ export function withdrawAdminDocument(id: string, reason: string) {
 }
 
 export function listAdminRevisions(id: string) {
-  return adminFetch<AdminRevision[]>(
+  return adminFetch(
+    z.array(AdminRevisionSchema),
     `/documents/${encodeURIComponent(id)}/revisions`
   )
 }
@@ -377,7 +316,8 @@ export function reviewAdminRevision(
   action: "approve" | "reject" | "request_changes",
   reason?: string
 ) {
-  return adminFetch<AdminRevision>(
+  return adminFetch(
+    AdminRevisionSchema,
     `/documents/${encodeURIComponent(documentId)}/revisions/${revision}/review`,
     { method: "POST", body: JSON.stringify({ action, reason }) }
   )
@@ -388,7 +328,8 @@ export function promoteAdminRevision(
   revision: number,
   reason?: string
 ) {
-  return adminFetch<AdminRevision>(
+  return adminFetch(
+    AdminRevisionSchema,
     `/documents/${encodeURIComponent(documentId)}/revisions/${revision}/promote`,
     { method: "POST", body: JSON.stringify({ reason }) }
   )
@@ -399,7 +340,8 @@ export function rollbackAdminRevision(
   revision: number,
   reason: string
 ) {
-  return adminFetch<AdminRevision>(
+  return adminFetch(
+    AdminRevisionSchema,
     `/documents/${encodeURIComponent(documentId)}/revisions/${revision}/rollback`,
     { method: "POST", body: JSON.stringify({ reason }) }
   )
@@ -417,26 +359,23 @@ export function listAdminAudit(
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") search.set(key, String(value))
   }
-  return adminFetch<Paginated<AuditEntry>>(`/audit-logs?${search.toString()}`)
+  return adminFetch(
+    PaginatedSchema(AuditEntrySchema),
+    `/audit-logs?${search.toString()}`
+  )
 }
 
-export type RoleAssignment = {
-  id?: number
-  actor_id: string
-  role: string
-  granted_by?: string
-  granted_at?: string
-  revoked_at?: string | null
-  revoked_by?: string | null
-  reason?: string
-}
+export type RoleAssignment = z.infer<typeof RoleAssignmentSchema>
 
 export function listAdminRoles() {
-  return adminFetch<{
-    roles: RoleAssignment[]
-    available_roles: string[]
-    role_permissions: Record<string, string[]>
-  }>("/roles")
+  return adminFetch(
+    z.object({
+      roles: z.array(RoleAssignmentSchema),
+      available_roles: z.array(z.string()),
+      role_permissions: z.record(z.string(), z.array(z.string())),
+    }),
+    "/roles"
+  )
 }
 
 export function grantAdminRole(payload: {
@@ -444,7 +383,7 @@ export function grantAdminRole(payload: {
   role: string
   reason?: string
 }) {
-  return adminFetch<RoleAssignment>("/roles", {
+  return adminFetch(RoleAssignmentSchema, "/roles", {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -455,94 +394,38 @@ export function revokeAdminRole(payload: {
   role: string
   reason: string
 }) {
-  return adminFetch<RoleAssignment>("/roles/revoke", {
+  return adminFetch(RoleAssignmentSchema, "/roles/revoke", {
     method: "POST",
     body: JSON.stringify(payload),
   })
 }
 
 export function getAdminStatus() {
-  return adminFetch<{
-    generated_at: string
-    checks: Record<string, string>
-    role_provider: string
-    environment: string
-  }>("/status")
+  return adminFetch(
+    z.object({
+      generated_at: z.string(),
+      checks: z.record(z.string(), z.string()),
+      role_provider: z.string(),
+      environment: z.string(),
+    }),
+    "/status"
+  )
 }
 
-// ── Ingestion pipeline ─────────────────────────────────────────────────────
 
-export type IngestionCandidate = {
-  id: string
-  source_id: string
-  external_id?: string | null
-  source_url: string
-  canonical_url: string
-  title?: string | null
-  issuing_organization?: string | null
-  document_type?: string | null
-  language?: string | null
-  file_format: string
-  publication_date?: string | null
-  last_updated_at?: string | null
-  discovered_at?: string | null
-  status: string
-  duplicate_class?: string | null
-  checksum?: string | null
-  document_id?: string | null
-  revision?: number | null
-  extraction_status?: string | null
-  ocr_required: boolean
-  page_count: number
-  skip_reason?: string | null
-  error_message?: string | null
-  metadata: Record<string, unknown>
-  jobs?: IngestionJob[]
-}
+export type IngestionCandidate = z.infer<typeof IngestionCandidateSchema>
 
-export type IngestionJob = {
-  id: string
-  job_type: "discovery" | "ingest"
-  source_id?: string | null
-  candidate_id?: string | null
-  document_id?: string | null
-  status: string
-  stage?: string | null
-  progress: number
-  attempts: number
-  max_attempts: number
-  error_message?: string | null
-  details: Record<string, unknown>
-  created_at?: string | null
-  started_at?: string | null
-  finished_at?: string | null
-}
+export type IngestionJob = z.infer<typeof IngestionJobSchema>
 
-export type IngestionOverview = {
-  generated_at: string
-  candidates: Record<string, number>
-  jobs: Record<string, number>
-  documents: {
-    awaiting_review: number
-    ocr_required: number
-    failed_processing: number
-  }
-  sources: Array<{
-    source_id: string
-    issuing_organization: string
-    source_type: string
-    verification_status: string
-    last_discovered_at?: string | null
-    last_error?: string | null
-  }>
-}
+export type IngestionOverview = z.infer<typeof IngestionOverviewSchema>
 
 export function getIngestionOverview() {
-  return adminFetch<IngestionOverview>("/ingestion/overview")
+  return adminFetch(IngestionOverviewSchema, "/ingestion/overview")
 }
 
 export function startAdminDiscovery(sourceId: string) {
-  return adminFetch<IngestionJob>(
+  return adminFetch(
+    IngestionJobSchema,
     `/ingestion/sources/${encodeURIComponent(sourceId)}/discover`,
     {
       method: "POST",
@@ -563,19 +446,22 @@ export function listIngestionCandidates(
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") search.set(key, String(value))
   }
-  return adminFetch<Paginated<IngestionCandidate>>(
+  return adminFetch(
+    PaginatedSchema(IngestionCandidateSchema),
     `/ingestion/candidates?${search.toString()}`
   )
 }
 
 export function getIngestionCandidate(id: string) {
-  return adminFetch<IngestionCandidate>(
+  return adminFetch(
+    IngestionCandidateSchema,
     `/ingestion/candidates/${encodeURIComponent(id)}`
   )
 }
 
 export function ingestCandidate(id: string) {
-  return adminFetch<IngestionJob>(
+  return adminFetch(
+    IngestionJobSchema,
     `/ingestion/candidates/${encodeURIComponent(id)}/ingest`,
     {
       method: "POST",
@@ -584,7 +470,8 @@ export function ingestCandidate(id: string) {
 }
 
 export function skipCandidate(id: string, reason: string) {
-  return adminFetch<IngestionCandidate>(
+  return adminFetch(
+    IngestionCandidateSchema,
     `/ingestion/candidates/${encodeURIComponent(id)}/skip`,
     {
       method: "POST",
@@ -605,13 +492,15 @@ export function listIngestionJobs(
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== "") search.set(key, String(value))
   }
-  return adminFetch<Paginated<IngestionJob>>(
+  return adminFetch(
+    PaginatedSchema(IngestionJobSchema),
     `/ingestion/jobs?${search.toString()}`
   )
 }
 
 export function retryIngestionJob(id: string) {
-  return adminFetch<IngestionJob>(
+  return adminFetch(
+    IngestionJobSchema,
     `/ingestion/jobs/${encodeURIComponent(id)}/retry`,
     {
       method: "POST",
@@ -620,7 +509,8 @@ export function retryIngestionJob(id: string) {
 }
 
 export function cancelIngestionJob(id: string) {
-  return adminFetch<IngestionJob>(
+  return adminFetch(
+    IngestionJobSchema,
     `/ingestion/jobs/${encodeURIComponent(id)}/cancel`,
     {
       method: "POST",
@@ -629,30 +519,36 @@ export function cancelIngestionJob(id: string) {
 }
 
 export function getDocumentProcessing(documentId: string) {
-  return adminFetch<{
-    document_id: string
-    status: string
-    extraction_status?: string | null
-    extraction_method?: string | null
-    ocr_required: boolean
-    page_count: number
-    chunk_count: number
-    publication_status: string
-    visibility_scope: string
-    error_message?: string | null
-    revisions: Array<{
-      revision: number
-      checksum?: string | null
-      approved: boolean
-      current: boolean
-      created_at?: string | null
-      requires_review: boolean
-    }>
-  }>(`/documents/${encodeURIComponent(documentId)}/processing`)
+  return adminFetch(
+    z.object({
+      document_id: z.string(),
+      status: z.string(),
+      extraction_status: z.union([z.string(), z.null()]).optional(),
+      extraction_method: z.union([z.string(), z.null()]).optional(),
+      ocr_required: z.boolean(),
+      page_count: z.number(),
+      chunk_count: z.number(),
+      publication_status: z.string(),
+      visibility_scope: z.string(),
+      error_message: z.union([z.string(), z.null()]).optional(),
+      revisions: z.array(
+        z.object({
+          revision: z.number(),
+          checksum: z.union([z.string(), z.null()]).optional(),
+          approved: z.boolean(),
+          current: z.boolean(),
+          created_at: z.union([z.string(), z.null()]).optional(),
+          requires_review: z.boolean(),
+        })
+      ),
+    }),
+    `/documents/${encodeURIComponent(documentId)}/processing`
+  )
 }
 
 export function reprocessAdminDocument(documentId: string) {
-  return adminFetch<IngestionJob>(
+  return adminFetch(
+    IngestionJobSchema,
     `/documents/${encodeURIComponent(documentId)}/reprocess`,
     {
       method: "POST",

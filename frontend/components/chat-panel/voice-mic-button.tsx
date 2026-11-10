@@ -19,7 +19,6 @@ export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, tit
   const { state, transcript, language, errorMessage, startRecording, stopRecording, reset } =
     useVoiceRecorder(uiLanguage)
 
-  // Fire callback when transcription is done, then reset after 1.5s
   useEffect(() => {
     if (state === "done" && transcript) {
       onTranscript(transcript, language)
@@ -28,7 +27,6 @@ export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, tit
     }
   }, [state, transcript, language, onTranscript, reset])
 
-  // Surface errors via onError callback
   useEffect(() => {
     if (state === "error" && errorMessage) {
       onError?.(errorMessage)
@@ -64,22 +62,17 @@ export function VoiceMicButton({ onTranscript, onError, disabled, titleIdle, tit
       title={ariaLabel}
       className={cn(
         "relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
-        // idle
         !isRecording && !isTranscribing && !isDone &&
           "border-border/50 bg-background text-muted-foreground hover:border-primary/40 hover:text-primary",
-        // recording — destructive pulse
         isRecording &&
           "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15",
-        // transcribing — warning
         isTranscribing &&
           "border-warning/40 bg-warning/10 text-warning cursor-wait",
-        // done — green
         isDone &&
           "border-success/30 bg-success/10 text-success",
         disabled && "cursor-not-allowed opacity-50",
       )}
     >
-      {/* Pulsing ring while recording */}
       {isRecording && (
         <span className="absolute inset-0 animate-ping rounded-full bg-destructive/30" />
       )}

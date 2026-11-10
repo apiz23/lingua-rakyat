@@ -1,5 +1,3 @@
-// Trilingual UI copy for the chat panel. Keyed by AppLanguage ("ms" | "en" | "zh")
-// so 中文 users get a fully translated chrome, not English fallback.
 
 export type ChatCopy = {
   historyLoadError: string

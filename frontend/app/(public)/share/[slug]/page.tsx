@@ -141,7 +141,6 @@ export default async function SharePage({ params }: SharePageProps) {
   return (
     <div className="relative flex min-h-dvh flex-col px-4 py-6 sm:py-12">
       <div className="mx-auto flex w-full max-w-2xl flex-col">
-        {/* Header */}
         <div className="mb-6 flex shrink-0 items-center justify-between sm:mb-8">
           <Link href="/" className="flex items-center gap-2.5">
             <Image
@@ -165,9 +164,7 @@ export default async function SharePage({ params }: SharePageProps) {
           </Link>
         </div>
 
-        {/* Card */}
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          {/* Top section: metadata */}
           <div className="border-b border-border px-5 py-4 sm:px-8 sm:py-5">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <span className="text-xs font-semibold tracking-[0.25em] text-primary uppercase">
@@ -192,7 +189,6 @@ export default async function SharePage({ params }: SharePageProps) {
             </div>
           </div>
 
-          {/* Question */}
           <div className="border-b border-border bg-muted/30 px-5 py-4 sm:px-8 sm:py-5">
             <h1 className="font-heading text-xl leading-relaxed font-semibold break-words text-foreground sm:text-2xl">
               <span className="mr-2 text-primary">{copy.q}:</span>
@@ -209,7 +205,6 @@ export default async function SharePage({ params }: SharePageProps) {
             </p>
           </div>
 
-          {/* Answer + sources (scrollable if long) */}
           <div>
             <div className="px-5 py-5 sm:px-8 sm:py-6">
               <div className="prose prose-sm prose-headings:font-heading prose-headings:text-foreground prose-headings:text-left prose-a:text-primary prose-strong:text-foreground max-w-none text-left break-words text-foreground">
@@ -229,7 +224,6 @@ export default async function SharePage({ params }: SharePageProps) {
           </div>
         </div>
 
-        {/* CTA + disclaimer */}
         <div className="mt-6 sm:mt-8">
           <Link
             href="/workspace"

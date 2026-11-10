@@ -1,8 +1,8 @@
--- Atomic revision review / promotion / rollback (2026-11-09).
---
--- All lifecycle state changes and their events/audit rows happen inside one
--- PostgreSQL transaction. The function returns the new current revision or
--- raises, so callers can never persist a partial lifecycle transition.
+
+
+
+
+
 
 create or replace function public.review_document_revision(
   p_document_id text,

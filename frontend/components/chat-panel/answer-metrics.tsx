@@ -6,10 +6,6 @@ import { ChevronDown, ChevronRight, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { SourceChunk } from "@/lib/api"
 
-// ---------------------------------------------------------------------------
-// AnswerMetrics — segmented bars (confidence + grounded) + expandable
-// "How calculated?" breakdown panel.
-// ---------------------------------------------------------------------------
 
 const SEGMENTS = 10
 
@@ -101,7 +97,6 @@ function Breakdown({
 
   return (
     <div className="mt-2 space-y-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-[10px] leading-relaxed text-muted-foreground">
-      {/* Confidence section */}
       <div className="space-y-1.5">
         <p className="text-[9px] font-semibold tracking-wider text-foreground/80 uppercase">
           {ms ? t("Keyakinan") : t("Confidence")} — {pct(confidence)}
@@ -158,7 +153,6 @@ function Breakdown({
         )}
       </div>
 
-      {/* Faithfulness section */}
       {hasFaithfulness && (
         <div className="space-y-1 border-t border-border/40 pt-3">
           <p className="text-[9px] font-semibold tracking-wider text-foreground/80 uppercase">

@@ -1,4 +1,3 @@
-// Strip markdown syntax so OG descriptions and card text read as plain text.
 export function plainExcerpt(markdown: string, maxLength: number): string {
   const text = markdown
     .replace(/[#*_`>[\]()]/g, "")

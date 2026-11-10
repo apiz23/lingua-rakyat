@@ -35,12 +35,10 @@ function speakFallback(text: string, language: string): void {
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = toBCP47(language)
 
-  // Match backend gender rule: Malay = female, English/other = male
   const wantFemale = MALAY_LANGS.has(language)
   const voices = window.speechSynthesis.getVoices()
   if (voices.length > 0) {
     const langPrefix = utterance.lang.split("-")[0].toLowerCase()
-    // Score voices: prefer matching lang, then matching gender heuristic
     const femaleHints = ["female", "woman", "girl", "samantha", "victoria", "karen", "moira", "fiona", "tessa", "zira", "hazel"]
     const maleHints   = ["male", "man", "daniel", "alex", "fred", "jorge", "arthur", "mark", "thomas", "david"]
     const genderHints = wantFemale ? femaleHints : maleHints
@@ -64,12 +62,10 @@ export function useTTS(): UseTTSReturn {
 
   const stop = useCallback(() => {
     generationRef.current += 1
-    // Cancel fallback timer if running
     if (fallbackTimerRef.current !== null) {
       clearTimeout(fallbackTimerRef.current)
       fallbackTimerRef.current = null
     }
-    // Cancel any in-flight fetch
     if (abortCtrlRef.current) {
       abortCtrlRef.current.abort()
       abortCtrlRef.current = null
@@ -138,7 +134,6 @@ export function useTTS(): UseTTSReturn {
         setState("playing")
         await audio.play()
       } else {
-        // Backend returned { fallback: true } — quota exceeded
         speakFallback(text, language)
         setState("playing")
         // speechSynthesis has no reliable onend — reset after estimated duration
@@ -151,11 +146,9 @@ export function useTTS(): UseTTSReturn {
       }
     } catch (err) {
       if (!current() || ctrl.signal.aborted) return
-      // Don't fallback if request was intentionally aborted
       if (err instanceof Error && err.name === "AbortError") {
         return
       }
-      // Network error — best-effort fallback
       speakFallback(text, language)
       setState("playing")
       const estimatedMs = Math.max(2000, text.length * 60)
@@ -167,7 +160,6 @@ export function useTTS(): UseTTSReturn {
     }
   }, [stop])
 
-  // Cleanup on unmount — stop audio, clear timers, cancel speech
   useEffect(() => () => { stop() }, [stop])
 
   return { play, stop, state }

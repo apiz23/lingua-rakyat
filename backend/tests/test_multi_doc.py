@@ -14,7 +14,7 @@ import utils.rag_pipeline as rag
 from utils.rag_pipeline import _resolve_namespaces
 
 
-# ---- _resolve_namespaces (pure) ----
+
 
 def test_single_document_id_resolves_to_one_namespace():
     assert _resolve_namespaces("a", None) == ["a"]
@@ -36,7 +36,7 @@ def test_empty_everything_returns_empty():
     assert _resolve_namespaces(None, None) == []
 
 
-# ---- _retrieve_matches across namespaces ----
+
 
 class _FakeIndex:
     """Returns one distinct chunk per namespace so we can assert coverage."""
@@ -56,7 +56,7 @@ class _FakeIndex:
 def test_retrieve_matches_spans_all_namespaces(monkeypatch):
     monkeypatch.setattr(rag, "get_embeddings_cohere", lambda texts, input_type="search_query": [[0.1]])
     monkeypatch.setattr(rag, "_get_index", lambda: _FakeIndex())
-    # Disable rerank so we observe the merged set directly.
+
     monkeypatch.setattr(rag, "_cohere_rerank", lambda q, matches, top_n: matches[:top_n])
 
     variants = [{"key": "en", "text": "where is the tax relief?", "variant_type": "original"}]
@@ -66,7 +66,7 @@ def test_retrieve_matches_spans_all_namespaces(monkeypatch):
     assert doc_ids == {"docA", "docB"}
 
 
-# ---- pipeline integration: per-source doc id ----
+
 
 def test_pipeline_sources_carry_per_document_id(monkeypatch):
     def fake_retrieve(namespaces, query_variants, top_k, allowed_revisions=None):

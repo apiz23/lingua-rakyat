@@ -54,7 +54,6 @@ import {
   Info,
 } from "lucide-react"
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 function pct(v: number) {
   return `${Math.round(v * 100)}%`
@@ -76,7 +75,6 @@ const ACCENT: Record<Tone, string> = {
   default: "border-l-foreground text-foreground",
 }
 
-// ── StatCard ───────────────────────────────────────────────────────────────
 
 function StatCard({
   label,
@@ -119,7 +117,6 @@ function StatCard({
   )
 }
 
-// ── SegBar — 10-cell segmented bar ────────────────────────────────────────
 
 const SEG_COLOR: Record<Tone, string> = {
   success: "bg-success",
@@ -165,7 +162,6 @@ function SegBar({
   )
 }
 
-// ── GradeBadge ─────────────────────────────────────────────────────────────
 
 function GradeBadge({ grade }: { grade: number }) {
   return (
@@ -185,7 +181,6 @@ function GradeBadge({ grade }: { grade: number }) {
   )
 }
 
-// ── InfoNote ── plain-language callout box ─────────────────────────────────
 
 function InfoNote({ children }: { children: React.ReactNode }) {
   return (
@@ -196,7 +191,6 @@ function InfoNote({ children }: { children: React.ReactNode }) {
   )
 }
 
-// ── Category Labels ───────────────────────────────────────────────────────
 
 const LANG_LABELS: Record<string, { name: string; code: string }> = {
   en: { name: "English", code: "EN" },
@@ -214,7 +208,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   passport: "Passport",
 }
 
-// ── Tab config ─────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: "metrics" as const, label: "Live Stats", icon: BarChart3 },
@@ -224,7 +217,6 @@ const TABS = [
 ]
 type TabId = (typeof TABS)[number]["id"]
 
-// ── Main Page ──────────────────────────────────────────────────────────────
 
 function SimplifyDemoFixture() {
   return (
@@ -360,7 +352,6 @@ export default function EvalPage() {
     try {
       setReport(await getEvalReport())
     } catch {
-      /* no records yet */
     } finally {
       setLoadingReport(false)
     }
@@ -536,13 +527,10 @@ export default function EvalPage() {
   const hasMetrics = report?.status === "ok" && (report.total_queries ?? 0) > 0
   const hasGenQuality = hasMetrics && report!.generation_quality !== undefined
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      {/* ── Sticky header + tabs ── */}
       <div className="sticky top-0 z-20 border-b border-foreground/30 bg-background">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          {/* Top row */}
           <div className="flex items-center justify-between gap-4 py-3">
             <div className="flex items-center gap-2.5">
               <FlaskConical className="h-4 w-4 text-primary" />
@@ -591,7 +579,6 @@ export default function EvalPage() {
             </div>
           </div>
 
-          {/* Tab navigation */}
           <nav
             className="scrollbar-none -mb-px flex gap-0 overflow-x-auto"
             aria-label={t("Evaluation sections")}
@@ -628,7 +615,6 @@ export default function EvalPage() {
         </div>
       </div>
 
-      {/* ── Info banner (dismissible) ── */}
       {!bannerDismissed && (
         <div className="border-b border-foreground/30 bg-muted/30">
           <div className="mx-auto flex max-w-7xl items-start gap-3 px-4 py-2.5 sm:px-6">
@@ -652,9 +638,6 @@ export default function EvalPage() {
       )}
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-        {/* ════════════════════════════════════
-            TAB 1 — LIVE STATS
-        ════════════════════════════════════ */}
         <div className={cn(activeTab !== "metrics" && "hidden")}>
           {!hasMetrics ? (
             <div className="flex flex-col items-center justify-center border-2 border-dashed border-foreground/50 py-24 text-center">
@@ -678,7 +661,6 @@ export default function EvalPage() {
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Response Speed */}
               <section>
                 <div className="mb-3 flex items-center gap-2">
                   <Zap className="h-4 w-4 text-muted-foreground" />
@@ -719,7 +701,6 @@ export default function EvalPage() {
                 </div>
               </section>
 
-              {/* Search Accuracy & Language Quality */}
               <section>
                 <div className="mb-3 flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -783,7 +764,6 @@ export default function EvalPage() {
                 </div>
               </section>
 
-              {/* Answer Truthfulness */}
               {(report!.faithfulness?.scored_queries ?? 0) > 0 && (
                 <section>
                   <div className="mb-3 flex items-center gap-2">
@@ -812,7 +792,6 @@ export default function EvalPage() {
                 </section>
               )}
 
-              {/* Readability status note */}
               <div
                 className={cn(
                   "flex items-center gap-2 border-2 px-4 py-3 text-sm shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]",
@@ -829,7 +808,6 @@ export default function EvalPage() {
                 <span className="text-xs">{report!.readability.note}</span>
               </div>
 
-              {/* Answer Quality (ROUGE / BLEU) */}
               {hasGenQuality && (
                 <section>
                   <div className="mb-3 flex items-center gap-2">
@@ -896,7 +874,6 @@ export default function EvalPage() {
                 </section>
               )}
 
-              {/* Per-language breakdown */}
               {Object.keys(report!.per_language).length > 0 && (
                 <section>
                   <div className="mb-3 flex items-center gap-2">
@@ -993,9 +970,6 @@ export default function EvalPage() {
           )}
         </div>
 
-        {/* ════════════════════════════════════
-            TAB 2 — ANSWER ACCURACY TEST
-        ════════════════════════════════════ */}
         <div className={cn("space-y-6", activeTab !== "testsuite" && "hidden")}>
           <InfoNote>
             {" "}
@@ -1003,7 +977,6 @@ export default function EvalPage() {
           </InfoNote>
 
           <div className="neo-card p-5 sm:p-6">
-            {/* Controls row */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Select
                 value={selectedDocId || "__none__"}
@@ -1080,7 +1053,6 @@ export default function EvalPage() {
               )}
             </div>
 
-            {/* Category pills */}
             <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
               <span className="text-muted-foreground">
                 <UiText text="Built-in test questions:" />
@@ -1106,7 +1078,6 @@ export default function EvalPage() {
               </span>
             </div>
 
-            {/* Category / unrelated status */}
             {detectedCategory === "unrelated" && skippedReason && (
               <div className="mt-4 flex items-start gap-3 border-2 border-foreground/60 bg-muted/20 px-4 py-3 shadow-[2px_2px_0_0_hsl(var(--shadow-color)/0.4)]">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
@@ -1141,7 +1112,6 @@ export default function EvalPage() {
             )}
           </div>
 
-          {/* Streaming progress */}
           {streamProgress && (
             <div className="neo-card p-5">
               <div className="mb-4 space-y-2">
@@ -1238,10 +1208,8 @@ export default function EvalPage() {
             </div>
           )}
 
-          {/* Test results */}
           {testResult && (
             <div className="space-y-4">
-              {/* Aggregate */}
               <div className="border-2 border-success/50 bg-success/5 p-5 shadow-[4px_4px_0_0_hsl(var(--shadow-color)/0.85)]">
                 <div className="mb-4 flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-success" />
@@ -1326,7 +1294,6 @@ export default function EvalPage() {
                 </p>
               </div>
 
-              {/* Category filter */}
               <div className="flex flex-wrap gap-2">
                 {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
                   const count =
@@ -1360,7 +1327,6 @@ export default function EvalPage() {
                 })}
               </div>
 
-              {/* Per-case accordion */}
               <div className="space-y-1.5">
                 {testResult.results
                   .filter(
@@ -1503,9 +1469,6 @@ export default function EvalPage() {
           )}
         </div>
 
-        {/* ════════════════════════════════════
-            TAB 3 — LANGUAGE SIMPLIFICATION
-        ════════════════════════════════════ */}
         <div className={cn(activeTab !== "simplify" && "hidden")}>
           <InfoNote>
             {" "}
@@ -1569,9 +1532,6 @@ export default function EvalPage() {
           </div>
         </div>
 
-        {/* ════════════════════════════════════
-            TAB 4 — MULTILINGUAL EXPANSION
-        ════════════════════════════════════ */}
         <div className={cn(activeTab !== "augment" && "hidden")}>
           <InfoNote>
             {" "}

@@ -104,7 +104,17 @@ describe("admin API transport states", () => {
     const api = await loadAdminApi()
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(json(200, { id: "job-1", status: "queued" }))
+      .mockResolvedValue(
+        json(200, {
+          id: "job-1",
+          status: "queued",
+          job_type: "discovery",
+          progress: 0,
+          attempts: 0,
+          max_attempts: 3,
+          details: {},
+        })
+      )
     globalThis.fetch = fetchMock
 
     await api.startAdminDiscovery("src-1")
@@ -134,7 +144,9 @@ describe("admin API transport states", () => {
     const api = await loadAdminApi()
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(json(200, { revision: 2, is_current: true }))
+      .mockResolvedValue(
+        json(200, { revision: 2, is_current: true, has_storage: true })
+      )
     globalThis.fetch = fetchMock
 
     await api.promoteAdminRevision("doc-1", 2, "Validated")
@@ -150,7 +162,11 @@ describe("admin API transport states", () => {
 
   it("sends revision review decisions with reason", async () => {
     const api = await loadAdminApi()
-    const fetchMock = vi.fn().mockResolvedValue(json(200, { revision: 2 }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        json(200, { revision: 2, is_current: false, has_storage: true })
+      )
     globalThis.fetch = fetchMock
 
     await api.reviewAdminRevision("doc-1", 2, "rollback" as never, "ignored")
@@ -162,5 +178,30 @@ describe("admin API transport states", () => {
         body: JSON.stringify({ action: "rollback", reason: "ignored" }),
       })
     )
+  })
+})
+
+describe("admin response boundary", () => {
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    vi.restoreAllMocks()
+  })
+  it("rejects malformed successful responses", async () => {
+    const api = await loadAdminApi()
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        json(200, { items: [null], total: 0, page: 1, page_size: 25 })
+      )
+    await expect(api.listAdminDocuments()).rejects.toMatchObject({
+      code: "error",
+    })
+  })
+  it("rejects invalid JSON as an admin error", async () => {
+    const api = await loadAdminApi()
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response("not json", { status: 200 }))
+    await expect(api.getDashboard()).rejects.toMatchObject({ code: "error" })
   })
 })

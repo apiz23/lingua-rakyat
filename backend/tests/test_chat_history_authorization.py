@@ -148,7 +148,7 @@ def test_owner_can_list_and_rename_conversations(client, calls):
 
 
 def test_foreign_session_rename_is_not_found(client, calls, monkeypatch):
-    # The database update reports no matching owner-scoped row for this session.
+
     monkeypatch.setattr(chat, "update_conversation_title", lambda *args: False)
     response = client.patch(
         "/api/chat/conversations/foreign-session",

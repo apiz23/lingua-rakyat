@@ -3,7 +3,6 @@ test.use({ browserName: "chromium" })
 test.setTimeout(120_000)
 
 test.beforeEach(async ({ page }) => {
-  // Keep this suite local: document and evaluation APIs are not part of i18n QA.
   await page.route("**/api/**", (route) =>
     route.fulfill({
       status: 503,

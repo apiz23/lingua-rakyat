@@ -1,5 +1,5 @@
--- Revision lifecycle, revision-scoped indexing and worker leases (2026-11-08).
--- Additive only.
+
+
 
 ALTER TABLE public.document_revisions
   ADD COLUMN IF NOT EXISTS indexing_status text NOT NULL DEFAULT 'pending',

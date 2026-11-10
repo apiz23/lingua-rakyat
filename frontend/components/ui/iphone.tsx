@@ -8,7 +8,6 @@ const SCREEN_WIDTH = 389.5
 const SCREEN_HEIGHT = 843.5
 const SCREEN_RADIUS = 55.75
 
-// Calculated percentages
 const LEFT_PCT = (SCREEN_X / PHONE_WIDTH) * 100
 const TOP_PCT = (SCREEN_Y / PHONE_HEIGHT) * 100
 const WIDTH_PCT = (SCREEN_WIDTH / PHONE_WIDTH) * 100

@@ -31,17 +31,11 @@ export interface PdfPanelProps {
   language: string
   onClose: () => void
   mobileVariant?: "drawer" | "dialog"
-  // Kept optional for backward compatibility with the summary-generating
-  // viewer; the react-pdf evidence viewer does not use them.
   document?: import("@/lib/api").Document | null
   messages?: import("./message-cards").Message[]
 }
 
 function useIsDesktop() {
-  // PdfPanel is SSR-disabled (dynamic import, ssr:false) so window is always
-  // available here. Initialise synchronously to avoid Drawer→Sheet swap on
-  // first render, which caused Radix's onOpenChange(false) to fire and close
-  // the panel immediately after it opened.
   const [isDesktop, setIsDesktop] = useState(
     () => window.matchMedia("(min-width: 1024px)").matches
   )
@@ -115,20 +109,15 @@ function PdfViewer({
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  // Highlight on every page — lets user navigate to find the source text
-  // even when page_start was not stored (null) and we fell back to page 1.
   const activeHighlight = highlightText
 
   useEffect(() => {
-    // Sync sync state to an external doc view change; cascading render is fine here.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentPage(targetPage)
     setHasTextLayer(null)
   }, [targetPage])
 
   useEffect(() => {
-    // Page count belongs to the previous PDF; keep it stale and a citation
-    // pointing past the new doc's last page crashes react-pdf.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResolvedUrl(`${API_URL}/api/documents/${documentId}/pdf`)
     setLoadError(false)
@@ -144,7 +133,6 @@ function PdfViewer({
     return () => ro.disconnect()
   }, [])
 
-  // Auto-scroll to first highlight mark after text layer renders
   useEffect(() => {
     if (!activeHighlight || !scrollAreaRef.current) return
     const container = scrollAreaRef.current

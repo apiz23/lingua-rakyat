@@ -7,8 +7,6 @@ import {
   stripLocale,
 } from "@/lib/i18n/routing"
 
-// No route protection — sign-in is optional everywhere. The middleware only
-// lets Clerk resolve sessions for server-side rendering.
 export default clerkMiddleware((_auth, request) => {
   const pathname = request.nextUrl.pathname
   if (

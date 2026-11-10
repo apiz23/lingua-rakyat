@@ -124,8 +124,6 @@ export default function CommandPaletteTopRight() {
           toggleLanguage: "Toggle language",
         }
 
-  // Navigation is audience-scoped. Route groups are presentation, not
-  // authorization: the backend still enforces every privileged call.
   const audience: "public" | "citizen" | "admin" | "research" =
     pathname?.startsWith("/manage")
       ? "admin"
@@ -271,7 +269,6 @@ export default function CommandPaletteTopRight() {
           </CommandGroup>
         </CommandList>
 
-        {/* Footer with keyboard shortcuts - hide on mobile */}
         {!isMobile && (
           <div className="border-t border-border/40 px-4 py-3">
             <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">

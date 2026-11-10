@@ -24,5 +24,5 @@ def test_evaluator_empty_when_no_load_fn():
 def test_evaluator_load_fn_failure_is_swallowed():
     def bad_load():
         raise RuntimeError("Supabase down")
-    ev = Evaluator(load_fn=bad_load)  # must not raise
+    ev = Evaluator(load_fn=bad_load)
     assert len(ev) == 0

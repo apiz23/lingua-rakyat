@@ -85,7 +85,7 @@ def store_share(
 ) -> str:
     if not user_id or not user_id.strip():
         raise ValueError("Verified share owner is required")
-    slug = secrets.token_urlsafe(12)  # 72-bit entropy — negligible collision risk
+    slug = secrets.token_urlsafe(12)
     payload = {
         "slug": slug,
         "question": question,

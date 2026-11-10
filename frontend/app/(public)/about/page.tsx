@@ -42,7 +42,6 @@ import { useLanguage } from "@/components/language-provider"
 import { Instrument_Serif } from "next/font/google"
 import PageIntro from "@/components/page-intro"
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
 
 const editorialFont = Instrument_Serif({
   subsets: ["latin"],
@@ -211,7 +210,6 @@ function MetricCard({
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AboutPage() {
   const t = useTranslations()
@@ -226,7 +224,6 @@ export default function AboutPage() {
           subtitle:
             "Rujukan seni bina — saluran pengambilan, sistem S&J, timbunan teknologi, API, dan metrik penilaian.",
 
-          // Overview
           overviewLabel: "Gambaran Projek",
           problemTitle: "Masalah",
           problemItems: [
@@ -246,19 +243,16 @@ export default function AboutPage() {
           ragText:
             "Berbanding LLM yang meneka daripada ingatan latihan, Lingua Rakyat terlebih dahulu mencari petikan berkaitan dalam dokumen sebenar, kemudian menghantar hanya petikan itu kepada LLM — supaya jawapan sentiasa boleh dikesan kepada sumber nyata.",
 
-          // Ingestion pipeline
           ingestionLabel: "Saluran Pengambilan",
           ingestionBadge: "Fasa 1",
           ingestionDesc:
             "Dicetuskan sekali apabila PDF dimuat naik. Berjalan luar talian — pengguna boleh mula bertanya soalan sebaik sahaja pengambilan selesai.",
 
-          // Q&A pipeline
           qaLabel: "Saluran S&J",
           qaBadge: "Fasa 2",
           qaDesc:
             "Dicetuskan setiap soalan. Aliran token ke UI semasa dijana — token pertama muncul dalam ~600ms pada cache hangat.",
 
-          // API
           apiLabel: "Rujukan API",
           apiDesc:
             "Semua titik akhir dihadkan kadar setiap IP melalui SlowAPI. Dokumen interaktif di",
@@ -267,20 +261,16 @@ export default function AboutPage() {
           colPath: "Laluan",
           colDesc: "Penerangan",
 
-          // Tech Stack
           techLabel: "Timbunan Teknologi",
           techBackend: "Backend",
           techFrontend: "Frontend & Penempatan",
 
-          // Key Features
           featuresLabel: "Ciri Utama",
 
-          // Eval Metrics
           metricsLabel: "Metrik Penilaian",
           metricsDesc: "Semua metrik dikira secara dalaman dalam",
           metricsDescSuffix: ". Tiada API penilaian luaran.",
 
-          // Footer
           footerNote: "Nota:",
           footerText:
             "Halaman ini mencerminkan keadaan kod semasa penghantaran RISE 2026. Backend dihoskan di Render (peringkat percuma, 512 MB RAM). Frontend di Vercel. Sumber:",
@@ -356,7 +346,6 @@ export default function AboutPage() {
     <>
       <div className="min-h-screen bg-background">
         <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
-          {/* ── Page header ── */}
           <PageIntro
             eyebrow={copy.badge}
             className={
@@ -387,11 +376,8 @@ export default function AboutPage() {
               </a>
             ))}
           </nav>
-          {/* ── 2-column body ── */}
           <div className="grid gap-10 lg:gap-14 xl:grid-cols-[minmax(0,1.7fr)_minmax(260px,1fr)]">
-            {/* ── LEFT COLUMN ── */}
             <div className="min-w-0 space-y-10">
-              {/* Overview */}
               <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="overview" />
                 <div className="pt-6 pb-2">
@@ -459,7 +445,6 @@ export default function AboutPage() {
                 </div>
               </section>
 
-              {/* Ingestion Pipeline */}
               <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="ingestion" />
                 <div className="pt-6 pb-2">
@@ -486,7 +471,6 @@ export default function AboutPage() {
                 </div>
               </section>
 
-              {/* Q&A Pipeline */}
               <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="qa-pipeline" />
                 <div className="pt-6 pb-2">
@@ -511,7 +495,6 @@ export default function AboutPage() {
                 </div>
               </section>
 
-              {/* API Reference */}
               <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="api" />
                 <div className="pt-6 pb-2">
@@ -573,9 +556,7 @@ export default function AboutPage() {
               </section>
             </div>
 
-            {/* ── RIGHT COLUMN ── */}
             <div className="min-w-0 space-y-10">
-              {/* Tech Stack */}
               <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
                 <SectionAnchor id="tech-stack" />
                 <div className="pt-6 pb-2">
@@ -610,9 +591,7 @@ export default function AboutPage() {
             </div>
           </div>
 
-          {/* ── Key Features + Eval Metrics side by side ── */}
           <div className="grid gap-10 lg:gap-14 xl:grid-cols-[minmax(0,1.7fr)_minmax(260px,1fr)]">
-            {/* Key Features */}
             <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
               <SectionAnchor id="features" />
               <div className="pt-6 pb-2">
@@ -654,7 +633,6 @@ export default function AboutPage() {
               </div>
             </section>
 
-            {/* Eval Metrics */}
             <section className="min-w-0 overflow-hidden border-t border-border bg-transparent">
               <SectionAnchor id="metrics" />
               <div className="pt-6 pb-2">
@@ -677,7 +655,6 @@ export default function AboutPage() {
             </section>
           </div>
 
-          {/* Footer note */}
           <div className="border border-border/40 bg-muted/10 px-4 py-3 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">
               {copy.footerNote}

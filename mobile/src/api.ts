@@ -1,5 +1,6 @@
-// API client for the Lingua Rakyat FastAPI backend. Same contract as the
-// web app's frontend/lib/api.ts, adapted for React Native.
+import type { SourceChunk, ChatStreamEvent } from "./chat-types"
+export type { SourceChunk, ChatStreamEvent } from "./chat-types"
+import { parseChatStreamEvent } from "./chat-stream"
 
 import { fetch as streamingFetch } from "expo/fetch"
 import { authHeader } from "./auth-token"
@@ -9,7 +10,6 @@ export const API_URL =
 
 export const DEFAULT_CHAT_MODEL_ID = "openai/gpt-oss-120b"
 
-// ── Types ──────────────────────────────────────────────────────────────────
 
 export type Document = {
   id: string
@@ -24,52 +24,6 @@ export type Document = {
   is_featured?: boolean
   agency?: string
 }
-
-export type SourceChunk = {
-  text: string
-  document_id: string
-  score: number
-  doc_name?: string
-  page_start?: number | null
-  page_end?: number | null
-  section_title?: string
-  vector_score?: number
-  rerank_score?: number
-  confidence_label?: "high" | "medium" | "low"
-}
-
-export type ChatStreamEvent =
-  | { type: "start" }
-  | {
-      type: "retrieval"
-      language: string
-      retrieval_mode: string
-      query_variants_used: string[]
-      top_query_variant: string
-      sufficient_evidence?: boolean
-    }
-  | { type: "token"; text: string }
-  | { type: "sources"; sources: SourceChunk[] }
-  | {
-      type: "complete"
-      answer: string
-      language: string
-      sources: SourceChunk[]
-      confidence: number
-      confidence_label?: "high" | "medium" | "low"
-      latency_ms: number
-      model_used: string
-      sufficient_evidence: boolean
-      evidence_mode?: string
-      cached: boolean
-      retrieval_mode?: string
-      query_variants_used?: string[]
-      top_query_variant?: string
-      faithfulness?: number | null
-      confidence_explanation?: string | null
-    }
-  | { type: "suggestions"; questions: string[] }
-  | { type: "error"; detail: string }
 
 export type ChatHistoryMessage = {
   id: string
@@ -124,7 +78,6 @@ export interface MyShare {
   created_at: string
 }
 
-// ── Rate-limit aware fetch ─────────────────────────────────────────────────
 
 export class RateLimitError extends Error {
   waitSeconds: number
@@ -158,8 +111,6 @@ async function apiFetch(
   })
   let res = await fetch(input, withAuth(auth))
   if (res.status === 401 && auth.Authorization) {
-    // Retry only with a refreshed credential. Never fall back to anonymous
-    // after an authenticated request was rejected.
     const refreshed = await authHeader()
     if (refreshed.Authorization && refreshed.Authorization !== auth.Authorization) {
       res = await fetch(input, withAuth(refreshed))
@@ -175,7 +126,6 @@ async function apiFetch(
   return res
 }
 
-// ── Document API ───────────────────────────────────────────────────────────
 
 export async function listDocuments(): Promise<Document[]> {
   const res = await apiFetch(`${API_URL}/api/documents/`)
@@ -201,7 +151,6 @@ export async function deleteDocument(documentId: string): Promise<void> {
   }
 }
 
-// ── Chat API ───────────────────────────────────────────────────────────────
 
 export async function getChatHistory(params: {
   userId: string
@@ -235,7 +184,6 @@ export async function clearChatHistory(params: {
   return res.json()
 }
 
-// ── Conversations ──────────────────────────────────────────────────────────
 
 export async function listConversations(
   userId: string
@@ -277,7 +225,6 @@ export async function renameConversation(
   }
 }
 
-// ── Share links ────────────────────────────────────────────────────────────
 
 export async function createShare(payload: {
   session_id: string
@@ -332,7 +279,6 @@ export async function revokeShare(slug: string): Promise<boolean> {
   }
 }
 
-// ── Streaming chat ─────────────────────────────────────────────────────────
 
 export async function askQuestionStream(
   params: {
@@ -400,11 +346,11 @@ export async function askQuestionStream(
     for (const line of lines) {
       if (!line.startsWith("data: ")) continue
       try {
-        const event = JSON.parse(line.slice(6)) as ChatStreamEvent
+        const event = parseChatStreamEvent(JSON.parse(line.slice(6)))
+        if (!event) continue
         if (event.type === "complete" || event.type === "error") terminal = true
         if (!params.signal?.aborted) onEvent(event)
       } catch {
-        // Malformed SSE line — skip.
       }
     }
   }

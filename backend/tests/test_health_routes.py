@@ -15,8 +15,8 @@ def test_health_endpoints_return_only_minimal_status():
             assert response.status_code == 200
             assert response.json() == {"status": "ok"}
 
-        # Readiness now probes the public catalogue client. Without
-        # credentials it must fail closed with 503 and no configuration leak.
+
+
         ready = client.get("/health/ready")
         assert ready.status_code in (200, 503)
         assert set(ready.json()) <= {"status", "checks"}
@@ -40,7 +40,7 @@ def test_v1_router_mounts_audience_groups_with_privileged_admin():
     assert "/api/v1/admin/audit-logs" in paths
     assert not any(path.startswith("/api/v1/internal/") for path in paths)
 
-    # Admin is mounted but privileged: anonymous access must not reach data.
+
     with TestClient(app) as client:
         for path in (
             "/api/v1/admin/dashboard",

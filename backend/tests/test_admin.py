@@ -255,9 +255,9 @@ def install_atomic_review_rpc(monkeypatch, db):
     )
 
 
-# ---------------------------------------------------------------------------
-# Permission boundaries
-# ---------------------------------------------------------------------------
+
+
+
 
 
 @pytest.fixture
@@ -351,9 +351,9 @@ def test_dashboard_returns_real_metrics(app, monkeypatch):
     assert metrics["expiring"] == 1
 
 
-# ---------------------------------------------------------------------------
-# Services
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def test_document_listing_filters_and_hides_storage_paths():

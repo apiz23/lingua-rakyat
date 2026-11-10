@@ -54,7 +54,7 @@ def _supabase():
     return get_supabase(admin=True)
 
 
-# ── Supabase sessions ─────────────────────────────────────────────────────────
+
 
 def _get_session(chat_id: str) -> dict:
     try:
@@ -95,12 +95,12 @@ def _save_session(chat_id: str, session: dict) -> None:
         logger.warning("Session save failed: %s", exc)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _get_docs() -> list:
     try:
-        # /docs is a webhook read operation. It must not trigger privileged
-        # storage reconciliation or catalogue writes.
+
+
         return load_documents()
     except Exception as exc:
         logger.error("Failed to fetch docs: %s", exc)
@@ -134,7 +134,7 @@ def _format_answer(result: dict) -> str:
     return f"{answer}{source_line}\n{confidence_emoji}{note}".strip()
 
 
-# ── Update handlers ───────────────────────────────────────────────────────────
+
 
 async def _handle_message(bot, update) -> None:
     message = update.message
@@ -145,7 +145,7 @@ async def _handle_message(bot, update) -> None:
     session = _get_session(chat_id)
     text = (message.text or "").strip()
 
-    # ── /start ────────────────────────────────────────────────────────────────
+
     if text == "/start":
         await bot.send_message(
             chat_id=chat_id,
@@ -159,7 +159,7 @@ async def _handle_message(bot, update) -> None:
         )
         return
 
-    # ── /clear ────────────────────────────────────────────────────────────────
+
     if text == "/clear":
         session["document_id"] = None
         session["doc_name"] = ""
@@ -168,7 +168,7 @@ async def _handle_message(bot, update) -> None:
         await bot.send_message(chat_id=chat_id, text="🗑️ Cleared. Send a PDF or /docs to select one.")
         return
 
-    # ── /docs ─────────────────────────────────────────────────────────────────
+
     if text == "/docs":
         docs = _get_docs()
         if not docs:
@@ -191,7 +191,7 @@ async def _handle_message(bot, update) -> None:
         )
         return
 
-    # ── PDF upload ────────────────────────────────────────────────────────────
+
     if message.document and message.document.file_name.lower().endswith(".pdf"):
         await bot.send_message(chat_id=chat_id, text="⏳ Processing...")
         try:
@@ -231,7 +231,7 @@ async def _handle_message(bot, update) -> None:
             await bot.send_message(chat_id=chat_id, text="❌ Upload failed. Please try again later.")
         return
 
-    # ── Voice ─────────────────────────────────────────────────────────────────
+
     if message.voice:
         await bot.send_message(chat_id=chat_id, text="🎤 Transcribing...")
         try:
@@ -248,7 +248,7 @@ async def _handle_message(bot, update) -> None:
             await bot.send_message(chat_id=chat_id, text="❌ Transcription failed. Please try again.")
             return
 
-    # ── Text Q&A ──────────────────────────────────────────────────────────────
+
     if not text:
         return
 
@@ -300,7 +300,7 @@ async def _handle_callback(bot, update) -> None:
         )
 
 
-# ── Webhook endpoint ──────────────────────────────────────────────────────────
+
 
 @router.post("/webhook")
 async def telegram_webhook(request: Request):
@@ -331,8 +331,8 @@ async def telegram_webhook(request: Request):
     return JSONResponse({"ok": True})
 
 
-# Versioned callback alias. It uses the exact same machine-secret validation
-# and is inert until Telegram is explicitly configured to call this path.
+
+
 machine_v1_router.add_api_route(
     "/telegram/webhook",
     telegram_webhook,
@@ -341,13 +341,13 @@ machine_v1_router.add_api_route(
 )
 
 
-# ── Setup endpoint (call once after deploy) ───────────────────────────────────
+
 
 @router.get("/setup")
 async def setup_webhook(request: Request):
     _ = request
-    # No trusted operator authorization or canonical configured webhook URL
-    # exists yet. Keep machine callback handling separate and fail closed here.
+
+
     raise HTTPException(
         status_code=503,
         detail="Telegram webhook setup is temporarily unavailable.",

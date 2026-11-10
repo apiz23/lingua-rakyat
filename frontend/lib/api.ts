@@ -1,5 +1,3 @@
-// src/lib/api.ts
-// All API calls to the FastAPI backend go through this file
 
 import {
   cacheAnswerSources,
@@ -22,7 +20,6 @@ class HistoryAuthorizationError extends Error {
   }
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────
 
 export type Document = {
   id: string
@@ -104,7 +101,6 @@ export type AskResponse = {
   confidence_label?: "high" | "medium" | "low"
   latency_ms: number
   model_used?: string
-  // Backend may suffix tags, e.g. "augmented+condensed+multidoc".
   retrieval_mode?: string
   query_variants_used?: string[]
   top_query_variant?: string
@@ -135,7 +131,6 @@ export type ChatHistoryMessage = {
   verification?: AnswerVerification | null
 }
 
-// ── Evaluation Types ───────────────────────────────────────────────────────
 
 export type EvalReport = {
   status: string
@@ -232,17 +227,13 @@ export type AugmentResult = {
   variant_count: number
 }
 
-// ── Rate-limit aware fetch ─────────────────────────────────────────────────
 async function apiFetch(
   input: RequestInfo,
   init?: RequestInit
 ): Promise<Response> {
-  // The shared transport owns URL resolution, bearer injection, the single
-  // safe 401 retry, 429 handling and no-store defaults.
   return authorizedFetch(String(input), init)
 }
 
-// ── Document API ───────────────────────────────────────────────────────────
 
 export async function verifyUploadToken(token: string): Promise<void> {
   const params = new URLSearchParams({ token })
@@ -293,8 +284,6 @@ export async function getDocumentStatus(
   return res.json()
 }
 
-// Polls until the document leaves "processing". Resolves with the final
-// status; rejects only on network/HTTP failure or timeout.
 export async function waitForDocumentReady(
   documentId: string,
   opts: { intervalMs?: number; timeoutMs?: number } = {}
@@ -374,9 +363,6 @@ export async function reindexDocument(
   return res.json()
 }
 
-// ── FIX: Re-sync chunk counts from Pinecone ───────────────────────────────
-// Fixes existing documents that show chunk_count=0 because they were
-// uploaded before the backend fix. Queries Pinecone for real vector counts.
 export async function refreshChunkCounts(): Promise<{
   updated: number
   total: number
@@ -392,7 +378,6 @@ export async function refreshChunkCounts(): Promise<{
   return res.json()
 }
 
-// ── Chat API ───────────────────────────────────────────────────────────────
 
 export async function askQuestion(
   userId: string,
@@ -439,7 +424,6 @@ export async function getChatHistory(params: {
 
   try {
     // user_id goes in a header, not the query string — a query param ends
-    // up in browser history and server access logs, a header does not.
     const res = await apiFetch(`${apiBase()}/api/v1/me/history?${search.toString()}`, {
       ...(params.signal ? { signal: params.signal } : {}),
     })
@@ -449,8 +433,6 @@ export async function getChatHistory(params: {
     cacheHistory(messages)
     return messages
   } catch (error) {
-    // Saved history is private server data. An authorization denial must not
-    // be converted into a successful-looking response from local storage.
     if (error instanceof HistoryAuthorizationError) throw error
     const cached = getCachedHistory({
       userId: params.userId,
@@ -481,7 +463,6 @@ export async function clearChatHistory(params: {
   return res.json()
 }
 
-// ── Evaluation API ─────────────────────────────────────────────────────────
 
 export async function getEvalReport(): Promise<EvalReport> {
   const res = await apiFetch(`${apiBase()}/api/eval/report`)
@@ -538,7 +519,6 @@ export async function clearEvalRecords(uploadToken?: string): Promise<void> {
   }
 }
 
-// ── Streaming chat ─────────────────────────────────────────────────────────
 
 export type ChatStreamEvent =
   | { type: "start" }
@@ -667,7 +647,6 @@ export async function askQuestionStream(
   }, signal)
 }
 
-// ── Streaming test suite ───────────────────────────────────────────────────
 
 export type StreamProgressEvent = {
   type: "progress"
@@ -741,11 +720,6 @@ export async function runTestSuiteStream(
   }
 }
 
-// ── Available Groq models ──────────────────────────────────────────────────
-// rpm = requests/min, rpd = requests/day, tpm = tokens/min, tpd = tokens/day
-// Groq deprecations (free/dev tier): llama-4-scout + qwen3-32b decommissioned
-// 2026-07-17; llama-3.3-70b-versatile decommissioned 2026-08-16. Recommended
-// replacement per Groq: openai/gpt-oss-120b (or qwen/qwen3.6-27b, preview).
 export const DEFAULT_CHAT_MODEL_ID = "openai/gpt-oss-120b"
 
 export const GROQ_MODELS = [
@@ -792,7 +766,6 @@ export const GROQ_MODELS = [
   },
 ]
 
-// ─── Conversations ───────────────────────────────────────────────────────────
 
 export interface ConversationSummary {
   session_id: string
@@ -837,7 +810,6 @@ export async function renameConversation(
   }
 }
 
-// ─── Share links ─────────────────────────────────────────────────────────────
 
 export interface ShareResult {
   slug: string

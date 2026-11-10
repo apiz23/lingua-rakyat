@@ -1,9 +1,9 @@
--- Official document ingestion pipeline (2026-11-07).
---
--- Additive. Ingestion prepares private, unpublished draft documents and
--- pending revisions for human review. Nothing here can publish a document.
 
--- Document identity / extraction metadata used by discovery + ingestion.
+
+
+
+
+
 ALTER TABLE public.lr_documents
   ADD COLUMN IF NOT EXISTS source_url text,
   ADD COLUMN IF NOT EXISTS external_id text,
@@ -45,7 +45,7 @@ CREATE INDEX IF NOT EXISTS lr_documents_source_url_idx
 CREATE INDEX IF NOT EXISTS lr_documents_checksum_idx
   ON public.lr_documents (checksum);
 
--- Discovered documents awaiting an explicit ingestion decision.
+
 CREATE TABLE IF NOT EXISTS public.ingestion_candidates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   source_id text NOT NULL,
@@ -89,7 +89,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS ingestion_candidates_source_url_unique
 CREATE INDEX IF NOT EXISTS ingestion_candidates_status_idx
   ON public.ingestion_candidates (status, discovered_at DESC);
 
--- Durable job history. BackgroundTasks executes jobs; this table is the record.
+
 CREATE TABLE IF NOT EXISTS public.ingestion_jobs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   job_type text NOT NULL,
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS public.ingestion_jobs (
     CHECK (attempts >= 0 AND max_attempts >= 1 AND attempts <= max_attempts)
 );
 
--- At most one active job per candidate prevents duplicate concurrent work.
+
 CREATE UNIQUE INDEX IF NOT EXISTS ingestion_jobs_active_candidate_unique
   ON public.ingestion_jobs (candidate_id)
   WHERE candidate_id IS NOT NULL AND status IN ('queued', 'running');
@@ -128,7 +128,7 @@ CREATE INDEX IF NOT EXISTS ingestion_jobs_status_idx
 CREATE INDEX IF NOT EXISTS ingestion_jobs_source_idx
   ON public.ingestion_jobs (source_id, created_at DESC);
 
--- Incremental discovery checkpoints.
+
 CREATE TABLE IF NOT EXISTS public.source_discovery_checkpoints (
   source_id text PRIMARY KEY,
   last_discovered_at timestamptz,

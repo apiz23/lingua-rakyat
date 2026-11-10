@@ -19,10 +19,10 @@ _PROCESSING_READY = "ready"
 _ALLOWED_OWNERS = {"system", "operator", "telegram_chat"}
 _VERIFIED_SOURCE = "verified"
 
-# A registry entry may be a bare source-type string (legacy callers and the
-# original unit tests) or a full trusted-source record. Only the full record
-# can carry verification, rights and freshness, and the central eligibility
-# service always supplies it.
+
+
+
+
 SourceRegistryValue = Union[str, MappingType[str, Any]]
 
 
@@ -159,8 +159,8 @@ def is_publicly_eligible(
     if isinstance(version, bool) or not isinstance(version, int) or version < 1:
         return False
 
-    # These markers are optional in older rows, but any populated marker means
-    # this revision is not currently eligible regardless of other fields.
+
+
     if document.get("superseded_by") or document.get("revoked_at"):
         return False
 

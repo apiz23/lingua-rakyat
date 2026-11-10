@@ -17,8 +17,8 @@ class MergeRequest(BaseModel):
 def merge_anon(body: MergeRequest, verified: Optional[str] = Depends(get_verified_user)):
     if not verified:
         raise HTTPException(status_code=401, detail="Sign-in required")
-    # A signed-in destination does not prove ownership of a browser-supplied
-    # source ID. Keep this route unavailable until a server-issued anonymous
-    # session capability is implemented and bound to the source identity.
+
+
+
     _ = body
     raise HTTPException(status_code=503, detail="Anonymous history linking is temporarily unavailable.")

@@ -97,7 +97,6 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
 
       if (e.shiftKey) return
 
-      // ChatGPT/Claude style: Enter submits. Also allow Cmd/Ctrl+Enter.
       e.preventDefault()
       void doSubmit()
     }

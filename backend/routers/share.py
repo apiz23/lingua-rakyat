@@ -34,7 +34,7 @@ def _eligible_share_sources(sources: list[dict]) -> Optional[list[dict]]:
             if document_id.strip() not in cited_ids:
                 cited_ids.append(document_id.strip())
     if not cited_ids:
-        # No citation can be revalidated; keep the share text but no evidence.
+
         return []
 
     try:
@@ -62,8 +62,8 @@ def _eligible_share_sources(sources: list[dict]) -> Optional[list[dict]]:
 class ShareRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    # Legacy clients send evidence fields that are accepted for rollout
-    # compatibility only; creation always reloads them from chat history.
+
+
     session_id: Optional[str] = Field(default=None, min_length=1)
     question: str = Field(min_length=1)
     answer: str = Field(min_length=1)
@@ -170,7 +170,7 @@ async def fetch_share(slug: str, response: Response):
                 answer=result.get("answer", ""),
             )
         except ValueError:
-            # Malformed legacy rows remain viewable as user-shared text only.
+
             persisted = None
         except RuntimeError as exc:
             raise HTTPException(status_code=503, detail="Share service unavailable") from exc
@@ -179,8 +179,8 @@ async def fetch_share(slug: str, response: Response):
         sources = []
     sources = _eligible_share_sources(sources)
     if sources is None:
-        # A cited revision is no longer public: suppress the whole share rather
-        # than leaking stale evidence or a partially redacted answer.
+
+
         raise HTTPException(status_code=404, detail="Share link not found")
     return SharedAnswerResponse(
         slug=result["slug"],
@@ -204,7 +204,7 @@ def revoke_share(slug: str, verified: Optional[str] = Depends(get_verified_user)
     if row is None:
         raise HTTPException(status_code=404, detail="Share link not found")
     if not row.get("user_id") or row["user_id"] != verified:
-        # Anonymous/legacy shares have no owner and can never be revoked.
+
         raise HTTPException(status_code=403, detail="Not your share")
     try:
         deleted = delete_share(slug, user_id=verified)
@@ -217,7 +217,7 @@ def revoke_share(slug: str, verified: Optional[str] = Depends(get_verified_user)
     return {"success": True}
 
 
-# Versioned adapters retain the existing public-slug and Clerk-owner semantics.
+
 @public_v1_router.get("/{slug}", response_model=SharedAnswerResponse)
 async def fetch_public_share_v1(slug: str, response: Response):
     return await fetch_share(slug, response)
@@ -233,10 +233,10 @@ async def create_my_share_v1(
     body: ShareRequest,
     verified: Optional[str] = Depends(get_verified_user),
 ):
-    # The current message persistence contract does not return a stable
-    # message_ref to clients. Preserve the secured lookup behavior until that
-    # contract is implemented; caller content is still matched to an owned
-    # persisted answer before anything is stored.
+
+
+
+
     return await create_share(body, verified)
 
 

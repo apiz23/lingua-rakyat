@@ -1,5 +1,3 @@
-// Shared primitives for Open Graph / Twitter preview images (satori via next/og).
-// Everything here must stay self-contained: no Tailwind, no DOM, no CSS vars.
 
 export const OG = {
   width: 1200,
@@ -33,8 +31,6 @@ type OgFont = {
   style: "normal"
 }
 
-// satori only parses .woff/.ttf (not .woff2), so every source must serve woff.
-// Google first with a legacy UA (it answers .woff instead of .woff2), fontsource on jsDelivr as fallback.
 const FONT_SOURCES: Array<{ name: OgFont["name"]; weight: OgFont["weight"]; urls: string[] }> = [
   {
     name: "Bricolage Grotesque",
@@ -70,7 +66,6 @@ const FONT_SOURCES: Array<{ name: OgFont["name"]; weight: OgFont["weight"]; urls
   },
 ]
 
-// Legacy UA: modern UAs get .woff2 from Google Fonts, which satori cannot parse.
 const LEGACY_UA = "Mozilla/5.0 (Windows NT 6.1; rv:6.0) Gecko/20110814 Firefox/6.0"
 
 async function fetchBuffer(urls: string[]): Promise<ArrayBuffer | null> {
@@ -89,7 +84,6 @@ async function fetchBuffer(urls: string[]): Promise<ArrayBuffer | null> {
       if (!res.ok) continue
       return await res.arrayBuffer()
     } catch {
-      // try the next source
     }
   }
   return null
@@ -144,7 +138,6 @@ export function BrandMark({ size = 196 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 512 512">
       <rect x="56" y="46" width="400" height="378" rx="112" fill={ogColors.green} />
       <path d="M224 424 L256 478 L288 424 Z" fill={ogColors.green} />
-      {/* sage under-wings */}
       <path
         d="M122 186 C 166 202 210 244 240 300 L 240 388 C 196 350 152 280 122 186 Z"
         fill={ogColors.sage}
@@ -153,7 +146,6 @@ export function BrandMark({ size = 196 }: { size?: number }) {
         d="M390 186 C 346 202 302 244 272 300 L 272 388 C 316 350 360 280 390 186 Z"
         fill={ogColors.sage}
       />
-      {/* cream wings / open pages */}
       <path
         d="M122 128 C 166 144 212 190 242 252 L 242 346 C 196 306 152 230 122 128 Z"
         fill={ogColors.paper}

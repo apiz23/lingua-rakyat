@@ -55,21 +55,11 @@ export interface Message {
   cached: boolean
   model_used?: string
   sufficient_evidence: boolean
-  // "strong" | "cautious" | "insufficient" | "summary". Absent on rows saved
-  // before this field existed — fall back to sufficient_evidence then.
   evidence_mode?: string
   faithfulness?: number | null
-  // Localized backend sentence explaining confidence. Absent (undefined) on
-  // ALL persisted history rows — the backend history endpoint doesn't carry
-  // this field yet — so computeConfidenceReason is the fallback whenever it
-  // is undefined. A backend value of null is deliberate: no sentence to show.
   confidence_explanation?: string | null
-  // Additive backend verification state. Absent on older history rows and when
-  // verification is disabled, so the UI keeps its previous evidence display.
   verification?: AnswerVerification | null
   isStreaming?: boolean
-  // True after tokens arrive but before the verifier returns. The answer is
-  // provisional until the authoritative "complete" event replaces it.
   verifying?: boolean
   suggestions?: string[]
 }
@@ -105,9 +95,6 @@ function highlightSourceText(text: string, question: string) {
     token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   )
   const regex = new RegExp(`(${escaped.join("|")})`, "gi")
-  // split with one capture group alternates: even indices = plain text,
-  // odd indices = keyword matches. (Never re-test with a /g regex — its
-  // lastIndex is stateful and skips alternate matches.)
   const parts = text.split(regex)
 
   return (
@@ -167,9 +154,6 @@ function computeConfidenceReason(
   return `${n} sources found, ${pct}% match strength`
 }
 
-// ---------------------------------------------------------------------------
-// SourcePills — always-visible page citation badges below the answer
-// ---------------------------------------------------------------------------
 
 interface SourcePillData {
   pageStart: number
@@ -188,7 +172,6 @@ const SourcePills = React.memo(function SourcePills({
   language: string
   onPillClick: (sourceIndex: number, pageStart: number) => void
 }) {
-  // Deduplicate by page_start — keep highest-scoring source per page
   const pillMap = new Map<number, SourcePillData>()
   sources.forEach((source, idx) => {
     const page = source.page_start
@@ -205,12 +188,10 @@ const SourcePills = React.memo(function SourcePills({
     }
   })
 
-  // Sort by page_start ascending (document reading order), cap at 5
   const pills = Array.from(pillMap.values())
     .sort((a, b) => a.pageStart - b.pageStart)
     .slice(0, 5)
 
-  // No page-numbered pills but sources exist → show a generic "Open PDF" pill
   if (pills.length === 0) {
     if (sources.length === 0) return null
     const label =
@@ -316,7 +297,6 @@ export const AIMessageCard = React.memo(function AIMessageCard({
   }
 
   const [isStreamed, setIsStreamed] = React.useState(message.cached)
-  // Feedback survives thread switches/reloads so users can't double-vote.
   const [feedback, setFeedback] = React.useState<"up" | "down" | null>(() => {
     if (typeof window === "undefined") return null
     const stored = window.localStorage.getItem(`lr-feedback:${message.id}`)
@@ -335,15 +315,12 @@ export const AIMessageCard = React.memo(function AIMessageCard({
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (sourceIndex: number, _pageStart: number) => {
       const source = message.sources[sourceIndex]
-      // Open PDF panel with cited passage highlighted — in the source's own
-      // document, which in multi-doc mode may differ from the anchored one.
       onOpenPdf?.(
         source?.page_start ?? 1,
         source?.text ?? null,
         source?.document_id,
         source?.doc_name
       )
-      // Open sources panel if closed + highlight the matching card
       if (!expandedSources.has(message.id)) toggleSources(message.id)
       if (highlightTimerRef.current !== null)
         clearTimeout(highlightTimerRef.current)
@@ -380,7 +357,6 @@ export const AIMessageCard = React.memo(function AIMessageCard({
           }),
         })
       } catch {
-        // silent — don't interrupt demo on network failure
       } finally {
         requestLifetime.finish()
       }
@@ -416,7 +392,6 @@ export const AIMessageCard = React.memo(function AIMessageCard({
         toast.success(t("Link copied! Share via WhatsApp or SMS."))
       } catch {
         if (!requestLifetime.current()) return
-        // Clipboard denied (non-HTTPS, permissions) — show the link instead
         toast.info(url, { duration: 12000 })
       }
     } catch (error) {
@@ -448,7 +423,6 @@ export const AIMessageCard = React.memo(function AIMessageCard({
     if (!autoSpeak) return
 
     play(message.answer, message.language)
-    // play is stable (useCallback with no deps) — safe to include, prevents stale closure if deps change
   }, [message.isStreaming, isLatest, autoSpeak, play])
 
   React.useEffect(() => {
@@ -503,7 +477,6 @@ export const AIMessageCard = React.memo(function AIMessageCard({
       <MessageContent className="max-w-[95%] min-w-0 flex-1 gap-0 sm:max-w-[85%]">
         <div className="neo-card relative overflow-hidden bg-card transition-all">
           <div className="p-3.5 sm:p-5">
-            {/* Primary row: language badge + copy button */}
             <div className="mb-1.5 flex items-center justify-between gap-3">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <div className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1">
@@ -532,7 +505,6 @@ export const AIMessageCard = React.memo(function AIMessageCard({
               </button>
             </div>
 
-            {/* Compact secondary line: evidence dot + label + cached + latency */}
             <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
               <span
                 aria-hidden="true"

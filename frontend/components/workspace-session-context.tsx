@@ -33,9 +33,6 @@ function readAnonId(): string {
   return id
 }
 
-// Shared across the sidebar (recent chats list) and the workspace page (chat
-// panel) so switching a conversation from either place stays in sync without
-// routing through the URL.
 export function WorkspaceSessionProvider({
   children,
 }: {
@@ -43,7 +40,6 @@ export function WorkspaceSessionProvider({
 }) {
   const { user, isLoaded, isSignedIn } = useUser()
   const identity = resolveIdentity(isLoaded, isSignedIn, user?.id)
-  // An unresolved or changing identity never renders the previous actor's tree.
   if (!identity.key) return null
   return <ActorWorkspace key={identity.key} actor={{ key: identity.key, userId: user?.id ?? "", state: identity.state }}>{children}</ActorWorkspace>
 }

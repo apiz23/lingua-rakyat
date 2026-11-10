@@ -1,4 +1,4 @@
-# backend/scripts/download_sample_docs.py
+
 """
 One-time script to download pre-approved Malaysian government PDFs.
 Run: python backend/scripts/download_sample_docs.py
@@ -11,22 +11,22 @@ SAMPLE_DOCS = [
     {
         "doc_id": "lhdn-efiling-2024",
         "filename": "lhdn-efiling-2024.pdf",
-        "url": None,  # Set LHDN_PDF_URL env var or place PDF manually in sample_docs/
+        "url": None,
     },
     {
         "doc_id": "kwsp-pengeluaran",
         "filename": "kwsp-pengeluaran.pdf",
-        "url": None,  # Set KWSP_PDF_URL env var
+        "url": None,
     },
     {
         "doc_id": "jpn-mykad-faq",
         "filename": "jpn-mykad-faq.pdf",
-        "url": None,  # Set JPN_PDF_URL env var
+        "url": None,
     },
     {
         "doc_id": "ptptn-peminjam",
         "filename": "ptptn-peminjam.pdf",
-        "url": None,  # Set PTPTN_PDF_URL env var
+        "url": None,
     },
 ]
 

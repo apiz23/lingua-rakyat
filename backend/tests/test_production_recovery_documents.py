@@ -277,7 +277,7 @@ def test_pdf_proxy_serves_current_approved_revision_through_service_client(clien
     assert response.headers["cache-control"] == "no-store"
     assert ("download", "published-doc/revision-1.pdf", True) in calls
     assert ("table", "lr_documents", False) in calls
-    # The trusted source registry and revision records are service-role reads.
+
     assert ("table", "official_sources", True) in calls
     assert ("table", "document_revisions", True) in calls
 

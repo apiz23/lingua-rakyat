@@ -29,7 +29,6 @@ export default function MySharesPage() {
 
   useEffect(() => {
     if (!isSignedIn) {
-      // Reset request state when the account signs out.
       setLoading(false)
       return
     }

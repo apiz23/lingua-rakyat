@@ -9,7 +9,6 @@ import React, {
 } from "react"
 import { AnimatePresence, motion } from "motion/react"
 
-// Define the structure for our logo objects
 interface Logo {
   name: string
   id: number
@@ -86,8 +85,6 @@ const ALL_LOGOS: Logo[] = [
   },
 ]
 
-// Utility function to randomly shuffle an array
-// This is used to mix up the order of logos for a more dynamic display
 const shuffleArray = <T,>(array: T[]): T[] => {
   const shuffled = [...array]
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -97,18 +94,14 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   return shuffled
 }
 
-// Utility function to distribute logos across multiple columns
-// This ensures each column has a balanced number of logos
 const distributeLogos = (allLogos: Logo[], columnCount: number): Logo[][] => {
   const shuffled = shuffleArray(allLogos)
   const columns: Logo[][] = Array.from({ length: columnCount }, () => [])
 
-  // Distribute logos evenly across columns
   shuffled.forEach((logo, index) => {
     columns[index % columnCount].push(logo)
   })
 
-  // Ensure all columns have the same number of logos by filling shorter columns
   const maxLength = Math.max(...columns.map((col) => col.length))
   columns.forEach((col) => {
     while (col.length < maxLength) {
@@ -119,50 +112,41 @@ const distributeLogos = (allLogos: Logo[], columnCount: number): Logo[][] => {
   return columns
 }
 
-// Props for the LogoColumn component
 interface LogoColumnProps {
   logos: Logo[]
   index: number
   currentTime: number
 }
 
-// LogoColumn component: Displays a single column of animated logos
 const LogoColumn: React.FC<LogoColumnProps> = React.memo(
   ({ logos, index, currentTime }) => {
-    const cycleInterval = 2000 // Time each logo is displayed (in milliseconds)
-    const columnDelay = index * 200 // Stagger the start of each column's animation
-    // Calculate which logo should be displayed based on the current time
+    const cycleInterval = 2000
+    const columnDelay = index * 200
     const adjustedTime =
       (currentTime + columnDelay) % (cycleInterval * logos.length)
     const currentIndex = Math.floor(adjustedTime / cycleInterval)
 
-    // Memoize the current logo to prevent unnecessary re-renders
     const CurrentLogo = useMemo(
       () => logos[currentIndex].img,
       [logos, currentIndex]
     )
 
     return (
-      // Framer Motion component for the column container
       <motion.div
         className="w-24 h-14 md:w-48 md:h-24 overflow-hidden relative"
-        initial={{ opacity: 0, y: 50 }} // Start invisible and below final position
-        animate={{ opacity: 1, y: 0 }} // Animate to full opacity and final position
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{
-          delay: index * 0.1, // Stagger the animation of each column
+          delay: index * 0.1,
           duration: 0.5,
           ease: "easeOut",
         }}
       >
-        {/* AnimatePresence enables animation of components that are removed from the DOM */}
         <AnimatePresence mode="wait">
-          {/* Framer Motion component for each logo */}
           <motion.div
             key={`${logos[currentIndex].id}-${currentIndex}`}
             className="absolute inset-0 flex items-center justify-center"
-            // Animation for when the logo enters
             initial={{ y: "10%", opacity: 0, filter: "blur(8px)" }}
-            // Animation for when the logo is displayed
             animate={{
               y: "0%",
               opacity: 1,
@@ -176,7 +160,6 @@ const LogoColumn: React.FC<LogoColumnProps> = React.memo(
                 duration: 0.5,
               },
             }}
-            // Animation for when the logo exits
             exit={{
               y: "-20%",
               opacity: 0,
@@ -196,29 +179,24 @@ const LogoColumn: React.FC<LogoColumnProps> = React.memo(
   }
 )
 
-// Main LogoCarousel component
 function LogoCarousel({ columnCount = 2 }: { columnCount?: number }) {
   const [logoSets, setLogoSets] = useState<Logo[][]>([])
   const [currentTime, setCurrentTime] = useState(0)
 
-  // Distribute logos across columns when the component mounts
   useEffect(() => {
     const distributedLogos = distributeLogos(ALL_LOGOS, columnCount)
     setLogoSets(distributedLogos)
   }, [columnCount])
 
-  // Function to update the current time (used for logo cycling)
   const updateTime = useCallback(() => {
     setCurrentTime((prevTime) => prevTime + 100)
   }, [])
 
-  // Set up an interval to update the time every 100ms
   useEffect(() => {
     const intervalId = setInterval(updateTime, 100)
     return () => clearInterval(intervalId)
   }, [updateTime])
 
-  // Render the logo columns
   return (
     <div className="flex space-x-4">
       {logoSets.map((logos, index) => (
@@ -258,7 +236,6 @@ function PierreIcon(props: SVGProps<SVGSVGElement>) {
       {...props}
     >
       <path
-        // fill="var(--color-fg)"
         fill="black"
         d="M2 0a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V2a2 2 0 00-2-2H2zm33.134 14.398h-2.502V16h6.714v-1.602h-2.502V8.152c0-.384-.096-.666-.288-.846-.192-.192-.468-.288-.828-.288h-2.52V8.62h1.926v5.778zm-.342-9.108c.264.228.594.342.99.342s.726-.12.99-.36.396-.546.396-.918a1.11 1.11 0 00-.414-.9c-.264-.24-.594-.36-.99-.36-.384 0-.708.12-.972.36-.252.228-.378.528-.378.9 0 .384.126.696.378.936zm-12.55-1.98V16h1.926v-4.14h2.016c1.812 0 3.156-.324 4.032-.972.888-.648 1.332-1.752 1.332-3.312 0-1.044-.204-1.878-.612-2.502-.396-.636-.99-1.086-1.782-1.35-.78-.276-1.77-.414-2.97-.414h-3.942zm1.926 6.894V4.966h2.088c.732 0 1.338.072 1.818.216.492.144.87.408 1.134.792.276.372.414.906.414 1.602 0 .708-.138 1.254-.414 1.638-.264.384-.642.648-1.134.792-.48.132-1.086.198-1.818.198h-2.088zm24.622 1.674h-7.034c.031.82.258 1.486.68 1.998.456.552 1.11.828 1.962.828.708 0 1.278-.162 1.71-.486.432-.324.726-.78.882-1.368h1.836c-.204.984-.666 1.788-1.386 2.412-.708.612-1.71.918-3.006.918-.96 0-1.782-.204-2.466-.612a4.058 4.058 0 01-1.53-1.71c-.348-.72-.522-1.536-.522-2.448 0-.948.18-1.764.54-2.448a3.817 3.817 0 011.548-1.566c.672-.372 1.44-.558 2.304-.558.912 0 1.704.174 2.376.522a3.595 3.595 0 011.548 1.53c.372.66.558 1.446.558 2.358v.63zm-2.52-2.88c-.48-.48-1.128-.72-1.944-.72-.504 0-.954.108-1.35.324-.384.216-.69.534-.918.954a2.879 2.879 0 00-.31 1.116h5.232c-.05-.703-.286-1.26-.71-1.674zm4.554-1.656c-.216.216-.324.54-.324.972V16h1.854V8.62h4.716V7.018h-5.238c-.456 0-.792.108-1.008.324zm7.331.972c0-.432.108-.756.324-.972.216-.216.552-.324 1.008-.324h5.238V8.62H60.01V16h-1.854V8.314zm8.748 3.564h7.034v-.63c0-.912-.186-1.698-.558-2.358a3.595 3.595 0 00-1.548-1.53c-.672-.348-1.464-.522-2.376-.522-.864 0-1.632.186-2.304.558-.66.36-1.176.882-1.548 1.566-.36.684-.54 1.5-.54 2.448 0 .912.174 1.728.522 2.448.348.72.858 1.29 1.53 1.71.684.408 1.506.612 2.466.612 1.296 0 2.298-.306 3.006-.918.72-.624 1.182-1.428 1.386-2.412h-1.836c-.156.588-.45 1.044-.882 1.368-.432.324-1.002.486-1.71.486-.852 0-1.506-.276-1.962-.828-.423-.511-.65-1.178-.68-1.998zm5.224-1.206h-5.232c.035-.42.139-.793.31-1.116.228-.42.534-.738.918-.954a2.773 2.773 0 011.35-.324c.816 0 1.464.24 1.944.72.424.413.66.971.71 1.674z"
       />

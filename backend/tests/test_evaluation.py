@@ -33,7 +33,7 @@ def test_report_includes_avg_faithfulness():
     ev = Evaluator()
     ev.record("Q1", "A1", language="en", confidence=0.7, latency_ms=300, faithfulness_score=0.8)
     ev.record("Q2", "A2", language="ms", confidence=0.6, latency_ms=400, faithfulness_score=0.6)
-    ev.record("Q3", "A3", language="en", confidence=0.5, latency_ms=200)  # no faithfulness
+    ev.record("Q3", "A3", language="en", confidence=0.5, latency_ms=200)
     report = ev.report()
     assert "faithfulness" in report
     assert abs(report["faithfulness"]["avg_faithfulness_score"] - 0.70) < 0.01

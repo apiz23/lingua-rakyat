@@ -22,13 +22,13 @@ def test_batch_embed_called_once_for_multiple_variants():
         mock_index.return_value.query.return_value = fake_pinecone_result
         rag._retrieve_matches(["doc-123"], variants, top_k=5)
 
-    # Must be called exactly once with all 3 variant texts
+
     mock_embed.assert_called_once_with(
         ["what is mykad", "apakah mykad", "什么是身份证"],
         input_type="search_query",
     )
 
-    # Verify each variant's embedding was sent to Pinecone in correct order
+
     calls = mock_index.return_value.query.call_args_list
     assert len(calls) == 3
     assert calls[0].kwargs["vector"] == [0.1] * 1024
