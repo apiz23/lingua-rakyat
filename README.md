@@ -24,10 +24,21 @@ The web app runs at `http://localhost:3000`; the backend API is at `http://local
 
 For mobile development, see `mobile/AGENTS.md` and the scripts in `mobile/package.json`. Do not use client-controlled identifiers as authorization.
 
+## Repository layout
+
+- `frontend/`: Next.js web app and tests.
+- `backend/`: FastAPI service, ingestion scripts and Python tests.
+- `mobile/`: Expo mobile app.
+- `supabase/`: database schema and migrations.
+- `docs/`: development guides, architecture, operations notes and project assets.
+- `.agents/skills/`: shared design skills used for this project.
+
 ## Maintained documentation
 
+- [Local development](docs/LOCAL_DEVELOPMENT.md)
+- [RISE poster](docs/assets/lingua-rakyat-rise-poster.png)
 - [Architecture and API compatibility](docs/ARCHITECTURE.md)
 - [Security requirements and release gates](docs/SECURITY.md)
-- [Demo booth rate limits](docs/BOOTH_MODE.md)
+- [Demo booth rate limits](docs/SECURITY.md)
 
 Supabase schema and migrations under `supabase/` and backend route models are the implementation-level references for database and API details. Documentation describes intended constraints; verify status labels against source and deployment evidence.

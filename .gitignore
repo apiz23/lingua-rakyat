@@ -36,3 +36,10 @@ mobile/.env.next-e2e/
 frontend/test-results/
 frontend/playwright-report/
 frontend/.next-e2e/
+
+frontend/.next-ui01d/
+frontend/qa/*-results/
+frontend/qa/*-pass/
+frontend/qa/*-final/
+frontend/qa/*.log
+.impeccable/
