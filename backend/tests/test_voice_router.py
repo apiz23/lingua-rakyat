@@ -49,6 +49,33 @@ def test_transcribe_rejects_empty_file():
     assert "empty" in resp.json()["detail"].lower()
 
 
+def test_transcribe_rejects_oversized_file(monkeypatch):
+    client = _make_client()
+    from routers import voice
+
+    monkeypatch.setattr(voice, "MAX_AUDIO_BYTES", 8)
+    resp = client.post(
+        "/api/voice/transcribe",
+        files={"audio": ("recording.webm", b"x" * 64, "audio/webm")},
+    )
+    assert resp.status_code == 413
+    assert "too large" in resp.json()["detail"].lower()
+
+
+def test_transcribe_rejects_oversized_content_length(monkeypatch):
+    client = _make_client()
+    from routers import voice
+
+    monkeypatch.setattr(voice, "MAX_AUDIO_BYTES", 8)
+    monkeypatch.setattr(voice, "_MULTIPART_OVERHEAD_BYTES", 0)
+    resp = client.post(
+        "/api/voice/transcribe",
+        files={"audio": ("recording.webm", b"small", "audio/webm")},
+    )
+    assert resp.status_code == 413
+    assert "too large" in resp.json()["detail"].lower()
+
+
 def test_tts_returns_audio_bytes():
     fake_audio = b"\xff\xfbfake_mp3_data"
     with patch("routers.voice.text_to_speech", return_value=fake_audio):

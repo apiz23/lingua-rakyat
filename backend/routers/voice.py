@@ -17,6 +17,9 @@ router = APIRouter()
 public_v1_router = APIRouter()
 
 MIN_AUDIO_BYTES = 1
+MAX_AUDIO_BYTES = 10 * 1024 * 1024
+# Multipart framing adds a small amount on top of the file itself.
+_MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 
 class TTSRequest(BaseModel):
@@ -33,7 +36,19 @@ async def transcribe(request: Request, audio: UploadFile = File(...)):
     Receive WebM/Opus audio from browser MediaRecorder.
     Returns { transcript, language, duration_s }.
     """
-    audio_bytes = await audio.read()
+    declared = (request.headers.get("content-length") or "").strip()
+    if declared.isdigit() and int(declared) > MAX_AUDIO_BYTES + _MULTIPART_OVERHEAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Audio file is too large. Maximum size is 10 MB.",
+        )
+
+    audio_bytes = await audio.read(MAX_AUDIO_BYTES + 1)
+    if len(audio_bytes) > MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Audio file is too large. Maximum size is 10 MB.",
+        )
 
     if len(audio_bytes) < MIN_AUDIO_BYTES:
         raise HTTPException(status_code=400, detail="empty audio: no bytes received")
