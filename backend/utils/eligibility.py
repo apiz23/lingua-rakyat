@@ -96,11 +96,13 @@ def revision_number(document: Mapping[str, Any]) -> Optional[int]:
 
 
 def load_snapshot(
-    client: Any, document_ids: Optional[Iterable[str]] = None
+    client: Any,
+    document_ids: Optional[Iterable[str]] = None,
+    source_ids: Optional[Iterable[str]] = None,
 ) -> EligibilitySnapshot:
     """Read registry and revision state. Raises ``EligibilityUnavailable``."""
     try:
-        sources = fetch_approved_sources(client)
+        sources = fetch_approved_sources(client, source_ids)
         revisions = fetch_revisions(client, document_ids)
     except PublicationStoreUnavailable as exc:
         raise EligibilityUnavailable(str(exc)) from exc
@@ -116,9 +118,18 @@ def load_snapshot(
     )
 
 
+def _source_ids_for_rows(rows: Iterable[Mapping[str, Any]]) -> list[str]:
+    return [
+        str(row.get("source_id", "")).strip()
+        for row in rows
+        if isinstance(row.get("source_id"), str) and str(row.get("source_id")).strip()
+    ]
+
+
 def snapshot_for_rows(client: Any, rows: Iterable[Mapping[str, Any]]) -> EligibilitySnapshot:
-    ids = [str(row.get("id", "")) for row in rows if row.get("id") is not None]
-    return load_snapshot(client, ids)
+    row_list = list(rows)
+    ids = [str(row.get("id", "")) for row in row_list if row.get("id") is not None]
+    return load_snapshot(client, ids, _source_ids_for_rows(row_list))
 
 
 def current_approved_revision(
@@ -247,7 +258,9 @@ def load_documents_for_authorization(
     except PublicationStoreUnavailable as exc:
         raise EligibilityUnavailable(str(exc)) from exc
     by_id = {str(row.get("id", "")): row for row in rows if row.get("id") is not None}
-    return by_id, load_snapshot(client, document_ids)
+    return by_id, load_snapshot(
+        client, document_ids, _source_ids_for_rows(by_id.values())
+    )
 
 
 def dataset_for_public_catalogue(
@@ -257,5 +270,9 @@ def dataset_for_public_catalogue(
         rows = fetch_documents(client)
     except PublicationStoreUnavailable as exc:
         raise EligibilityUnavailable(str(exc)) from exc
-    snapshot = load_snapshot(client, [str(row.get("id", "")) for row in rows])
+    snapshot = load_snapshot(
+        client,
+        [str(row.get("id", "")) for row in rows],
+        _source_ids_for_rows(rows),
+    )
     return rows, snapshot

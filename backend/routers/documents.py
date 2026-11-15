@@ -19,7 +19,7 @@ from pypdf import PdfReader
 from slowapi import Limiter
 
 from rate_limits import DOC_LIMIT, PDF_URL_LIMIT, SEED_LIMIT, get_proxy_aware_remote_address
-from utils import eligibility
+from utils import catalogue_cache, eligibility
 from utils.auth import get_supabase
 from utils.chat_history import delete_chat_messages_for_document
 from utils.rag_pipeline import (
@@ -201,9 +201,9 @@ def _snapshot_for_rows(rows: list[dict[str, Any]]) -> eligibility.EligibilitySna
 def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
     last_error: Optional[Exception] = None
 
-
-
-
+    cached = catalogue_cache.get_documents()
+    if cached is not None:
+        return cached
 
     for admin in (False, True):
         try:
@@ -221,20 +221,18 @@ def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
                 len(visible),
                 get_documents_table(),
             )
-            return [to_public_document(row) for row in visible]
+            documents = [to_public_document(row) for row in visible]
+            catalogue_cache.set_documents(documents)
+            return documents
         except Exception as exc:
             last_error = exc
             logger.error(
                 "[Documents] Catalogue read failed (service_client=%s): %s", admin, exc
             )
 
-
-
-
     if strict:
         raise DocumentCatalogueUnavailable("Document catalogue unavailable") from last_error
     return []
-
 
 def upsert_documents(documents: list[dict[str, Any]]) -> None:
     if not documents:
