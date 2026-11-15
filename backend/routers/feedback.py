@@ -1,12 +1,15 @@
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+from slowapi import Limiter
 
+from rate_limits import FEEDBACK_LIMIT, get_proxy_aware_remote_address
 from utils.auth import get_supabase
 
 logger = logging.getLogger("feedback_router")
+limiter = Limiter(key_func=get_proxy_aware_remote_address)
 router = APIRouter()
 public_v1_router = APIRouter()
 
@@ -19,7 +22,9 @@ class FeedbackRequest(BaseModel):
 
 
 @router.post("")
-async def submit_feedback(body: FeedbackRequest):
+@limiter.limit(FEEDBACK_LIMIT)
+async def submit_feedback(request: Request, body: FeedbackRequest):
+    _ = request
     try:
         get_supabase().table("lr_feedback").insert({
             "session_id": body.session_id,

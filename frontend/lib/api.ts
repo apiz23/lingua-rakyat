@@ -847,8 +847,33 @@ export async function createShare(payload: {
   return res.json()
 }
 
-export async function getShare(slug: string): Promise<SharedAnswer | null> {
+export async function submitAnswerFeedback(
+  payload: {
+    sessionId: string
+    question: string
+    docId: string
+    feedback: "up" | "down"
+  },
+  signal?: AbortSignal
+): Promise<void> {
   try {
+    await publicFetch(`${apiBase()}/api/v1/public/feedback`, {
+      method: "POST",
+      signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: payload.sessionId,
+        question: payload.question,
+        doc_id: payload.docId,
+        feedback: payload.feedback,
+      }),
+    })
+  } catch {
+    // Feedback is best-effort; a failed submit must never interrupt the chat.
+  }
+}
+
+export async function getShare(slug: string): Promise<SharedAnswer | null> {  try {
     const res = await publicFetch(`${apiBase()}/api/v1/public/shares/${encodeURIComponent(slug)}`)
     if (!res.ok) return null
     return res.json()

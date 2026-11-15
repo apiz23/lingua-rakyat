@@ -77,3 +77,6 @@ PDF_URL_LIMIT = _limit("PDF_URL_RATE_LIMIT", "20/minute", "240/minute")
 
 
 SEED_LIMIT = _limit("SEED_RATE_LIMIT", "5/minute", "30/minute")
+
+
+FEEDBACK_LIMIT = _limit("FEEDBACK_RATE_LIMIT", "60/minute", "300/minute")

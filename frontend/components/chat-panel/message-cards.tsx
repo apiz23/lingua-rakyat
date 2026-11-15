@@ -4,7 +4,6 @@ import { localizeHref } from "@/lib/i18n/routing"
 import { UiText, useTranslations } from "@/components/i18n"
 import React, { useState } from "react"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { type AnswerVerification, SourceChunk } from "@/lib/api"
@@ -31,7 +30,7 @@ import {
   Share2,
 } from "lucide-react"
 import { AnswerMetrics } from "./answer-metrics"
-import { createShare } from "@/lib/api"
+import { createShare, submitAnswerFeedback } from "@/lib/api"
 import { toast } from "sonner"
 import {
   Message,
@@ -345,18 +344,15 @@ export const AIMessageCard = React.memo(function AIMessageCard({
       if (!next || !sessionId) return
       const requestLifetime = lifetime.begin()
       try {
-        await fetch(`${API_URL}/api/v1/public/feedback`, {
-          method: "POST",
-          signal: requestLifetime.signal,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_id: sessionId,
+        await submitAnswerFeedback(
+          {
+            sessionId,
             question: message.question,
-            doc_id: docId ?? message.sources[0]?.document_id ?? "",
+            docId: docId ?? message.sources[0]?.document_id ?? "",
             feedback: next,
-          }),
-        })
-      } catch {
+          },
+          requestLifetime.signal
+        )
       } finally {
         requestLifetime.finish()
       }
