@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Optional
 
 from utils import admin_service
+from utils import catalogue_cache
 from utils.document_publication import _parse_aware_datetime
 from utils.publication_store import (
     fetch_approved_sources,
@@ -229,6 +230,7 @@ def _rpc(client: Any, name: str, params: Mapping[str, Any]) -> dict[str, Any]:
         data = data[0] if data else None
     if not isinstance(data, dict):
         raise RevisionUnavailable("Revision lifecycle returned no result")
+    catalogue_cache.invalidate_documents()
     return data
 
 

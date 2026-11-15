@@ -71,10 +71,51 @@ def _rows(client: Any, table: str) -> list[dict[str, Any]]:
     return [row for row in data if isinstance(row, dict)]
 
 
-def fetch_approved_sources(client: Any) -> dict[str, dict[str, Any]]:
+def _filtered_rows(
+    client: Any,
+    table: str,
+    column: str,
+    values: Iterable[str],
+    chunk_size: int = 50,
+) -> list[dict[str, Any]]:
+    """Read only rows whose column matches one of the given values."""
+    wanted = [
+        value
+        for value in dict.fromkeys(values)
+        if isinstance(value, str) and value.strip()
+    ]
+    if not wanted:
+        return []
+    rows: list[dict[str, Any]] = []
+    for start in range(0, len(wanted), chunk_size):
+        chunk = wanted[start : start + chunk_size]
+        try:
+            result = (
+                client.table(table).select("*").in_(column, chunk).execute()
+            )
+        except Exception as exc:
+            if _is_missing_table(exc):
+                logger.error(
+                    "[Publication] Required table %s is missing. Apply the publication "
+                    "migration; the public catalogue stays empty (deny) until then.",
+                    table,
+                )
+                raise PublicationSchemaMissing(f"Missing table {table}") from exc
+            raise PublicationStoreUnavailable(f"Could not read {table}") from exc
+        data = getattr(result, "data", None) or []
+        rows.extend(row for row in data if isinstance(row, dict))
+    return rows
+
+
+def fetch_approved_sources(
+    client: Any, source_ids: Optional[Iterable[str]] = None
+) -> dict[str, dict[str, Any]]:
     """Return verified, usage-permitted, unrevoked sources keyed by source id."""
     try:
-        rows = _rows(client, sources_table())
+        if source_ids is None:
+            rows = _rows(client, sources_table())
+        else:
+            rows = _filtered_rows(client, sources_table(), "source_id", source_ids)
     except PublicationSchemaMissing:
 
         return {}
@@ -96,25 +137,25 @@ def fetch_approved_sources(client: Any) -> dict[str, dict[str, Any]]:
 def fetch_documents(
     client: Any, document_ids: Optional[Iterable[str]] = None
 ) -> list[dict[str, Any]]:
-    rows = _rows(client, documents_table())
     if document_ids is None:
-        return rows
-    wanted = {doc_id for doc_id in document_ids if isinstance(doc_id, str) and doc_id}
-    return [row for row in rows if str(row.get("id", "")) in wanted]
+        return _rows(client, documents_table())
+    return _filtered_rows(client, documents_table(), "id", document_ids)
 
 
 def fetch_revisions(
     client: Any, document_ids: Optional[Iterable[str]] = None
 ) -> list[dict[str, Any]]:
     try:
-        rows = _rows(client, revisions_table())
+        if document_ids is None:
+            rows = _rows(client, revisions_table())
+        else:
+            rows = _filtered_rows(
+                client, revisions_table(), "document_id", document_ids
+            )
     except PublicationSchemaMissing:
 
         return []
-    if document_ids is None:
-        return rows
-    wanted = {doc_id for doc_id in document_ids if isinstance(doc_id, str) and doc_id}
-    return [row for row in rows if str(row.get("document_id", "")) in wanted]
+    return rows
 
 
 def _event_exists(client: Any, idempotency_key: str) -> bool:

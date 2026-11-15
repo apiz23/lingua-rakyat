@@ -49,11 +49,11 @@ Status legend: [DONE] = already built, [TODO] = not yet built
   - Key Expo libraries:
       * expo-document-picker — pick PDF from device
       * expo-av — record voice message
-      * expo-file-system — upload PDF bytes to /api/documents/upload
+      * expo-file-system — future: send PDFs once a trusted admin upload endpoint exists
       * @expo/vector-icons — icons
       * react-native-gifted-chat — chat UI (optional)
   - API calls: same endpoints as web, point to https://lingua-rakyat-ai.vercel.app
-  - Auth: reuse upload token system (verify-token endpoint)
+  - Auth: future uploads must use trusted administrator authorization, not a shared upload token
   - Offline: cache last 5 answers in AsyncStorage for no-network viewing
   - Distribution: Expo Go for testing, EAS Build for APK/IPA
 

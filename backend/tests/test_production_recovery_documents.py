@@ -112,6 +112,11 @@ class FakeClient:
         self._rows = [row for row in self._rows if str(row.get(field)) == str(value)]
         return self
 
+    def in_(self, field, values):
+        allowed = {str(value) for value in values}
+        self._rows = [row for row in self._rows if str(row.get(field)) in allowed]
+        return self
+
     def limit(self, *_args, **_kwargs):
         return self
 

@@ -1,5 +1,5 @@
 """
-routers/documents.py - Document upload and management endpoints.
+routers/documents.py - Document catalogue reads and PDF delivery endpoints.
 """
 
 import io
@@ -12,21 +12,16 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
 from pypdf import PdfReader
 from slowapi import Limiter
 
-from rate_limits import DOC_LIMIT, PDF_URL_LIMIT, SEED_LIMIT, get_proxy_aware_remote_address
-from utils import eligibility
+from rate_limits import PDF_URL_LIMIT, get_proxy_aware_remote_address
+from utils import catalogue_cache, eligibility
 from utils.auth import get_supabase
-from utils.chat_history import delete_chat_messages_for_document
-from utils.rag_pipeline import (
-    delete_document_from_vectorstore,
-    ingest_document,
-    rename_document_in_vectorstore,
-)
+from utils.rag_pipeline import ingest_document
 
 limiter = Limiter(key_func=get_proxy_aware_remote_address)
 logger = logging.getLogger("documents_router")
@@ -78,7 +73,6 @@ FEATURED_DOCS = [
     },
 ]
 
-
 def get_bucket() -> str:
     return os.getenv("SUPABASE_BUCKET", "documents")
 
@@ -93,10 +87,6 @@ def utc_now_iso() -> str:
 
 class DocumentCatalogueUnavailable(RuntimeError):
     """The public document catalogue cannot be read right now."""
-
-
-
-
 
 _storage_cache: list[dict[str, Any]] | None = None
 _storage_cache_at: datetime | None = None
@@ -201,9 +191,9 @@ def _snapshot_for_rows(rows: list[dict[str, Any]]) -> eligibility.EligibilitySna
 def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
     last_error: Optional[Exception] = None
 
-
-
-
+    cached = catalogue_cache.get_documents()
+    if cached is not None:
+        return cached
 
     for admin in (False, True):
         try:
@@ -221,20 +211,18 @@ def load_documents(*, strict: bool = False) -> list[dict[str, Any]]:
                 len(visible),
                 get_documents_table(),
             )
-            return [to_public_document(row) for row in visible]
+            documents = [to_public_document(row) for row in visible]
+            catalogue_cache.set_documents(documents)
+            return documents
         except Exception as exc:
             last_error = exc
             logger.error(
                 "[Documents] Catalogue read failed (service_client=%s): %s", admin, exc
             )
 
-
-
-
     if strict:
         raise DocumentCatalogueUnavailable("Document catalogue unavailable") from last_error
     return []
-
 
 def upsert_documents(documents: list[dict[str, Any]]) -> None:
     if not documents:
@@ -381,19 +369,6 @@ def sync_documents_with_storage(documents: list[dict[str, Any]]) -> list[dict[st
         return documents
 
 
-def _validate_upload_token(token: str) -> None:
-    if not token or not verify_upload_token(token):
-        raise HTTPException(status_code=401, detail="Valid upload token required.")
-
-
-def _require_admin_authorization() -> None:
-    """Fail closed until a trusted server-side operator role is configured."""
-    raise HTTPException(
-        status_code=503,
-        detail="Document administration is temporarily unavailable.",
-    )
-
-
 def verify_upload_token(token: str) -> bool:
     try:
         now = utc_now_iso()
@@ -426,25 +401,6 @@ class DocumentResponse(BaseModel):
     error_message: Optional[str] = None
     is_featured: bool = False
     agency: Optional[str] = None
-
-
-class UploadResponse(BaseModel):
-    success: bool
-    document: DocumentResponse
-    message: str
-
-
-class RenameDocumentRequest(BaseModel):
-    name: str
-    upload_token: str
-
-
-@router.post("/verify-token")
-@limiter.limit(DOC_LIMIT)
-async def verify_token(request: Request, token: str):
-    _ = request
-    _ = token
-    _require_admin_authorization()
 
 
 def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filename: str) -> None:
@@ -559,67 +515,6 @@ def ingest_uploaded_document(document_id: str, file_content: bytes, safe_filenam
             os.remove(tmp_path)
 
 
-@router.post("/upload", response_model=UploadResponse)
-@limiter.limit(DOC_LIMIT)
-async def upload_document(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
-    upload_token: str = "",
-):
-    _ = request, background_tasks, file, upload_token
-    _require_admin_authorization()
-
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
-    if file.content_type and file.content_type not in {"application/pdf", "application/x-pdf"}:
-        raise HTTPException(status_code=400, detail="Uploaded file must be a PDF.")
-
-    file_content = await file.read()
-    file_size = len(file_content)
-    if file_size > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="File too large. Maximum upload size is 5 MB.")
-    validate_uploaded_pdf_bytes(file_content)
-
-    document_id = str(uuid.uuid4())
-    safe_filename = os.path.basename(file.filename)
-    storage_path = f"{document_id}/{safe_filename}"
-
-    try:
-        get_supabase(admin=True).storage.from_(get_bucket()).upload(
-            storage_path,
-            file_content,
-            {"content-type": "application/pdf"},
-        )
-        logger.info("[Upload] Uploaded %s", storage_path)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail="Failed to upload document to storage. Please try again.") from exc
-
-    doc_record = {
-        "id": document_id,
-        "name": safe_filename,
-        "size_bytes": file_size,
-        "chunk_count": 0,
-        "status": "processing",
-        "uploaded_at": utc_now_iso(),
-        "storage_path": storage_path,
-        "public_url": build_public_url(storage_path),
-        "error_message": None,
-    }
-    upsert_documents([doc_record])
-    _invalidate_storage_cache()
-
-    background_tasks.add_task(ingest_uploaded_document, document_id, file_content, safe_filename)
-
-    return UploadResponse(
-        success=True,
-        document=DocumentResponse(**normalize_document_row(doc_record)),
-        message="Document uploaded — processing in background.",
-    )
-
-
 class DocumentStatusResponse(BaseModel):
     id: str
     status: str
@@ -642,8 +537,6 @@ async def get_document_status(document_id: str):
 @router.get("/", response_model=list[DocumentResponse])
 async def list_documents():
 
-
-
     try:
         documents = load_documents(strict=True)
     except DocumentCatalogueUnavailable as exc:
@@ -652,122 +545,6 @@ async def list_documents():
             detail="Document catalogue is temporarily unavailable.",
         ) from exc
     return [DocumentResponse(**doc) for doc in documents]
-
-
-@router.patch("/{document_id}/rename", response_model=DocumentResponse)
-@limiter.limit(DOC_LIMIT)
-async def rename_document(request: Request, document_id: str, body: RenameDocumentRequest):
-    _ = request, document_id, body
-    _require_admin_authorization()
-
-    new_name = os.path.basename(body.name.strip())
-    if not new_name:
-        raise HTTPException(status_code=400, detail="Document name cannot be empty.")
-    if len(new_name) > 180:
-        raise HTTPException(status_code=400, detail="Document name is too long.")
-    if not new_name.lower().endswith(".pdf"):
-        new_name = f"{new_name}.pdf"
-
-    documents = load_documents()
-    doc_to_rename = next((doc for doc in documents if doc["id"] == document_id), None)
-    if not doc_to_rename:
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    if doc_to_rename["name"] == new_name:
-        return DocumentResponse(**normalize_document_row(doc_to_rename))
-
-    storage_path = doc_to_rename.get("storage_path")
-    if storage_path:
-        new_storage_path = f"{document_id}/{new_name}"
-        try:
-            get_supabase(admin=True).storage.from_(get_bucket()).move(storage_path, new_storage_path)
-            doc_to_rename["storage_path"] = new_storage_path
-            doc_to_rename["public_url"] = build_public_url(new_storage_path)
-            logger.info("[Rename] Moved storage object %s -> %s", storage_path, new_storage_path)
-        except Exception as exc:
-            logger.warning("[Rename] Storage move failed for %s: %s", storage_path, exc)
-
-    doc_to_rename["name"] = new_name
-    get_supabase(admin=True).table(get_documents_table()).update({
-        "name": new_name,
-        "storage_path": doc_to_rename.get("storage_path"),
-        "public_url": doc_to_rename.get("public_url"),
-    }).eq("id", document_id).execute()
-    rename_document_in_vectorstore(
-        document_id=document_id,
-        document_name=new_name,
-        chunk_count=int(doc_to_rename.get("chunk_count", 0) or 0),
-    )
-    _invalidate_storage_cache()
-
-    return DocumentResponse(**normalize_document_row(doc_to_rename))
-
-
-@router.post("/register")
-async def register_document(
-    id: str,
-    name: str,
-    size_bytes: int = 0,
-    chunk_count: int = 0,
-    storage_path: Optional[str] = None,
-    public_url: Optional[str] = None,
-    upload_token: str = "",
-):
-    _ = id, name, size_bytes, chunk_count, storage_path, public_url, upload_token
-    _require_admin_authorization()
-    documents = load_documents()
-    if any(doc["id"] == id for doc in documents):
-        raise HTTPException(status_code=409, detail=f"Document '{id}' is already registered.")
-
-    new_doc = {
-        "id": id,
-        "name": name,
-        "size_bytes": size_bytes,
-        "chunk_count": chunk_count,
-        "status": "ready",
-        "uploaded_at": utc_now_iso(),
-        "storage_path": storage_path or f"{id}.pdf",
-        "public_url": public_url or build_public_url(storage_path or f"{id}.pdf"),
-        "error_message": None,
-    }
-    upsert_documents([new_doc])
-    _invalidate_storage_cache()
-
-    return {
-        "success": True,
-        "message": f"Document '{name}' registered successfully",
-        "document": normalize_document_row(new_doc),
-    }
-
-
-@router.post("/refresh-chunks")
-async def refresh_chunk_counts():
-    _require_admin_authorization()
-
-
-@router.delete("/{document_id}")
-async def delete_document(document_id: str, upload_token: str = ""):
-    _ = document_id, upload_token
-    _require_admin_authorization()
-    documents = load_documents()
-    doc_to_delete = next((doc for doc in documents if doc["id"] == document_id), None)
-    if not doc_to_delete:
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    storage_path = doc_to_delete.get("storage_path")
-    if storage_path:
-        try:
-            get_supabase(admin=True).storage.from_(get_bucket()).remove([storage_path])
-            logger.info("[Delete] Removed %s from storage", storage_path)
-        except Exception as exc:
-            logger.warning("[Delete] Could not remove %s from storage: %s", storage_path, exc)
-
-    delete_document_from_vectorstore(document_id)
-    delete_chat_messages_for_document(document_id, admin_authorized=True)
-    delete_document_record(document_id)
-    _invalidate_storage_cache()
-
-    return {"success": True, "message": f"Document '{doc_to_delete['name']}' deleted"}
 
 
 def _read_catalogue_row(
@@ -864,232 +641,3 @@ def proxy_pdf(request: Request, document_id: str, download: bool = False):
             "ETag": f'"{etag}"',
         },
     )
-
-
-class ReindexResponse(BaseModel):
-    success: bool
-    chunk_count: int
-    message: str
-
-
-@router.post("/{document_id}/reindex", response_model=ReindexResponse)
-@limiter.limit(DOC_LIMIT)
-async def reindex_document(request: Request, document_id: str, upload_token: str = ""):
-    """Re-ingest an existing document to refresh Pinecone vectors (e.g. pick up page_start metadata)."""
-    _ = request, document_id, upload_token
-    _require_admin_authorization()
-
-    sb = get_supabase(admin=True)
-    rows = (
-        sb.table(get_documents_table())
-        .select("storage_path, name, status")
-        .eq("id", document_id)
-        .limit(1)
-        .execute()
-    )
-    if not rows.data:
-        raise HTTPException(status_code=404, detail="Document not found")
-    row = rows.data[0]
-    storage_path = row.get("storage_path")
-    if not storage_path:
-        raise HTTPException(status_code=400, detail="No storage path — cannot re-index.")
-
-    pdf_bytes: bytes = sb.storage.from_(get_bucket()).download(storage_path)
-
-    tmp_path = None
-    try:
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-            tmp.write(pdf_bytes)
-            tmp_path = tmp.name
-
-        chunk_count, ingest_quality = ingest_document(
-            pdf_path=tmp_path,
-            document_id=document_id,
-            document_name=row.get("name") or "",
-        )
-        sb.table(get_documents_table()).update(
-            {"chunk_count": chunk_count, "status": "ready", "error_message": None}
-        ).eq("id", document_id).execute()
-        from routers.eval import log_data_quality
-        log_data_quality({**ingest_quality, "document_id": document_id, "doc_name": row.get("name") or ""})
-        return ReindexResponse(
-            success=True,
-            chunk_count=chunk_count,
-            message=f"Re-indexed into {chunk_count} chunks.",
-        )
-    except Exception as exc:
-        logger.warning("[Reindex] Failed for %s: %s", document_id, exc)
-        raise HTTPException(status_code=500, detail="Re-index failed. Please try again.") from exc
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
-
-
-_DEFAULT_PREWARM = [
-    "Summarize this document",
-    "Siapa yang layak memohon?",
-    "What documents do I need?",
-]
-
-PREWARM_QUESTIONS: dict[str, list[str]] = {
-    doc["doc_id"]: _DEFAULT_PREWARM for doc in FEATURED_DOCS
-}
-
-
-def _download_seed_pdf(featured: dict, dest_path: str) -> bool:
-    """Fetch a featured PDF from its official source_url into sample_docs."""
-    source_url = featured.get("source_url")
-    if not source_url:
-        return False
-    try:
-        import httpx
-
-        resp = httpx.get(source_url, timeout=30.0, follow_redirects=True)
-        resp.raise_for_status()
-        content = resp.content
-        if not content.startswith(PDF_MAGIC):
-            logger.warning("[Seed] Not a PDF: %s", source_url)
-            return False
-        if len(content) > MAX_UPLOAD_BYTES:
-            logger.warning("[Seed] Too large (%d bytes): %s", len(content), source_url)
-            return False
-        with open(dest_path, "wb") as fh:
-            fh.write(content)
-        logger.info("[Seed] Downloaded %s (%d bytes)", featured["doc_id"], len(content))
-        return True
-    except Exception as exc:
-        logger.warning("[Seed] Download failed for %s: %s", source_url, exc)
-        return False
-
-
-def _upload_seed_pdf_to_storage(supabase_id: str, filename: str, pdf_path: str) -> Optional[str]:
-    """Put the seeded PDF into the storage bucket so the /pdf proxy and viewer work."""
-    storage_path = f"{supabase_id}/{filename}"
-    try:
-        with open(pdf_path, "rb") as fh:
-            data = fh.read()
-        get_supabase(admin=True).storage.from_(get_bucket()).upload(
-            storage_path,
-            data,
-            {"content-type": "application/pdf", "x-upsert": "true"},
-        )
-        return storage_path
-    except Exception as exc:
-        if "exist" in str(exc).lower() or "duplicate" in str(exc).lower():
-            return storage_path
-        logger.warning("[Seed] Storage upload failed for %s: %s", storage_path, exc)
-        return None
-
-
-async def _do_seed() -> dict:
-    """
-    Seed logic decoupled from FastAPI request — callable from startup and the HTTP route.
-    Uses uuid5 for deterministic Supabase IDs. Pinecone namespace = supabase_id so the
-    chat API (which receives doc.id from the frontend) hits the correct namespace.
-    """
-    existing_docs = load_documents()
-    existing_by_name = {doc["name"]: doc for doc in existing_docs}
-
-    seeded = 0
-    already_present = 0
-    repaired = 0
-
-    for featured in FEATURED_DOCS:
-        doc_id = featured["doc_id"]
-        doc_name = featured["name"]
-
-        pdf_path = os.path.join(SAMPLE_DOCS_DIR, featured["filename"])
-        if not os.path.exists(pdf_path) and not _download_seed_pdf(featured, pdf_path):
-            logger.warning("[Seed] PDF not found, skipping: %s", pdf_path)
-            continue
-
-
-        supabase_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
-
-        existing = existing_by_name.get(doc_name)
-        if existing:
-            already_present += 1
-
-
-            if not existing.get("storage_path"):
-                storage_path = _upload_seed_pdf_to_storage(
-                    str(existing["id"]), featured["filename"], pdf_path
-                )
-                if storage_path:
-                    get_supabase(admin=True).table(get_documents_table()).update({
-                        "storage_path": storage_path,
-                        "public_url": build_public_url(storage_path),
-                        "size_bytes": os.path.getsize(pdf_path),
-                    }).eq("id", existing["id"]).execute()
-                    repaired += 1
-                    logger.info("[Seed] Backfilled storage for %s", doc_id)
-            continue
-
-        try:
-            chunk_count, _ = ingest_document(
-                pdf_path=pdf_path,
-                document_id=supabase_id,
-                document_name=doc_name,
-            )
-            storage_path = _upload_seed_pdf_to_storage(
-                supabase_id, featured["filename"], pdf_path
-            )
-            base_payload = {
-                "id": supabase_id,
-                "name": doc_name,
-                "size_bytes": os.path.getsize(pdf_path),
-                "chunk_count": chunk_count,
-                "status": "ready",
-                "uploaded_at": utc_now_iso(),
-                "storage_path": storage_path,
-                "public_url": build_public_url(storage_path),
-                "error_message": None,
-            }
-
-            for payload in [
-                {**base_payload, "is_featured": True, "agency": featured["agency"]},
-                base_payload,
-            ]:
-                resp = get_supabase(admin=True).table(get_documents_table()).upsert(payload).execute()
-                if getattr(resp, "data", None) is not None:
-                    logger.info("[Seed] Upserted %s (payload keys: %s)", doc_id, list(payload.keys()))
-                    break
-                logger.warning("[Seed] Upsert failed for %s, retrying without optional cols", doc_id)
-            logger.info("[Seed] Seeded %s as %s (%d chunks)", doc_id, supabase_id, chunk_count)
-            seeded += 1
-        except Exception as exc:
-            logger.error("[Seed] Failed to ingest %s: %s", doc_id, exc)
-
-    return {"seeded": seeded, "already_present": already_present, "repaired": repaired}
-
-
-@router.post("/seed")
-@limiter.limit(SEED_LIMIT)
-async def seed_featured_documents(request: Request, upload_token: str = ""):
-    _ = request, upload_token
-    _require_admin_authorization()
-
-
-async def _prewarm_featured_docs():
-    """
-    After seeding completes, silently fire 3 pre-warm questions per featured doc.
-    Populates _query_cache so first judge query returns in ~200ms instead of ~2s.
-    """
-    from utils.rag_pipeline import answer_question
-
-    existing_ids = {doc["id"] for doc in load_documents()}
-    for featured in FEATURED_DOCS:
-        doc_id = featured["doc_id"]
-        supabase_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
-        if supabase_id not in existing_ids:
-            continue
-        for question in PREWARM_QUESTIONS.get(doc_id, []):
-            try:
-                answer_question(
-                    question=question,
-                    document_id=supabase_id,
-                    enable_query_augmentation=False,
-                )
-                logger.info("[Prewarm] Cached: %s / %s", doc_id, question[:40])
-            except Exception as exc:
-                logger.warning("[Prewarm] Failed: %s / %s — %s", doc_id, question[:40], exc)

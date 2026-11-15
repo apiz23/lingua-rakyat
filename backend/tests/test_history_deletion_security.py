@@ -202,18 +202,3 @@ def test_admin_cleanup_cannot_be_unscoped(db):
     assert db.acquisitions == []
 
 
-def test_document_cleanup_is_disabled_until_trusted_operator_authorization(client, db, monkeypatch):
-    calls = []
-    monkeypatch.setattr(documents, "verify_upload_token", lambda _token: calls.append("token-check"))
-    monkeypatch.setattr(documents, "load_documents", lambda: calls.append("load"))
-    monkeypatch.setattr(documents, "delete_document_from_vectorstore", lambda _doc: calls.append("vector-delete"))
-    monkeypatch.setattr(documents, "delete_document_record", lambda _doc: calls.append("row-delete"))
-
-    signed_in = client.delete("/api/documents/d1", headers=auth_headers())
-    shared_token = client.delete("/api/documents/d1", params={"upload_token": "test-admin-token"})
-
-    assert signed_in.status_code == 503
-    assert shared_token.status_code == 503
-    assert calls == []
-    assert db.acquisitions == []
-    assert db.executions == []

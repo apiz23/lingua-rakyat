@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Optional
 
 from utils.authorization import Actor
+from utils import catalogue_cache
 from utils.document_publication import is_publicly_eligible
 from utils.publication_store import (
     documents_table,
@@ -976,6 +977,7 @@ def publish_document(
         correlation_id=correlation_id,
         details={"revision": revision.get("revision")},
     )
+    catalogue_cache.invalidate_documents()
     return get_document(client, actor, document_id)
 
 
@@ -1022,6 +1024,7 @@ def lifecycle_action(
         state_to=new_status,
         correlation_id=correlation_id,
     )
+    catalogue_cache.invalidate_documents()
     return get_document(client, actor, document_id)
 
 

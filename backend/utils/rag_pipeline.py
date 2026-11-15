@@ -189,8 +189,20 @@ def _sanitize_question(question: str) -> str:
     return question[:500].strip()
 
 
+def _configured_models() -> frozenset[str]:
+    return frozenset(
+        model.strip().lower()
+        for model in (GROQ_MODEL, GROQ_MODEL_FAST)
+        if isinstance(model, str) and model.strip()
+    )
+
+
 def _normalize_model_name(model_override: str | None) -> str:
-    return (model_override or GROQ_MODEL).strip().lower()
+    """Ignore client models the server has not configured."""
+    requested = (model_override or "").strip().lower()
+    if requested and requested in _configured_models():
+        return requested
+    return GROQ_MODEL.strip().lower()
 
 
 def _cache_key(
@@ -1622,7 +1634,7 @@ def _prepare_pipeline(
 ) -> dict[str, Any]:
     t_start = time.time()
     lang = detect_language(question)
-    model_name = model_override or GROQ_MODEL
+    model_name = _normalize_model_name(model_override)
     small_model = _is_small_model(model_name)
     is_summary = is_summarize_intent(question)
 
