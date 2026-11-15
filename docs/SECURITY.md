@@ -54,9 +54,8 @@ Status terms: **Implemented in source** = code path exists locally; **implemente
 | Voice | 10/minute | 120/minute |
 | Documents | 10/minute | 120/minute |
 | PDF URL | 20/minute | 240/minute |
-| Seed operation | 5/minute | 30/minute |
 
-Overrides take precedence over either mode: `GLOBAL_RATE_LIMIT`, `CHAT_RATE_LIMIT`, `VOICE_RATE_LIMIT`, `DOC_RATE_LIMIT`, `PDF_URL_RATE_LIMIT`, and `SEED_RATE_LIMIT`, using SlowAPI limit syntax. These are current source values, not a statement of deployed settings. The source selects the first `X-Forwarded-For` entry, then `X-Real-IP`, then the direct peer, without validating the forwarding proxy. Do not rely on IP-based limits until ingress trusts only configured proxies and forwarded-chain behavior is verified; this remains an unresolved control.
+Overrides take precedence over either mode: `GLOBAL_RATE_LIMIT`, `CHAT_RATE_LIMIT`, `VOICE_RATE_LIMIT`, `DOC_RATE_LIMIT`, and `PDF_URL_RATE_LIMIT`, using SlowAPI limit syntax. These are current source values, not a statement of deployed settings. The source selects the first `X-Forwarded-For` entry, then `X-Real-IP`, then the direct peer, without validating the forwarding proxy. Do not rely on IP-based limits until ingress trusts only configured proxies and forwarded-chain behavior is verified; this remains an unresolved control.
 
 ## Unresolved findings and decisions
 
