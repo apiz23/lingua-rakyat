@@ -489,7 +489,7 @@ export default function Home() {
                 {language === "ms"
                   ? t("Lihat cara ia berfungsi")
                   : t("See how it works")}{" "}
-                <span aria-hidden="true">&rarr;</span>
+                <ArrowRight aria-hidden="true" className="inline size-3.5" />
               </a>
             </div>
           </div>
