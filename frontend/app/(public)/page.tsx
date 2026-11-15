@@ -359,7 +359,7 @@ export default function Home() {
               values: [true, true, true, true],
             },
             {
-              label: "Urus dokumen (upload/rename/delete)",
+              label: "Akses dokumen awam (baca sahaja)",
               values: [true, false, true, true],
             },
             {

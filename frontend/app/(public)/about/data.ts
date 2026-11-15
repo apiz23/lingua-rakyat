@@ -299,7 +299,6 @@ export const FRONTEND_STACK_MS: StackItem[] = [
 
 
 export const API_ENDPOINTS: ApiEndpoint[] = [
-  { method: "POST",   path: "/api/documents/upload",              desc: "Disabled pending trusted administrator authorization" },
   { method: "GET",    path: "/api/documents/",                    desc: "Legacy public catalogue read; visibility remains under review" },
   { method: "DELETE", path: "/api/documents/{id}",                desc: "Disabled pending trusted administrator authorization" },
   { method: "POST",   path: "/api/chat/ask-stream",               desc: "Legacy streaming Q&A; anonymous requests are not saved" },
@@ -321,7 +320,6 @@ export const API_ENDPOINTS: ApiEndpoint[] = [
 ]
 
 export const API_ENDPOINTS_MS: ApiEndpoint[] = [
-  { method: "POST",   path: "/api/documents/upload",              desc: "Dilumpuhkan sementara menunggu kebenaran pentadbir yang sah" },
   { method: "GET",    path: "/api/documents/",                    desc: "Bacaan katalog lama; keterlihatan masih dalam semakan" },
   { method: "DELETE", path: "/api/documents/{id}",                desc: "Dilumpuhkan sementara menunggu kebenaran pentadbir yang sah" },
   { method: "POST",   path: "/api/chat/ask-stream",               desc: "S&J penstriman lama; permintaan tanpa nama tidak disimpan" },

@@ -35,12 +35,6 @@ export type Document = {
   agency?: string
 }
 
-export type UploadDocumentResponse = {
-  success: boolean
-  document: Document
-  message: string
-}
-
 export type SourceChunk = {
   text: string
   document_id: string
@@ -235,40 +229,6 @@ async function apiFetch(
 }
 
 
-export async function verifyUploadToken(token: string): Promise<void> {
-  const params = new URLSearchParams({ token })
-  const res = await apiFetch(
-    `${apiBase()}/api/documents/verify-token?${params}`,
-    {
-      method: "POST",
-    }
-  )
-  if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.detail || "Invalid token")
-  }
-}
-
-export async function uploadDocument(
-  file: File,
-  uploadToken: string
-): Promise<UploadDocumentResponse> {
-  const formData = new FormData()
-  formData.append("file", file)
-  const params = new URLSearchParams({ upload_token: uploadToken })
-  const res = await apiFetch(`${apiBase()}/api/documents/upload?${params}`, {
-    method: "POST",
-    body: formData,
-  })
-  if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.detail || "Upload failed")
-  }
-  const result = await res.json()
-  cacheDocuments([result.document, ...getCachedDocuments()])
-  return result
-}
-
 export type DocumentStatus = {
   id: string
   status: "processing" | "ready" | "error"
@@ -315,69 +275,6 @@ export async function listDocuments(signal?: AbortSignal): Promise<Document[]> {
     throw error
   }
 }
-
-export async function deleteDocument(documentId: string, uploadToken?: string): Promise<void> {
-  const params = uploadToken ? `?upload_token=${encodeURIComponent(uploadToken)}` : ""
-  const res = await apiFetch(`${apiBase()}/api/documents/${documentId}${params}`, {
-    method: "DELETE",
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Failed to delete document" }))
-    throw new Error(err.detail || "Failed to delete document")
-  }
-}
-
-export async function renameDocument(
-  documentId: string,
-  name: string,
-  uploadToken: string
-): Promise<Document> {
-  const res = await apiFetch(`${apiBase()}/api/documents/${documentId}/rename`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, upload_token: uploadToken }),
-  })
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: "Rename failed" }))
-    throw new Error(error.detail || "Rename failed")
-  }
-  const updated = await res.json()
-  cacheDocuments(
-    getCachedDocuments().map((doc) => (doc.id === updated.id ? updated : doc))
-  )
-  return updated
-}
-
-export async function reindexDocument(
-  documentId: string,
-  uploadToken: string
-): Promise<{ success: boolean; chunk_count: number; message: string }> {
-  const res = await apiFetch(
-    `${apiBase()}/api/documents/${documentId}/reindex?upload_token=${encodeURIComponent(uploadToken)}`,
-    { method: "POST" }
-  )
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: "Re-index failed" }))
-    throw new Error(error.detail || "Re-index failed")
-  }
-  return res.json()
-}
-
-export async function refreshChunkCounts(): Promise<{
-  updated: number
-  total: number
-  message: string
-}> {
-  const res = await apiFetch(`${apiBase()}/api/documents/refresh-chunks`, {
-    method: "POST",
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Refresh failed" }))
-    throw new Error(err.detail || "Refresh failed")
-  }
-  return res.json()
-}
-
 
 export async function askQuestion(
   userId: string,

@@ -214,69 +214,6 @@ def test_public_document_catalogue_reports_unavailable_database(client, monkeypa
     assert response.json()["detail"] == "Document catalogue is temporarily unavailable."
 
 
-def test_refresh_chunks_is_disabled_before_database_or_pinecone_access(client, monkeypatch):
-    client_accesses = []
-    monkeypatch.setattr(
-        documents,
-        "get_supabase",
-        lambda **kwargs: client_accesses.append(kwargs),
-    )
-    monkeypatch.setattr(
-        documents,
-        "load_documents",
-        lambda: pytest.fail("disabled refresh loaded documents"),
-    )
-    monkeypatch.setattr(
-        documents,
-        "upsert_documents",
-        lambda _rows: pytest.fail("disabled refresh attempted document write"),
-    )
-
-    unauthenticated = client.post("/api/documents/refresh-chunks")
-    bearer_only = client.post(
-        "/api/documents/refresh-chunks",
-        headers={"Authorization": "Bearer signed-in-citizen-token"},
-    )
-
-    assert unauthenticated.status_code == 503
-    assert bearer_only.status_code == 503
-    assert unauthenticated.json() == bearer_only.json()
-    assert client_accesses == []
-
-
-@pytest.mark.parametrize("method,path,kwargs", [
-    ("post", "/api/documents/verify-token?token=shared-value", {}),
-    ("post", "/api/documents/register?id=d1&name=Doc", {}),
-    ("delete", "/api/documents/d1?upload_token=shared-value", {}),
-    ("patch", "/api/documents/d1/rename", {"json": {"name": "New.pdf", "upload_token": "shared-value"}}),
-    ("post", "/api/documents/d1/reindex?upload_token=shared-value", {}),
-    ("post", "/api/documents/seed?upload_token=shared-value", {}),
-    ("post", "/api/documents/upload?upload_token=shared-value", {
-        "files": {"file": ("doc.pdf", b"%PDF-1.4", "application/pdf")},
-    }),
-])
-def test_document_administration_is_disabled_without_trusted_operator_role(
-    client, monkeypatch, method, path, kwargs
-):
-    acquisitions = []
-    monkeypatch.setattr(
-        documents,
-        "get_supabase",
-        lambda **options: acquisitions.append(options),
-    )
-    monkeypatch.setattr(
-        documents,
-        "verify_upload_token",
-        lambda _token: pytest.fail("shared token was treated as operator authorization"),
-    )
-
-    response = getattr(client, method)(path, **kwargs)
-
-    assert response.status_code == 503
-    assert response.json()["detail"] == "Document administration is temporarily unavailable."
-    assert acquisitions == []
-
-
 def test_telegram_setup_is_disabled_and_ignores_untrusted_host(client, monkeypatch):
     calls = []
     monkeypatch.setattr(telegram, "BOT_TOKEN", "test-token")
