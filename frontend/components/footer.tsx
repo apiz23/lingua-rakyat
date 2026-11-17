@@ -8,6 +8,7 @@ import { useLanguage } from "./language-provider"
 import { GithubIcon } from "./ui/github"
 import { LinkedinIcon } from "./ui/linkedin"
 import logo from "@/public/icons/android-chrome-512x512.png"
+import styles from "./landing-chrome.module.css"
 
 const socialLinks = [
   {
@@ -22,7 +23,7 @@ const socialLinks = [
   },
 ]
 
-export default function Footer() {
+export default function Footer({ editorial = false }: { editorial?: boolean }) {
   const { language } = useLanguage()
   const ms = language === "ms"
   const copy = {
@@ -57,7 +58,13 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="w-full border-t border-border bg-background text-foreground">
+    <footer
+      className={
+        editorial
+          ? styles.footer
+          : "w-full border-t border-border bg-background text-foreground"
+      }
+    >
       <div className="mx-auto w-full max-w-7xl px-4 py-9 sm:px-6 sm:py-11 lg:px-8">
         <div className="grid gap-9 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(9rem,0.6fr))] lg:gap-12">
           <div className="min-w-0 sm:col-span-2 lg:col-span-1">

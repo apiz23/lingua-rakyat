@@ -1,5 +1,10 @@
 "use client"
 
+import { useState } from "react"
+import { useLanguage } from "@/components/language-provider"
+import { LocalizedLink as Link } from "@/components/i18n"
+import { Button } from "@/components/ui/button"
+import { FileVideo } from "lucide-react"
 import {
   MediaPlayer,
   MediaPlayerVideo,
@@ -24,12 +29,42 @@ interface DemoVideoProps {
 }
 
 export function DemoVideo({ src }: DemoVideoProps) {
+  const [unavailable, setUnavailable] = useState(false)
+  const { language } = useLanguage()
+  if (unavailable) {
+    return (
+      <div
+        role="status"
+        className="flex min-h-72 flex-col items-center justify-center gap-5 rounded-xl bg-secondary px-6 py-12 text-center text-secondary-foreground"
+      >
+        <FileVideo aria-hidden="true" className="size-8" strokeWidth={1.5} />
+        <p>
+          {language === "ms"
+            ? "Video demo tidak tersedia buat masa ini."
+            : "The demo video is currently unavailable."}
+        </p>
+        <Button asChild size="lg">
+          <Link href="/workspace">
+            {language === "ms" ? "Tanya soalan" : "Ask a question"}
+          </Link>
+        </Button>
+      </div>
+    )
+  }
   return (
     <>
       <div className="neo-card overflow-hidden bg-card sm:hidden">
         <MediaPlayer className="aspect-video w-full rounded-none">
-          <MediaPlayerVideo className="h-full w-full object-cover">
-            <source src={src} type="video/mp4" />
+          <MediaPlayerVideo
+            preload="none"
+            onError={() => setUnavailable(true)}
+            className="h-full w-full object-cover"
+          >
+            <source
+              src={src}
+              type="video/mp4"
+              onError={() => setUnavailable(true)}
+            />
           </MediaPlayerVideo>
           <MediaPlayerControls className="flex-col items-start gap-2">
             <MediaPlayerControlsOverlay />
@@ -46,10 +81,7 @@ export function DemoVideo({ src }: DemoVideoProps) {
       </div>
 
       <div className="relative hidden sm:block">
-        <Safari
-          url="lingua-rakyat.my"
-          className="w-full drop-shadow-xl"
-        />
+        <Safari url="lingua-rakyat.my" className="w-full drop-shadow-xl" />
         <div
           className="absolute z-20 overflow-hidden"
           style={{
@@ -60,8 +92,16 @@ export function DemoVideo({ src }: DemoVideoProps) {
           }}
         >
           <MediaPlayer className="h-full w-full rounded-none">
-            <MediaPlayerVideo className="h-full w-full object-cover">
-              <source src={src} type="video/mp4" />
+            <MediaPlayerVideo
+              preload="none"
+              onError={() => setUnavailable(true)}
+              className="h-full w-full object-cover"
+            >
+              <source
+                src={src}
+                type="video/mp4"
+                onError={() => setUnavailable(true)}
+              />
             </MediaPlayerVideo>
             <MediaPlayerControls className="flex-col items-start gap-2.5">
               <MediaPlayerControlsOverlay />
@@ -84,11 +124,8 @@ export function DemoVideo({ src }: DemoVideoProps) {
           </MediaPlayer>
         </div>
       </div>
-      <div className="pointer-events-none absolute -bottom-6 right-0 z-30 hidden w-[17%] max-w-[180px] md:block lg:-right-2">
-        <Iphone
-          src={mobileWallpaper.src}
-          className="drop-shadow-2xl"
-        />
+      <div className="pointer-events-none absolute right-0 -bottom-6 z-30 hidden w-[17%] max-w-[180px] md:block lg:-right-2">
+        <Iphone src={mobileWallpaper.src} className="drop-shadow-2xl" />
       </div>
     </>
   )

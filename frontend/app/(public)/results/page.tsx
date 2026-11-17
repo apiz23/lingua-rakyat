@@ -414,7 +414,11 @@ export default function ResultsPage() {
     : t("Target < 3s")
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
+    <main
+      id="public-main"
+      tabIndex={-1}
+      className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-10"
+    >
       <PageIntro
         eyebrow={copy.eyebrow}
         title={copy.heading}
@@ -685,6 +689,6 @@ export default function ResultsPage() {
           </div>
         ))}
       </div>
-    </div>
+    </main>
   )
 }
