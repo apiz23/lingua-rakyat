@@ -27,6 +27,9 @@ node_modules/
 .opencode/
 .pytest_cache/
 
+# Graphify knowledge graph outputs
+graphify-out/
+
 # Google Search Console exports
 page_index/
 
