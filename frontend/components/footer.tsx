@@ -1,25 +1,19 @@
 "use client"
 
-import Image from "next/image"
 import { ArrowUpRight } from "lucide-react"
 
 import { LocalizedLink as Link, UiText } from "@/components/i18n"
 import { useLanguage } from "./language-provider"
-import { GithubIcon } from "./ui/github"
-import { LinkedinIcon } from "./ui/linkedin"
-import logo from "@/public/icons/android-chrome-512x512.png"
 import styles from "./landing-chrome.module.css"
 
 const socialLinks = [
   {
     label: "GitHub",
     href: "https://github.com/apiz23/lingua-rakyat",
-    Icon: GithubIcon,
   },
   {
     label: "LinkedIn",
     href: "https://www.linkedin.com/in/muh-hafizuddin/",
-    Icon: LinkedinIcon,
   },
 ]
 
@@ -32,6 +26,7 @@ export default function Footer({ editorial = false }: { editorial?: boolean }) {
       : "Understand public information in your language.",
     product: ms ? "Teroka" : "Explore",
     resources: ms ? "Tentang kami" : "About",
+    connect: ms ? "Hubungi" : "Connect",
     home: ms ? "Utama" : "Home",
     workspace: ms ? "Ruang kerja" : "Workspace",
     results: ms ? "Keputusan" : "Results",
@@ -51,10 +46,7 @@ export default function Footer({ editorial = false }: { editorial?: boolean }) {
         { label: copy.results, href: "/results" },
       ],
     },
-    {
-      title: copy.resources,
-      items: [{ label: copy.about, href: "/about" }],
-    },
+    { title: copy.resources, items: [{ label: copy.about, href: "/about" }] },
   ]
 
   return (
@@ -66,41 +58,17 @@ export default function Footer({ editorial = false }: { editorial?: boolean }) {
       }
     >
       <div className="mx-auto w-full max-w-7xl px-4 py-9 sm:px-6 sm:py-11 lg:px-8">
-        <div className="grid gap-9 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(9rem,0.6fr))] lg:gap-12">
+        <div className={`${styles.footerGrid} grid gap-9 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,0.7fr))] lg:gap-12`}>
           <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <Link
               href="/"
-              className="inline-flex items-center gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+              className={`${styles.footerWordmark} inline-flex min-h-11 items-center rounded-sm font-heading text-xl font-bold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring`}
             >
-              <Image
-                src={logo}
-                alt=""
-                width={36}
-                height={36}
-                className="size-9 shrink-0"
-              />
-              <span className="font-heading text-base font-bold tracking-tight">
-                <UiText text="Lingua Rakyat" />
-              </span>
+              <UiText text="Lingua Rakyat" />
             </Link>
-            <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
+            <p className={`${styles.footerTagline} mt-4 max-w-sm leading-tight`}>
               {copy.tagline}
             </p>
-            <ul className="mt-5 flex flex-wrap gap-2">
-              {socialLinks.map(({ label, href, Icon }) => (
-                <li key={label}>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    className="inline-flex size-10 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:bg-secondary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <Icon size={17} />
-                  </a>
-                </li>
-              ))}
-            </ul>
           </div>
 
           {columns.map((column) => (
@@ -126,6 +94,27 @@ export default function Footer({ editorial = false }: { editorial?: boolean }) {
               </ul>
             </nav>
           ))}
+
+          <nav aria-label={copy.connect} className="min-w-0">
+            <h2 className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+              {copy.connect}
+            </h2>
+            <ul className="mt-3 space-y-2">
+              {socialLinks.map(({ label, href }) => (
+                <li key={href}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-1 rounded-sm py-1 text-sm text-foreground/80 transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {label}
+                    <ArrowUpRight aria-hidden="true" className="size-3.5" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
 
         <div className="mt-8 flex flex-col gap-2 border-t border-border pt-4 text-xs text-muted-foreground sm:mt-10 sm:flex-row sm:items-center sm:justify-between">
