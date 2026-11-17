@@ -139,12 +139,7 @@ export const AdminDocumentSchema = z.object({
   name: z.string(),
   size_bytes: z.number(),
   chunk_count: z.number(),
-  status: z.union([
-    z.literal("processing"),
-    z.literal("ready"),
-    z.literal("error"),
-    z.string(),
-  ]),
+  status: z.enum(["processing", "ready", "error"]),
   uploaded_at: z.string(),
   agency: z.union([z.string(), z.null()]).optional(),
   is_featured: z.boolean(),

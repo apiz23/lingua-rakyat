@@ -1,6 +1,5 @@
 import type { ColorTokens } from "@/components/pdf/theme-types";
 
-/** Theme color token keys that can be used for the color prop */
 export const THEME_COLOR_KEYS = [
   "foreground",
   "background",
@@ -16,8 +15,7 @@ export const THEME_COLOR_KEYS = [
   "info",
 ] as const satisfies (keyof ColorTokens)[];
 
-/** Resolves a color value: theme token key → hex, or raw CSS color as-is. */
 export const resolveColor = (value: string, colors: ColorTokens): string => {
-  const key = value as (typeof THEME_COLOR_KEYS)[number];
-  return THEME_COLOR_KEYS.includes(key) ? colors[key] : value;
+  const key = THEME_COLOR_KEYS.find((candidate) => candidate === value)
+  return key ? colors[key] : value
 };

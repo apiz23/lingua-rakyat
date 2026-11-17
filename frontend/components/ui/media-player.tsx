@@ -1537,7 +1537,9 @@ function MediaPlayerSeek(props: MediaPlayerSeekProps) {
       ? Array.isArray(tooltipCollisionBoundary)
         ? tooltipCollisionBoundary
         : [tooltipCollisionBoundary]
-      : ([context.rootRef.current].filter(Boolean) as Element[])
+      : context.rootRef.current
+        ? [context.rootRef.current]
+        : []
 
     collisionDataRef.current = { padding, boundaries }
     return collisionDataRef.current

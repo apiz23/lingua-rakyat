@@ -1,4 +1,25 @@
 
+import { z, type ZodType } from "zod"
+import {
+  AnswerVerificationSchema,
+  AskResponseSchema,
+  AugmentResultSchema,
+  ChatHistoryMessageSchema,
+  ClaimVerificationStatusSchema,
+  ClearHistoryResultSchema,
+  ConversationSummarySchema,
+  DocumentSchema,
+  DocumentStatusSchema,
+  EvalReportSchema,
+  MyShareSchema,
+  SharedAnswerSchema,
+  ShareResultSchema,
+  SimplifyDemoSchema,
+  SourceChunkSchema,
+  StreamEventSchema,
+  TestSuiteResultSchema,
+  VerificationStatusSchema,
+} from "@/lib/api-schemas"
 import {
   cacheAnswerSources,
   cacheDocuments,
@@ -21,205 +42,30 @@ class HistoryAuthorizationError extends Error {
 }
 
 
-export type Document = {
-  id: string
-  name: string
-  size_bytes: number
-  chunk_count: number
-  status: "processing" | "ready" | "error"
-  uploaded_at: string
-  error_message?: string
-  storage_path?: string
-  public_url?: string
-  is_featured?: boolean
-  agency?: string
-}
+export type Document = z.infer<typeof DocumentSchema>
 
-export type SourceChunk = {
-  text: string
-  document_id: string
-  source_id?: string
-  score: number
-  doc_name?: string
-  page_start?: number | null
-  page_end?: number | null
-  section_title?: string
-  vector_score?: number
-  rerank_score?: number
-  confidence_label?: "high" | "medium" | "low"
-}
+export type SourceChunk = z.infer<typeof SourceChunkSchema>
 
-export type ClaimVerificationStatus =
-  | "supported"
-  | "partially_supported"
-  | "unsupported"
-  | "conflicting"
-  | "unverifiable"
+export type ClaimVerificationStatus = z.infer<
+  typeof ClaimVerificationStatusSchema
+>
 
-export type VerificationStatus =
-  | "verified"
-  | "partially_supported"
-  | "unsupported"
-  | "conflicting"
-  | "unverifiable"
+export type VerificationStatus = z.infer<typeof VerificationStatusSchema>
 
-export type AnswerVerification = {
-  verification_status: VerificationStatus
-  claims: Array<{
-    claim_id: string
-    text: string
-    status: ClaimVerificationStatus
-    supporting_source_ids: string[]
-    conflicting_source_ids: string[]
-  }>
-  verified_claim_count: number
-  partially_supported_claim_count: number
-  unsupported_claim_count: number
-  conflicting_claim_count: number
-  unverifiable_claim_count: number
-  verification_summary: string
-  citation_valid: boolean
-  extraction_complete: boolean
-  extraction_status: string
-  revision_attempted: boolean
-  abstained: boolean
-}
+export type AnswerVerification = z.infer<typeof AnswerVerificationSchema>
 
-export type AskResponse = {
-  answer: string
-  sources: SourceChunk[]
-  language: string
-  question: string
-  timestamp: string
-  confidence: number
-  confidence_label?: "high" | "medium" | "low"
-  latency_ms: number
-  model_used?: string
-  retrieval_mode?: string
-  query_variants_used?: string[]
-  top_query_variant?: string
-  sufficient_evidence?: boolean
-  faithfulness?: number | null
-  evidence_mode?: string
-  confidence_explanation?: string | null
-  verification?: AnswerVerification | null
-}
+export type AskResponse = z.infer<typeof AskResponseSchema>
 
-export type ChatHistoryMessage = {
-  id: string
-  user_id?: string
-  session_id: string
-  document_id: string
-  question: string
-  answer: string
-  language: string
-  sources: SourceChunk[]
-  timestamp: string
-  confidence: number
-  confidence_label?: "high" | "medium" | "low"
-  latency_ms: number
-  model_used?: string
-  sufficient_evidence?: boolean
-  faithfulness?: number | null
-  confidence_explanation?: string | null
-  verification?: AnswerVerification | null
-}
+export type ChatHistoryMessage = z.infer<typeof ChatHistoryMessageSchema>
 
 
-export type EvalReport = {
-  status: string
-  generated_at: string
-  total_queries: number
-  latency: {
-    p50_ms: number
-    p95_ms: number
-    p99_ms: number
-    avg_ms: number
-  }
-  retrieval: {
-    avg_confidence: number
-    pct_above_threshold: number
-  }
-  readability: {
-    avg_fk_grade: number
-    pct_simple_language: number
-    target_grade: number
-    note: string
-  }
-  per_language: Record<
-    string,
-    {
-      queries: number
-      avg_confidence: number
-      avg_latency_ms: number
-      avg_fk_grade: number
-    }
-  >
-  generation_quality?: {
-    samples_with_ground_truth: number
-    avg_rouge1_f1: number
-    avg_rouge2_f1: number
-    avg_rougeL_f1: number
-    avg_bleu: number
-    exact_match_rate: number
-  }
-  faithfulness?: {
-    scored_queries: number
-    avg_faithfulness_score: number
-  }
-}
+export type EvalReport = z.infer<typeof EvalReportSchema>
 
-export type TestSuiteResult = {
-  status: string
-  aggregate: {
-    cases_run: number
-    cases_failed: number
-    avg_rouge1_f1: number
-    avg_rouge2_f1: number
-    avg_rougeL_f1: number
-    avg_bleu: number
-    avg_fk_grade: number
-    avg_confidence: number
-    avg_latency_ms: number
-    readability_note: string
-    avg_semantic_similarity: number | null
-  }
-  results: Array<{
-    case_index: number
-    language: string
-    category?: string
-    question: string
-    answer: string
-    ground_truth: string
-    scores: {
-      rouge1_f1: number
-      rouge2_f1: number
-      rougeL_f1: number
-      bleu: number
-      fk_grade: number
-      confidence: number
-      latency_ms: number
-      semantic_similarity: number | null
-    }
-  }>
-  errors: Array<{ case_index: number; question: string; error: string }>
-}
+export type TestSuiteResult = z.infer<typeof TestSuiteResultSchema>
 
-export type SimplifyDemo = {
-  description: string
-  examples: Array<{
-    original: string
-    simplified: string
-    language: string
-  }>
-}
+export type SimplifyDemo = z.infer<typeof SimplifyDemoSchema>
 
-export type AugmentResult = {
-  original: string
-  source_lang: string
-  variants: Record<string, string>
-  variant_count: number
-}
+export type AugmentResult = z.infer<typeof AugmentResultSchema>
 
 async function apiFetch(
   input: RequestInfo,
@@ -228,20 +74,25 @@ async function apiFetch(
   return authorizedFetch(String(input), init)
 }
 
-
-export type DocumentStatus = {
-  id: string
-  status: "processing" | "ready" | "error"
-  chunk_count: number
-  error_message?: string | null
+async function parseJson<T>(res: Response, schema: ZodType<T>): Promise<T> {
+  const payload: unknown = await res.json()
+  return schema.parse(payload)
 }
+
+async function errorDetail(res: Response, fallback: string): Promise<string> {
+  const payload: unknown = await res.json().catch(() => null)
+  const parsed = z.object({ detail: z.string() }).safeParse(payload)
+  return parsed.success ? parsed.data.detail : fallback
+}
+
+export type DocumentStatus = z.infer<typeof DocumentStatusSchema>
 
 export async function getDocumentStatus(
   documentId: string
 ): Promise<DocumentStatus> {
   const res = await apiFetch(`${apiBase()}/api/documents/${documentId}/status`)
   if (!res.ok) throw new Error("Failed to fetch document status")
-  return res.json()
+  return parseJson(res, DocumentStatusSchema)
 }
 
 export async function waitForDocumentReady(
@@ -265,7 +116,7 @@ export async function listDocuments(signal?: AbortSignal): Promise<Document[]> {
   try {
     const res = await apiFetch(`${apiBase()}/api/documents/`, { signal })
     if (!res.ok) throw new Error("Failed to fetch documents")
-    const documents = await res.json()
+    const documents = await parseJson(res, z.array(DocumentSchema))
     cacheDocuments(documents)
     return documents
   } catch (error) {
@@ -303,10 +154,9 @@ export async function askQuestion(
     }),
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.detail || "Failed to get answer")
+    throw new Error(await errorDetail(res, "Failed to get answer"))
   }
-  return res.json()
+  return parseJson(res, AskResponseSchema)
 }
 
 export async function getChatHistory(params: {
@@ -320,13 +170,12 @@ export async function getChatHistory(params: {
   if (params.sessionId) search.set("conversation_ref", params.sessionId)
 
   try {
-    // user_id goes in a header, not the query string — a query param ends
     const res = await apiFetch(`${apiBase()}/api/v1/me/history?${search.toString()}`, {
       ...(params.signal ? { signal: params.signal } : {}),
     })
     if (res.status === 401 || res.status === 403) throw new HistoryAuthorizationError()
     if (!res.ok) throw new Error("Failed to fetch chat history")
-    const messages = await res.json()
+    const messages = await parseJson(res, z.array(ChatHistoryMessageSchema))
     cacheHistory(messages)
     return messages
   } catch (error) {
@@ -357,14 +206,14 @@ export async function clearChatHistory(params: {
     { method: "DELETE", signal: params.signal }
   )
   if (!res.ok) throw new Error("Failed to clear chat history")
-  return res.json()
+  return parseJson(res, ClearHistoryResultSchema)
 }
 
 
 export async function getEvalReport(): Promise<EvalReport> {
   const res = await apiFetch(`${apiBase()}/api/eval/report`)
   if (!res.ok) throw new Error("Failed to fetch evaluation report")
-  return res.json()
+  return parseJson(res, EvalReportSchema)
 }
 
 export async function runTestSuite(
@@ -382,16 +231,15 @@ export async function runTestSuite(
     }),
   })
   if (!res.ok) {
-    const error = await res.json()
-    throw new Error(error.detail || "Test suite failed")
+    throw new Error(await errorDetail(res, "Test suite failed"))
   }
-  return res.json()
+  return parseJson(res, TestSuiteResultSchema)
 }
 
 export async function getSimplifyDemo(): Promise<SimplifyDemo> {
   const res = await apiFetch(`${apiBase()}/api/eval/simplify-demo`)
   if (!res.ok) throw new Error("Failed to fetch simplify demo")
-  return res.json()
+  return parseJson(res, SimplifyDemoSchema)
 }
 
 export async function augmentQuery(
@@ -404,15 +252,14 @@ export async function augmentQuery(
     body: JSON.stringify({ query, source_lang: sourceLang }),
   })
   if (!res.ok) throw new Error("Failed to augment query")
-  return res.json()
+  return parseJson(res, AugmentResultSchema)
 }
 
 export async function clearEvalRecords(uploadToken?: string): Promise<void> {
   const params = uploadToken ? `?upload_token=${encodeURIComponent(uploadToken)}` : ""
   const res = await apiFetch(`${apiBase()}/api/eval/clear${params}`, { method: "DELETE" })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Failed to clear eval records" }))
-    throw new Error(err.detail || "Failed to clear eval records")
+    throw new Error(await errorDetail(res, "Failed to clear eval records"))
   }
 }
 
@@ -506,8 +353,7 @@ export async function askQuestionStream(
       runOfflineFallback()
       return
     }
-    const err = await res.json().catch(() => ({ detail: "Stream failed" }))
-    throw new Error(err.detail || "Stream failed")
+    throw new Error(await errorDetail(res, "Stream failed"))
   }
   await consumeChatSse(res.body, (event) => {
     if (signal?.aborted) return
@@ -545,37 +391,13 @@ export async function askQuestionStream(
 }
 
 
-export type StreamProgressEvent = {
-  type: "progress"
-  index: number
-  total: number
-  result: TestSuiteResult["results"][0]
-}
-export type StreamAggregateEvent = {
-  type: "aggregate"
-  aggregate: TestSuiteResult["aggregate"]
-  results: TestSuiteResult["results"]
-  errors: TestSuiteResult["errors"]
-}
-export type StreamErrorEvent = { type: "error"; index: number; error: string }
-export type StreamDoneEvent = { type: "done" }
-export type StreamSkippedEvent = {
-  type: "skipped"
-  reason: string
-  detected_category: string | null
-}
-export type StreamCategoryEvent = {
-  type: "category"
-  category: string
-  total: number
-}
-export type StreamEvent =
-  | StreamProgressEvent
-  | StreamAggregateEvent
-  | StreamErrorEvent
-  | StreamDoneEvent
-  | StreamSkippedEvent
-  | StreamCategoryEvent
+export type StreamEvent = z.infer<typeof StreamEventSchema>
+export type StreamProgressEvent = Extract<StreamEvent, { type: "progress" }>
+export type StreamAggregateEvent = Extract<StreamEvent, { type: "aggregate" }>
+export type StreamErrorEvent = Extract<StreamEvent, { type: "error" }>
+export type StreamDoneEvent = Extract<StreamEvent, { type: "done" }>
+export type StreamSkippedEvent = Extract<StreamEvent, { type: "skipped" }>
+export type StreamCategoryEvent = Extract<StreamEvent, { type: "category" }>
 
 export async function runTestSuiteStream(
   documentId: string,
@@ -595,8 +417,7 @@ export async function runTestSuiteStream(
     signal,
   })
   if (!res.ok || !res.body) {
-    const err = await res.json().catch(() => ({ detail: "Stream failed" }))
-    throw new Error(err.detail || "Stream failed")
+    throw new Error(await errorDetail(res, "Stream failed"))
   }
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
@@ -610,7 +431,7 @@ export async function runTestSuiteStream(
     for (const line of lines) {
       if (!line.startsWith("data: ")) continue
       try {
-        const event: StreamEvent = JSON.parse(line.slice(6))
+        const event = StreamEventSchema.parse(JSON.parse(line.slice(6)))
         onEvent(event)
       } catch {}
     }
@@ -664,22 +485,15 @@ export const GROQ_MODELS = [
 ]
 
 
-export interface ConversationSummary {
-  session_id: string
-  title: string
-  last_at: string
-  count: number
-  custom_title?: string
-}
+export type ConversationSummary = z.infer<typeof ConversationSummarySchema>
 
 export async function listConversations(userId: string, signal?: AbortSignal): Promise<ConversationSummary[]> {
   void userId // Retained for caller compatibility; identity comes from Clerk.
   try {
-    // user_id goes in a header, not the query string — see getChatHistory.
     const res = await apiFetch(`${apiBase()}/api/v1/me/conversations`, { signal })
     if (res.status === 401 || res.status === 403) throw new HistoryAuthorizationError()
     if (!res.ok) return []
-    return res.json()
+    return parseJson(res, z.array(ConversationSummarySchema))
   } catch (error) {
     if (signal?.aborted) throw error
     if (error instanceof HistoryAuthorizationError) throw error
@@ -708,23 +522,9 @@ export async function renameConversation(
 }
 
 
-export interface ShareResult {
-  slug: string
-  url: string
-}
+export type ShareResult = z.infer<typeof ShareResultSchema>
 
-export interface SharedAnswer {
-  slug: string
-  question: string
-  answer: string
-  sources: SourceChunk[]
-  language: string
-  created_at: string
-  confidence: number
-  confidence_label: string
-  agency: string
-  evidence_linked: boolean
-}
+export type SharedAnswer = z.infer<typeof SharedAnswerSchema>
 
 export async function createShare(payload: {
   session_id: string
@@ -738,10 +538,9 @@ export async function createShare(payload: {
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: "Failed to create share link" }))
-    throw new Error(error.detail || "Failed to create share link")
+    throw new Error(await errorDetail(res, "Failed to create share link"))
   }
-  return res.json()
+  return parseJson(res, ShareResultSchema)
 }
 
 export async function submitAnswerFeedback(
@@ -773,25 +572,19 @@ export async function submitAnswerFeedback(
 export async function getShare(slug: string): Promise<SharedAnswer | null> {  try {
     const res = await publicFetch(`${apiBase()}/api/v1/public/shares/${encodeURIComponent(slug)}`)
     if (!res.ok) return null
-    return res.json()
+    return parseJson(res, SharedAnswerSchema)
   } catch {
     return null
   }
 }
 
-export interface MyShare {
-  slug: string
-  question: string
-  confidence_label: string
-  agency: string
-  created_at: string
-}
+export type MyShare = z.infer<typeof MyShareSchema>
 
 export async function listMyShares(): Promise<MyShare[]> {
   try {
     const res = await apiFetch(`${apiBase()}/api/v1/me/shares`)
     if (!res.ok) return []
-    return await res.json()
+    return await parseJson(res, z.array(MyShareSchema))
   } catch {
     return []
   }

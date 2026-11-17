@@ -85,7 +85,7 @@ export function useTTS(): UseTTSReturn {
   }, [])
 
   const play = useCallback(async (text: string, language: string) => {
-    stop()  // this now also aborts previous in-flight fetch
+    stop()
     const generation = generationRef.current
     const current = () => generationRef.current === generation
     setState("loading")

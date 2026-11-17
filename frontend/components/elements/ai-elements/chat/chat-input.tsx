@@ -46,10 +46,13 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
     const localTextareaRef = React.useRef<HTMLTextAreaElement | null>(null)
     const fileInputRef = React.useRef<HTMLInputElement | null>(null)
 
-    React.useImperativeHandle(
-      forwardedRef,
-      () => localTextareaRef.current as HTMLTextAreaElement,
-      []
+    const setTextareaRef = React.useCallback(
+      (node: HTMLTextAreaElement | null) => {
+        localTextareaRef.current = node
+        if (typeof forwardedRef === "function") forwardedRef(node)
+        else if (forwardedRef) forwardedRef.current = node
+      },
+      [forwardedRef]
     )
 
     const setValue = React.useCallback(
@@ -118,7 +121,7 @@ const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
         className={cn("neo-input bg-background", className)}
       >
         <textarea
-          ref={localTextareaRef}
+          ref={setTextareaRef}
           value={inputValue}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={onKeyDown}

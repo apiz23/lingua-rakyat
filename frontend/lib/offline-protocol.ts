@@ -16,12 +16,30 @@ export async function within<T>(work: Promise<T>, timeoutMs = 4000): Promise<T> 
 }
 
 type Invalidation = { type: typeof TYPE; version: string; id: string }
-function valid(value: unknown): value is Invalidation {
-  if (!value || typeof value !== "object") return false
-  const item = value as Record<string, unknown>
-  return item.type === TYPE && item.version === OFFLINE_PROTOCOL_VERSION &&
-    typeof item.id === "string" && item.id.length > 0 && item.id.length <= 128 &&
-    Object.keys(item).every((key) => ["type", "version", "id"].includes(key))
+const INVALIDATION_KEYS = ["type", "version", "id"]
+
+function isInvalidation(value: unknown): value is Invalidation {
+  if (typeof value !== "object" || value === null) return false
+  if (Object.keys(value).some((key) => !INVALIDATION_KEYS.includes(key))) {
+    return false
+  }
+  const id = Reflect.get(value, "id")
+  return (
+    Reflect.get(value, "type") === TYPE &&
+    Reflect.get(value, "version") === OFFLINE_PROTOCOL_VERSION &&
+    typeof id === "string" &&
+    id.length > 0 &&
+    id.length <= 128
+  )
+}
+
+/** Worker-to-page invalidation handshake message, narrowed without a cast. */
+export function isOfflineInvalidationMessage(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false
+  return (
+    Reflect.get(value, "type") === "LR_OFFLINE_INVALIDATE" &&
+    Reflect.get(value, "version") === OFFLINE_PROTOCOL_VERSION
+  )
 }
 
 /** Broadcasts invalidation only; it never carries an actor, token or content. */
@@ -29,7 +47,7 @@ export function createInvalidationChannel(onInvalidate: () => void) {
   let channel: BroadcastChannel | null = null
   const seen = new Set<string>()
   const receive = (value: unknown) => {
-    if (!valid(value) || seen.has(value.id)) return
+    if (!isInvalidation(value) || seen.has(value.id)) return
     if (seen.size >= 128) seen.clear()
     seen.add(value.id)
     onInvalidate()
@@ -56,6 +74,15 @@ export function createInvalidationChannel(onInvalidate: () => void) {
   }
 }
 
+function isOfflineStatus(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false
+  return (
+    Reflect.get(value, "type") === "LR_OFFLINE_STATUS" &&
+    Reflect.get(value, "version") === OFFLINE_PROTOCOL_VERSION &&
+    Reflect.get(value, "clean") === true
+  )
+}
+
 /** A bounded challenge to the controlling worker; an old or silent worker fails closed. */
 export function confirmOfflineController(controller: ServiceWorker | null, timeoutMs = 4000): Promise<boolean> {
   if (!controller || typeof MessageChannel === "undefined") return Promise.resolve(false)
@@ -72,8 +99,7 @@ export function confirmOfflineController(controller: ServiceWorker | null, timeo
     }
     const timer = setTimeout(() => finish(false), timeoutMs)
     channel.port1.onmessage = (event) => {
-      const data = event.data
-      finish(data?.type === "LR_OFFLINE_STATUS" && data.version === OFFLINE_PROTOCOL_VERSION && data.clean === true)
+      finish(isOfflineStatus(event.data))
     }
     try { controller.postMessage({ type: "LR_OFFLINE_CHECK" }, [channel.port2]) } catch { finish(false) }
   })

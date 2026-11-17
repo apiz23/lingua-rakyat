@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { API_URL } from "@/lib/config"
-const MIN_DURATION_MS = 500  // reject recordings shorter than 500ms
+const MIN_DURATION_MS = 500
 
 export type RecorderState = "idle" | "recording" | "transcribing" | "done" | "error"
 

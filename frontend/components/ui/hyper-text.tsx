@@ -43,7 +43,6 @@ type HyperTextMotionComponent = ComponentType<
 >
 
 interface HyperTextProps extends Omit<MotionProps, "children"> {
-  /** The text content to be animated */
   children: string
   /** Optional className for styling */
   className?: string

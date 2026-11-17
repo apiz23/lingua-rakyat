@@ -854,14 +854,13 @@ export default function AdminSourcesPage() {
                           <UiText text="Evidence" />
                         </dt>
                         <dd className="mt-0.5 break-words">
-                          {String(
-                            (
-                              source.metadata as {
-                                verification_evidence?: string
-                              }
-                            )?.verification_evidence ??
-                              "No verification evidence recorded"
-                          )}
+                          {(() => {
+                            const evidence =
+                              source.metadata?.["verification_evidence"]
+                            return typeof evidence === "string" && evidence
+                              ? evidence
+                              : "No verification evidence recorded"
+                          })()}
                         </dd>
                       </div>
                     </dl>

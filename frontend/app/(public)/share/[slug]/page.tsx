@@ -1,5 +1,6 @@
 import { UiText } from "@/components/i18n"
 import { getShare } from "@/lib/api"
+import { isConfidenceLabel } from "@/lib/api-schemas"
 import { ChatMarkdown } from "@/components/chat-panel/chat-markdown"
 import { notFound } from "next/navigation"
 import { LocalizedLink as Link } from "@/components/i18n"
@@ -135,7 +136,7 @@ export default async function SharePage({ params }: SharePageProps) {
   const copy = copyFor(locale)
   const confidenceText =
     copy.confidence[
-      (data.confidence_label as "high" | "medium" | "low") ?? "medium"
+      isConfidenceLabel(data.confidence_label) ? data.confidence_label : "medium"
     ] ?? copy.confidence.medium
 
   return (

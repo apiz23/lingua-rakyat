@@ -3,14 +3,10 @@
 import { useEffect, useRef, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 
-/**
- * useState persisted to localStorage. SSR-safe: renders the default first,
- * loads the stored value in an effect (no hydration mismatch), and only
- * starts writing back after the initial load.
- */
-export function useLocalStorageSetting<T extends string | boolean>(
+function usePersistedSetting<T>(
   key: string,
-  defaultValue: T
+  defaultValue: T,
+  parseStored: (raw: string) => T | undefined
 ): [T, Dispatch<SetStateAction<T>>] {
   const [value, setValue] = useState<T>(defaultValue)
   const loadedRef = useRef(false)
@@ -18,9 +14,8 @@ export function useLocalStorageSetting<T extends string | boolean>(
   useEffect(() => {
     const stored = window.localStorage.getItem(key)
     if (stored !== null) {
-      setValue(
-        (typeof defaultValue === "boolean" ? stored === "true" : stored) as T
-      )
+      const parsed = parseStored(stored)
+      if (parsed !== undefined) setValue(parsed)
     }
     loadedRef.current = true
     // defaultValue only determines the parse mode (boolean vs string)
@@ -33,4 +28,21 @@ export function useLocalStorageSetting<T extends string | boolean>(
   }, [key, value])
 
   return [value, setValue]
+}
+
+/** useState persisted as a boolean. Unknown stored values keep the default. */
+export function useLocalStorageBoolean(
+  key: string,
+  defaultValue: boolean
+): [boolean, Dispatch<SetStateAction<boolean>>] {
+  return usePersistedSetting(key, defaultValue, (raw) => raw === "true")
+}
+
+/** useState persisted as a string. The parser rejects unknown stored values. */
+export function useLocalStorageString<T extends string>(
+  key: string,
+  defaultValue: T,
+  parse: (raw: string) => T | undefined
+): [T, Dispatch<SetStateAction<T>>] {
+  return usePersistedSetting(key, defaultValue, parse)
 }

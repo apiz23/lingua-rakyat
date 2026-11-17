@@ -1,4 +1,5 @@
 import type { AnswerVerification, ChatStreamEvent, SourceChunk } from "./api"
+import { AnswerVerificationSchema } from "./api-schemas"
 
 type UnknownRecord = Record<string, unknown>
 
@@ -55,55 +56,9 @@ function parseVerification(
   value: unknown,
   sources: unknown[]
 ): AnswerVerification | null {
-  if (!isRecord(value)) return null
-  const statuses = [
-    "verified",
-    "partially_supported",
-    "unsupported",
-    "conflicting",
-    "unverifiable",
-  ]
-  const claimStatuses = [
-    "supported",
-    "partially_supported",
-    "unsupported",
-    "conflicting",
-    "unverifiable",
-  ]
-  if (
-    !statuses.includes(String(value.verification_status)) ||
-    !Array.isArray(value.claims) ||
-    typeof value.citation_valid !== "boolean" ||
-    typeof value.extraction_complete !== "boolean" ||
-    typeof value.extraction_status !== "string" ||
-    typeof value.verification_summary !== "string" ||
-    typeof value.revision_attempted !== "boolean" ||
-    typeof value.abstained !== "boolean" ||
-    ![
-      "verified_claim_count",
-      "partially_supported_claim_count",
-      "unsupported_claim_count",
-      "conflicting_claim_count",
-      "unverifiable_claim_count",
-    ].every((key) => Number.isInteger(value[key]) && Number(value[key]) >= 0)
-  )
-    return null
-
-  const claims = value.claims
-  if (
-    !claims.every(
-      (claim) =>
-        isRecord(claim) &&
-        typeof claim.claim_id === "string" &&
-        typeof claim.text === "string" &&
-        claimStatuses.includes(String(claim.status)) &&
-        isStringArray(claim.supporting_source_ids) &&
-        isStringArray(claim.conflicting_source_ids)
-    )
-  )
-    return null
-
-  const verification = value as unknown as AnswerVerification
+  const parsed = AnswerVerificationSchema.safeParse(value)
+  if (!parsed.success) return null
+  const verification = parsed.data
   if (verification.verification_status === "verified") {
     const currentSourceIds = new Set(
       sources

@@ -17,7 +17,10 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/components/language-provider"
 import { CHAT_COPY } from "@/lib/i18n/chat"
-import { useLocalStorageSetting } from "@/hooks/useLocalStorageSetting"
+import {
+  useLocalStorageBoolean,
+  useLocalStorageString,
+} from "@/hooks/useLocalStorageSetting"
 import { createIdentityLifecycle } from "@/lib/identity-lifecycle"
 import {
   AiChat,
@@ -91,8 +94,8 @@ function shortModelLabel(modelId: string): string {
 
 interface ChatPanelProps {
   selectedDoc: Document | null
-  sessionId?: string | null // externally controlled session
-  userId?: string // passed from workspace
+  sessionId?: string | null
+  userId?: string
   onBack?: () => void
   composerTop?: React.ReactNode
   emptyState?: React.ReactNode
@@ -208,7 +211,9 @@ export default function ChatPanel({
   )
 
   const [selectedPopoverModel, setSelectedPopoverModel] =
-    useLocalStorageSetting<string>("lr-chat-model", DEFAULT_CHAT_MODEL_ID)
+    useLocalStorageString("lr-chat-model", DEFAULT_CHAT_MODEL_ID, (raw) =>
+      raw.trim() ? raw : undefined
+    )
 
   useEffect(() => {
     if (window.localStorage.getItem("lr-chat-model-migrated-v2")) return
@@ -225,21 +230,22 @@ export default function ChatPanel({
     )
   }, [setSelectedPopoverModel])
   const [enableQueryAugmentation, setEnableQueryAugmentation] =
-    useLocalStorageSetting<boolean>("lr-augmentation", true)
-  const [askAllDocs, setAskAllDocs] = useLocalStorageSetting<boolean>(
+    useLocalStorageBoolean("lr-augmentation", true)
+  const [askAllDocs, setAskAllDocs] = useLocalStorageBoolean(
     "lr-ask-all-docs",
     true
   )
-  const [textSize, setTextSize] = useLocalStorageSetting<"normal" | "large">(
+  const [textSize, setTextSize] = useLocalStorageString<"normal" | "large">(
     "lr-text-size",
-    "normal"
+    "normal",
+    (raw) => (raw === "normal" || raw === "large" ? raw : undefined)
   )
   const largeText = textSize === "large"
-  const [autoSpeak, setAutoSpeak] = useLocalStorageSetting<boolean>(
+  const [autoSpeak, setAutoSpeak] = useLocalStorageBoolean(
     "lingua-autospeak",
     false
   )
-  const [simpleMode, setSimpleMode] = useLocalStorageSetting<boolean>(
+  const [simpleMode, setSimpleMode] = useLocalStorageBoolean(
     "lr-simple-mode",
     true
   )
@@ -355,7 +361,7 @@ export default function ChatPanel({
   }, [externalUserId])
 
   useEffect(() => {
-    setPdfViewerState(null) // Close PDF panel when document changes
+    setPdfViewerState(null)
 
     if (externalSessionId !== undefined) {
       if (externalSessionId) {
@@ -538,222 +544,238 @@ export default function ChatPanel({
         false,
         (event) => {
           if (!requestLifetime.current()) return
-          if (event.type === "retrieval") {
-            if (!messageAdded) {
-              messageAdded = true
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: msgId,
-                  question,
-                  answer: "",
-                  sources: [],
-                  timestamp,
-                  language: event.language,
-                  confidence: 0,
-                  latency_ms: 0,
-                  cached: false,
-                  sufficient_evidence: event.sufficient_evidence ?? true,
-                  isStreaming: true,
-                },
-              ])
+          switch (event.type) {
+            case "start":
               return
-            }
 
-            setMessages((prev) => {
-              const last = prev[prev.length - 1]
-              if (!last || last.id !== msgId) return prev
-
-              return [
-                ...prev.slice(0, -1),
-                {
-                  ...last,
-                  language: event.language,
-                  sufficient_evidence:
-                    event.sufficient_evidence ?? last.sufficient_evidence,
-                },
-              ]
-            })
-            return
-          }
-
-          if (event.type === "verifying") {
-            if (!messageAdded) {
-              messageAdded = true
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: msgId,
-                  question,
-                  answer: "",
-                  sources: [],
-                  timestamp,
-                  language: "en",
-                  confidence: 0,
-                  latency_ms: 0,
-                  cached: false,
-                  sufficient_evidence: true,
-                  isStreaming: true,
-                  verifying: true,
-                },
-              ])
-              return
-            }
-            setMessages((prev) => {
-              const last = prev[prev.length - 1]
-              if (!last || last.id !== msgId) return prev
-              return [...prev.slice(0, -1), { ...last, verifying: true }]
-            })
-            return
-          }
-
-          if (event.type === "token") {
-            if (!messageAdded) {
-              messageAdded = true
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: msgId,
-                  question,
-                  answer: event.text,
-                  sources: [],
-                  timestamp,
-                  language: "en",
-                  confidence: 0,
-                  latency_ms: 0,
-                  cached: false,
-                  sufficient_evidence: true,
-                  isStreaming: true,
-                },
-              ])
-              return
-            }
-
-            setMessages((prev) => {
-              const last = prev[prev.length - 1]
-              if (!last || last.id !== msgId) return prev
-              return [
-                ...prev.slice(0, -1),
-                { ...last, answer: last.answer + event.text },
-              ]
-            })
-            return
-          }
-
-          if (event.type === "complete") {
-            const completedMessage: Message = {
-              id: msgId,
-              question,
-              answer: event.answer,
-              sources: event.sources ?? [],
-              timestamp,
-              language: event.language,
-              confidence: event.confidence ?? 0,
-              confidence_label: event.confidence_label,
-              latency_ms: event.latency_ms ?? 0,
-              cached: event.cached ?? false,
-              model_used: event.model_used,
-              sufficient_evidence: event.sufficient_evidence ?? true,
-              evidence_mode: event.evidence_mode,
-              faithfulness: event.faithfulness ?? null,
-              confidence_explanation: event.confidence_explanation,
-              verification: event.verification ?? null,
-              isStreaming: false,
-              verifying: false,
-            }
-
-            setMessages((prev) => {
-              if (!messageAdded) return [...prev, completedMessage]
-
-              let index = -1
-              for (let i = prev.length - 1; i >= 0; i -= 1) {
-                if (prev[i].id === msgId) {
-                  index = i
-                  break
-                }
+            case "retrieval": {
+              if (!messageAdded) {
+                messageAdded = true
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: msgId,
+                    question,
+                    answer: "",
+                    sources: [],
+                    timestamp,
+                    language: event.language,
+                    confidence: 0,
+                    latency_ms: 0,
+                    cached: false,
+                    sufficient_evidence: event.sufficient_evidence ?? true,
+                    isStreaming: true,
+                  },
+                ])
+                return
               }
 
-              if (index === -1) return [...prev, completedMessage]
+              setMessages((prev) => {
+                const last = prev[prev.length - 1]
+                if (!last || last.id !== msgId) return prev
 
-              return [
-                ...prev.slice(0, index),
-                completedMessage,
-                ...prev.slice(index + 1),
-              ]
-            })
-
-            setDocumentHistory((prev) => [
-              {
-                id: `${sessionId}-${timestamp}`,
-                user_id: userId,
-                session_id: sessionId,
-                document_id: selectedDoc.id,
-                question,
-                answer: event.answer,
-                language: event.language,
-                sources: event.sources ?? [],
-                timestamp,
-                confidence: event.confidence ?? 0,
-                confidence_label: event.confidence_label,
-                latency_ms: event.latency_ms ?? 0,
-                model_used: event.model_used,
-                sufficient_evidence: event.sufficient_evidence ?? true,
-                faithfulness: event.faithfulness ?? null,
-                confidence_explanation: event.confidence_explanation,
-              },
-              ...prev,
-            ])
-            return
-          }
-
-          if (event.type === "suggestions") {
-            setMessages((prev) => {
-              let idx = -1
-              for (let i = prev.length - 1; i >= 0; i -= 1) {
-                if (prev[i].id === msgId) {
-                  idx = i
-                  break
-                }
-              }
-              if (idx === -1) return prev
-              return [
-                ...prev.slice(0, idx),
-                { ...prev[idx], suggestions: event.questions },
-                ...prev.slice(idx + 1),
-              ]
-            })
-            return
-          }
-
-          if (event.type === "error") {
-            if (messageAdded) {
-              setMessages((prev) =>
-                prev.filter((message) => message.id !== msgId)
-              )
-            }
-
-            const detail = event.detail ?? ""
-            const isRateLimit =
-              detail.toLowerCase().includes("rate limit") ||
-              detail.toLowerCase().includes("too many") ||
-              detail.includes("429")
-
-            if (isRateLimit) {
-              const match = detail.match(/(\d+(?:\.\d+)?)\s*s\b/)
-              const waitSeconds = match ? Math.ceil(parseFloat(match[1])) : 30
-              setRateLimitedUntil(Date.now() + waitSeconds * 1000)
-              setRateLimitSecondsLeft(waitSeconds)
-
-              toast.error(copy.tooManyQuestions, {
-                description: `${copy.waitAgain} ${waitSeconds} ${copy.seconds}`,
-                duration: 8000,
+                return [
+                  ...prev.slice(0, -1),
+                  {
+                    ...last,
+                    language: event.language,
+                    sufficient_evidence:
+                      event.sufficient_evidence ?? last.sufficient_evidence,
+                  },
+                ]
               })
               return
             }
 
-            toast.error(copy.answerError, {
-              description: detail || copy.retryLater,
-            })
+            case "verifying": {
+              if (!messageAdded) {
+                messageAdded = true
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: msgId,
+                    question,
+                    answer: "",
+                    sources: [],
+                    timestamp,
+                    language: "en",
+                    confidence: 0,
+                    latency_ms: 0,
+                    cached: false,
+                    sufficient_evidence: true,
+                    isStreaming: true,
+                    verifying: true,
+                  },
+                ])
+                return
+              }
+              setMessages((prev) => {
+                const last = prev[prev.length - 1]
+                if (!last || last.id !== msgId) return prev
+                return [...prev.slice(0, -1), { ...last, verifying: true }]
+              })
+              return
+            }
+
+            case "token": {
+              if (!messageAdded) {
+                messageAdded = true
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: msgId,
+                    question,
+                    answer: event.text,
+                    sources: [],
+                    timestamp,
+                    language: "en",
+                    confidence: 0,
+                    latency_ms: 0,
+                    cached: false,
+                    sufficient_evidence: true,
+                    isStreaming: true,
+                  },
+                ])
+                return
+              }
+
+              setMessages((prev) => {
+                const last = prev[prev.length - 1]
+                if (!last || last.id !== msgId) return prev
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, answer: last.answer + event.text },
+                ]
+              })
+              return
+            }
+
+            case "complete": {
+              const completedMessage: Message = {
+                id: msgId,
+                question,
+                answer: event.answer,
+                sources: event.sources,
+                timestamp,
+                language: event.language,
+                confidence: event.confidence,
+                confidence_label: event.confidence_label,
+                latency_ms: event.latency_ms,
+                cached: event.cached,
+                model_used: event.model_used,
+                sufficient_evidence: event.sufficient_evidence,
+                evidence_mode: event.evidence_mode,
+                faithfulness: event.faithfulness ?? null,
+                confidence_explanation: event.confidence_explanation,
+                verification: event.verification ?? null,
+                isStreaming: false,
+                verifying: false,
+              }
+
+              setMessages((prev) => {
+                if (!messageAdded) return [...prev, completedMessage]
+
+                let index = -1
+                for (let i = prev.length - 1; i >= 0; i -= 1) {
+                  if (prev[i].id === msgId) {
+                    index = i
+                    break
+                  }
+                }
+
+                if (index === -1) return [...prev, completedMessage]
+
+                return [
+                  ...prev.slice(0, index),
+                  completedMessage,
+                  ...prev.slice(index + 1),
+                ]
+              })
+
+              setDocumentHistory((prev) => [
+                {
+                  id: `${sessionId}-${timestamp}`,
+                  user_id: userId,
+                  session_id: sessionId,
+                  document_id: selectedDoc.id,
+                  question,
+                  answer: event.answer,
+                  language: event.language,
+                  sources: event.sources,
+                  timestamp,
+                  confidence: event.confidence,
+                  confidence_label: event.confidence_label,
+                  latency_ms: event.latency_ms,
+                  model_used: event.model_used,
+                  sufficient_evidence: event.sufficient_evidence,
+                  faithfulness: event.faithfulness ?? null,
+                  confidence_explanation: event.confidence_explanation,
+                },
+                ...prev,
+              ])
+              return
+            }
+
+            case "sources":
+              return
+
+            case "suggestions": {
+              setMessages((prev) => {
+                let idx = -1
+                for (let i = prev.length - 1; i >= 0; i -= 1) {
+                  if (prev[i].id === msgId) {
+                    idx = i
+                    break
+                  }
+                }
+                if (idx === -1) return prev
+                return [
+                  ...prev.slice(0, idx),
+                  { ...prev[idx], suggestions: event.questions },
+                  ...prev.slice(idx + 1),
+                ]
+              })
+              return
+            }
+
+            case "error": {
+              if (messageAdded) {
+                setMessages((prev) =>
+                  prev.filter((message) => message.id !== msgId)
+                )
+              }
+
+              const detail = event.detail
+              const isRateLimit =
+                detail.toLowerCase().includes("rate limit") ||
+                detail.toLowerCase().includes("too many") ||
+                detail.includes("429")
+
+              if (isRateLimit) {
+                const match = detail.match(/(\d+(?:\.\d+)?)\s*s\b/)
+                const waitSeconds = match
+                  ? Math.ceil(parseFloat(match[1]))
+                  : 30
+                setRateLimitedUntil(Date.now() + waitSeconds * 1000)
+                setRateLimitSecondsLeft(waitSeconds)
+
+                toast.error(copy.tooManyQuestions, {
+                  description: `${copy.waitAgain} ${waitSeconds} ${copy.seconds}`,
+                  duration: 8000,
+                })
+                return
+              }
+
+              toast.error(copy.answerError, {
+                description: detail || copy.retryLater,
+              })
+              return
+            }
+
+            default: {
+              const _exhaustive: never = event
+              void _exhaustive
+            }
           }
         },
         requestLifetime.signal,

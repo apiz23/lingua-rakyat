@@ -6,7 +6,7 @@
 // Rules:
 // - Browser with NEXT_PUBLIC_API_URL unset uses same-origin ("/api/...").
 // - Server-side requests require an absolute NEXT_PUBLIC_API_URL.
-// - No localhost fallback exists anywhere.
+// - No localhost fallback in this transport.
 // - A 401 is retried at most once, and only with a *different* fresh token.
 //   If the refresh yields no token we never downgrade to anonymous.
 // - 403 never refreshes a token. 429 raises a typed rate-limit error.

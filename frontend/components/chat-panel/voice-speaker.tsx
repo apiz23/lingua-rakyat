@@ -45,7 +45,7 @@ export function VoiceSpeaker({ text, language }: VoiceSpeakerProps) {
     if (state === "playing") {
       stop()
     } else {
-      play(text, language) // also handles "error" state — retries
+      play(text, language)
     }
   }
 

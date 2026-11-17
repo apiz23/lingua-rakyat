@@ -15,7 +15,7 @@ import { purgeLegacyOfflineData } from "@/lib/offline-cache"
 import { useLanguage } from "@/components/language-provider"
 import {
   createInvalidationChannel,
-  OFFLINE_PROTOCOL_VERSION,
+  isOfflineInvalidationMessage,
 } from "@/lib/offline-protocol"
 
 const LEGACY_CACHE_PREFIX = "lingua-rakyat"
@@ -57,14 +57,9 @@ async function purgeLegacyCaches() {
 /**
  * Cross-tab identity/offline boundary.
  *
- * Earlier revisions rendered a full-page "checking this device" gate and
- * refused to mount children until a service worker handshake, a Clerk client
- * reload and a token fetch all succeeded. That made every public route depend
- * on service-worker support and a fast network, so privacy-restricted
- * browsers, slow registrations and stale workers saw a permanently blocked
- * site. Rendering is now unconditional: the boundary only removes legacy
- * caches and remounts the tree when the actor changes or another tab signals
- * invalidation. Private data still fails closed at the API, which verifies the
+ * Rendering is unconditional: the boundary only removes legacy caches and
+ * remounts the tree when the actor changes or another tab signals
+ * invalidation. Private data fails closed at the API, which verifies the
  * Clerk token server-side.
  */
 export default function OfflineProvider({
@@ -103,10 +98,7 @@ export default function OfflineProvider({
       peer.send()
     }
     const onWorkerMessage = (event: MessageEvent) => {
-      if (
-        event.data?.type === "LR_OFFLINE_INVALIDATE" &&
-        event.data.version === OFFLINE_PROTOCOL_VERSION
-      ) {
+      if (isOfflineInvalidationMessage(event.data)) {
         onController()
       }
     }
