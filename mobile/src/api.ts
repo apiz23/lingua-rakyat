@@ -96,32 +96,47 @@ export class AuthRequiredError extends Error {
   }
 }
 
+function readDetail(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null) return null
+  const detail = Reflect.get(payload, "detail")
+  return typeof detail === "string" ? detail : null
+}
+
+async function errorDetail(res: Response, fallback: string): Promise<string> {
+  const payload: unknown = await res.json().catch(() => null)
+  return readDetail(payload) ?? fallback
+}
+
 async function apiFetch(
   input: RequestInfo,
   init?: RequestInit
 ): Promise<Response> {
   const auth = await authHeader()
-  const withAuth = (extra: Record<string, string>): RequestInit => ({
-    ...init,
-    cache: "no-store",
-    headers: {
-      ...(init?.headers as Record<string, string> | undefined),
-      ...extra,
-    },
-  })
-  let res = await fetch(input, withAuth(auth))
-  if (res.status === 401 && auth.Authorization) {
+  if (auth.expired) throw new AuthRequiredError()
+  const withAuth = (extra: Record<string, string>): RequestInit => {
+    const headers = new Headers(init?.headers)
+    for (const [name, value] of Object.entries(extra)) headers.set(name, value)
+    return { ...init, cache: "no-store", headers }
+  }
+  let res = await fetch(input, withAuth(auth.headers))
+  if (res.status === 401 && auth.headers.Authorization) {
     const refreshed = await authHeader()
-    if (refreshed.Authorization && refreshed.Authorization !== auth.Authorization) {
-      res = await fetch(input, withAuth(refreshed))
+    if (
+      refreshed.headers.Authorization &&
+      refreshed.headers.Authorization !== auth.headers.Authorization
+    ) {
+      res = await fetch(input, withAuth(refreshed.headers))
     }
   }
+  if (res.status === 401 || res.status === 403) throw new AuthRequiredError()
   if (res.status === 429) {
     const retryAfter = parseInt(
       res.headers.get("Retry-After") ?? "60",
       10
     )
-    throw new RateLimitError(Number.isNaN(retryAfter) ? 60 : retryAfter)
+    throw new RateLimitError(
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60
+    )
   }
   return res
 }
@@ -146,8 +161,7 @@ export async function deleteDocument(documentId: string): Promise<void> {
     method: "DELETE",
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Failed to delete document" }))
-    throw new Error(err.detail || "Failed to delete document")
+    throw new Error(await errorDetail(res, "Failed to delete document"))
   }
 }
 
@@ -191,13 +205,10 @@ export async function listConversations(
   void userId // Retained for caller compatibility; identity comes from Clerk.
   try {
     const res = await apiFetch(`${API_URL}/api/v1/me/conversations`)
-    if (res.status === 401 || res.status === 403) {
-      throw new Error("HistoryAuthorizationError")
-    }
     if (!res.ok) return []
     return res.json()
   } catch (error) {
-    if (error instanceof Error && error.message === "HistoryAuthorizationError") throw error
+    if (error instanceof AuthRequiredError) throw error
     return []
   }
 }
@@ -220,7 +231,8 @@ export async function renameConversation(
       }
     )
     return res.ok
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthRequiredError) throw error
     return false
   }
 }
@@ -237,8 +249,7 @@ export async function createShare(payload: {
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: "Failed to create share link" }))
-    throw new Error(error.detail || "Failed to create share link")
+    throw new Error(await errorDetail(res, "Failed to create share link"))
   }
   return res.json()
 }
@@ -263,7 +274,8 @@ export async function listMyShares(): Promise<MyShare[]> {
     const res = await apiFetch(`${API_URL}/api/v1/me/shares`)
     if (!res.ok) return []
     return await res.json()
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthRequiredError) throw error
     return []
   }
 }
@@ -274,7 +286,8 @@ export async function revokeShare(slug: string): Promise<boolean> {
       method: "DELETE",
     })
     return res.ok
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthRequiredError) throw error
     return false
   }
 }
@@ -295,9 +308,11 @@ export async function askQuestionStream(
   },
   onEvent: (event: ChatStreamEvent) => void
 ): Promise<void> {
+  const auth = await authHeader()
+  if (auth.expired) throw new AuthRequiredError()
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(await authHeader()),
+    ...auth.headers,
   }
   if (params.requireAuth && !headers.Authorization) throw new AuthRequiredError()
   const res = await streamingFetch(`${API_URL}/api/chat/ask-stream`, {
@@ -322,11 +337,12 @@ export async function askQuestionStream(
 
   if (res.status === 429) {
     const retryAfter = parseInt(res.headers.get("Retry-After") ?? "60", 10)
-    throw new RateLimitError(Number.isNaN(retryAfter) ? 60 : retryAfter)
+    throw new RateLimitError(
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60
+    )
   }
   if (!res.ok || !res.body) {
-    const err = await res.json().catch(() => ({ detail: "Stream failed" }))
-    throw new Error((err as { detail?: string }).detail || "Stream failed")
+    throw new Error(await errorDetail(res, "Stream failed"))
   }
 
   const reader = res.body.getReader()
