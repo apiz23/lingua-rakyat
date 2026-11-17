@@ -7,23 +7,79 @@ import { useAuth, UserButton } from "@clerk/nextjs"
 import Image from "next/image"
 import { useLanguage } from "@/components/language-provider"
 import { LocalizedLink as Link } from "@/components/i18n"
+import styles from "./landing-chrome.module.css"
+import { useEffect } from "react"
 
 type Item = { href: string; label: string }
 
 export function ExperienceNav({
   label,
   items,
+  editorial = false,
 }: {
   label: string
   items: Item[]
+  editorial?: boolean
 }) {
   const t = useTranslations()
 
   const { language, setLanguage } = useLanguage()
   const pathname = usePathname()
+  const hasMainContent =
+    editorial || pathname === "/about" || pathname === "/results"
   const { isLoaded, isSignedIn } = useAuth()
+  useEffect(() => {
+    if (!editorial) return
+    const header = document.querySelector<HTMLElement>("[data-landing-header]")
+    if (!header) return
+    const updateHeight = () =>
+      document.documentElement.style.setProperty(
+        "--landing-header-height",
+        `${header.getBoundingClientRect().height}px`
+      )
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(header)
+    updateHeight()
+    let frame = 0
+    const revealFocus = (event: FocusEvent) => {
+      const target = event.target
+      if (
+        !(target instanceof HTMLElement) ||
+        !target.closest("[data-immersive-landing]") ||
+        header.contains(target)
+      )
+        return
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const box = target.getBoundingClientRect()
+        const bottom = header.getBoundingClientRect().bottom
+        if (box.top < bottom + 16 && box.bottom > 0)
+          window.scrollBy({ top: box.top - bottom - 24, behavior: "instant" })
+      })
+    }
+    document.addEventListener("focusin", revealFocus)
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(frame)
+      document.removeEventListener("focusin", revealFocus)
+      document.documentElement.style.removeProperty("--landing-header-height")
+    }
+  }, [editorial])
   return (
-    <header className="border-b border-border/70 bg-background/90">
+    <header
+      data-landing-header={editorial ? "" : undefined}
+      className={
+        editorial ? styles.header : "border-b border-border/70 bg-background/90"
+      }
+    >
+      {hasMainContent && (
+        <a
+          className={styles.skipLink}
+          href={editorial ? "#landing-main" : "#public-main"}
+        >
+          {language === "ms" ? "Langkau ke kandungan" : "Skip to content"}
+        </a>
+      )}
       <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link
           href="/"
@@ -72,7 +128,13 @@ export function ExperienceNav({
             }
             className="rounded-md border border-border px-2 py-1 text-xs font-medium"
           >
-            {language === "ms" ? t("EN") : t("BM")}
+            {editorial
+              ? language === "ms"
+                ? "EN"
+                : "BM"
+              : language === "ms"
+                ? t("EN")
+                : t("BM")}
           </button>
           {isLoaded &&
             (isSignedIn ? (
