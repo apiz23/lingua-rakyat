@@ -10,9 +10,9 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Optional
 
-from utils import admin_service
 from utils import catalogue_cache
 from utils.document_publication import _parse_aware_datetime
+from utils.document_read_model import document_detail, source_view
 from utils.publication_store import (
     fetch_approved_sources,
     fetch_documents,
@@ -173,7 +173,7 @@ def get_revision(client: Any, actor: Any, document_id: str, revision: int) -> di
     current = document.get("current_revision") or document.get("document_version")
     view = _revision_view(row, current=current)
     source = _source(client, row.get("source_id"))
-    view["source"] = admin_service._source_view(source) if source else None
+    view["source"] = source_view(source) if source else None
     return view
 
 
@@ -324,7 +324,7 @@ def review_current_document(
             "p_reason": reason or None,
         },
     )
-    return admin_service.get_document(client, actor, document_id)
+    return document_detail(client, document_id)
 
 
 def _update_revision(

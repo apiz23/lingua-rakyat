@@ -11,15 +11,31 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterable, Mapping, Optional
+from typing import Any, Mapping, Optional
 
+from utils.admin_errors import (
+    AdminConflict,
+    AdminNotFound,
+    AdminUnavailable,
+    AdminValidationError,
+)
 from utils.authorization import Actor
 from utils import catalogue_cache
 from utils.document_publication import is_publicly_eligible
+from utils.document_read_model import (
+    document_detail,
+    document_view as _document_view,
+    documents as _documents,
+    publication_blockers,
+    read_rows as _read,
+    revision_for as _revision_for,
+    revision_view as _revision_view,
+    source_map as _source_map,
+    source_view as _source_view,
+)
 from utils.publication_store import (
     documents_table,
     events_table,
-    fetch_documents,
     revisions_table,
     sources_table,
 )
@@ -31,22 +47,6 @@ ROLES_TABLE = "lr_admin_roles"
 AUDIT_TABLE = "admin_audit_log"
 
 DASHBOARD_EXPIRING_DAYS = 30
-
-
-class AdminUnavailable(RuntimeError):
-    """Admin persistence is missing or unreachable; callers return 503."""
-
-
-class AdminNotFound(RuntimeError):
-    """Target resource does not exist."""
-
-
-class AdminConflict(RuntimeError):
-    """The requested transition is not valid for the current state."""
-
-
-class AdminValidationError(ValueError):
-    """Request data failed validation."""
 
 
 def _now() -> datetime:
@@ -75,16 +75,6 @@ def _parse(value: Any) -> Optional[datetime]:
 def _is_missing_table(exc: Exception) -> bool:
     text = str(exc)
     return "42P01" in text or "PGRST205" in text
-
-
-def _read(client: Any, table: str) -> list[dict[str, Any]]:
-    try:
-        result = client.table(table).select("*").execute()
-    except Exception as exc:
-        if _is_missing_table(exc):
-            raise AdminUnavailable(f"{table} is not provisioned") from exc
-        raise AdminUnavailable(f"Could not read {table}") from exc
-    return [row for row in (getattr(result, "data", None) or []) if isinstance(row, dict)]
 
 
 def _insert(client: Any, table: str, payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -148,121 +138,6 @@ def _actor_roles(client: Any, actor: Actor) -> set[str]:
 
 
         return set()
-
-
-
-
-
-
-
-def _document_view(
-    row: Mapping[str, Any],
-    *,
-    source: Optional[Mapping[str, Any]] = None,
-    revision: Optional[Mapping[str, Any]] = None,
-) -> dict[str, Any]:
-    """Browser-safe admin view: never expose storage paths or signed URLs."""
-    return {
-        "id": str(row.get("id", "")),
-        "name": row.get("name", ""),
-        "size_bytes": int(row.get("size_bytes", 0) or 0),
-        "chunk_count": int(row.get("chunk_count", 0) or 0),
-        "status": row.get("status", ""),
-        "uploaded_at": str(row.get("uploaded_at") or ""),
-        "agency": row.get("agency"),
-        "is_featured": bool(row.get("is_featured", False)),
-        "visibility_scope": row.get("visibility_scope") or "unclassified",
-        "publication_status": row.get("publication_status") or "draft",
-        "source_id": row.get("source_id"),
-        "source_type": row.get("source_type"),
-        "owner_type": row.get("owner_type"),
-        "approved_by": row.get("approved_by"),
-        "approved_at": row.get("approved_at"),
-        "published_at": row.get("published_at"),
-        "expires_at": row.get("expires_at"),
-        "last_verified_at": row.get("last_verified_at"),
-        "current_revision": row.get("current_revision") or row.get("document_version") or 1,
-        "error_message": row.get("error_message"),
-        "has_storage": bool(row.get("storage_path")),
-        "source": _source_view(source) if source else None,
-        "revision": _revision_view(revision) if revision else None,
-    }
-
-
-def _source_view(row: Mapping[str, Any]) -> dict[str, Any]:
-    return {
-        "source_id": row.get("source_id", ""),
-        "issuing_organization": row.get("issuing_organization", ""),
-        "authority": row.get("authority"),
-        "source_url": row.get("source_url"),
-        "source_type": row.get("source_type", ""),
-        "verification_status": row.get("verification_status", "unverified"),
-        "verified_by": row.get("verified_by"),
-        "verified_at": row.get("verified_at"),
-        "usage_rights": row.get("usage_rights"),
-        "usage_permitted": bool(row.get("usage_permitted", False)),
-        "freshness_days": row.get("freshness_days"),
-        "last_verified_at": row.get("last_verified_at"),
-        "revoked_at": row.get("revoked_at"),
-        "metadata": row.get("metadata") or {},
-        "created_at": row.get("created_at"),
-        "updated_at": row.get("updated_at"),
-    }
-
-
-def _revision_view(row: Mapping[str, Any]) -> dict[str, Any]:
-    return {
-        "revision": row.get("revision"),
-        "source_id": row.get("source_id"),
-        "source_type": row.get("source_type"),
-        "checksum": row.get("checksum"),
-        "approved_by": row.get("approved_by"),
-        "approved_at": row.get("approved_at"),
-        "created_at": row.get("created_at"),
-        "superseded_at": row.get("superseded_at"),
-        "revoked_at": row.get("revoked_at"),
-        "has_storage": bool(row.get("storage_path")),
-        "is_current": False,
-        "indexing_status": row.get("indexing_status") or "pending",
-        "indexed_at": row.get("indexed_at"),
-        "chunk_count": int(row.get("chunk_count") or 0),
-        "index_error": row.get("index_error"),
-        "review_status": row.get("review_status") or "pending",
-        "review_reason": row.get("review_reason"),
-        "reviewed_by": row.get("reviewed_by"),
-        "reviewed_at": row.get("reviewed_at"),
-    }
-
-
-def _revision_for(row: Mapping[str, Any], revisions: Iterable[Mapping[str, Any]]) -> Optional[Mapping[str, Any]]:
-    current = row.get("current_revision") or row.get("document_version")
-    document_id = str(row.get("id") or "")
-    try:
-        current_revision = int(current)
-    except (TypeError, ValueError):
-        return None
-    matches = [
-        rev
-        for rev in revisions
-        if str(rev.get("document_id") or "") == document_id
-        and int(rev.get("revision") or 0) == current_revision
-    ]
-    return matches[0] if len(matches) == 1 else None
-
-
-def _source_map(client: Any) -> dict[str, dict[str, Any]]:
-    return {
-        str(row.get("source_id")): row
-        for row in _read(client, sources_table())
-        if row.get("source_id")
-    }
-
-
-def _documents(client: Any) -> list[dict[str, Any]]:
-    try:
-        return fetch_documents(client)
-    except Exception as exc:
-        raise AdminUnavailable("Could not read documents") from exc
 
 
 
@@ -410,24 +285,7 @@ def list_documents(
 
 def get_document(client: Any, actor: Actor, document_id: str) -> dict[str, Any]:
     del actor
-    row = next((doc for doc in _documents(client) if str(doc.get("id")) == document_id), None)
-    if row is None:
-        raise AdminNotFound("Document not found")
-    source = _source_map(client).get(str(row.get("source_id") or ""))
-    revisions = [rev for rev in _read(client, revisions_table()) if rev.get("document_id") == document_id]
-    revision = _revision_for(row, revisions)
-    view = _document_view(row, source=source, revision=revision)
-    current_revision = row.get("current_revision") or row.get("document_version")
-    revision_views = []
-    for rev in revisions:
-        item = _revision_view(rev)
-        item["is_current"] = str(rev.get("revision")) == str(current_revision)
-        revision_views.append(item)
-    view["revisions"] = revision_views
-    events = [ev for ev in _read(client, events_table()) if ev.get("document_id") == document_id]
-    view["events"] = sorted(events, key=lambda ev: str(ev.get("occurred_at") or ""), reverse=True)
-    view["blockers"] = publication_blockers(row, source, revision)
-    return view
+    return document_detail(client, document_id)
 
 
 METADATA_FIELDS = {"name", "agency", "is_featured", "expires_at", "source_id"}
@@ -798,64 +656,6 @@ def revoke_source(
 
 
 
-
-
-def publication_blockers(
-    document: Mapping[str, Any],
-    source: Optional[Mapping[str, Any]],
-    revision: Optional[Mapping[str, Any]],
-    *,
-    now: Optional[datetime] = None,
-) -> list[str]:
-    moment = now or _now()
-    blockers: list[str] = []
-    if document.get("status") != "ready":
-        blockers.append("processing_not_ready")
-    if not document.get("approved_by") or not document.get("approved_at"):
-        blockers.append("missing_approval")
-    if not source:
-        blockers.append("missing_source")
-    else:
-        if source.get("verification_status") != "verified":
-            blockers.append("source_not_verified")
-        if source.get("usage_permitted") is not True:
-            blockers.append("usage_not_permitted")
-        if not str(source.get("usage_rights") or "").strip():
-            blockers.append("source_usage_rights_missing")
-        if source.get("revoked_at"):
-            blockers.append("source_revoked")
-        freshness = source.get("freshness_days")
-        verified = _parse(source.get("last_verified_at"))
-        if (
-            not isinstance(freshness, int)
-            or isinstance(freshness, bool)
-            or freshness <= 0
-            or freshness > 3650
-        ):
-            blockers.append("source_freshness_policy_missing")
-        elif verified is None or verified > moment:
-            blockers.append("source_verification_time_invalid")
-        elif moment - verified > timedelta(days=freshness):
-            blockers.append("source_stale")
-    if revision is None:
-        blockers.append("missing_current_revision")
-    else:
-        if revision.get("superseded_at") or revision.get("revoked_at"):
-            blockers.append("revision_not_current")
-        if not revision.get("storage_path"):
-            blockers.append("revision_storage_missing")
-        if not revision.get("approved_by") or not revision.get("approved_at"):
-            blockers.append("revision_not_approved")
-        if revision.get("indexing_status") != "indexed":
-            blockers.append("revision_not_indexed")
-        elif int(revision.get("chunk_count") or 0) <= 0:
-            blockers.append("revision_index_empty")
-    expiry = _parse(document.get("expires_at"))
-    if document.get("expires_at") and (expiry is None or expiry <= moment):
-        blockers.append("expired")
-    if document.get("revoked_at") or document.get("superseded_by"):
-        blockers.append("revoked")
-    return blockers
 
 
 def review_queue(client: Any, actor: Actor) -> list[dict[str, Any]]:
