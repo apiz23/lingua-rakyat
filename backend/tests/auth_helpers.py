@@ -19,6 +19,7 @@ def mint_token(
     issuer: str = TEST_ISSUER,
     expires_in: int = 300,
     kid: str = TEST_KID,
+    azp: str | None = None,
 ) -> str:
     now = datetime.datetime.now(datetime.timezone.utc)
     payload = {
@@ -27,6 +28,8 @@ def mint_token(
         "iat": now,
         "exp": now + datetime.timedelta(seconds=expires_in),
     }
+    if azp is not None:
+        payload["azp"] = azp
     return jwt.encode(payload, private_key, algorithm="RS256", headers={"kid": kid})
 
 

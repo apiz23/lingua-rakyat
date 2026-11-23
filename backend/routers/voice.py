@@ -1,6 +1,7 @@
 """
 routers/voice.py — Voice I/O endpoints: STT (Groq Whisper) + TTS (ElevenLabs).
 """
+import asyncio
 import logging
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
@@ -54,7 +55,10 @@ async def transcribe(request: Request, audio: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="empty audio: no bytes received")
 
     try:
-        result = transcribe_audio(audio_bytes, audio.filename or "recording.webm")
+        # Groq transcription is a blocking HTTP call; keep it off the event loop.
+        result = await asyncio.to_thread(
+            transcribe_audio, audio_bytes, audio.filename or "recording.webm"
+        )
     except TranscriptionError as exc:
         logger.warning("Transcription failed: %s", exc)
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -66,7 +70,7 @@ async def transcribe(request: Request, audio: UploadFile = File(...)):
 
 @router.post("/tts")
 @limiter.limit(VOICE_LIMIT)
-async def tts(request: Request, body: TTSRequest):
+def tts(request: Request, body: TTSRequest):
     """
     Convert text to speech via ElevenLabs multilingual v2.
     Returns audio/mpeg on success, or { fallback: true } if quota exceeded.

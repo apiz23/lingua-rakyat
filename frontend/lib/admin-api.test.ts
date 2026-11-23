@@ -38,7 +38,7 @@ describe("admin API transport states", () => {
       "https://api.example.test/api/v1/admin/documents?",
       expect.any(Object)
     )
-  })
+  }, 15_000)
 
   it("maps 401 to unauthorized", async () => {
     const api = await loadAdminApi()

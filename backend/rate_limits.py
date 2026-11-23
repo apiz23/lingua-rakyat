@@ -1,10 +1,9 @@
-"""
-rate_limits.py — Centralized, env-gated rate-limit values.
+"""Centralized, env-gated rate-limit values.
 
-All endpoints key by client IP (slowapi get_remote_address). At a demo booth,
-every visitor shares one public IP, so the per-IP buckets fill quickly and
-judges hit HTTP 429 mid-demo. Set BOOTH_MODE=true to switch to generous limits
-for the controlled demo, then false again for normal public use.
+All endpoints key by client IP. At a demo booth, every visitor shares one public
+IP, so the per-IP buckets fill quickly and judges hit HTTP 429 mid-demo. Set
+BOOTH_MODE=true to switch to generous limits for the controlled demo, then false
+again for normal public use.
 
 Normal-mode values match the limits that were previously hard-coded on each
 route, so behavior is unchanged unless BOOTH_MODE (or a per-limit override) is
@@ -12,42 +11,65 @@ set. Each value can be overridden directly with its own env var
 (e.g. CHAT_RATE_LIMIT="500/minute"), which takes precedence over BOOTH_MODE.
 
 When deployed behind a reverse proxy (Vercel, Render, Cloudflare, nginx), the
-raw client IP is the proxy's IP, not the end user's. This module provides
-get_proxy_aware_remote_address() which checks X-Forwarded-For and X-Real-IP
-before falling back to the direct connection IP, so rate limits are enforced
-on real users, not on proxy IPs.
+raw client IP is the proxy's IP, not the end user's. Forwarded headers are only
+trusted when the direct peer is a configured trusted proxy
+(``TRUSTED_PROXY_IPS``) or when ``TRUST_PROXY_HEADERS=true`` is set explicitly;
+otherwise any caller could spoof its own rate-limit key.
 """
 
+import ipaddress
 import os
-from typing import Optional
 
 from fastapi import Request
 
 
+def _trusted_proxy_networks() -> list:
+    networks = []
+    for entry in os.getenv("TRUSTED_PROXY_IPS", "").split(","):
+        value = entry.strip()
+        if not value:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(value, strict=False))
+        except ValueError:
+            continue
+    return networks
+
+
+def _is_trusted_proxy(peer: str) -> bool:
+    if os.getenv("TRUST_PROXY_HEADERS", "false").strip().lower() == "true":
+        return True
+    try:
+        address = ipaddress.ip_address(peer)
+    except ValueError:
+        return False
+    return any(address in network for network in _trusted_proxy_networks())
+
+
 def get_proxy_aware_remote_address(request: Request) -> str:
     """
-    Resolve the original client IP from proxy-forwarded headers.
+    Resolve the original client IP without trusting unverified headers.
 
-    Priority:
-      1. X-Forwarded-For (first, most trusted IP in the chain)
-      2. X-Real-IP (single IP header, set by some proxies like nginx)
-      3. request.client.host (direct connection — fallback)
+    Forwarded headers are consulted only when the immediate peer is a trusted
+    proxy. The rightmost entry is used because it is the hop appended by the
+    first trusted ingress proxy; leftmost entries are caller-controlled.
     """
+    client = request.client
+    peer = client.host if client is not None else "unknown"
+    if not _is_trusted_proxy(peer):
+        return peer
+
     forwarded = request.headers.get("x-forwarded-for", "").strip()
     if forwarded:
         candidates = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
         if candidates:
-            return candidates[0]
+            return candidates[-1]
 
     real_ip = request.headers.get("x-real-ip", "").strip()
     if real_ip:
         return real_ip
 
-    client = request.client
-    if client is not None:
-        return client.host
-
-    return "unknown"
+    return peer
 
 
 BOOTH_MODE = os.getenv("BOOTH_MODE", "false").lower() == "true"

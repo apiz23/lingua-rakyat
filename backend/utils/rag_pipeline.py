@@ -189,12 +189,29 @@ def _sanitize_question(question: str) -> str:
     return question[:500].strip()
 
 
+# Models the web client exposes. The server only honours a client override when
+# it is on this list, so a stale/unknown id can never be forwarded upstream.
+SUPPORTED_CHAT_MODELS: frozenset[str] = frozenset(
+    {
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.6-27b",
+        "llama-3.1-8b-instant",
+    }
+)
+
+
 def _configured_models() -> frozenset[str]:
-    return frozenset(
+    configured = {
         model.strip().lower()
         for model in (GROQ_MODEL, GROQ_MODEL_FAST)
         if isinstance(model, str) and model.strip()
-    )
+    }
+    # An unconfigured server must deny every override rather than forward a
+    # client-supplied model id upstream.
+    if not configured:
+        return frozenset()
+    return frozenset(configured | SUPPORTED_CHAT_MODELS)
 
 
 def _normalize_model_name(model_override: str | None) -> str:
@@ -1748,6 +1765,9 @@ def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -
         "namespaces": prepared.get("namespaces", [prepared["document_id"]]),
         "sources": [
             {
+                # Stable S1..Sn id matching build_evidence(), so the client can
+                # ground claim citations against the sources it actually shows.
+                "source_id": f"S{index}",
                 "text": match["metadata"]["text"][:360],
                 "document_id": match["metadata"].get("doc_id") or prepared["document_id"],
                 "doc_name": match["metadata"].get("doc_name", ""),
@@ -1762,7 +1782,7 @@ def _build_result(prepared: dict[str, Any], answer_text: str, model_used: str) -
                     prepared["sufficient_evidence"],
                 ),
             }
-            for match in prepared["filtered_matches"]
+            for index, match in enumerate(prepared["filtered_matches"], start=1)
         ],
         "confidence": round(top_score, 4),
         "confidence_label": confidence_label,

@@ -156,16 +156,6 @@ export async function getDocumentStatus(
   return res.json()
 }
 
-export async function deleteDocument(documentId: string): Promise<void> {
-  const res = await apiFetch(`${API_URL}/api/documents/${documentId}`, {
-    method: "DELETE",
-  })
-  if (!res.ok) {
-    throw new Error(await errorDetail(res, "Failed to delete document"))
-  }
-}
-
-
 export async function getChatHistory(params: {
   userId: string
   documentId?: string

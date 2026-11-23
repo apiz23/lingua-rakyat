@@ -1,4 +1,8 @@
-import type { ChatStreamEvent, SourceChunk } from "./chat-types";
+import type {
+  AnswerVerification,
+  ChatStreamEvent,
+  SourceChunk,
+} from "./chat-types";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -59,6 +63,7 @@ export function parseChatStreamEvent(value: unknown): ChatStreamEvent | null {
   if (!isRecord(value) || typeof value.type !== "string") return null;
   switch (value.type) {
     case "start":
+    case "verifying":
       return { type: value.type };
     case "token":
       return typeof value.text === "string"
@@ -108,6 +113,14 @@ export function parseChatStreamEvent(value: unknown): ChatStreamEvent | null {
         typeof value.cached !== "boolean"
       )
         return null;
+      const verification =
+        isRecord(value.verification) &&
+        typeof value.verification.verification_status === "string"
+          ? {
+              verification_status: value.verification
+                .verification_status as AnswerVerification["verification_status"],
+            }
+          : null;
       return {
         type: "complete",
         answer: value.answer,
@@ -149,6 +162,7 @@ export function parseChatStreamEvent(value: unknown): ChatStreamEvent | null {
           typeof value.model_used === "string" ? value.model_used : "unknown",
         sufficient_evidence: value.sufficient_evidence === true,
         cached: value.cached === true,
+        verification,
       };
     default:
       return null;

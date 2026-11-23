@@ -32,13 +32,14 @@ Status terms: **Implemented in source** = code path exists locally; **implemente
 
 - Inventory actual deployed grants, RLS policies, functions, sequences and storage bucket/object policies. Repository SQL does not prove live posture.
 - Use least-privilege DB roles, default-deny RLS, private buckets and explicit owner/public eligibility policies. Never expose service-role credentials to clients. Any server-side RLS bypass must repeat equivalent authorization and audit checks in trusted services.
+- `2026-11-23-harden-citizen-data-rls.sql` enables RLS and revokes `anon`/`authenticated` access on chat history, shared answers, feedback, evaluation records and chat-bot session tables. The backend reaches those tables with the service role only after identity and ownership checks. Confirm the migration is applied before relying on this posture.
 - Test direct SQL and object access as anon, authenticated users with distinct subjects, least-privilege service roles and service-role paths. Verify cross-owner isolation, no public private-object access and safe migration rollback.
 - Do not backfill publication status by inferring from readiness or existing presence. Require reviewed source/owner/approval inventory; unclassified rows remain private/draft.
 
 ## Abuse, privacy and operations
 
 - Bound request bytes before buffering, including voice/audio uploads; validate media type, duration and text lengths. Apply per-actor/IP plus global concurrency/spend budgets, timeouts and provider limits to voice, chat, feedback and ingestion.
-- Trust forwarded IP headers only from configured proxies and parse the trusted chain correctly. Current rate-limit source reads forwarded headers without validating proxy origin; this is an unresolved spoofing risk until ingress topology and trusted proxies are configured and tested.
+- Trust forwarded IP headers only from configured proxies and parse the trusted chain correctly. The rate-limit source now ignores forwarded headers unless the direct peer matches `TRUSTED_PROXY_IPS` (or `TRUST_PROXY_HEADERS=true` is set explicitly). Ingress CIDRs still need to be configured and tested for the deployed topology.
 - Minimize telemetry: do not log credentials, signed URLs, raw prompts, audio, private snippets or sensitive provider output. Define retention, deletion, consent and access before research use. Default to no raw citizen prompt retention absent explicit approval.
 - Keep public health responses minimal. Restrict or disable OpenAPI/docs in production if they disclose internal routes or details. Validate security headers, CORS, CSRF protections where cookie auth is used, and secret redaction.
 - Audit privileged attempts and outcomes with verified actor, permission, operation, object/version, result and correlation ID in protected append-only storage; exclude secrets and content.
@@ -55,7 +56,7 @@ Status terms: **Implemented in source** = code path exists locally; **implemente
 | Documents | 10/minute | 120/minute |
 | PDF URL | 20/minute | 240/minute |
 
-Overrides take precedence over either mode: `GLOBAL_RATE_LIMIT`, `CHAT_RATE_LIMIT`, `VOICE_RATE_LIMIT`, `DOC_RATE_LIMIT`, and `PDF_URL_RATE_LIMIT`, using SlowAPI limit syntax. These are current source values, not a statement of deployed settings. The source selects the first `X-Forwarded-For` entry, then `X-Real-IP`, then the direct peer, without validating the forwarding proxy. Do not rely on IP-based limits until ingress trusts only configured proxies and forwarded-chain behavior is verified; this remains an unresolved control.
+Overrides take precedence over either mode: `GLOBAL_RATE_LIMIT`, `CHAT_RATE_LIMIT`, `VOICE_RATE_LIMIT`, `DOC_RATE_LIMIT`, and `PDF_URL_RATE_LIMIT`, using SlowAPI limit syntax. These are current source values, not a statement of deployed settings. The source ignores `X-Forwarded-For`/`X-Real-IP` unless the direct peer matches `TRUSTED_PROXY_IPS` or `TRUST_PROXY_HEADERS=true`; when trusted, it uses the rightmost forwarded hop. Deployment must still configure the actual ingress CIDRs and verify the chain.
 
 ## Unresolved findings and decisions
 
@@ -64,7 +65,7 @@ The prior security/architecture audits identified the following; the items are *
 1. **Publication policy integration:** the publication helper was reported as unused by runtime catalogue/PDF/retrieval paths. Confirm current call sites and enforce one eligibility policy end to end.
 2. **Database and storage posture:** deployed Supabase grants, RLS and bucket access were not inspected. Complete live inventory and role-based negative tests before public rollout.
 3. **Admin/research authority:** no approved trusted grant source was recorded; document mutations and evaluation are intentionally unavailable in local source pending authorization design.
-4. **Proxy trust and rate limits:** forwarded headers were trusted without origin validation; voice request size was checked after reading content into memory; feedback lacked a dedicated limiter in the audited source. Verify current implementation and ingress controls.
+4. **Proxy trust and rate limits:** forwarded headers are now gated on configured trusted proxies; voice request size is enforced from `Content-Length` and a capped read; feedback has a dedicated limiter. Ingress CIDRs and deployed proxy behavior still require verification.
 5. **Identity token context:** prior review noted disabled audience verification and the need to define token context and malformed-header behavior. Verify and resolve explicitly.
 6. **Offline cache isolation:** prior review found global browser cache keys. Verify identity partitioning and purge behavior across sign-out/account switch.
 7. **PDF/share revocation:** one-hour signed URL behavior was reported; determine whether any path remains and document accepted revocation lag. Share and OG caches must not outlive eligibility.

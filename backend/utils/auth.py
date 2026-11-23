@@ -9,8 +9,11 @@ today's behavior. An invalid token is a hard 401, never a silent fallback.
 
 import logging
 import os
-import httpx
+import threading
+import time
 from typing import Optional
+
+import httpx
 
 import jwt
 from fastapi import HTTPException, Request
@@ -22,10 +25,52 @@ CLERK_ISSUER = os.getenv("CLERK_ISSUER", "")
 
 _jwk_client: Optional[jwt.PyJWKClient] = None
 
+# The admin UI can issue several parallel requests per page load. Looking the
+# account email up over HTTPS on every one of them adds latency and risks Clerk
+# API rate limits, so verified emails are cached briefly per subject.
+_EMAIL_CACHE_TTL_SECONDS = 300.0
+_EMAIL_CACHE_MAX_ENTRIES = 500
+_email_cache: dict[str, tuple[float, Optional[str]]] = {}
+_email_cache_lock = threading.Lock()
+
+
+def _cached_account_email(subject: str) -> tuple[bool, Optional[str]]:
+    now = time.monotonic()
+    with _email_cache_lock:
+        entry = _email_cache.get(subject)
+        if entry is None:
+            return False, None
+        cached_at, email = entry
+        if now - cached_at > _EMAIL_CACHE_TTL_SECONDS:
+            _email_cache.pop(subject, None)
+            return False, None
+        return True, email
+
+
+def _cache_account_email(subject: str, email: Optional[str]) -> None:
+    with _email_cache_lock:
+        if len(_email_cache) >= _EMAIL_CACHE_MAX_ENTRIES:
+            _email_cache.clear()
+        _email_cache[subject] = (time.monotonic(), email)
+
+
+def _authorized_parties() -> frozenset[str]:
+    """Allowed Clerk ``azp`` origins, configured per deployment."""
+    raw = os.getenv("CLERK_AUTHORIZED_PARTIES", "")
+    return frozenset(
+        party.strip().rstrip("/")
+        for party in raw.split(",")
+        if party.strip()
+    )
+
 
 def verified_account_email(subject: str) -> Optional[str]:
     """Resolve a verified primary email using the server's Clerk credential."""
     from urllib.parse import quote
+
+    cached, email = _cached_account_email(subject)
+    if cached:
+        return email
 
     secret = _env_value("CLERK_SECRET_KEY")
     if not secret:
@@ -44,7 +89,10 @@ def verified_account_email(subject: str) -> Optional[str]:
     for address in user.get("email_addresses", []):
         if address.get("id") == primary_id and (address.get("verification") or {}).get("status") == "verified":
             email = address.get("email_address")
-            return email.strip().lower() if isinstance(email, str) else None
+            resolved = email.strip().lower() if isinstance(email, str) else None
+            _cache_account_email(subject, resolved)
+            return resolved
+    _cache_account_email(subject, None)
     return None
 
 
@@ -114,6 +162,14 @@ def verify_clerk_claims(token: str) -> dict:
         # Clerk session tokens carry `azp`, not `aud`.
         options={"verify_aud": False},
     )
+    allowed_parties = _authorized_parties()
+    if allowed_parties:
+        authorized_party = claims.get("azp")
+        if (
+            not isinstance(authorized_party, str)
+            or authorized_party.strip().rstrip("/") not in allowed_parties
+        ):
+            raise jwt.InvalidTokenError("Token was issued for an unauthorized party")
     sub = claims.get("sub", "")
     if not sub:
         raise jwt.InvalidTokenError("Token has no sub claim")

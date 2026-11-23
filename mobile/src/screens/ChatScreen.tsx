@@ -20,6 +20,7 @@ import {
   RateLimitError,
   SourceChunk,
   askQuestionStream,
+  getChatHistory,
 } from "../api"
 import { Copy } from "../i18n"
 import { Palette, fonts, radius, spacing, useTheme } from "../theme"
@@ -32,6 +33,7 @@ interface Message {
   confidence_label?: "high" | "medium" | "low"
   suggestions?: string[]
   streaming: boolean
+  verifying?: boolean
   error?: string
 }
 
@@ -112,6 +114,34 @@ export default function ChatScreen({
   useEffect(() => {
     setMessages([])
   }, [sessionId])
+
+  // Selecting a saved conversation from the profile screen remounts this
+  // screen with a new sessionId; hydrate it from the owner-scoped history.
+  useEffect(() => {
+    if (!isSignedIn || !userId || !sessionId) return
+    let active = true
+    getChatHistory({ userId, sessionId })
+      .then((rows) => {
+        if (!active || generationRef.current !== 0) return
+        setMessages(
+          [...rows].reverse().map((row) => ({
+            id: row.id,
+            question: row.question,
+            answer: row.answer,
+            sources: row.sources ?? [],
+            confidence_label: row.confidence_label,
+            streaming: false,
+          }))
+        )
+      })
+      .catch((error: unknown) => {
+        if (!active) return
+        if (error instanceof AuthRequiredError) setAuthRequired(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [isSignedIn, userId, sessionId])
 
   useEffect(() => {
     if (waitSeconds <= 0) return
@@ -206,18 +236,22 @@ export default function ChatScreen({
           if (!current()) return
           if (event.type === "token") {
             appendAnswer(msgId, event.text)
+          } else if (event.type === "verifying") {
+            updateMessage(msgId, { verifying: true })
           } else if (event.type === "complete") {
             updateMessage(msgId, {
               answer: event.answer,
               sources: event.sources ?? [],
               confidence_label: event.confidence_label,
               streaming: false,
+              verifying: false,
             })
           } else if (event.type === "suggestions") {
             updateMessage(msgId, { suggestions: event.questions })
           } else if (event.type === "error") {
             updateMessage(msgId, {
               streaming: false,
+              verifying: false,
               error: event.detail || copy.answerError,
             })
           }

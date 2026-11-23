@@ -14,14 +14,13 @@ Commands:
 import hashlib
 import logging
 import os
-import tempfile
 import uuid
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from routers.documents import load_documents, upsert_documents
-from utils.rag_pipeline import answer_question, ingest_document
+from routers.documents import load_documents
+from utils.rag_pipeline import answer_question
 from utils.voice_helpers import transcribe_audio
 
 logger = logging.getLogger("telegram_router")
@@ -193,42 +192,16 @@ async def _handle_message(bot, update) -> None:
 
 
     if message.document and message.document.file_name.lower().endswith(".pdf"):
-        await bot.send_message(chat_id=chat_id, text="⏳ Processing...")
-        try:
-            tg_file = await bot.get_file(message.document.file_id)
-            buf = await tg_file.download_as_bytearray()
-
-            doc_id = str(uuid.uuid4())
-            doc_name = message.document.file_name
-
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                tmp.write(buf)
-                tmp_path = tmp.name
-
-            try:
-                chunk_count, _ = ingest_document(tmp_path, doc_id, doc_name)
-                upsert_documents([{
-                    "id": doc_id, "name": doc_name,
-                    "size_bytes": message.document.file_size or 0,
-                    "chunk_count": chunk_count, "status": "ready",
-                    "uploaded_at": "", "storage_path": "", "public_url": "",
-                }])
-            finally:
-                os.unlink(tmp_path)
-
-            session["document_id"] = doc_id
-            session["doc_name"] = doc_name
-            session["history"] = []
-            _save_session(chat_id, session)
-
-            await bot.send_message(
-                chat_id=chat_id,
-                text=f"✅ *{doc_name}* loaded.\n\nAsk anything in Malay, English, or Chinese.",
-                parse_mode="Markdown",
-            )
-        except Exception as exc:
-            logger.error("PDF upload failed: %s", exc)
-            await bot.send_message(chat_id=chat_id, text="❌ Upload failed. Please try again later.")
+        # Fail closed. Public chat uploads bypass the ingestion, source and
+        # publication review pipeline, so they are not accepted here. Operators
+        # upload through the authorized admin API instead.
+        await bot.send_message(
+            chat_id=chat_id,
+            text=(
+                "🔒 Direct PDF uploads are disabled. "
+                "Use /docs to choose an official verified document."
+            ),
+        )
         return
 
 
@@ -259,11 +232,34 @@ async def _handle_message(bot, update) -> None:
     await bot.send_chat_action(chat_id=chat_id, action="typing")
 
     try:
+        from routers.chat import AskRequest, _authorize_ask_documents
+
+        document_id = session["document_id"]
+        request_body = AskRequest(
+            user_id=session["user_id"],
+            document_id=document_id,
+            document_name=session["doc_name"],
+            session_id=session["session_id"],
+            question=text,
+        )
+        namespaces, allowed_revisions = _authorize_ask_documents(None, request_body)
         result = answer_question(
             question=text,
-            document_id=session["document_id"],
+            document_id=document_id,
             chat_history=session["history"][-6:] or None,
+            namespaces=namespaces,
+            allowed_revisions=allowed_revisions,
         )
+    except HTTPException:
+        session["document_id"] = None
+        session["doc_name"] = ""
+        session["history"] = []
+        _save_session(chat_id, session)
+        await bot.send_message(
+            chat_id=chat_id,
+            text="🔒 That document is no longer public. Use /docs to pick an available one.",
+        )
+        return
     except Exception as exc:
         logger.error("Q&A failed: %s", exc)
         await bot.send_message(chat_id=chat_id, text="❌ Error processing your question. Please try again.")
@@ -344,7 +340,7 @@ machine_v1_router.add_api_route(
 
 
 @router.get("/setup")
-async def setup_webhook(request: Request):
+def setup_webhook(request: Request):
     _ = request
 
 

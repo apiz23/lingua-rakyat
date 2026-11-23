@@ -21,7 +21,7 @@ def list_chat_messages(
     if session_id is not None and not session_id.strip():
         raise ValueError("Session scope cannot be empty")
     try:
-        query = get_supabase().table(CHAT_HISTORY_TABLE).select("*")
+        query = get_supabase(admin=True).table(CHAT_HISTORY_TABLE).select("*")
         query = query.eq("user_id", user_id)
         if document_id:
             query = query.eq("document_id", document_id)
@@ -39,7 +39,7 @@ def list_chat_messages(
 
 def insert_chat_message(payload: dict[str, Any]) -> bool:
     try:
-        get_supabase().table(CHAT_HISTORY_TABLE).insert(payload).execute()
+        get_supabase(admin=True).table(CHAT_HISTORY_TABLE).insert(payload).execute()
         logger.info(
             "[ChatHistory] Saved message for document_id=%s session_id=%s",
             payload.get("document_id"), payload.get("session_id"),
@@ -64,7 +64,7 @@ def insert_chat_message(payload: dict[str, Any]) -> bool:
                     removed_any = True
             if removed_any:
                 try:
-                    get_supabase().table(CHAT_HISTORY_TABLE).insert(retry_payload).execute()
+                    get_supabase(admin=True).table(CHAT_HISTORY_TABLE).insert(retry_payload).execute()
                     logger.info(
                         "[ChatHistory] Saved message after removing unsupported columns for document_id=%s session_id=%s",
                         retry_payload.get("document_id"),

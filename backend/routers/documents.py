@@ -523,7 +523,7 @@ class DocumentStatusResponse(BaseModel):
 
 
 @router.get("/{document_id}/status", response_model=DocumentStatusResponse)
-async def get_document_status(document_id: str):
+def get_document_status(document_id: str):
     """Lightweight status poll for the upload flow — no storage sync, one row read."""
     row, _snapshot = _read_catalogue_row(document_id)
     return DocumentStatusResponse(
@@ -535,7 +535,7 @@ async def get_document_status(document_id: str):
 
 
 @router.get("/", response_model=list[DocumentResponse])
-async def list_documents():
+def list_documents():
 
     try:
         documents = load_documents(strict=True)
