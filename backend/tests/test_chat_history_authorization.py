@@ -231,7 +231,7 @@ def test_history_read_query_always_contains_owner_and_optional_narrowing_predica
         def table(self, name):
             return Query()
 
-    monkeypatch.setattr(chat_history, "get_supabase", lambda: Client())
+    monkeypatch.setattr(chat_history, "get_supabase", lambda **_kwargs: Client())
     assert chat_history.list_chat_messages(
         user_id="user_alice", session_id="session-1", document_id="document-1"
     ) == []

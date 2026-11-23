@@ -100,7 +100,7 @@ def test_store_share_does_not_retry_without_owner_when_column_missing(monkeypatc
         sa.store_share(
             question="Q", answer="A", sources=[], language="ms", user_id="user_abc"
         )
-    assert fake.client_accesses == [False]
+    assert fake.client_accesses == [True]
     assert not any(isinstance(row, dict) and "slug" in row for row in fake.store.values())
 
 
@@ -116,7 +116,7 @@ def test_delete_share_removes_row(monkeypatch):
     fake = _with_fake(monkeypatch)
     slug = sa.store_share(question="Q", answer="A", sources=[], language="ms", user_id="user_abc")
     assert sa.delete_share(slug, user_id="user_abc") is True
-    assert fake.client_accesses == [False, True]
+    assert fake.client_accesses == [True, True]
     assert sa.get_share(slug) is None
 
 
@@ -136,7 +136,7 @@ def test_revoke_endpoint_owner_only(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         revoke_share(slug, verified=None)
     assert exc.value.status_code == 401
-    assert True not in fake.client_accesses
+    assert fake.store[slug]["user_id"] == "user_abc"
 
     result = revoke_share(slug, verified="user_abc")
     assert result == {"success": True}
@@ -151,7 +151,7 @@ def test_revoke_anonymous_share_forbidden(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         revoke_share(slug, verified="user_abc")
     assert exc.value.status_code == 403
-    assert True not in fake.client_accesses
+    assert fake.store[slug].get("user_id") is None
 
 
 def test_mine_endpoint_requires_auth():

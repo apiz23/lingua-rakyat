@@ -23,10 +23,10 @@ class FeedbackRequest(BaseModel):
 
 @router.post("")
 @limiter.limit(FEEDBACK_LIMIT)
-async def submit_feedback(request: Request, body: FeedbackRequest):
+def submit_feedback(request: Request, body: FeedbackRequest):
     _ = request
     try:
-        get_supabase().table("lr_feedback").insert({
+        get_supabase(admin=True).table("lr_feedback").insert({
             "session_id": body.session_id,
             "question": body.question,
             "doc_id": body.doc_id,

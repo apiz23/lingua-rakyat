@@ -51,7 +51,7 @@ def find_owned_chat_answer(
         raise ValueError("Question and answer are required")
     try:
         query = (
-            get_supabase().table(CHAT_TABLE)
+            get_supabase(admin=True).table(CHAT_TABLE)
             .select("user_id, session_id, question, answer, language, sources, confidence, created_at")
             .eq("user_id", user_id)
             .eq("question", question)
@@ -97,7 +97,7 @@ def store_share(
         "agency": agency,
     }
     payload["user_id"] = user_id
-    res = get_supabase().table(TABLE).insert(payload).execute()
+    res = get_supabase(admin=True).table(TABLE).insert(payload).execute()
     if not res.data:
         raise RuntimeError(f"[Share] Insert returned no data for slug={slug}")
     logger.info("[Share] Stored slug=%s", slug)
@@ -106,7 +106,7 @@ def store_share(
 
 def get_share(slug: str) -> Optional[dict[str, Any]]:
     try:
-        res = get_supabase().table(TABLE).select("*").eq("slug", slug).execute()
+        res = get_supabase(admin=True).table(TABLE).select("*").eq("slug", slug).execute()
         rows = res.data or []
         return rows[0] if rows else None
     except Exception as exc:
@@ -117,7 +117,7 @@ def get_share(slug: str) -> Optional[dict[str, Any]]:
 def list_shares_for_user(user_id: str) -> list[dict[str, Any]]:
     try:
         res = (
-            get_supabase()
+            get_supabase(admin=True)
             .table(TABLE)
             .select("slug, question, confidence_label, agency, created_at")
             .eq("user_id", user_id)

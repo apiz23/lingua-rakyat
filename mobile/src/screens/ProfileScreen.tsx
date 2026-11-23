@@ -16,9 +16,9 @@ import { AppLanguage, Copy, LANGUAGE_LABEL } from "../i18n"
 import { Palette, fonts, radius, spacing, useTheme } from "../theme"
 import { GitHubLogo, GoogleLogo } from "../components/ProviderLogos"
 import {
+  AuthRequiredError,
   ConversationSummary,
   listConversations,
-  clearChatHistory,
 } from "../api"
 
 const logo = require("../../assets/splash-icon.png")
@@ -77,9 +77,7 @@ export default function ProfileScreen({
       .catch((error: unknown) => {
         if (!active) return
         setConversations([])
-        setHistoryNeedsSignIn(
-          error instanceof Error && error.message === "HistoryAuthorizationError",
-        )
+        setHistoryNeedsSignIn(error instanceof AuthRequiredError)
       })
       .finally(() => {
         if (active) setHistoryLoading(false)

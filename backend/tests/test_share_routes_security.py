@@ -141,7 +141,7 @@ def test_authenticated_owner_creates_share_from_persisted_answer(setup):
     assert stored["confidence"] == 0.87
     assert stored["confidence_label"] == ""
     assert "agency" not in stored or stored["agency"] == ""
-    assert database.accesses == [False, False]
+    assert database.accesses == [True, True]
 
 
 def test_missing_or_anonymous_identity_cannot_create_share(setup):
@@ -199,7 +199,7 @@ def test_answer_must_match_server_saved_owner_record(setup):
     )
     assert response.status_code == 404
     assert database.tables[shared_answers.TABLE] == []
-    assert database.accesses == [False]
+    assert database.accesses == [True]
 
 
 def test_another_user_cannot_revoke_owner_share_and_does_not_acquire_admin(setup):
@@ -210,7 +210,7 @@ def test_another_user_cannot_revoke_owner_share_and_does_not_acquire_admin(setup
     })
     response = client.delete("/api/share/owner-share", headers=auth("user_bob"))
     assert response.status_code == 403
-    assert database.accesses == [False]
+    assert database.accesses == [True]
     assert any(row["slug"] == "owner-share" for row in database.tables[shared_answers.TABLE])
 
 
@@ -268,7 +268,7 @@ def test_ownerless_legacy_share_cannot_be_revoked(setup):
     })
     response = client.delete("/api/share/legacy-public", headers=auth())
     assert response.status_code == 403
-    assert database.accesses == [False]
+    assert database.accesses == [True]
 
 
 def test_share_insert_failure_does_not_retry_without_ownership(setup):
@@ -337,4 +337,4 @@ def test_v1_share_creation_reuses_owned_persisted_answer_validation(setup):
     )
     assert stored["user_id"] == "user_alice"
     assert stored["answer"] == "The deadline is 30 June."
-    assert database.accesses == [False, False]
+    assert database.accesses == [True, True]

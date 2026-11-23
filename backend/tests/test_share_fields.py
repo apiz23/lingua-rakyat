@@ -44,7 +44,7 @@ class FakeSupabase:
 
 def _with_fake(monkeypatch):
     fake = FakeSupabase()
-    monkeypatch.setattr(sa, "get_supabase", lambda: fake)
+    monkeypatch.setattr(sa, "get_supabase", lambda **_kwargs: fake)
     return fake
 
 

@@ -1344,3 +1344,15 @@ def test_abstention_uses_only_confirmed_points():
     answer = _abstention_answer("en", result, [evidence()])
     assert "The fee is RM 10." in answer
     assert "midnight" not in answer
+
+
+def test_result_sources_carry_verifier_source_ids():
+    """The client grounds claim citations against rendered source ids.
+
+    Without this, every verified answer is downgraded to unverifiable in the
+    browser because claim.supporting_source_ids ("S1"...) match nothing.
+    """
+    prepared = _stream_prepared()
+    result = rag._build_result(prepared, "Fee is RM 10.", "test-model")
+
+    assert [source["source_id"] for source in result["sources"]] == ["S1"]

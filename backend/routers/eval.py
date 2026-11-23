@@ -45,14 +45,14 @@ logger = logging.getLogger("eval_router")
 def _persist_eval_record(record: dict) -> None:
     from utils.auth import get_supabase
     table = os.getenv("EVAL_TABLE", "lr_eval_records")
-    get_supabase().table(table).insert(record).execute()
+    get_supabase(admin=True).table(table).insert(record).execute()
 
 
 def _load_eval_records() -> list[dict]:
     from utils.auth import get_supabase
     table = os.getenv("EVAL_TABLE", "lr_eval_records")
     response = (
-        get_supabase()
+        get_supabase(admin=True)
         .table(table)
         .select("*")
         .order("timestamp", desc=True)

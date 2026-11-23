@@ -77,3 +77,24 @@ def test_jwks_unreachable_503(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         auth.get_verified_user(FakeRequest(f"Bearer {token}"))
     assert exc.value.status_code == 503
+
+
+def test_authorized_party_is_required_when_configured(monkeypatch):
+    install_fake_jwks(monkeypatch, PUBLIC_KEY)
+    monkeypatch.setenv("CLERK_AUTHORIZED_PARTIES", "https://app.example.test")
+    from utils.auth import get_verified_user
+
+    missing = mint_token(PRIVATE_KEY, sub="user_abc")
+    with pytest.raises(HTTPException) as exc:
+        get_verified_user(FakeRequest(f"Bearer {missing}"))
+    assert exc.value.status_code == 401
+
+    forged = mint_token(PRIVATE_KEY, sub="user_abc", azp="https://evil.example.test")
+    with pytest.raises(HTTPException) as exc:
+        get_verified_user(FakeRequest(f"Bearer {forged}"))
+    assert exc.value.status_code == 401
+
+    accepted = mint_token(
+        PRIVATE_KEY, sub="user_abc", azp="https://app.example.test"
+    )
+    assert get_verified_user(FakeRequest(f"Bearer {accepted}")) == "user_abc"

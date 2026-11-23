@@ -2,10 +2,11 @@
 routers/chat.py - Question and answer endpoints.
 """
 
+import asyncio
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -54,6 +55,9 @@ class AskRequest(BaseModel):
 class SourceChunk(BaseModel):
     text: str
     document_id: str
+    # S1..Sn identifier emitted by the verifier and used by the client to
+    # ground claim citations against the rendered sources.
+    source_id: str = ""
     score: float
     doc_name: str = ""
     page_start: Optional[int] = None
@@ -324,7 +328,7 @@ def clear_chat_history(
 
 @router.post("/ask", response_model=AskResponse)
 @limiter.limit(CHAT_LIMIT)
-async def ask_question(
+def ask_question(
     request: Request,
     body: AskRequest,
     verified: Optional[str] = Depends(get_verified_user),
@@ -362,7 +366,7 @@ async def ask_question(
         _fail_idempotent_run(verified, body)
         raise
 
-    timestamp = datetime.utcnow().isoformat() + "Z"
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     answer_text = result["answer"]
 
 
@@ -395,9 +399,17 @@ async def ask_question(
     return response
 
 
+def _next_stream_event(events: Any) -> Optional[dict[str, Any]]:
+    """Advance a synchronous event generator without blocking the event loop."""
+    try:
+        return next(events)
+    except StopIteration:
+        return None
+
+
 @router.post("/ask-stream")
 @limiter.limit(CHAT_LIMIT)
-async def ask_question_stream(
+def ask_question_stream(
     request: Request,
     body: AskRequest,
     verified: Optional[str] = Depends(get_verified_user),
@@ -411,7 +423,7 @@ async def ask_question_stream(
     claim = _claim_idempotent_run(verified, body)
 
     async def event_stream():
-        timestamp = datetime.utcnow().isoformat() + "Z"
+        timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         answer_pieces: list[str] = []
         final_result: Optional[dict[str, Any]] = None
 
@@ -422,7 +434,7 @@ async def ask_question_stream(
                 yield f"data: {json.dumps({'type': 'complete', **claim.response})}\n\n"
                 return
 
-            for event in stream_answer_question(
+            events = stream_answer_question(
                 question=body.question,
                 document_id=body.document_id or None,
                 model_override=body.model_override or None,
@@ -432,13 +444,17 @@ async def ask_question_stream(
                 document_ids=body.document_ids or None,
                 namespaces=namespaces,
                 allowed_revisions=allowed_revisions,
-            ):
+            )
+            while True:
+                # Provider and vector-store calls are synchronous; run each
+                # step in the threadpool so other requests keep streaming.
+                event = await asyncio.to_thread(_next_stream_event, events)
+                if event is None:
+                    break
                 if event["type"] == "token":
                     answer_pieces.append(event["text"])
                     yield f"data: {json.dumps(event)}\n\n"
                 elif event["type"] == "complete":
-
-
                     final_result = event
                 else:
                     yield f"data: {json.dumps(event)}\n\n"
@@ -446,30 +462,34 @@ async def ask_question_stream(
             if final_result is None:
                 raise RuntimeError("Streaming finished without a completion event.")
 
-
-
             answer_text = (final_result.get("answer") or "").strip() or "".join(
                 answer_pieces
             ).strip()
-            _recheck_ask_documents(verified, body, allowed_revisions)
+            await asyncio.to_thread(
+                _recheck_ask_documents, verified, body, allowed_revisions
+            )
             if verified:
-                if not insert_chat_message(
-                    _history_payload(body, final_result, timestamp, answer_text)
-                ):
+                saved = await asyncio.to_thread(
+                    insert_chat_message,
+                    _history_payload(body, final_result, timestamp, answer_text),
+                )
+                if not saved:
                     raise RuntimeError("History persistence failed.")
-                _record_eval(body, final_result, answer_text)
+                await asyncio.to_thread(_record_eval, body, final_result, answer_text)
 
             if claim is not None:
-                _complete_idempotent_run(verified, body, final_result)
+                await asyncio.to_thread(
+                    _complete_idempotent_run, verified, body, final_result
+                )
 
             yield f"data: {json.dumps(final_result)}\n\n"
 
         except HTTPException as exc:
-            _fail_idempotent_run(verified, body)
+            await asyncio.to_thread(_fail_idempotent_run, verified, body)
             logger.error("[Chat] Streaming authorization failed: %s", exc.detail)
             yield f"data: {json.dumps({'type': 'error', 'detail': 'An error occurred during generation.'})}\n\n"
         except Exception as exc:
-            _fail_idempotent_run(verified, body)
+            await asyncio.to_thread(_fail_idempotent_run, verified, body)
             logger.error("[Chat] Streaming failed: %s", exc)
             yield f"data: {json.dumps({'type': 'error', 'detail': 'An error occurred during generation.'})}\n\n"
 
@@ -496,7 +516,7 @@ class RenameRequest(BaseModel):
 
 
 @router.get("/conversations", response_model=list[ConversationSummary])
-async def get_conversations(
+def get_conversations(
     user_id: str = "",
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
     verified: Optional[str] = Depends(get_verified_user),
@@ -513,7 +533,7 @@ async def get_conversations(
 
 
 @router.patch("/conversations/{session_id}")
-async def rename_conversation(
+def rename_conversation(
     session_id: str,
     body: RenameRequest,
     x_user_id: Optional[str] = Header(None, alias="X-User-Id"),
@@ -532,7 +552,7 @@ async def rename_conversation(
 
 
 @router.get("/history", response_model=list[ChatMessage])
-async def get_chat_history(
+def get_chat_history(
     document_id: Optional[str] = None,
     session_id: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -576,7 +596,7 @@ async def get_chat_history(
 
 
 @router.delete("/history/{document_id}")
-async def clear_document_chat_history(
+def clear_document_chat_history(
     document_id: str,
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
@@ -605,19 +625,19 @@ async def clear_document_chat_history(
 
 
 @me_v1_router.get("/conversations", response_model=list[ConversationSummary])
-async def get_my_conversations_v1(
+def get_my_conversations_v1(
     verified: Optional[str] = Depends(get_verified_user),
 ):
-    return await get_conversations(user_id="", x_user_id=None, verified=verified)
+    return get_conversations(user_id="", x_user_id=None, verified=verified)
 
 
 @me_v1_router.patch("/conversations/{session_id}")
-async def rename_my_conversation_v1(
+def rename_my_conversation_v1(
     session_id: str,
     body: RenameRequest,
     verified: Optional[str] = Depends(get_verified_user),
 ):
-    return await rename_conversation(
+    return rename_conversation(
         session_id=session_id,
         body=body,
         x_user_id=None,
@@ -626,14 +646,14 @@ async def rename_my_conversation_v1(
 
 
 @me_v1_router.get("/history", response_model=list[ChatMessage])
-async def get_my_history_v1(
-    document_ref: str,
+def get_my_history_v1(
+    document_ref: Optional[str] = None,
     conversation_ref: Optional[str] = None,
     verified: Optional[str] = Depends(get_verified_user),
 ):
-    if not document_ref.strip():
+    if document_ref is not None and not document_ref.strip():
         raise HTTPException(status_code=400, detail="Invalid history scope")
-    return await get_chat_history(
+    return get_chat_history(
         document_id=document_ref,
         session_id=conversation_ref,
         user_id=None,
@@ -643,14 +663,14 @@ async def get_my_history_v1(
 
 
 @me_v1_router.delete("/history")
-async def delete_my_history_v1(
+def delete_my_history_v1(
     document_ref: str,
     conversation_ref: Optional[str] = None,
     verified: Optional[str] = Depends(get_verified_user),
 ):
     if not document_ref.strip():
         raise HTTPException(status_code=400, detail="Invalid history scope")
-    return await clear_document_chat_history(
+    return clear_document_chat_history(
         document_id=document_ref,
         user_id=None,
         session_id=conversation_ref,

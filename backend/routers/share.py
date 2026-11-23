@@ -93,7 +93,7 @@ class SharedAnswerResponse(BaseModel):
 
 
 @router.post("", response_model=ShareResponse)
-async def create_share(body: ShareRequest, verified: Optional[str] = Depends(get_verified_user)):
+def create_share(body: ShareRequest, verified: Optional[str] = Depends(get_verified_user)):
     if not verified or not verified.strip():
         raise HTTPException(status_code=401, detail="Sign in to create a share link")
     try:
@@ -156,7 +156,7 @@ def my_shares(verified: Optional[str] = Depends(get_verified_user)):
 
 
 @router.get("/{slug}", response_model=SharedAnswerResponse)
-async def fetch_share(slug: str, response: Response):
+def fetch_share(slug: str, response: Response):
     response.headers["Cache-Control"] = "no-store, private"
     result = get_share(slug)
     if result is None:
@@ -219,8 +219,8 @@ def revoke_share(slug: str, verified: Optional[str] = Depends(get_verified_user)
 
 
 @public_v1_router.get("/{slug}", response_model=SharedAnswerResponse)
-async def fetch_public_share_v1(slug: str, response: Response):
-    return await fetch_share(slug, response)
+def fetch_public_share_v1(slug: str, response: Response):
+    return fetch_share(slug, response)
 
 
 @me_v1_router.get("/shares", response_model=list[MyShareItem])
@@ -229,7 +229,7 @@ def list_my_shares_v1(verified: Optional[str] = Depends(get_verified_user)):
 
 
 @me_v1_router.post("/shares", response_model=ShareResponse)
-async def create_my_share_v1(
+def create_my_share_v1(
     body: ShareRequest,
     verified: Optional[str] = Depends(get_verified_user),
 ):
@@ -237,7 +237,7 @@ async def create_my_share_v1(
 
 
 
-    return await create_share(body, verified)
+    return create_share(body, verified)
 
 
 @me_v1_router.delete("/shares/{slug}")
